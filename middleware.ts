@@ -62,8 +62,12 @@ export async function middleware(request: NextRequest) {
   const esPeticionAPI = pathname.startsWith('/api/')
   const token = request.cookies.get(NOMBRE_COOKIE)?.value
 
-  // Sin token → rechazar de inmediato
+  // Sin token
   if (!token) {
+    // Si ya va a /dashboard, dejar pasar para que se renderice el LoginPage inline
+    if (pathname === '/dashboard') {
+      return NextResponse.next()
+    }
     return rechazarAcceso(request, esPeticionAPI)
   }
 
@@ -74,14 +78,27 @@ export async function middleware(request: NextRequest) {
 
     // Verificar que el rol del usuario tiene permiso para esta ruta
     if (!regla.roles.includes(rolUsuario)) {
-      return NextResponse.rewrite(new URL('/dashboard', request.url))
+      // Si es un cadete intentando acceder a una ruta de admin, redirigir a su panel
+      if (rolUsuario === 'cadete') {
+        return NextResponse.redirect(new URL('/cadeteria', request.url))
+      }
+      // Para otros casos no autorizados, dejar pasar y que el layout muestre el AccesoRestringido
+      return NextResponse.next()
     }
 
     // Acceso concedido — continuar con la petición
     return NextResponse.next()
   } catch {
     // JWT inválido, manipulado o expirado
-    return rechazarAcceso(request, esPeticionAPI)
+    // Si ya está en /dashboard, dejar pasar limpiando la cookie para evitar bucles
+    if (pathname === '/dashboard') {
+      const response = NextResponse.next()
+      response.cookies.delete(NOMBRE_COOKIE)
+      return response
+    }
+    const response = rechazarAcceso(request, esPeticionAPI)
+    response.cookies.delete(NOMBRE_COOKIE)
+    return response
   }
 }
 
