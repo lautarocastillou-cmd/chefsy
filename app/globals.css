@@ -1,0 +1,32 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos base para Chefsy con escalado de tamaño confortable */
+html {
+  font-size: 17px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+:root {
+  --chefsy: #2A6348;
+  --chefsy-hover: #234f3a;
+  --chefsy-light: #f0f6f3;
+}
+
+body {
+  background-color: var(--chefsy-light);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  background-color: #020617; /* slate-950 */
+  color: #f8fafc; /* slate-50 */
+}

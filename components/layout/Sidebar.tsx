@@ -1,0 +1,122 @@
+'use client'
+
+// ─────────────────────────────────────────────────────
+// components/layout/Sidebar.tsx
+// Barra lateral de navegación. Resalta la ruta activa.
+// ─────────────────────────────────────────────────────
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
+import { usarPedidos } from '@/contexto/PedidosContexto'
+import { Sun, Moon, LogOut } from 'lucide-react'
+import { usarAuth } from '@/contexto/AuthContexto'
+
+// Ítems de navegación principal
+const elementosNavegacion = [
+  { href: '/dashboard',     etiqueta: 'Dashboard',     icono: '📊' },
+  { href: '/pedidos',       etiqueta: 'Pedidos',       icono: '📋' },
+  { href: '/nuevo-pedido',  etiqueta: 'Nuevo Pedido',  icono: '➕' },
+  { href: '/cadeteria',     etiqueta: 'Cadetería',     icono: '🛵' },
+  { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: '💰' },
+  { href: '/productos',     etiqueta: 'Productos',     icono: '🍔' },
+  { href: '/clientes',      etiqueta: 'Clientes',      icono: '👥' },
+  { href: '/tienda',        etiqueta: 'Tienda',        icono: '🏪' },
+]
+
+interface PropsSidebar {
+  className?: string
+  onCloseMobile?: () => void
+}
+
+export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
+  const rutaActual = usePathname()
+  const { modoOscuro, alternarModoOscuro } = usarPedidos()
+  const { usuarioActivo, cerrarSesion } = usarAuth()
+
+  const elementosFiltrados = elementosNavegacion.filter((item) => {
+    if (usuarioActivo?.rol === 'cadete') {
+      return item.href === '/cadeteria'
+    }
+    return true
+  })
+
+  return (
+    <aside className={cn('w-56 bg-chefsy border-r border-chefsy-700 flex flex-col shrink-0', className)}>
+      {/* Marca */}
+      <div className="px-5 py-6 border-b border-chefsy-700 flex flex-col items-center gap-3">
+        <div className="relative group">
+          <img 
+            src="/logo.jpg" 
+            alt="Chefsy Logo" 
+            className="w-28 h-28 object-contain rounded-2xl border border-chefsy-600 bg-white p-1.5 shadow-md transition-transform duration-300 group-hover:scale-105" 
+          />
+        </div>
+        <div className="text-center">
+          <span className="text-xs font-bold text-chefsy-200 uppercase tracking-widest">
+            Sistema de Pedidos
+          </span>
+        </div>
+      </div>
+
+      {/* Navegación */}
+      <nav className="flex-1 p-3 space-y-0.5">
+        {elementosFiltrados.map((item) => {
+          const estaActivo = rutaActual === item.href
+          return (
+             <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => onCloseMobile?.()}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                estaActivo
+                  ? 'bg-chefsy-700 text-white'
+                  : 'text-chefsy-100 hover:bg-chefsy-700/60 hover:text-white'
+              )}
+            >
+              <span className="text-base">{item.icono}</span>
+              <div className="flex flex-col text-left">
+                <span className="leading-tight">{item.etiqueta}</span>
+                {item.href === '/tienda' && (
+                  <span className="text-[0.7rem] text-chefsy-300 font-medium opacity-80 leading-none">
+                    en construcción
+                  </span>
+                )}
+              </div>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* Pie del sidebar */}
+      <div className="px-5 py-3 border-t border-chefsy-700 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2 w-full">
+          <p className="text-xs text-chefsy-300">Chefsy v1.0.0</p>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={alternarModoOscuro}
+              className="p-1.5 rounded-lg text-chefsy-200 hover:text-white hover:bg-chefsy-700/60 transition-colors focus:outline-none focus:ring-1 focus:ring-chefsy-400"
+              title={modoOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            >
+              {modoOscuro ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button
+              onClick={() => {
+                cerrarSesion()
+                onCloseMobile?.()
+              }}
+              className="p-1.5 rounded-lg text-chefsy-200 hover:text-red-400 hover:bg-red-950/40 transition-colors focus:outline-none focus:ring-1 focus:ring-red-400"
+              title="Cerrar sesión"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        </div>
+        <p className="text-[10px] text-chefsy-400 font-semibold tracking-wider text-left pl-0.5">
+          designed by lauta
+        </p>
+      </div>
+    </aside>
+  )
+}
