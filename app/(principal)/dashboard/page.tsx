@@ -9,7 +9,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import Link from 'next/link'
-import { Clock, ChefHat, Bike, CheckCircle2, Plus, Users } from 'lucide-react'
+import { Clock, ChefHat, Bike, CheckCircle2, Users } from 'lucide-react'
 
 export default function PaginaDashboard() {
   const { pedidos } = usarPedidos()
@@ -40,14 +40,6 @@ export default function PaginaDashboard() {
         <div className="relative z-10">
           <p className="text-chefsy-100 font-medium mb-1 capitalize">{fechaActual}</p>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">¡Hola Lauta! ¿Listo para el servicio?</h1>
-          <div className="flex gap-4">
-            <Link
-              href="/nuevo-pedido"
-              className="px-6 py-3 bg-white text-chefsy-800 font-semibold rounded-xl hover:bg-chefsy-50 transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <Plus size={20} /> Nuevo Pedido
-            </Link>
-          </div>
         </div>
       </div>
 

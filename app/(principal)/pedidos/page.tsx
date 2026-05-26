@@ -6,7 +6,6 @@
 // ─────────────────────────────────────────────────────
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import { EstadoPedido, TipoEntrega } from '@/tipos'
@@ -86,13 +85,7 @@ export default function PaginaPedidos() {
           ))}
         </div>
 
-        {/* Botón nuevo pedido */}
-        <Link
-          href="/nuevo-pedido"
-          className="px-4 py-1.5 bg-chefsy text-white text-sm font-medium rounded-md hover:bg-chefsy-700 shrink-0"
-        >
-          ➕ Nuevo
-        </Link>
+
       </div>
 
       {/* ── Contador ── */}

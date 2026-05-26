@@ -55,32 +55,35 @@ export default function PaginaCadeteria() {
     return <LoginPage />
   }
 
+  const esAdmin = usuarioActivo.rol === 'admin'
+
   return (
-    <div className="min-h-screen bg-chefsy-50">
-      <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
-          <p className="text-xs text-chefsy-200">Solo delivery</p>
+    <div className={esAdmin ? "min-h-full pb-8" : "min-h-screen bg-chefsy-50"}>
+      {esAdmin ? (
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-colors">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">🛵 Cadetería</h1>
+            <p className="text-xs text-gray-400 dark:text-slate-400">
+              Pedidos asignados y listos para reparto (Solo Delivery)
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {usuarioActivo.rol === 'admin' && (
-            <Link
-              href="/dashboard"
-              className="text-sm text-chefsy-100 hover:text-white"
-            >
-              ← Volver
-            </Link>
-          )}
+      ) : (
+        <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
+            <p className="text-xs text-chefsy-200">Solo delivery</p>
+          </div>
           <button
             onClick={cerrarSesion}
             className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1"
           >
             Cerrar Sesión
           </button>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="max-w-md mx-auto p-4 space-y-4">
+      <main className={esAdmin ? "max-w-xl mx-auto space-y-4" : "max-w-md mx-auto p-4 space-y-4"}>
         {pedidosCadeteria.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-sm">
             No hay pedidos delivery para repartir en este momento.
@@ -89,7 +92,7 @@ export default function PaginaCadeteria() {
           pedidosCadeteria.map((pedido) => (
             <div
               key={pedido.id}
-              className="bg-white border border-chefsy-200 rounded-lg p-4 space-y-4 animate-[slideIn_0.2s_ease-out]"
+              className="bg-white dark:bg-slate-900 border border-chefsy-200 dark:border-slate-800 rounded-2xl p-4 space-y-4 animate-[slideIn_0.2s_ease-out] transition-colors"
             >
               <div className="flex items-center justify-between">
                 <BadgeEstado estado={pedido.estado} />
@@ -100,9 +103,9 @@ export default function PaginaCadeteria() {
               </div>
 
               <div>
-                <p className="text-xl font-bold text-gray-900">{pedido.cliente}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{pedido.cliente}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  <span className="text-sm text-gray-500">{pedido.telefono}</span>
+                  <span className="text-sm text-gray-500 dark:text-slate-400">{pedido.telefono}</span>
                   <a
                     href={redireccionarWhatsApp(pedido.telefono, pedido.cliente)}
                     target="_blank"
@@ -126,7 +129,7 @@ export default function PaginaCadeteria() {
 
               <InfoEntregaPedido pedido={pedido} destacado />
 
-              <div className="text-sm text-gray-600 space-y-0.5">
+              <div className="text-sm text-gray-650 dark:text-slate-300 space-y-0.5">
                 {pedido.productos.map((producto) => (
                   <p key={producto.id}>
                     {producto.cantidad}× {producto.nombre}
@@ -134,18 +137,18 @@ export default function PaginaCadeteria() {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800 pt-3">
                 <div>
                   <p className="text-xs text-gray-400">Cobrar</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-lg font-bold text-gray-900 dark:text-slate-100">
                     {formatearPrecio(pedido.total)}
                   </p>
                 </div>
-                <span className="text-sm text-gray-500 capitalize">{pedido.metodoPago}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400 capitalize">{pedido.metodoPago}</span>
               </div>
 
               {pedido.observaciones && (
-                <div className="text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
+                <div className="text-sm text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded px-3 py-2">
                   ⚠️ {pedido.observaciones}
                 </div>
               )}

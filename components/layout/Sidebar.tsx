@@ -16,7 +16,6 @@ import { usarAuth } from '@/contexto/AuthContexto'
 const elementosNavegacion = [
   { href: '/dashboard',     etiqueta: 'Dashboard',     icono: '📊' },
   { href: '/pedidos',       etiqueta: 'Pedidos',       icono: '📋' },
-  { href: '/nuevo-pedido',  etiqueta: 'Nuevo Pedido',  icono: '➕' },
   { href: '/cadeteria',     etiqueta: 'Cadetería',     icono: '🛵' },
   { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: '💰' },
   { href: '/productos',     etiqueta: 'Productos',     icono: '🍔' },

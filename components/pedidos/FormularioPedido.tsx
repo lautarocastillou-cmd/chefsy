@@ -20,8 +20,49 @@ const claseInput =
   'w-full border border-gray-300 rounded-md px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent'
 
 export default function FormularioPedido() {
-  const { agregarPedido, pedidos } = usarPedidos()
+  const { agregarPedido, pedidos, productos } = usarPedidos()
   const router = useRouter()
+
+  const cargarEjemplo = () => {
+    setCliente('Lautaro de Prueba')
+    setTelefono('3815559876')
+    setTipoEntrega('delivery')
+    setDireccion('Av. Belgrano 1234, San Fernando del Valle de Catamarca')
+    setCoordenadas({
+      latitud: -28.468200,
+      longitud: -65.782100,
+    })
+    setMetodoPago('efectivo')
+    setObservaciones('Entregar rápido, por favor. Ejemplo de prueba.')
+
+    if (productos && productos.length > 0) {
+      const prod = productos.find(p => p.activo) || productos[0]
+      if (prod) {
+        setFilasProductos([
+          {
+            id: generarIdProducto(),
+            idCategoria: prod.categoriaId,
+            idProductoCatalogo: prod.id,
+            cantidad: 2,
+            precio: prod.precio,
+            modificadoresSeleccionadosIds: [],
+          }
+        ])
+        return
+      }
+    }
+
+    setFilasProductos([
+      {
+        id: generarIdProducto(),
+        idCategoria: 'promos',
+        idProductoCatalogo: 'promos-promo-2-lomos',
+        cantidad: 1,
+        precio: 22000,
+        modificadoresSeleccionadosIds: [],
+      }
+    ])
+  }
 
   const [clienteEncontrado, setClienteEncontrado] = useState<Pedido | null>(null)
 
@@ -138,6 +179,23 @@ export default function FormularioPedido() {
 
   return (
     <div className="space-y-7 max-w-2xl">
+
+      <div className="bg-amber-500/10 border border-amber-500/20 dark:bg-amber-500/5 dark:border-amber-500/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-[slideIn_0.25s_ease-out]">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">🧪</span>
+          <div>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Modo Desarrollador</p>
+            <p className="text-xs text-amber-700/80 dark:text-amber-500/80">Carga un pedido de ejemplo con datos válidos para agilizar las pruebas.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={cargarEjemplo}
+          className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 duration-150 shrink-0 text-center"
+        >
+          Cargar Ejemplo
+        </button>
+      </div>
 
       <section>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">

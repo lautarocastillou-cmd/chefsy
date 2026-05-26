@@ -33,6 +33,12 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
 
   // Si el usuario es cadete, no tiene permiso de ver las páginas de administración (que están en este layout)
   const esCadete = usuarioActivo.rol === 'cadete'
+
+  // Si es cadete y está en cadetería, renderizamos su vista directamente sin la barra lateral
+  if (esCadete && pathname === '/cadeteria') {
+    return <>{children}</>
+  }
+
   const tienePermiso = !esCadete || pathname === '/cadeteria'
 
   return (
