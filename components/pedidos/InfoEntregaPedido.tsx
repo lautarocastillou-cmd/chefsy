@@ -19,7 +19,7 @@ export default function InfoEntregaPedido({ pedido, destacado = false }: PropsIn
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <BadgeTipoEntrega tipoEntrega={pedido.tipoEntrega} className="text-xs" />
-          {pedido.distanciaKm !== undefined && (
+          {typeof pedido.distanciaKm === 'number' && (
             <span className="text-xs text-slate-500">({pedido.distanciaKm.toFixed(1)} km)</span>
           )}
         </div>
@@ -54,7 +54,7 @@ export default function InfoEntregaPedido({ pedido, destacado = false }: PropsIn
           >
             <span>📍</span>
             <span className="truncate max-w-[180px]">{resumen}</span>
-            {pedido.distanciaKm !== undefined && (
+            {typeof pedido.distanciaKm === 'number' && (
               <span className="text-gray-400 font-normal">({pedido.distanciaKm.toFixed(1)} km)</span>
             )}
           </a>
