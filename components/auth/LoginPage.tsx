@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
-  const manejarEnvio = (e: React.FormEvent) => {
+  const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -27,10 +27,8 @@ export default function LoginPage() {
     }
 
     setCargando(true)
-    // Agregamos un pequeño delay sintético de 400ms para mejorar la experiencia de login (feedback visual)
-    setTimeout(() => {
-      const exito = iniciarSesion(uLimpio, cLimpia)
-      setCargando(false)
+    try {
+      const exito = await iniciarSesion(uLimpio, cLimpia)
       if (exito) {
         if (uLimpio.toLowerCase() === 'cadete') {
           router.push('/cadeteria')
@@ -40,7 +38,9 @@ export default function LoginPage() {
       } else {
         setError('Usuario o contraseña incorrectos.')
       }
-    }, 450)
+    } finally {
+      setCargando(false)
+    }
   }
 
   return (

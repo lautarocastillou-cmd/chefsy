@@ -6,7 +6,7 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin } from 'lucide-react'
+import { MessageCircle, MapPin, Bike } from 'lucide-react'
 import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
@@ -84,6 +84,18 @@ export default function PaginaCadeteria() {
       )}
 
       <main className={esAdmin ? "max-w-xl mx-auto space-y-4" : "max-w-md mx-auto p-4 space-y-4"}>
+        {!esAdmin && (
+          <div className="bg-gradient-to-r from-chefsy-800 to-chefsy-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden mb-4 animate-[slideIn_0.25s_ease-out]">
+            <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
+              <Bike size={120} />
+            </div>
+            <div className="relative z-10">
+              <h2 className="text-lg font-bold">¡Hola, cadete! 👋</h2>
+              <p className="text-xs text-chefsy-100 mt-1">¿Listo para salir a la calle? Repartí con cuidado.</p>
+            </div>
+          </div>
+        )}
+
         {pedidosCadeteria.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-sm">
             No hay pedidos delivery para repartir en este momento.

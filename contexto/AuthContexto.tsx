@@ -1,75 +1,105 @@
 'use client'
 
+// ─────────────────────────────────────────────────────
+// contexto/AuthContexto.tsx
+// Contexto global de autenticación. Ahora utiliza
+// la API del servidor (/api/auth/login y /api/auth/logout)
+// para gestionar sesiones seguras con cookies HttpOnly.
+// La interfaz pública (usarAuth, ProveedorAuth) es idéntica
+// a la versión anterior para mantener compatibilidad total.
+// ─────────────────────────────────────────────────────
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 export interface Usuario {
   usuario: string
-  nombre: string
-  rol: 'admin' | 'cadete'
+  nombre:  string
+  rol:     'admin' | 'cadete'
 }
 
 interface ValorContextoAuth {
-  usuarioActivo: Usuario | null
-  estaListoAuth: boolean
-  iniciarSesion: (usuario: string, clave: string) => boolean
-  cerrarSesion: () => void
+  usuarioActivo:  Usuario | null
+  estaListoAuth:  boolean
+  iniciarSesion:  (usuario: string, clave: string) => Promise<boolean>
+  cerrarSesion:   () => Promise<void>
 }
 
 const ContextoAuth = createContext<ValorContextoAuth | undefined>(undefined)
-
-const USUARIOS_MOCK: Record<string, { clave: string; nombre: string; rol: 'admin' | 'cadete' }> = {
-  admin: { clave: 'admin', nombre: 'Administrador Chefsy', rol: 'admin' },
-  cadete: { clave: 'cadete', nombre: 'Delivery Cadete', rol: 'cadete' },
-}
 
 export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(null)
   const [estaListoAuth, setEstaListoAuth] = useState(false)
 
-  // Cargar sesión guardada al iniciar
+  // Al montar: intentar recuperar la sesión activa consultando el servidor
   useEffect(() => {
-    const sesionGuardada = localStorage.getItem('chefsy-usuario-activo')
-    if (sesionGuardada) {
+    async function restaurarSesion() {
       try {
-        setUsuarioActivo(JSON.parse(sesionGuardada))
+        const res = await fetch('/api/auth/sesion', { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.usuario) {
+            setUsuarioActivo(data)
+          }
+        }
       } catch {
-        localStorage.removeItem('chefsy-usuario-activo')
+        // Sin conectividad o sin sesión — continuar sin usuario
+      } finally {
+        setEstaListoAuth(true)
       }
     }
-    setEstaListoAuth(true)
+    restaurarSesion()
   }, [])
 
-  const iniciarSesion = (usuario: string, clave: string): boolean => {
-    const uLimpio = usuario.trim().toLowerCase()
-    const match = USUARIOS_MOCK[uLimpio]
+  /**
+   * Inicia sesión llamando al endpoint del servidor.
+   * Retorna true si las credenciales son válidas, false en caso contrario.
+   */
+  const iniciarSesion = async (usuario: string, clave: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body:        JSON.stringify({ usuario, clave }),
+      })
 
-    if (match && match.clave === clave) {
-      const datosUsuario: Usuario = {
-        usuario: uLimpio,
-        nombre: match.nombre,
-        rol: match.rol,
+      if (!res.ok) return false
+
+      const data = await res.json()
+      if (data.ok && data.usuario) {
+        setUsuarioActivo({
+          usuario: data.usuario,
+          nombre:  data.nombre,
+          rol:     data.rol,
+        })
+        return true
       }
-      setUsuarioActivo(datosUsuario)
-      localStorage.setItem('chefsy-usuario-activo', JSON.stringify(datosUsuario))
-      return true
+
+      return false
+    } catch {
+      return false
     }
-    return false
   }
 
-  const cerrarSesion = () => {
-    setUsuarioActivo(null)
-    localStorage.removeItem('chefsy-usuario-activo')
+  /**
+   * Cierra la sesión del usuario llamando al endpoint del servidor,
+   * que invalida la cookie HttpOnly.
+   */
+  const cerrarSesion = async (): Promise<void> => {
+    try {
+      await fetch('/api/auth/logout', {
+        method:      'POST',
+        credentials: 'same-origin',
+      })
+    } catch {
+      // Continuar aunque falle la llamada
+    } finally {
+      setUsuarioActivo(null)
+    }
   }
 
   return (
-    <ContextoAuth.Provider
-      value={{
-        usuarioActivo,
-        estaListoAuth,
-        iniciarSesion,
-        cerrarSesion,
-      }}
-    >
+    <ContextoAuth.Provider value={{ usuarioActivo, estaListoAuth, iniciarSesion, cerrarSesion }}>
       {children}
     </ContextoAuth.Provider>
   )

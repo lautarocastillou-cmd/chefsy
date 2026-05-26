@@ -51,6 +51,7 @@ export interface Pedido {
   observaciones?: string
   hora: string
   fecha: string
+  created_at?: string
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

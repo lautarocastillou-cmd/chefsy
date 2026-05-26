@@ -331,6 +331,7 @@ export default function PaginaTienda() {
   }
 
   const generarEnlaceWhatsApp = (pedido: Pedido): string => {
+    const telefono = process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || ''
     let mensaje = `*¡Hola Chefsy!* Hice un pedido online: \n\n`
     mensaje += `*Orden:* #${pedido.id}\n`
     mensaje += `*Cliente:* ${pedido.cliente}\n`
@@ -352,7 +353,10 @@ export default function PaginaTienda() {
 
     mensaje += `\n*Total a pagar: ${formatearPrecio(pedido.total)}*\n`
 
-    return `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`
+    const urlBase = telefono
+      ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(mensaje)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`
+    return urlBase
   }
 
   // --- VISTA EN CONSTRUCCIÓN ---

@@ -12,12 +12,8 @@ import React, {
 import { Pedido, EstadoPedido } from '@/tipos'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/datos/productos'
-import {
-  cargarPedidosLocales,
-  guardarPedidosLocalmente,
-  CLAVE_PEDIDOS_LOCAL,
-} from '@/lib/pedidosLocal'
 import { X, CheckCircle2, RotateCcw } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 // ── Acciones del reducer ──────────────────────────────
 
@@ -27,6 +23,7 @@ type AccionPedidos =
   | { tipo: 'EDITAR_PEDIDO'; pedido: Pedido }
   | { tipo: 'CAMBIAR_ESTADO'; id: string; estado: EstadoPedido }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
+  | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido } // Para eventos Realtime
 
 interface EstadoGlobal {
   pedidos: Pedido[]
@@ -42,15 +39,28 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
       return { pedidos: accion.pedidos }
 
     case 'AGREGAR_PEDIDO':
+      if (estado.pedidos.some((p) => p.id === accion.pedido.id)) return estado
       return {
         pedidos: [accion.pedido, ...estado.pedidos],
       }
 
+    case 'UPSERT_PEDIDO': {
+      const existe = estado.pedidos.some((p) => p.id === accion.pedido.id)
+      if (existe) {
+        return {
+          pedidos: estado.pedidos.map((p) => (p.id === accion.pedido.id ? accion.pedido : p)),
+        }
+      }
+      return {
+        pedidos: [accion.pedido, ...estado.pedidos].sort(
+          (a, b) => new Date(b.created_at || b.fecha).getTime() - new Date(a.created_at || a.fecha).getTime()
+        ),
+      }
+    }
+
     case 'EDITAR_PEDIDO':
       return {
-        pedidos: estado.pedidos.map((p) =>
-          p.id === accion.pedido.id ? accion.pedido : p
-        ),
+        pedidos: estado.pedidos.map((p) => (p.id === accion.pedido.id ? accion.pedido : p)),
       }
 
     case 'CAMBIAR_ESTADO':
@@ -101,7 +111,7 @@ interface ValorContextoPedidos {
 
 const ContextoPedidos = createContext<ValorContextoPedidos | undefined>(undefined)
 
-// Sonido sintético corto para entregas
+// Sonidos
 function reproducirSonidoNotificacion() {
   if (typeof window === 'undefined') return
   try {
@@ -119,14 +129,11 @@ function reproducirSonidoNotificacion() {
       osc.stop(start + duration)
     }
     const t = ctx.currentTime
-    playTone(523.25, t, 0.25) // C5
-    playTone(659.25, t + 0.08, 0.35) // E5
-  } catch (error) {
-    console.warn('No se pudo reproducir el sonido:', error)
-  }
+    playTone(523.25, t, 0.25)
+    playTone(659.25, t + 0.08, 0.35)
+  } catch (e) {}
 }
 
-// Sonido sintético metálico que imita una campana de cocina de metal ("Ting-Ting")
 function reproducirSonidoCampanaCocina() {
   if (typeof window === 'undefined') return
   try {
@@ -144,19 +151,13 @@ function reproducirSonidoCampanaCocina() {
       osc.stop(start + duration)
     }
     const t = ctx.currentTime
-    
-    // Armónicos metálicos del primer tañido
-    playTone(1567.98, t, 1.0, 0.15) // G6
-    playTone(1975.53, t, 0.8, 0.10) // B6
-    playTone(2637.02, t, 0.6, 0.05) // E7
-    
-    // Repique metálico rápido ("Ting-Ting")
+    playTone(1567.98, t, 1.0, 0.15)
+    playTone(1975.53, t, 0.8, 0.10)
+    playTone(2637.02, t, 0.6, 0.05)
     const t2 = t + 0.12
     playTone(1567.98, t2, 0.8, 0.12)
     playTone(1975.53, t2, 0.6, 0.08)
-  } catch (error) {
-    console.warn('No se pudo reproducir la campana de cocina:', error)
-  }
+  } catch (e) {}
 }
 
 export function ProveedorPedidos({ children }: { children: ReactNode }) {
@@ -171,7 +172,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   const prevPedidosRef = useRef<Pedido[]>([])
   const esCambioLocalRef = useRef(false)
 
-  // Cargar tema oscuro al montar
+  // Cargar tema
   useEffect(() => {
     const temaGuardado = localStorage.getItem('chefsy-tema')
     if (temaGuardado === 'dark') {
@@ -197,140 +198,103 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     })
   }
 
-  // 1) Al montar en el cliente: cargar pedidos, categorías y productos guardados
+  // 1) Al montar: Cargar Catálogo de LocalStorage y Pedidos de Supabase
   useEffect(() => {
-    // Cargar pedidos
-    const pedidosGuardados = cargarPedidosLocales()
-    despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados })
-    prevPedidosRef.current = pedidosGuardados
+    async function cargarInicial() {
+      // Cargar Catálogo (Categorías, Productos, Modificadores) de localStorage temporalmente
+      // En una FASE 2, estos también deberían ir a Supabase
+      const catsCrud = localStorage.getItem('chefsy-categorias-v1')
+      let catsActuales = catsCrud ? JSON.parse(catsCrud) : categoriasCatalogo
+      if (!catsActuales.some((c: any) => c.id === 'promos')) {
+        catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
+      }
+      setCategorias(catsActuales)
 
-    // Cargar categorías
-    const catsCrud = localStorage.getItem('chefsy-categorias-v1')
-    let catsActuales: CategoriaCatalogo[] = []
-    if (catsCrud) {
+      const prodsCrud = localStorage.getItem('chefsy-productos-v1')
+      let prodsActuales = prodsCrud ? JSON.parse(prodsCrud) : productosCatalogo
+      setProductos(prodsActuales)
+
+      const modsCrud = localStorage.getItem('chefsy-modificadores-v1')
+      setModificadores(modsCrud ? JSON.parse(modsCrud) : modificadoresCatalogo)
+
+      // Cargar Pedidos de Supabase
       try {
-        catsActuales = JSON.parse(catsCrud)
-      } catch {
-        catsActuales = categoriasCatalogo
-      }
-    } else {
-      catsActuales = categoriasCatalogo
-    }
-    if (!catsActuales.some((c) => c.id === 'promos')) {
-      catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
-    }
-    setCategorias(catsActuales)
-    localStorage.setItem('chefsy-categorias-v1', JSON.stringify(catsActuales))
+        const { data: pedidosGuardados, error } = await supabase
+          .from('pedidos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100)
+        
+        if (error) throw error
 
-    // Cargar productos
-    const prodsCrud = localStorage.getItem('chefsy-productos-v1')
-    let prodsActuales: ProductoCatalogo[] = []
-    if (prodsCrud) {
-      try {
-        prodsActuales = JSON.parse(prodsCrud)
-      } catch {
-        prodsActuales = productosCatalogo
+        if (pedidosGuardados) {
+          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados as Pedido[] })
+          prevPedidosRef.current = pedidosGuardados as Pedido[]
+        }
+      } catch (error) {
+        console.error('[Supabase] Error al cargar pedidos:', error)
+      } finally {
+        setEstaListo(true)
       }
-    } else {
-      prodsActuales = productosCatalogo
     }
-    const defaultPromos = productosCatalogo.filter((p) => p.categoriaId === 'promos')
-    defaultPromos.forEach((p) => {
-      if (!prodsActuales.some((pa) => pa.id === p.id)) {
-        prodsActuales.push(p)
-      }
-    })
-    setProductos(prodsActuales)
-    localStorage.setItem('chefsy-productos-v1', JSON.stringify(prodsActuales))
-
-    // Cargar modificadores
-    const modsCrud = localStorage.getItem('chefsy-modificadores-v1')
-    if (modsCrud) {
-      try {
-        setModificadores(JSON.parse(modsCrud))
-      } catch {
-        setModificadores(modificadoresCatalogo)
-        localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(modificadoresCatalogo))
-      }
-    } else {
-      setModificadores(modificadoresCatalogo)
-      localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(modificadoresCatalogo))
-    }
-
-    setEstaListo(true)
+    cargarInicial()
   }, [])
 
-  // 2) Guardar en localStorage ante cada cambio de pedidos
-  useEffect(() => {
-    if (!estaListo) return
-    guardarPedidosLocalmente(estado.pedidos)
-  }, [estado.pedidos, estaListo])
-
-  // 3) Sincronizar en tiempo real entre pestañas (Storage Event)
+  // 2) Suscripción a Supabase Realtime
   useEffect(() => {
     if (!estaListo) return
 
-    const sincronizarTabs = (evento: StorageEvent) => {
-      if (evento.key === CLAVE_PEDIDOS_LOCAL && evento.newValue) {
-        try {
-          const nuevosPedidos = JSON.parse(evento.newValue)
-          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: nuevosPedidos })
-        } catch (e) {
-          console.error('[Chefsy] Error de sincronización de pedidos:', e)
+    const channel = supabase
+      .channel('tabla-pedidos')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pedidos' },
+        (payload) => {
+          // No procesar nuestros propios cambios optimistas
+          if (esCambioLocalRef.current) return
+
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const pedido = payload.new as Pedido
+            despachar({ tipo: 'UPSERT_PEDIDO', pedido })
+          } else if (payload.eventType === 'DELETE') {
+            despachar({ tipo: 'ELIMINAR_PEDIDO', id: payload.old.id })
+          }
         }
-      }
-      if (evento.key === 'chefsy-categorias-v1' && evento.newValue) {
-        try {
-          setCategorias(JSON.parse(evento.newValue))
-        } catch (e) {
-          console.error('[Chefsy] Error de sincronización de categorías:', e)
-        }
-      }
-      if (evento.key === 'chefsy-productos-v1' && evento.newValue) {
-        try {
-          setProductos(JSON.parse(evento.newValue))
-        } catch (e) {
-          console.error('[Chefsy] Error de sincronización de productos:', e)
-        }
-      }
-      if (evento.key === 'chefsy-modificadores-v1' && evento.newValue) {
-        try {
-          setModificadores(JSON.parse(evento.newValue))
-        } catch (e) {
-          console.error('[Chefsy] Error de sincronización de modificadores:', e)
-        }
-      }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
+  }, [estaListo])
 
+  // 3) Sincronizar Catálogo entre pestañas
+  useEffect(() => {
+    if (!estaListo) return
+    const sincronizarTabs = (evento: StorageEvent) => {
+      if (evento.key === 'chefsy-categorias-v1' && evento.newValue) setCategorias(JSON.parse(evento.newValue))
+      if (evento.key === 'chefsy-productos-v1' && evento.newValue) setProductos(JSON.parse(evento.newValue))
+      if (evento.key === 'chefsy-modificadores-v1' && evento.newValue) setModificadores(JSON.parse(evento.newValue))
+    }
     window.addEventListener('storage', sincronizarTabs)
     return () => window.removeEventListener('storage', sincronizarTabs)
   }, [estaListo])
 
-  // 4) Monitorear cambios de estado para lanzar notificaciones y sonidos
+  // 4) Notificaciones de cambios
   useEffect(() => {
     if (!estaListo) return
-
     if (prevPedidosRef.current.length > 0) {
-      // a) Detectar si hay algún pedido nuevo agregado al sistema
-      const nuevosPedidos = estado.pedidos.filter(
-        (nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id)
-      )
-
+      const nuevosPedidos = estado.pedidos.filter((nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id))
       nuevosPedidos.forEach((nuevo) => {
-        // Reproducir sonido de campana de cocina
         reproducirSonidoCampanaCocina()
-        
-        // Si el pedido fue cargado desde otra pestaña/dispositivo, mostrar la notificación flotante
         if (!esCambioLocalRef.current) {
-          agregarNotificacion(`🔔 ¡Nuevo pedido ingresado de ${nuevo.cliente}!`, 'info')
+          agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
         }
       })
 
-      // b) Detectar si algún pedido cambió a entregado
       estado.pedidos.forEach((nuevo) => {
         const anterior = prevPedidosRef.current.find((p) => p.id === nuevo.id)
         if (anterior && anterior.estado !== 'entregado' && nuevo.estado === 'entregado') {
-          // Solo si es un cambio externo
           if (!esCambioLocalRef.current) {
             agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
             reproducirSonidoNotificacion()
@@ -338,57 +302,82 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
         }
       })
     }
-    // Reiniciamos el indicador de cambio local para la próxima actualización
-    esCambioLocalRef.current = false
+    
+    // Si fue un cambio local o remoto, después de procesar este render, ya no es local.
+    // Pequeño timeout para permitir que el Realtime event sea descartado si es local
+    setTimeout(() => { esCambioLocalRef.current = false }, 100)
     prevPedidosRef.current = estado.pedidos
   }, [estado.pedidos, estaListo])
 
-  const agregarPedido = (pedido: Pedido) => {
+  const agregarPedido = async (pedido: Pedido) => {
     esCambioLocalRef.current = true
     despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
-    // Ejecutar campana de forma local inmediata
     reproducirSonidoCampanaCocina()
+    
+    // Guardar en Supabase
+    try {
+      const { error } = await supabase.from('pedidos').insert(pedido)
+      if (error) throw error
+    } catch (e) {
+      console.error('[Supabase] Error al insertar pedido', e)
+      agregarNotificacion('Error al guardar el pedido en la nube', 'warning')
+    }
   }
 
-  const editarPedido = (pedido: Pedido) => {
+  const editarPedido = async (pedido: Pedido) => {
     esCambioLocalRef.current = true
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
+    
+    try {
+      const { error } = await supabase.from('pedidos').update(pedido).eq('id', pedido.id)
+      if (error) throw error
+    } catch (e) {
+      console.error('[Supabase] Error al actualizar pedido', e)
+    }
   }
 
-  const cambiarEstado = (id: string, nuevoEstado: EstadoPedido) => {
+  const cambiarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
     const pedido = estado.pedidos.find((p) => p.id === id)
-    if (pedido) {
+    if (pedido && pedido.estado !== nuevoEstado) {
       const estadoAnterior = pedido.estado
-      if (estadoAnterior !== nuevoEstado) {
-        esCambioLocalRef.current = true
-        despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: nuevoEstado })
-        
-        const nombresEstados: Record<EstadoPedido, string> = {
-          nuevo: 'Nuevo',
-          en_cocina: 'En Cocina',
-          listo: 'Listo',
-          en_reparto: 'En Reparto',
-          entregado: 'Entregado',
-          cancelado: 'Cancelado'
-        }
+      esCambioLocalRef.current = true
+      despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: nuevoEstado })
+      
+      const nombresEstados: Record<EstadoPedido, string> = {
+        nuevo: 'Nuevo', en_cocina: 'En Cocina', listo: 'Listo',
+        en_reparto: 'En Reparto', entregado: 'Entregado', cancelado: 'Cancelado'
+      }
 
-        agregarNotificacion(
-          `Pedido de ${pedido.cliente} cambiado a "${nombresEstados[nuevoEstado]}".`,
-          'info',
-          {
-            etiqueta: 'Deshacer',
-            alHacerClick: () => {
-              esCambioLocalRef.current = true
-              despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: estadoAnterior })
-            }
+      agregarNotificacion(
+        `Pedido de ${pedido.cliente} cambiado a "${nombresEstados[nuevoEstado]}".`,
+        'info',
+        {
+          etiqueta: 'Deshacer',
+          alHacerClick: async () => {
+            esCambioLocalRef.current = true
+            despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: estadoAnterior })
+            await supabase.from('pedidos').update({ estado: estadoAnterior }).eq('id', id)
           }
-        )
+        }
+      )
+
+      try {
+        const { error } = await supabase.from('pedidos').update({ estado: nuevoEstado }).eq('id', id)
+        if (error) throw error
+      } catch (e) {
+        console.error('[Supabase] Error al cambiar estado', e)
       }
     }
   }
 
-  const eliminarPedido = (id: string) => {
+  const eliminarPedido = async (id: string) => {
+    esCambioLocalRef.current = true
     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+    try {
+      await supabase.from('pedidos').delete().eq('id', id)
+    } catch (e) {
+      console.error('[Supabase] Error al eliminar', e)
+    }
   }
 
   const actualizarCategorias = (nuevasCategorias: CategoriaCatalogo[]) => {
@@ -406,16 +395,10 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(nuevosModificadores))
   }
 
-  const agregarNotificacion = (
-    mensaje: string,
-    tipo: 'info' | 'success' | 'warning' = 'success',
-    accion?: { etiqueta: string; alHacerClick: () => void }
-  ) => {
+  const agregarNotificacion = (mensaje: string, tipo: 'info' | 'success' | 'warning' = 'success', accion?: { etiqueta: string; alHacerClick: () => void }) => {
     const id = Date.now().toString()
     setNotificaciones((prev) => [...prev, { id, mensaje, tipo, accion }])
-    setTimeout(() => {
-      setNotificaciones((prev) => prev.filter((n) => n.id !== id))
-    }, 6000)
+    setTimeout(() => { setNotificaciones((prev) => prev.filter((n) => n.id !== id)) }, 6000)
   }
 
   const eliminarNotificacion = (id: string) => {
@@ -423,29 +406,17 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   }
 
   const valor: ValorContextoPedidos = {
-    pedidos: estado.pedidos,
-    categorias,
-    productos,
-    modificadores,
-    estaListo,
-    agregarPedido,
-    editarPedido,
-    cambiarEstado,
-    eliminarPedido,
-    actualizarCategorias,
-    actualizarProductos,
-    actualizarModificadores,
-    notificaciones,
-    eliminarNotificacion,
-    modoOscuro,
-    alternarModoOscuro,
+    pedidos: estado.pedidos, categorias, productos, modificadores, estaListo,
+    agregarPedido, editarPedido, cambiarEstado, eliminarPedido,
+    actualizarCategorias, actualizarProductos, actualizarModificadores,
+    notificaciones, eliminarNotificacion, modoOscuro, alternarModoOscuro,
   }
 
   return (
     <ContextoPedidos.Provider value={valor}>
       {!estaListo ? (
         <div className="min-h-[40vh] flex items-center justify-center text-sm text-gray-400">
-          Cargando pedidos…
+          Cargando pedidos de la nube…
         </div>
       ) : (
         <>
@@ -457,68 +428,28 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   )
 }
 
-function ContenedorToasts({
-  notificaciones,
-  onEliminar,
-}: {
-  notificaciones: Notificacion[]
-  onEliminar: (id: string) => void
-}) {
+function ContenedorToasts({ notificaciones, onEliminar }: { notificaciones: Notificacion[]; onEliminar: (id: string) => void }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full px-4 sm:px-0">
       <style>{`
-        @keyframes slideIn {
-          from {
-            transform: translateY(20px) scale(0.95);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-        }
-        .toast-animate {
-          animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+        @keyframes slideIn { from { transform: translateY(20px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .toast-animate { animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
       {notificaciones.map((n) => (
-        <div
-          key={n.id}
-          className="toast-animate bg-white border border-slate-100 shadow-2xl rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden"
-          style={{
-            borderLeft: n.tipo === 'success' ? '4px solid #10B981' : n.tipo === 'warning' ? '4px solid #F59E0B' : '4px solid #3B82F6'
-          }}
-        >
+        <div key={n.id} className="toast-animate bg-white border border-slate-100 shadow-2xl rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden" style={{ borderLeft: n.tipo === 'success' ? '4px solid #10B981' : n.tipo === 'warning' ? '4px solid #F59E0B' : '4px solid #3B82F6' }}>
           <div className="text-green-500 shrink-0 mt-0.5">
-            {n.tipo === 'success' ? (
-              <CheckCircle2 size={18} className="text-green-500" />
-            ) : (
-              <CheckCircle2 size={18} className="text-blue-500" />
-            )}
+            {n.tipo === 'success' ? <CheckCircle2 size={18} className="text-green-500" /> : <CheckCircle2 size={18} className="text-blue-500" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Sistema de Pedidos
-            </p>
-            <p className="text-sm font-semibold text-slate-800 leading-snug mt-1">
-              {n.mensaje}
-            </p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sistema de Pedidos</p>
+            <p className="text-sm font-semibold text-slate-800 leading-snug mt-1">{n.mensaje}</p>
             {n.accion && (
-              <button
-                onClick={() => {
-                  n.accion?.alHacerClick()
-                  onEliminar(n.id)
-                }}
-                className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded transition-colors shadow-sm"
-              >
+              <button onClick={() => { n.accion?.alHacerClick(); onEliminar(n.id) }} className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded transition-colors shadow-sm">
                 <RotateCcw size={10} /> {n.accion.etiqueta}
               </button>
             )}
           </div>
-          <button
-            onClick={() => onEliminar(n.id)}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 shrink-0"
-          >
+          <button onClick={() => onEliminar(n.id)} className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 shrink-0">
             <X size={14} />
           </button>
         </div>
@@ -529,8 +460,6 @@ function ContenedorToasts({
 
 export function usarPedidos(): ValorContextoPedidos {
   const contexto = useContext(ContextoPedidos)
-  if (!contexto) {
-    throw new Error('usarPedidos debe usarse dentro de un ProveedorPedidos')
-  }
+  if (!contexto) throw new Error('usarPedidos debe usarse dentro de un ProveedorPedidos')
   return contexto
 }
