@@ -21,7 +21,14 @@ type AccionPedidos =
   | { tipo: 'CARGAR_PEDIDOS'; pedidos: Pedido[] }
   | { tipo: 'AGREGAR_PEDIDO'; pedido: Pedido }
   | { tipo: 'EDITAR_PEDIDO'; pedido: Pedido }
-  | { tipo: 'CAMBIAR_ESTADO'; id: string; estado: EstadoPedido }
+  | { 
+      tipo: 'CAMBIAR_ESTADO'; 
+      id: string; 
+      estado: EstadoPedido;
+      cocina_at: string | null;
+      listo_at: string | null;
+      entregado_at: string | null;
+    }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
   | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido } // Para eventos Realtime
 
@@ -66,7 +73,15 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
     case 'CAMBIAR_ESTADO':
       return {
         pedidos: estado.pedidos.map((p) =>
-          p.id === accion.id ? { ...p, estado: accion.estado } : p
+          p.id === accion.id 
+            ? { 
+                ...p, 
+                estado: accion.estado,
+                cocina_at: accion.cocina_at,
+                listo_at: accion.listo_at,
+                entregado_at: accion.entregado_at,
+              } 
+            : p
         ),
       }
 
@@ -158,6 +173,50 @@ function reproducirSonidoCampanaCocina() {
     playTone(1567.98, t2, 0.8, 0.12)
     playTone(1975.53, t2, 0.6, 0.08)
   } catch (e) {}
+}
+
+/**
+ * Determina qué marcas de tiempo deben setearse o resetearse según la transición de estado del pedido.
+ */
+export function obtenerCamposDeTiempoParaEstado(
+  nuevoEstado: EstadoPedido,
+  pedidoActual: Pedido
+): {
+  estado: EstadoPedido
+  cocina_at: string | null
+  listo_at: string | null
+  entregado_at: string | null
+} {
+  const ahora = new Date().toISOString()
+  
+  let cocina_at = pedidoActual.cocina_at || null
+  let listo_at = pedidoActual.listo_at || null
+  let entregado_at = pedidoActual.entregado_at || null
+
+  if (nuevoEstado === 'nuevo') {
+    cocina_at = null
+    listo_at = null
+    entregado_at = null
+  } else if (nuevoEstado === 'en_cocina') {
+    if (!cocina_at) cocina_at = ahora
+    listo_at = null
+    entregado_at = null
+  } else if (nuevoEstado === 'listo' || nuevoEstado === 'en_reparto') {
+    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
+    if (!listo_at) listo_at = ahora
+    entregado_at = null
+  } else if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
+    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
+    if (!listo_at) listo_at = cocina_at || ahora
+    if (!entregado_at) entregado_at = ahora
+  }
+
+  return {
+    estado: nuevoEstado,
+    cocina_at,
+    listo_at,
+    entregado_at,
+  }
 }
 
 export function ProveedorPedidos({ children }: { children: ReactNode }) {
@@ -341,7 +400,9 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     if (pedido && pedido.estado !== nuevoEstado) {
       const estadoAnterior = pedido.estado
       esCambioLocalRef.current = true
-      despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: nuevoEstado })
+      
+      const updates = obtenerCamposDeTiempoParaEstado(nuevoEstado, pedido)
+      despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
       
       const nombresEstados: Record<EstadoPedido, string> = {
         nuevo: 'Nuevo', en_cocina: 'En Cocina', listo: 'Listo',
@@ -354,15 +415,17 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
         {
           etiqueta: 'Deshacer',
           alHacerClick: async () => {
+            if (!pedido) return
             esCambioLocalRef.current = true
-            despachar({ tipo: 'CAMBIAR_ESTADO', id, estado: estadoAnterior })
-            await supabase.from('pedidos').update({ estado: estadoAnterior }).eq('id', id)
+            const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
+            despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
+            await supabase.from('pedidos').update(updatesAnteriores).eq('id', id)
           }
         }
       )
 
       try {
-        const { error } = await supabase.from('pedidos').update({ estado: nuevoEstado }).eq('id', id)
+        const { error } = await supabase.from('pedidos').update(updates).eq('id', id)
         if (error) throw error
       } catch (e) {
         console.error('[Supabase] Error al cambiar estado', e)

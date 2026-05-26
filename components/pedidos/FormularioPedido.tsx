@@ -19,7 +19,11 @@ import { useEffect } from 'react'
 const claseInput =
   'w-full border border-gray-300 rounded-md px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent'
 
-export default function FormularioPedido() {
+interface PropsFormularioPedido {
+  onClose?: () => void
+}
+
+export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}) {
   const { agregarPedido, pedidos, productos } = usarPedidos()
   const router = useRouter()
 
@@ -80,6 +84,8 @@ export default function FormularioPedido() {
   const [costoEnvio, setCostoEnvio] = useState(0)
   const [distanciaKm, setDistanciaKm] = useState(0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
+  const [envioManual, setEnvioManual] = useState(false)
+  const [costoEnvioManualInput, setCostoEnvioManualInput] = useState('')
 
   // CRM Express: buscar cliente recurrente por teléfono en tiempo real
   useEffect(() => {
@@ -128,7 +134,8 @@ export default function FormularioPedido() {
     }
   }, [coordenadas, pideDireccion])
   
-  const total = subtotal + costoEnvio
+  const costoEnvioFinal = envioManual ? (Number(costoEnvioManualInput) || 0) : costoEnvio
+  const total = subtotal + costoEnvioFinal
 
   const manejarTipoEntrega = (nuevoTipo: TipoEntrega) => {
     setTipoEntrega(nuevoTipo)
@@ -164,17 +171,22 @@ export default function FormularioPedido() {
       coordenadas: pideDireccion ? coordenadas ?? undefined : undefined,
       productos,
       total,
-      costoEnvio: costoEnvio > 0 ? costoEnvio : undefined,
-      distanciaKm: distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
+      costoEnvio: costoEnvioFinal > 0 ? costoEnvioFinal : undefined,
+      distanciaKm: !envioManual && distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
       estado: 'nuevo',
       metodoPago,
       observaciones: observaciones.trim() || undefined,
       hora: ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
       fecha: ahora.toISOString().split('T')[0],
+      created_at: ahora.toISOString(),
     }
 
     agregarPedido(nuevoPedido)
-    router.push('/pedidos')
+    if (onClose) {
+      onClose()
+    } else {
+      router.push('/pedidos')
+    }
   }
 
   return (
@@ -313,16 +325,52 @@ export default function FormularioPedido() {
           </div>
         </div>
         
-        {pideDireccion && coordenadas && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-800 space-y-1">
-            <p className="font-semibold text-blue-900">Detalle de Envío Automático</p>
-            {cargandoEnvio ? (
-              <p className="text-blue-600 animate-pulse">Calculando ruta real...</p>
+        {pideDireccion && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="envioManual"
+                checked={envioManual}
+                onChange={(e) => setEnvioManual(e.target.checked)}
+                className="w-4 h-4 text-chefsy border-gray-300 rounded focus:ring-chefsy cursor-pointer"
+              />
+              <label htmlFor="envioManual" className="text-xs font-semibold text-gray-700 select-none cursor-pointer">
+                🔧 Ajustar costo de envío de forma manual
+              </label>
+            </div>
+
+            {envioManual ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 text-sm text-amber-850 space-y-2 animate-[slideIn_0.15s_ease-out]">
+                <p className="font-semibold text-amber-900">Configuración Manual del Envío</p>
+                <div>
+                  <label className="block text-xs font-semibold text-amber-700 mb-1">
+                    Costo de envío ($) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={costoEnvioManualInput}
+                    onChange={(e) => setCostoEnvioManualInput(e.target.value)}
+                    placeholder="Ej: 1500"
+                    className="w-full bg-white border border-amber-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-slate-800"
+                    min="0"
+                  />
+                </div>
+              </div>
             ) : (
-              <>
-                <p>Distancia estimada: {distanciaKm.toFixed(2)} km</p>
-                <p>Costo del envío: <span className="font-semibold">{formatearPrecio(costoEnvio)}</span></p>
-              </>
+              coordenadas && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-800 space-y-1">
+                  <p className="font-semibold text-blue-900">Detalle de Envío Automático</p>
+                  {cargandoEnvio ? (
+                    <p className="text-blue-600 animate-pulse">Calculando ruta real...</p>
+                  ) : (
+                    <>
+                      <p>Distancia estimada: {distanciaKm.toFixed(2)} km</p>
+                      <p>Costo del envío: <span className="font-semibold">{formatearPrecio(costoEnvio)}</span></p>
+                    </>
+                  )}
+                </div>
+              )
             )}
           </div>
         )}
@@ -352,7 +400,13 @@ export default function FormularioPedido() {
         </button>
         <button
           type="button"
-          onClick={() => router.push('/pedidos')}
+          onClick={() => {
+            if (onClose) {
+              onClose()
+            } else {
+              router.push('/pedidos')
+            }
+          }}
           className="px-4 py-2.5 border border-chefsy-300 text-chefsy-700 rounded-md text-sm hover:bg-chefsy-50"
         >
           Cancelar

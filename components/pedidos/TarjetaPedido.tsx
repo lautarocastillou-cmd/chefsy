@@ -87,37 +87,43 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       "bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
       bordesPorEstado[pedido.estado]
     )}>
-      {/* Cabecera del pedido */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-bold text-gray-900 text-sm truncate" title={pedido.cliente}>
+      {/* Cabecera del pedido: Cliente y Estado */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="font-extrabold text-slate-800 text-sm truncate leading-snug" title={pedido.cliente}>
             {pedido.cliente}
-          </span>
-          <span className="text-[10px] text-gray-400 truncate shrink-0">
-            ({pedido.telefono})
-          </span>
-          <div className="flex items-center gap-0.5 shrink-0 ml-1">
+          </h4>
+          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[10px] text-slate-450 font-medium">
+            <span>{pedido.telefono}</span>
+            <span className="text-slate-300">•</span>
+            <span>{pedido.hora}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <BadgeEstado estado={pedido.estado} />
+          <div className="flex items-center gap-1">
             <button 
               onClick={copiarParaWhatsApp}
-              className="text-gray-400 hover:text-chefsy-600 transition-colors p-0.5"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
               title="Copiar para WhatsApp"
             >
-              {copiado ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+              {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
             </button>
             <button 
               onClick={imprimirComanda}
-              className="text-gray-400 hover:text-chefsy-600 transition-colors p-0.5"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
               title="Imprimir Comanda"
             >
-              <Printer size={12} />
+              <Printer size={11} />
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] text-gray-400">{pedido.hora}</span>
-          <TimerPedido fecha={pedido.fecha} hora={pedido.hora} estado={pedido.estado} />
-          <BadgeEstado estado={pedido.estado} />
-        </div>
+      </div>
+
+      {/* Línea de Tiempos del Pedido */}
+      <div className="bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100/50 dark:border-slate-800/40 rounded-xl p-2 flex items-center justify-between gap-2 transition-all">
+        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tiempos</span>
+        <TimerPedido pedido={pedido} />
       </div>
 
       {/* Tipo de entrega e info geográfica */}

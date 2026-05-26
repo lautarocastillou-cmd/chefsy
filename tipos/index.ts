@@ -52,6 +52,9 @@ export interface Pedido {
   hora: string
   fecha: string
   created_at?: string
+  cocina_at?: string | null
+  listo_at?: string | null
+  entregado_at?: string | null
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

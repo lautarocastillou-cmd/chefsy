@@ -40,6 +40,9 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
     return true
   })
 
+  const itemsPrincipales = elementosFiltrados.filter(item => item.href !== '/tienda')
+  const itemTienda = elementosFiltrados.find(item => item.href === '/tienda')
+
   return (
     <aside className={cn('w-56 bg-chefsy border-r border-chefsy-700 flex flex-col shrink-0', className)}>
       {/* Marca */}
@@ -59,33 +62,51 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 p-3 space-y-0.5">
-        {elementosFiltrados.map((item) => {
-          const estaActivo = rutaActual === item.href
-          return (
-             <Link
-              key={item.href}
-              href={item.href}
+      <nav className="flex-1 p-3 flex flex-col justify-between">
+        <div className="space-y-0.5">
+          {itemsPrincipales.map((item) => {
+            const estaActivo = rutaActual === item.href
+            return (
+               <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => onCloseMobile?.()}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                  estaActivo
+                    ? 'bg-chefsy-700 text-white'
+                    : 'text-chefsy-100 hover:bg-chefsy-700/60 hover:text-white'
+                )}
+              >
+                <span className="text-base">{item.icono}</span>
+                <span className="leading-tight">{item.etiqueta}</span>
+              </Link>
+            )
+          })}
+        </div>
+
+        {itemTienda && (
+          <div className="pt-3 border-t border-chefsy-700/50 mt-4">
+            <Link
+              href={itemTienda.href}
               onClick={() => onCloseMobile?.()}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
-                estaActivo
+                rutaActual === itemTienda.href
                   ? 'bg-chefsy-700 text-white'
                   : 'text-chefsy-100 hover:bg-chefsy-700/60 hover:text-white'
               )}
             >
-              <span className="text-base">{item.icono}</span>
+              <span className="text-base">{itemTienda.icono}</span>
               <div className="flex flex-col text-left">
-                <span className="leading-tight">{item.etiqueta}</span>
-                {item.href === '/tienda' && (
-                  <span className="text-[0.7rem] text-chefsy-300 font-medium opacity-80 leading-none">
-                    en construcción
-                  </span>
-                )}
+                <span className="leading-tight">{itemTienda.etiqueta}</span>
+                <span className="text-[0.7rem] text-chefsy-300 font-medium opacity-80 leading-none">
+                  en construcción
+                </span>
               </div>
             </Link>
-          )
-        })}
+          </div>
+        )}
       </nav>
 
       {/* Pie del sidebar */}

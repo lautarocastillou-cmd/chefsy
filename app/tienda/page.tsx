@@ -320,7 +320,8 @@ export default function PaginaTienda() {
       metodoPago,
       observaciones: observaciones.trim() || undefined,
       hora: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      fecha: new Date().toISOString().split('T')[0]
+      fecha: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString()
     }
 
     agregarPedido(nuevoPedido)

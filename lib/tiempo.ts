@@ -1,51 +1,76 @@
+// ─────────────────────────────────────────────────────
+// lib/tiempo.ts
+// Lógica utilitaria para la gestión de tiempos y contadores
+// ─────────────────────────────────────────────────────
+
 /**
- * Calcula los minutos transcurridos desde la hora de creación del pedido hasta el momento actual.
- * Evita el uso de librerías externas para mantener el rendimiento al máximo.
+ * Parsea una fecha en formato "YYYY-MM-DD" y hora en formato 12h o 24h a un objeto Date local.
+ * Soporta formatos de hora como "17:35", "17:35:12", "05:35 p. m.", "05:35 PM", etc.
+ * Resuelve el bug del NaN al ignorar caracteres no numéricos tras separar horas/minutos/segundos.
  *
  * @param fecha Cadena de texto de la fecha en formato "YYYY-MM-DD"
- * @param hora Cadena de texto de la hora en formato "HH:MM" o "HH:MM:SS"
- * @returns Cantidad de minutos transcurridos (siempre mayor o igual a 0)
+ * @param hora Cadena de texto de la hora en formato "HH:MM" o "HH:MM:SS" (con o sin meridiano)
+ * @returns Objeto Date correspondiente a la zona horaria local
  */
-export function calcularTiempoTranscurrido(fecha: string, hora: string): number {
-  if (!fecha || !hora) return 0
+export function parsearFechaHora(fecha: string, hora: string): Date {
+  if (!fecha || !hora) return new Date()
 
-  // Separar fecha y hora
-  const [anio, mes, dia] = fecha.split('-').map(Number)
-  const [horas, minutos] = hora.split(':').map(Number)
+  // Separar fecha
+  const partsFecha = fecha.split('-')
+  const anio = Number(partsFecha[0]) || new Date().getFullYear()
+  const mes = (Number(partsFecha[1]) || 1) - 1 // 0-indexed
+  const dia = Number(partsFecha[2]) || new Date().getDate()
 
-  // Crear objeto de fecha en la zona horaria local del cliente
-  const fechaCreacion = new Date(anio, mes - 1, dia, horas, minutos, 0)
-  const ahora = new Date()
+  // Limpiar y normalizar la hora
+  let horaLimpia = hora.trim()
+  
+  // Detectar AM / PM
+  const esPM = /p\.?\s*m\.?|pm/i.test(horaLimpia)
+  const esAM = /a\.?\s*m\.?|am/i.test(horaLimpia)
 
-  // Calcular la diferencia en milisegundos
-  const diferenciaMilisegundos = ahora.getTime() - fechaCreacion.getTime()
+  // Eliminar meridianos para parsear números
+  horaLimpia = horaLimpia.replace(/a\.?\s*m\.?|p\.?\s*m\.?|am|pm/i, '').trim()
 
-  // Si por diferencias de reloj local da negativo, devolver 0
-  if (diferenciaMilisegundos < 0) return 0
+  // Separar horas, minutos, segundos
+  const partsHora = horaLimpia.split(':')
+  let horas = Number(partsHora[0]) || 0
+  const minutos = Number(partsHora[1]) || 0
+  const segundos = Number(partsHora[2]) || 0
 
-  // Convertir milisegundos a minutos redondeando hacia abajo
-  const minutosTranscurridos = Math.floor(diferenciaMilisegundos / 1000 / 60)
-  return minutosTranscurridos
+  // Ajustar formato 12h a 24h
+  if (esPM && horas < 12) {
+    horas += 12
+  } else if (esAM && horas === 12) {
+    horas = 0
+  }
+
+  return new Date(anio, mes, dia, horas, minutos, segundos)
 }
 
 /**
- * Obtiene las clases CSS de Tailwind que determinan el color del timer de acuerdo
- * al tiempo transcurrido, optimizando la legibilidad bajo estrés operativo.
+ * Calcula la diferencia en segundos entre dos fechas, garantizando un mínimo de 1 segundo.
  *
- * @param minutos Minutos transcurridos
- * @returns Clases CSS de Tailwind para color de fondo, texto y bordes
+ * @param inicio Objeto Date de inicio
+ * @param fin Objeto Date de fin
+ * @returns Cantidad de segundos transcurridos
  */
-export function obtenerEstilosTimer(minutos: number): string {
-  // Menos de 15 minutos: Estado normal (Verde/Gris suave)
-  if (minutos < 15) {
-    return 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30'
-  }
-  
-  // Entre 15 y 30 minutos: Estado de alerta intermedia (Amarillo)
-  if (minutos < 30) {
-    return 'bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30 font-medium'
-  }
+export function calcularDiferenciaSegundos(inicio: Date, fin: Date): number {
+  const diff = fin.getTime() - inicio.getTime()
+  return Math.max(1, Math.floor(diff / 1000))
+}
 
-  // Más de 30 minutos: Estado crítico (Rojo con parpadeo)
-  return 'bg-red-50 text-red-700 border border-red-150 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 font-bold animate-pulse'
+/**
+ * Formatea un total de segundos en una cadena con formato "MM:SS".
+ *
+ * @param segundosTotales Cantidad de segundos transcurridos
+ * @returns Cadena con formato "MM:SS" (ej: "03:45", "102:05")
+ */
+export function formatearSegundos(segundosTotales: number): string {
+  const minutos = Math.floor(segundosTotales / 60)
+  const segundos = segundosTotales % 60
+
+  const strMinutos = minutos.toString().padStart(2, '0')
+  const strSegundos = segundos.toString().padStart(2, '0')
+
+  return `${strMinutos}:${strSegundos}`
 }

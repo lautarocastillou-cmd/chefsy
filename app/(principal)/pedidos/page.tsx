@@ -11,6 +11,9 @@ import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import { EstadoPedido, TipoEntrega } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { Plus, X } from 'lucide-react'
+import FormularioPedido from '@/components/pedidos/FormularioPedido'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -27,6 +30,7 @@ export default function PaginaPedidos() {
   const { pedidos } = usarPedidos()
   const [filtroActivo, setFiltroActivo] = useState<EstadoPedido | 'todos'>('todos')
   const [filtroEntrega, setFiltroEntrega] = useState<TipoEntrega | 'todos'>('todos')
+  const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
 
   const pedidosFiltrados = pedidos.filter((p) => {
     const coincideEstado = filtroActivo === 'todos' || p.estado === filtroActivo
@@ -104,6 +108,42 @@ export default function PaginaPedidos() {
           {pedidosFiltrados.map((pedido) => (
             <TarjetaPedido key={pedido.id} pedido={pedido} />
           ))}
+        </div>
+      )}
+
+      {/* ── Botón Flotante para Crear Pedido ── */}
+      <button
+        onClick={() => setModalNuevoPedidoAbierto(true)}
+        className="fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
+      >
+        <Plus size={18} />
+        <span>Crear Pedido</span>
+      </button>
+
+      {/* ── Modal de Nuevo Pedido ── */}
+      {modalNuevoPedidoAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl p-6 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3 mb-4 shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  📝 Nuevo Pedido
+                </h2>
+                <p className="text-xs text-gray-400 dark:text-slate-400">Registrar una orden desde el panel</p>
+              </div>
+              <button
+                onClick={() => setModalNuevoPedidoAbierto(false)}
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* Contenido del Modal (Scrollable) */}
+            <div className="flex-1 overflow-y-auto pr-1">
+              <FormularioPedido onClose={() => setModalNuevoPedidoAbierto(false)} />
+            </div>
+          </div>
         </div>
       )}
 

@@ -6,8 +6,8 @@
 import { Coordenadas } from '@/tipos'
 
 export const UBICACION_LOCAL: Coordenadas = {
-  latitud: -28.462788,
-  longitud: -65.778462,
+  latitud: -28.462809031658047,
+  longitud: -65.77850065400358,
 }
 
 // Para retrocompatibilidad y centrado de mapas
