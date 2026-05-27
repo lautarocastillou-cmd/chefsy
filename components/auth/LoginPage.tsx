@@ -133,28 +133,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Credenciales de Prueba */}
-        <div className="bg-slate-50 dark:bg-slate-800/35 border border-slate-150 dark:border-slate-800/60 rounded-2xl p-4 space-y-2.5 text-xs">
-          <h4 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[0.7rem] border-b border-slate-200/50 dark:border-slate-800/60 pb-1.5 flex items-center gap-1">
-            🔑 Credenciales de Prueba
-          </h4>
-          <div className="grid grid-cols-2 gap-3 text-slate-650 dark:text-slate-300">
-            {/* Admin */}
-            <div className="space-y-0.5">
-              <span className="flex items-center gap-1 font-bold text-slate-850 dark:text-slate-200">
-                <ShieldCheck size={12} className="text-emerald-500" /> Administrador
-              </span>
-              <p className="font-mono text-slate-400 dark:text-slate-500 text-[0.7rem]">User: admin<br />Pass: admin</p>
-            </div>
-            {/* Cadete */}
-            <div className="space-y-0.5">
-              <span className="flex items-center gap-1 font-bold text-slate-850 dark:text-slate-200">
-                <Bike size={12} className="text-blue-500" /> Cadete / Delivery
-              </span>
-              <p className="font-mono text-slate-400 dark:text-slate-500 text-[0.7rem]">User: cadete<br />Pass: cadete</p>
-            </div>
-          </div>
-        </div>
 
         {/* Enlace público a la tienda */}
         <div className="pt-3 text-center border-t border-slate-200/50 dark:border-slate-850/60 flex flex-col items-center gap-1.5">
@@ -162,11 +140,8 @@ export default function LoginPage() {
             href="/tienda"
             className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-98"
           >
-            🏪 Tienda
+            🏪 Ir a la Tienda
           </Link>
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-semibold animate-pulse">
-            ⚠️ En construcción
-          </span>
         </div>
       </div>
     </div>

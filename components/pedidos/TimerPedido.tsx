@@ -39,6 +39,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
 
   const fechaCocina = pedido.cocina_at ? new Date(pedido.cocina_at) : null
   const fechaListo = pedido.listo_at ? new Date(pedido.listo_at) : null
+  const fechaReparto = pedido.reparto_at ? new Date(pedido.reparto_at) : null
   const fechaEntregado = pedido.entregado_at ? new Date(pedido.entregado_at) : null
 
   // ── 1. Temporizador: NUEVO ──────────────────────────────
@@ -73,20 +74,37 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
     estaCocinaTicking = !fechaListo && !fechaEntregado && pedido.estado === 'en_cocina'
   }
 
-  // ── 3. Temporizador: LISTO/DESPACHO ──────────────────────
-  // Visible solo si pasó a Listo o En Reparto (o Entregado/Cancelado si pasó por ahí).
-  const showListo = !!fechaListo || pedido.estado === 'listo' || pedido.estado === 'en_reparto'
+  // ── 3. Temporizador: LISTO ──────────────────────
+  // Visible solo si pasó a Listo.
+  const showListo = !!fechaListo || pedido.estado === 'listo'
   let segListo = 0
   let estaListoTicking = false
   if (showListo) {
     const inicioListo = fechaListo || ahora
     let finListo = ahora
-    if (fechaEntregado) finListo = fechaEntregado
-    else if (pedido.estado !== 'listo' && pedido.estado !== 'en_reparto') {
+    if (fechaReparto) finListo = fechaReparto
+    else if (fechaEntregado) finListo = fechaEntregado
+    else if (pedido.estado !== 'listo') {
       finListo = inicioListo
     }
     segListo = calcularDiferenciaSegundos(inicioListo, finListo)
-    estaListoTicking = !fechaEntregado && (pedido.estado === 'listo' || pedido.estado === 'en_reparto')
+    estaListoTicking = !fechaReparto && !fechaEntregado && pedido.estado === 'listo'
+  }
+
+  // ── 4. Temporizador: REPARTO ──────────────────────
+  // Visible solo para delivery que haya entrado a reparto
+  const showReparto = pedido.tipoEntrega === 'delivery' && (!!fechaReparto || pedido.estado === 'en_reparto')
+  let segReparto = 0
+  let estaRepartoTicking = false
+  if (showReparto) {
+    const inicioReparto = fechaReparto || ahora
+    let finReparto = ahora
+    if (fechaEntregado) finReparto = fechaEntregado
+    else if (pedido.estado !== 'en_reparto') {
+      finReparto = inicioReparto
+    }
+    segReparto = calcularDiferenciaSegundos(inicioReparto, finReparto)
+    estaRepartoTicking = !fechaEntregado && pedido.estado === 'en_reparto'
   }
 
   return (
@@ -128,9 +146,24 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
               ? "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30 animate-pulse"
               : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
           )}
-          title="Tiempo transcurrido en Listo/Reparto"
+          title="Tiempo transcurrido en Listo"
         >
           <span>L: {formatearSegundos(segListo)}</span>
+        </span>
+      )}
+
+      {/* Reparto (Naranja si está activo, Gris si está frenado) */}
+      {showReparto && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold tracking-wide transition-all duration-300 border",
+            estaRepartoTicking
+              ? "bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30 animate-pulse"
+              : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
+          )}
+          title="Tiempo de viaje en Reparto"
+        >
+          <span>R: {formatearSegundos(segReparto)}</span>
         </span>
       )}
     </div>

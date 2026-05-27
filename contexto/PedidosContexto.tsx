@@ -186,29 +186,36 @@ export function obtenerCamposDeTiempoParaEstado(
   estado: EstadoPedido
   cocina_at: string | null
   listo_at: string | null
+  reparto_at: string | null
   entregado_at: string | null
 } {
   const ahora = new Date().toISOString()
   
   let cocina_at = pedidoActual.cocina_at || null
   let listo_at = pedidoActual.listo_at || null
+  let reparto_at = pedidoActual.reparto_at || null
   let entregado_at = pedidoActual.entregado_at || null
 
   if (nuevoEstado === 'nuevo') {
     cocina_at = null
     listo_at = null
+    reparto_at = null
     entregado_at = null
   } else if (nuevoEstado === 'en_cocina') {
     if (!cocina_at) cocina_at = ahora
     listo_at = null
+    reparto_at = null
     entregado_at = null
   } else if (nuevoEstado === 'listo' || nuevoEstado === 'en_reparto') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = ahora
+    if (nuevoEstado === 'en_reparto' && !reparto_at) reparto_at = ahora
+    if (nuevoEstado === 'listo') reparto_at = null
     entregado_at = null
   } else if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = cocina_at || ahora
+    if (!reparto_at && pedidoActual.tipoEntrega === 'delivery') reparto_at = listo_at || ahora
     if (!entregado_at) entregado_at = ahora
   }
 
@@ -216,6 +223,7 @@ export function obtenerCamposDeTiempoParaEstado(
     estado: nuevoEstado,
     cocina_at,
     listo_at,
+    reparto_at,
     entregado_at,
   }
 }
@@ -288,8 +296,13 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
         if (error) throw error
 
         if (pedidosGuardados) {
-          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados as Pedido[] })
-          prevPedidosRef.current = pedidosGuardados as Pedido[]
+          // Mapeamos ubicacion_cadete a reparto_at porque usamos la columna existente en Supabase para no romper el esquema
+          const pedidosMapeados = pedidosGuardados.map((p: any) => ({
+            ...p,
+            reparto_at: p.reparto_at || p.ubicacion_cadete || null
+          }))
+          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMapeados as Pedido[] })
+          prevPedidosRef.current = pedidosMapeados as Pedido[]
         }
       } catch (error) {
         console.error('[Supabase] Error al cargar pedidos:', error)
@@ -314,7 +327,11 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
           if (esCambioLocalRef.current) return
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const pedido = payload.new as Pedido
+            const pedidoCrudo = payload.new as any
+            const pedido = {
+              ...pedidoCrudo,
+              reparto_at: pedidoCrudo.reparto_at || pedidoCrudo.ubicacion_cadete || null
+            } as Pedido
             despachar({ tipo: 'UPSERT_PEDIDO', pedido })
           } else if (payload.eventType === 'DELETE') {
             despachar({ tipo: 'ELIMINAR_PEDIDO', id: payload.old.id })
@@ -376,7 +393,13 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     
     // Guardar en Supabase
     try {
-      const { error } = await supabase.from('pedidos').insert(pedido)
+      const payload: any = { ...pedido }
+      if (payload.reparto_at !== undefined) {
+        payload.ubicacion_cadete = payload.reparto_at
+        delete payload.reparto_at
+      }
+      
+      const { error } = await supabase.from('pedidos').insert(payload)
       if (error) throw error
     } catch (e) {
       console.error('[Supabase] Error al insertar pedido', e)
@@ -389,7 +412,13 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
     
     try {
-      const { error } = await supabase.from('pedidos').update(pedido).eq('id', pedido.id)
+      const payload: any = { ...pedido }
+      if (payload.reparto_at !== undefined) {
+        payload.ubicacion_cadete = payload.reparto_at
+        delete payload.reparto_at
+      }
+
+      const { error } = await supabase.from('pedidos').update(payload).eq('id', pedido.id)
       if (error) throw error
     } catch (e) {
       console.error('[Supabase] Error al actualizar pedido', e)
@@ -420,13 +449,25 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
             esCambioLocalRef.current = true
             const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
             despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
-            await supabase.from('pedidos').update(updatesAnteriores).eq('id', id)
+            
+            const payloadDeshacer: any = { ...updatesAnteriores }
+            if (payloadDeshacer.reparto_at !== undefined) {
+              payloadDeshacer.ubicacion_cadete = payloadDeshacer.reparto_at
+              delete payloadDeshacer.reparto_at
+            }
+            await supabase.from('pedidos').update(payloadDeshacer).eq('id', id)
           }
         } : undefined
       )
 
       try {
-        const { error } = await supabase.from('pedidos').update(updates).eq('id', id)
+        const payload: any = { ...updates }
+        if (payload.reparto_at !== undefined) {
+          payload.ubicacion_cadete = payload.reparto_at
+          delete payload.reparto_at
+        }
+
+        const { error } = await supabase.from('pedidos').update(payload).eq('id', id)
         if (error) throw error
       } catch (e) {
         console.error('[Supabase] Error al cambiar estado', e)
