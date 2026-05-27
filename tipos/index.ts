@@ -56,6 +56,7 @@ export interface Pedido {
   listo_at?: string | null
   entregado_at?: string | null
   cadete_coordenadas?: Coordenadas | null
+  pago_confirmado?: boolean
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

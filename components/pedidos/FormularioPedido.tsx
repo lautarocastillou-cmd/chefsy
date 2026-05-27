@@ -15,16 +15,18 @@ import { requiereDireccion } from '@/lib/entrega'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
 import { generarId, generarIdProducto, formatearPrecio } from '@/lib/utils'
 import { useEffect } from 'react'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
 
 const claseInput =
   'w-full border border-gray-300 rounded-md px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent'
 
 interface PropsFormularioPedido {
+  pedidoInicial?: Pedido
   onClose?: () => void
 }
 
-export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}) {
-  const { agregarPedido, pedidos, productos } = usarPedidos()
+export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormularioPedido = {}) {
+  const { agregarPedido, editarPedido, pedidos, productos } = usarPedidos()
   const router = useRouter()
 
   const cargarEjemplo = () => {
@@ -82,10 +84,32 @@ export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}
   ])
   const [error, setError] = useState('')
   const [costoEnvio, setCostoEnvio] = useState(0)
-  const [distanciaKm, setDistanciaKm] = useState(0)
+  const [distanciaKm, setDistanciaKm] = useState(pedidoInicial?.distanciaKm || 0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
-  const [envioManual, setEnvioManual] = useState(false)
-  const [costoEnvioManualInput, setCostoEnvioManualInput] = useState('')
+  const [envioManual, setEnvioManual] = useState(!!pedidoInicial?.costoEnvio && pedidoInicial.distanciaKm === undefined)
+  const [costoEnvioManualInput, setCostoEnvioManualInput] = useState(pedidoInicial?.costoEnvio?.toString() || '')
+
+  useEffect(() => {
+    if (pedidoInicial) {
+      setCliente(pedidoInicial.cliente)
+      setTelefono(pedidoInicial.telefono)
+      setTipoEntrega(pedidoInicial.tipoEntrega)
+      if (pedidoInicial.direccion) setDireccion(pedidoInicial.direccion)
+      if (pedidoInicial.coordenadas) setCoordenadas(pedidoInicial.coordenadas)
+      setMetodoPago(pedidoInicial.metodoPago)
+      if (pedidoInicial.observaciones) setObservaciones(pedidoInicial.observaciones)
+      
+      const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
+        id: p.id,
+        idCategoria: p.categoriaId || '',
+        idProductoCatalogo: p.idCatalogo || '',
+        cantidad: p.cantidad,
+        precio: p.precio,
+        modificadoresSeleccionadosIds: [] // No fully supported currently if no id mapping
+      }))
+      setFilasProductos(filas.length > 0 ? filas : [crearFilaProductoVacia()])
+    }
+  }, [pedidoInicial])
 
   // CRM Express: buscar cliente recurrente por teléfono en tiempo real
   useEffect(() => {
@@ -163,7 +187,7 @@ export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}
     const ahora = new Date()
 
     const nuevoPedido: Pedido = {
-      id: generarId(),
+      id: pedidoInicial?.id || generarId(),
       cliente: cliente.trim(),
       telefono: telefono.trim(),
       tipoEntrega,
@@ -173,15 +197,21 @@ export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}
       total,
       costoEnvio: costoEnvioFinal > 0 ? costoEnvioFinal : undefined,
       distanciaKm: !envioManual && distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
-      estado: 'nuevo',
+      estado: pedidoInicial?.estado || 'nuevo',
       metodoPago,
       observaciones: observaciones.trim() || undefined,
-      hora: ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      fecha: ahora.toISOString().split('T')[0],
-      created_at: ahora.toISOString(),
+      hora: pedidoInicial?.hora || ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+      fecha: pedidoInicial?.fecha || obtenerFechaNegocio(ahora),
+      created_at: pedidoInicial?.created_at || ahora.toISOString(),
+      pago_confirmado: pedidoInicial?.pago_confirmado,
     }
 
-    agregarPedido(nuevoPedido)
+    if (pedidoInicial) {
+      editarPedido(nuevoPedido)
+    } else {
+      agregarPedido(nuevoPedido)
+    }
+    
     if (onClose) {
       onClose()
     } else {
@@ -192,22 +222,24 @@ export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}
   return (
     <div className="space-y-7 max-w-2xl">
 
-      <div className="bg-amber-500/10 border border-amber-500/20 dark:bg-amber-500/5 dark:border-amber-500/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-[slideIn_0.25s_ease-out]">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">🧪</span>
-          <div>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Modo Desarrollador</p>
-            <p className="text-xs text-amber-700/80 dark:text-amber-500/80">Carga un pedido de ejemplo con datos válidos para agilizar las pruebas.</p>
+      {!pedidoInicial && (
+        <div className="bg-amber-500/10 border border-amber-500/20 dark:bg-amber-500/5 dark:border-amber-500/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-[slideIn_0.25s_ease-out]">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🧪</span>
+            <div>
+              <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Modo Desarrollador</p>
+              <p className="text-xs text-amber-700/80 dark:text-amber-500/80">Carga un pedido de ejemplo con datos válidos para agilizar las pruebas.</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={cargarEjemplo}
+            className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 duration-150 shrink-0 text-center"
+          >
+            Cargar Ejemplo
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={cargarEjemplo}
-          className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 duration-150 shrink-0 text-center"
-        >
-          Cargar Ejemplo
-        </button>
-      </div>
+      )}
 
       <section>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -396,7 +428,7 @@ export default function FormularioPedido({ onClose }: PropsFormularioPedido = {}
           onClick={manejarEnvio}
           className="flex-1 bg-chefsy text-white px-4 py-2.5 rounded-md text-sm font-medium hover:bg-chefsy-700"
         >
-          Crear Pedido
+          {pedidoInicial ? 'Guardar Cambios' : 'Crear Pedido'}
         </button>
         <button
           type="button"

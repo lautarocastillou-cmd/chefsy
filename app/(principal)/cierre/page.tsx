@@ -2,17 +2,15 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio } from '@/lib/utils'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { useState, useMemo } from 'react'
 import { Calendar, DollarSign, Send, TrendingUp, CreditCard, Landmark, Bike, Store, UtensilsCrossed, AlertTriangle } from 'lucide-react'
 
 export default function PaginaCierreCaja() {
   const { pedidos } = usarPedidos()
   
-  // Fecha seleccionada (por defecto hoy)
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => {
-    const hoy = new Date()
-    return hoy.toISOString().split('T')[0]
-  })
+  // Fecha seleccionada (por defecto hoy comercial)
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
 
   // Filtrar pedidos por fecha
   const pedidosFiltrados = useMemo(() => {

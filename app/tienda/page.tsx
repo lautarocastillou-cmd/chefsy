@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import Link from 'next/link'
 import { 
-  ShoppingBag, Plus, Minus, Trash2, User, Phone, 
+  ShoppingCart, Plus, Minus, Trash2, User, Phone, 
   MapPin, CreditCard, CheckCircle2, MessageCircle, 
   X, Moon, Sun, Lock, ChevronRight, Sparkles,
   Settings, Wrench, Hammer, HardHat, ArrowLeft
@@ -19,6 +20,7 @@ interface ItemCarrito {
   cantidad: number
   modificadoresSeleccionados: ModificadorCatalogo[]
   precioUnitario: number
+  notaPersonalizacion?: string
 }
 
 // --- DESCRIPCIONES E IMÁGENES COMPLEMENTARIAS DE PRODUCTOS ---
@@ -148,9 +150,6 @@ export default function PaginaTienda() {
     alternarModoOscuro 
   } = usarPedidos()
 
-  // Estado para alternar entre el modo en construcción (por defecto) y el modo desarrollador
-  const [modoDesarrollador, setModoDesarrollador] = useState(false)
-
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todos')
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
@@ -160,6 +159,7 @@ export default function PaginaTienda() {
   const [productoAPersonalizar, setProductoAPersonalizar] = useState<ProductoCatalogo | null>(null)
   const [modsSeleccionados, setModsSeleccionados] = useState<ModificadorCatalogo[]>([])
   const [cantidadModal, setCantidadModal] = useState(1)
+  const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
 
   // Estado del flujo de checkout
   const [mostrarCheckout, setMostrarCheckout] = useState(false)
@@ -189,6 +189,7 @@ export default function PaginaTienda() {
     setProductoAPersonalizar(prod)
     setModsSeleccionados([])
     setCantidadModal(1)
+    setNotaPersonalizacion('')
   }
 
   const alternarModificador = (mod: ModificadorCatalogo) => {
@@ -225,37 +226,13 @@ export default function PaginaTienda() {
           producto: productoAPersonalizar,
           cantidad: cantidadModal,
           modificadoresSeleccionados: modsSeleccionados,
-          precioUnitario
+          precioUnitario,
+          notaPersonalizacion: notaPersonalizacion.trim() || undefined
         }]
       }
     })
 
     setProductoAPersonalizar(null)
-  }
-
-  const agregarDirectoAlCarrito = (prod: ProductoCatalogo) => {
-    // Si tiene modificadores disponibles, abrimos el modal
-    if (prod.modificadoresIds && prod.modificadoresIds.length > 0) {
-      abrirModalPersonalizacion(prod)
-      return
-    }
-
-    setCarrito(prev => {
-      const indexExistente = prev.findIndex(item => item.idCart === prod.id)
-      if (indexExistente > -1) {
-        const nuevoCarrito = [...prev]
-        nuevoCarrito[indexExistente].cantidad += 1
-        return nuevoCarrito
-      } else {
-        return [...prev, {
-          idCart: prod.id,
-          producto: prod,
-          cantidad: 1,
-          modificadoresSeleccionados: [],
-          precioUnitario: prod.precio
-        }]
-      }
-    })
   }
 
   // --- MÉTODOS DEL CARRITO ---
@@ -301,9 +278,15 @@ export default function PaginaTienda() {
       direccion: tipoEntrega === 'delivery' ? direccionCliente.trim() : 'Retiro por el local',
       productos: carrito.map(item => {
         let nombreFormateado = item.producto.nombre
+        const anexos = []
         if (item.modificadoresSeleccionados.length > 0) {
-          const extras = item.modificadoresSeleccionados.map(m => m.nombre).join(', ')
-          nombreFormateado += ` (+ ${extras})`
+          anexos.push(item.modificadoresSeleccionados.map(m => m.nombre).join(', '))
+        }
+        if (item.notaPersonalizacion) {
+          anexos.push(`"${item.notaPersonalizacion}"`)
+        }
+        if (anexos.length > 0) {
+          nombreFormateado += ` (+ ${anexos.join(' | ')})`
         }
         return {
           id: `${item.producto.id}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -320,7 +303,7 @@ export default function PaginaTienda() {
       metodoPago,
       observaciones: observaciones.trim() || undefined,
       hora: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: obtenerFechaNegocio(),
       created_at: new Date().toISOString()
     }
 
@@ -360,122 +343,7 @@ export default function PaginaTienda() {
     return urlBase
   }
 
-  // --- VISTA EN CONSTRUCCIÓN ---
-  if (!modoDesarrollador) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-6 relative overflow-hidden font-sans">
-        {/* Luces de fondo decorativas */}
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header */}
-        <header className="w-full max-w-4xl mx-auto flex items-center justify-between z-10">
-          <div className="flex items-center gap-2">
-            <img 
-              src="/logo.jpg" 
-              alt="Chefsy Logo" 
-              className="w-8 h-8 object-contain rounded-lg bg-white p-0.5 border border-slate-800 shadow-sm"
-            />
-            <span className="font-extrabold text-sm tracking-tight text-slate-200">Chefsy Tienda</span>
-          </div>
-          <button
-            onClick={alternarModoOscuro}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
-          >
-            {modoOscuro ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </header>
-
-        {/* Contenido Principal */}
-        <main className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto text-center space-y-8 z-10 my-10 animate-in fade-in duration-300">
-          
-          {/* MÁQUINA DE CONSTRUCCIÓN DEL LOGOTIPO */}
-          <div className="relative w-44 h-44 flex items-center justify-center">
-            {/* Engranajes rotatorios de fondo (la máquina) */}
-            <div className="absolute inset-0 text-amber-550/10 animate-[spin_16s_linear_infinite] flex items-center justify-center">
-              <Settings size={170} strokeWidth={0.8} />
-            </div>
-            <div className="absolute inset-2 text-slate-800/40 animate-[spin_10s_linear_infinite_reverse] flex items-center justify-center">
-              <Settings size={125} strokeWidth={1.2} />
-            </div>
-
-            {/* Ilustración de herramientas flotantes */}
-            <div className="absolute top-1 right-2 text-amber-500 animate-bounce duration-1000">
-              <Wrench size={20} className="transform rotate-45" />
-            </div>
-            <div className="absolute bottom-3 left-1 text-amber-550 animate-pulse">
-              <Hammer size={20} className="transform -rotate-12" />
-            </div>
-            <div className="absolute top-1/2 -left-3 text-amber-400 animate-bounce duration-700">
-              <HardHat size={18} />
-            </div>
-
-            {/* Logo de Chefsy en construcción */}
-            <div className="relative z-10 w-28 h-28 bg-white dark:bg-slate-900 p-2.5 rounded-3xl border-2 border-dashed border-amber-500 shadow-2xl">
-              <img 
-                src="/logo.jpg" 
-                alt="Chefsy Logo Central" 
-                className="w-full h-full object-contain rounded-2xl bg-white"
-              />
-              <div className="absolute -bottom-2 -right-2 bg-amber-500 text-slate-950 font-black text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
-                🚧 Obras
-              </div>
-            </div>
-          </div>
-
-          {/* Textos descriptivos */}
-          <div className="space-y-3">
-            <h2 className="text-3xl font-black text-slate-100 tracking-tight">
-              Tienda
-            </h2>
-            <p className="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-500 font-extrabold text-xs uppercase tracking-wider rounded-full shadow-inner animate-pulse">
-              En construcción
-            </p>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed pt-2">
-              Estamos preparando la cocina digital. Muy pronto vas a poder ver nuestra carta y armar tus pedidos online desde aquí. ¡Volvé pronto!
-            </p>
-          </div>
-
-          {/* Barra de Progreso Simulada */}
-          <div className="w-full max-w-xs space-y-1.5 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800/80">
-            <div className="flex justify-between text-[0.7rem] text-slate-500 font-bold uppercase tracking-wider">
-              <span>Construyendo tienda online</span>
-              <span className="text-amber-500 font-black">75%</span>
-            </div>
-            <div className="w-full bg-slate-800/50 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-amber-550 to-amber-400 h-full rounded-full"
-                style={{ width: '75%' }}
-              />
-            </div>
-          </div>
-
-          {/* Botones de navegación */}
-          <div className="flex flex-col gap-2.5 w-full max-w-xs">
-            <Link
-              href="/"
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
-            >
-              <ArrowLeft size={14} />
-              Volver al Ingreso
-            </Link>
-          </div>
-
-        </main>
-
-        {/* Footer con el activador de vista previa de desarrollo */}
-        <footer className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-850 pt-4 z-10 text-[10px] text-slate-500">
-          <p>© {new Date().getFullYear()} Chefsy. Todos los derechos reservados.</p>
-          <button
-            onClick={() => setModoDesarrollador(true)}
-            className="text-slate-500 hover:text-amber-500 underline font-semibold transition-colors focus:outline-none cursor-pointer"
-          >
-            🔧 Previsualizar Tienda (Modo Desarrollador)
-          </button>
-        </footer>
-      </div>
-    )
-  }
 
   // --- VISTA DE ÉXITO ---
   if (pedidoCompletado) {
@@ -552,17 +420,6 @@ export default function PaginaTienda() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200 transition-colors font-sans pb-16">
       
-      {/* --- BANNER DE CONSTRUCCIÓN DELGADO (OPCIONAL) --- */}
-      <div className="w-full bg-amber-500 text-slate-950 text-center py-2 px-4 text-xs font-black tracking-wide flex items-center justify-center gap-2">
-        <span>🚧 MODO PREVISUALIZACIÓN — LA TIENDA SE ENCUENTRA EN CONSTRUCCIÓN</span>
-        <button 
-          onClick={() => setModoDesarrollador(false)}
-          className="bg-slate-950 text-white font-bold px-2 py-0.5 rounded hover:bg-slate-850 transition-colors text-[10px]"
-        >
-          Activar Obras
-        </button>
-      </div>
-
       {/* --- CABECERA DE LA TIENDA (BARRA DE NAVEGACIÓN OSCURA) --- */}
       <header className="bg-[#0B0F19] px-4 py-4 sticky top-0 z-40 transition-colors shadow-lg">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -579,8 +436,7 @@ export default function PaginaTienda() {
               {/* Navegación al estilo Freddy Burger */}
               <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
                 <span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Inicio</span>
-                <span className="text-orange-500 font-bold transition-colors cursor-pointer">Menú</span>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Reservas</span>
+                <span className="text-chefsy-500 font-bold transition-colors cursor-pointer">Menú</span>
               </nav>
             </div>
           </div>
@@ -597,7 +453,7 @@ export default function PaginaTienda() {
 
             {/* Acceso Empleados */}
             <Link
-              href="/"
+              href="/dashboard"
               className="p-2 rounded-xl text-slate-455 hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
               title="Acceso Personal"
             >
@@ -606,17 +462,22 @@ export default function PaginaTienda() {
             </Link>
             
             {/* Carrito Flotante Cabecera Desktop */}
-            <button
-              onClick={() => setCartAbierto(true)}
-              className="relative p-2.5 bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all flex items-center gap-1.5 focus:outline-none"
-            >
-              <ShoppingBag size={18} />
-              {totalProductosCarrito > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white font-extrabold text-[9px] w-5 h-5 rounded-full flex items-center justify-center border border-[#0B0F19] shadow-md">
-                  {totalProductosCarrito}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden md:block text-xs font-bold text-chefsy-500 animate-pulse">
+                ¿Ya elegiste todo? apretá acá 👉
+              </span>
+              <button
+                onClick={() => setCartAbierto(true)}
+                className="relative p-2.5 bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all flex items-center gap-1.5 focus:outline-none"
+              >
+                <ShoppingCart size={18} />
+                {totalProductosCarrito > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-chefsy-500 text-white font-extrabold text-[9px] w-5 h-5 rounded-full flex items-center justify-center border border-[#0B0F19] shadow-md">
+                    {totalProductosCarrito}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -624,7 +485,7 @@ export default function PaginaTienda() {
       {/* --- HERO SECTION DE LA TIENDA (FONDO NEGRO AL ESTILO FREDDY BURGER) --- */}
       <div className="bg-[#0B0F19] text-white py-14 px-6 text-left border-b border-slate-900 relative">
         <div className="max-w-6xl mx-auto space-y-2.5 relative z-10">
-          <span className="text-orange-500 font-black text-xs uppercase tracking-widest flex items-center gap-1.5">
+          <span className="text-chefsy-500 font-black text-xs uppercase tracking-widest flex items-center gap-1.5">
             🔥 CHEFSY BURGER
           </span>
           <h2 className="text-4xl md:text-5xl font-black tracking-tight">
@@ -643,7 +504,7 @@ export default function PaginaTienda() {
             onClick={() => setCategoriaSeleccionada('todos')}
             className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all snap-start flex-shrink-0 cursor-pointer flex items-center gap-1.5 ${
               categoriaSeleccionada === 'todos'
-                ? 'bg-orange-500 text-white shadow-md'
+                ? 'bg-chefsy-500 text-white shadow-md'
                 : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-350'
             }`}
           >
@@ -665,7 +526,7 @@ export default function PaginaTienda() {
                 onClick={() => setCategoriaSeleccionada(cat.id)}
                 className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all snap-start flex-shrink-0 cursor-pointer flex items-center gap-1.5 ${
                   categoriaSeleccionada === cat.id
-                    ? 'bg-orange-500 text-white shadow-md'
+                    ? 'bg-chefsy-500 text-white shadow-md'
                     : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-350'
                 }`}
               >
@@ -708,7 +569,7 @@ export default function PaginaTienda() {
               return (
                 <div
                   key={prod.id}
-                  onClick={() => !agotado && agregarDirectoAlCarrito(prod)}
+                  onClick={() => !agotado && abrirModalPersonalizacion(prod)}
                   className={`bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-850 shadow-sm hover:shadow-md rounded-[2.25rem] overflow-hidden transition-all group flex flex-col justify-between cursor-pointer ${
                     agotado ? 'opacity-65' : 'active:scale-98'
                   }`}
@@ -722,7 +583,7 @@ export default function PaginaTienda() {
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       {prod.esCombo && (
-                        <span className="absolute top-4 left-4 text-[9px] font-black bg-orange-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        <span className="absolute top-4 left-4 text-[9px] font-black bg-chefsy-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
                           Combo
                         </span>
                       )}
@@ -741,7 +602,7 @@ export default function PaginaTienda() {
                         <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-100 leading-snug uppercase tracking-tight">
                           {prod.nombre}
                         </h4>
-                        <span className="font-black text-sm text-orange-500 shrink-0">
+                        <span className="font-black text-sm text-chefsy-500 shrink-0">
                           {formatearPrecio(prod.precio)}
                         </span>
                       </div>
@@ -754,10 +615,8 @@ export default function PaginaTienda() {
 
                   {/* Pie de la Tarjeta */}
                   <div className="p-5 pt-0 text-left">
-                    <div className="text-xs text-orange-500 font-extrabold hover:text-orange-655 transition-colors">
-                      {prod.modificadoresIds && prod.modificadoresIds.length > 0 
-                        ? 'Toca para personalizar →'
-                        : 'Añadir al pedido +'}
+                    <div className="text-xs text-chefsy-500 font-extrabold hover:text-chefsy-655 transition-colors">
+                      Personalizar y añadir +
                     </div>
                   </div>
                 </div>
@@ -772,14 +631,14 @@ export default function PaginaTienda() {
         <div className="fixed bottom-4 left-4 right-4 z-40 md:hidden">
           <button
             onClick={() => setCartAbierto(true)}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3.5 px-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-500/20 active:scale-98 transition-all cursor-pointer"
+            className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-2xl flex items-center justify-between shadow-lg shadow-chefsy-500/20 active:scale-98 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <ShoppingBag size={18} />
+              <ShoppingCart size={18} />
               <span className="text-xs">Ver Carrito</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-orange-600 px-2 py-0.5 rounded-lg text-xs">
+              <span className="bg-chefsy-600 px-2 py-0.5 rounded-lg text-xs">
                 {totalProductosCarrito}
               </span>
               <span className="text-sm font-black">{formatearPrecio(subtotalCarrito)}</span>
@@ -800,7 +659,7 @@ export default function PaginaTienda() {
             {/* Cabecera del Drawer */}
             <div className="px-5 py-4 border-b border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="text-orange-500" size={20} />
+                <ShoppingCart className="text-chefsy-500" size={20} />
                 <h2 className="font-extrabold text-slate-850 dark:text-slate-100 text-sm">Tu Carrito</h2>
                 <span className="bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-350 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {totalProductosCarrito} items
@@ -815,7 +674,7 @@ export default function PaginaTienda() {
             </div>
 
             {/* Listado del Carrito */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4">
               {carrito.length === 0 ? (
                 <div className="text-center py-20 text-slate-400 dark:text-slate-500 text-xs">
                   🛒 Tu carrito está vacío.<br />Agrega algunos platos ricos de la tienda.
@@ -876,7 +735,7 @@ export default function PaginaTienda() {
                     <button
                       type="button"
                       onClick={() => setMostrarCheckout(false)}
-                      className="text-xs text-orange-500 hover:underline font-bold cursor-pointer"
+                      className="text-xs text-chefsy-500 hover:underline font-bold cursor-pointer"
                     >
                       ← Volver al carrito
                     </button>
@@ -895,7 +754,7 @@ export default function PaginaTienda() {
                         value={nombreCliente}
                         onChange={(e) => setNombreCliente(e.target.value)}
                         placeholder="Ej: Juan Pérez"
-                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-450"
+                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-450"
                       />
                     </div>
                   </div>
@@ -913,7 +772,7 @@ export default function PaginaTienda() {
                         value={telefonoCliente}
                         onChange={(e) => setTelefonoCliente(e.target.value)}
                         placeholder="Ej: 1122334455"
-                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-455"
+                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-455"
                       />
                     </div>
                   </div>
@@ -929,7 +788,7 @@ export default function PaginaTienda() {
                         onClick={() => setTipoEntrega('delivery')}
                         className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                           tipoEntrega === 'delivery'
-                            ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-650 dark:text-orange-400 border-orange-550'
+                            ? 'bg-chefsy-50 dark:bg-chefsy-950/20 text-chefsy-650 dark:text-chefsy-400 border-chefsy-550'
                             : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-450'
                         }`}
                       >
@@ -940,7 +799,7 @@ export default function PaginaTienda() {
                         onClick={() => setTipoEntrega('retiro')}
                         className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                           tipoEntrega === 'retiro'
-                            ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-650 dark:text-orange-400 border-orange-555'
+                            ? 'bg-chefsy-50 dark:bg-chefsy-950/20 text-chefsy-650 dark:text-chefsy-400 border-chefsy-555'
                             : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-455'
                         }`}
                       >
@@ -963,7 +822,7 @@ export default function PaginaTienda() {
                           value={direccionCliente}
                           onChange={(e) => setDireccionCliente(e.target.value)}
                           placeholder="Calle, Altura, Piso / Depto"
-                          className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-455"
+                          className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-455"
                         />
                       </div>
                     </div>
@@ -979,7 +838,7 @@ export default function PaginaTienda() {
                       <select
                         value={metodoPago}
                         onChange={(e) => setMetodoPago(e.target.value as any)}
-                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-550 bg-slate-50 dark:bg-slate-955 text-slate-705 dark:text-slate-205"
+                        className="w-full border border-slate-200 dark:border-slate-805 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-550 bg-slate-50 dark:bg-slate-955 text-slate-705 dark:text-slate-205"
                       >
                         <option value="efectivo">💵 Efectivo (Paga al recibir)</option>
                         <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
@@ -998,13 +857,13 @@ export default function PaginaTienda() {
                       onChange={(e) => setObservaciones(e.target.value)}
                       placeholder="Ej: Sin cebolla, tocar timbre de abajo..."
                       rows={2}
-                      className="w-full border border-slate-200 dark:border-slate-805 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-550 bg-slate-50 dark:bg-slate-955 text-slate-705 dark:text-slate-205 placeholder:text-gray-455 resize-none"
+                      className="w-full border border-slate-200 dark:border-slate-805 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-550 bg-slate-50 dark:bg-slate-955 text-slate-705 dark:text-slate-205 placeholder:text-gray-455 resize-none"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 mt-4 cursor-pointer"
+                    className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 mt-4 cursor-pointer"
                   >
                     Confirmar Pedido ({formatearPrecio(totalCarrito)})
                   </button>
@@ -1028,14 +887,14 @@ export default function PaginaTienda() {
                   )}
                   <div className="flex justify-between border-t border-slate-200 dark:border-slate-800 pt-2 text-sm font-black text-slate-850 dark:text-slate-100">
                     <span>Total a pagar</span>
-                    <span className="text-orange-500">{formatearPrecio(totalCarrito)}</span>
+                    <span className="text-chefsy-500">{formatearPrecio(totalCarrito)}</span>
                   </div>
                 </div>
 
                 {!mostrarCheckout && (
                   <button
                     onClick={() => setMostrarCheckout(true)}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     Iniciar Checkout
                     <ChevronRight size={14} />
@@ -1073,16 +932,28 @@ export default function PaginaTienda() {
             </div>
 
             {/* Cuerpo del Modal */}
-            <div className="p-5 overflow-y-auto space-y-4 flex-1 text-left">
+            <div className="p-5 overflow-y-auto scrollbar-hide space-y-4 flex-1 text-left">
               <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200/30 dark:border-slate-850 rounded-2xl p-4 flex justify-between items-center text-xs">
                 <span className="font-semibold text-slate-555 dark:text-slate-400">Precio base</span>
                 <span className="font-black text-slate-800 dark:text-slate-200">{formatearPrecio(productoAPersonalizar.precio)}</span>
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-[10px] font-bold text-slate-550 dark:text-slate-350 uppercase tracking-wider">Modificadores Disponibles</h4>
-                
-                <div className="space-y-1.5">
+                <h4 className="text-[10px] font-bold text-slate-550 dark:text-slate-350 uppercase tracking-wider">¿Querés cambiarle algo?</h4>
+                <textarea
+                  value={notaPersonalizacion}
+                  onChange={(e) => setNotaPersonalizacion(e.target.value)}
+                  placeholder="Ej: Sin cebolla, con extra mayonesa..."
+                  className="w-full border border-slate-200 dark:border-slate-805 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 placeholder:text-gray-400 resize-none"
+                  rows={2}
+                />
+              </div>
+
+              {productoAPersonalizar.modificadoresIds && productoAPersonalizar.modificadoresIds.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-bold text-slate-550 dark:text-slate-350 uppercase tracking-wider">Modificadores Disponibles</h4>
+                  
+                  <div className="space-y-1.5">
                   {productoAPersonalizar.modificadoresIds?.map(modId => {
                     const modObj = modificadores.find(m => m.id === modId)
                     if (!modObj) return null
@@ -1095,13 +966,13 @@ export default function PaginaTienda() {
                         onClick={() => alternarModificador(modObj)}
                         className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                           seleccionado
-                            ? 'bg-orange-50/50 dark:bg-orange-950/20 text-orange-655 dark:text-orange-400 border-orange-500 shadow-sm'
+                            ? 'bg-chefsy-50/50 dark:bg-chefsy-950/20 text-chefsy-655 dark:text-chefsy-400 border-chefsy-500 shadow-sm'
                             : 'border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 text-slate-655 dark:text-slate-350 hover:bg-slate-50'
                         }`}
                       >
                         <span className="flex items-center gap-2">
                           <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] text-white ${
-                            seleccionado ? 'bg-orange-500 border-transparent' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
+                            seleccionado ? 'bg-chefsy-500 border-transparent' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
                           }`}>
                             {seleccionado && '✓'}
                           </span>
@@ -1115,6 +986,7 @@ export default function PaginaTienda() {
                   })}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Footer del Modal */}
@@ -1139,7 +1011,7 @@ export default function PaginaTienda() {
 
               <button
                 onClick={agregarAlCarritoDesdeModal}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer text-center"
+                className="flex-1 bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer text-center"
               >
                 Agregar {formatearPrecio(calcularPrecioUnitarioModal() * cantidadModal)}
               </button>

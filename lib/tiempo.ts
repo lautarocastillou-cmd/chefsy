@@ -4,6 +4,25 @@
 // ─────────────────────────────────────────────────────
 
 /**
+ * Devuelve la fecha de negocio actual en formato YYYY-MM-DD local.
+ * Si la hora actual es antes de las 05:00 AM, se considera que todavía es el día anterior.
+ * Esto evita que la caja se cierre en medio de la noche.
+ */
+export function obtenerFechaNegocio(fechaReferencia: Date = new Date()): string {
+  const ahora = new Date(fechaReferencia)
+  
+  if (ahora.getHours() < 5) {
+    ahora.setDate(ahora.getDate() - 1)
+  }
+  
+  const anio = ahora.getFullYear()
+  const mes = String(ahora.getMonth() + 1).padStart(2, '0')
+  const dia = String(ahora.getDate()).padStart(2, '0')
+  
+  return `${anio}-${mes}-${dia}`
+}
+
+/**
  * Parsea una fecha en formato "YYYY-MM-DD" y hora en formato 12h o 24h a un objeto Date local.
  * Soporta formatos de hora como "17:35", "17:35:12", "05:35 p. m.", "05:35 PM", etc.
  * Resuelve el bug del NaN al ignorar caracteres no numéricos tras separar horas/minutos/segundos.

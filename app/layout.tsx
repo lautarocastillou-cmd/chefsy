@@ -4,8 +4,11 @@ import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
 
 export const metadata: Metadata = {
-  title: 'Chefsy — Sistema de Pedidos',
+  title: 'Chefsy',
   description: 'Sistema interno de gestión de pedidos para Chefsy',
+  icons: {
+    icon: '/logo.jpg',
+  },
 }
 
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {

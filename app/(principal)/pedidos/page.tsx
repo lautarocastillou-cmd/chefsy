@@ -33,7 +33,9 @@ export default function PaginaPedidos() {
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
 
   const pedidosFiltrados = pedidos.filter((p) => {
-    const coincideEstado = filtroActivo === 'todos' || p.estado === filtroActivo
+    const coincideEstado = filtroActivo === 'todos' 
+      ? p.estado !== 'cancelado'
+      : p.estado === filtroActivo
     const coincideEntrega = filtroEntrega === 'todos' || p.tipoEntrega === filtroEntrega
     return coincideEstado && coincideEntrega
   })
@@ -123,9 +125,9 @@ export default function PaginaPedidos() {
       {/* ── Modal de Nuevo Pedido ── */}
       {modalNuevoPedidoAbierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl p-6 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative">
             {/* Header del Modal */}
-            <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3 mb-4 shrink-0">
+            <div className="sticky top-0 z-10 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-6 pb-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                   📝 Nuevo Pedido
@@ -139,8 +141,8 @@ export default function PaginaPedidos() {
                 <X size={20} />
               </button>
             </div>
-            {/* Contenido del Modal (Scrollable) */}
-            <div className="flex-1 overflow-y-auto pr-1">
+            {/* Contenido del Modal */}
+            <div className="px-6 pb-6">
               <FormularioPedido onClose={() => setModalNuevoPedidoAbierto(false)} />
             </div>
           </div>

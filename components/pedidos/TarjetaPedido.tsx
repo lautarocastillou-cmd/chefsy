@@ -10,10 +10,11 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer, MapPin, X } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
+import FormularioPedido from './FormularioPedido'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -36,12 +37,13 @@ interface PropsTarjetaPedido {
 }
 
 export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
-  const { cambiarEstado, editarPedido } = usarPedidos()
+  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
   const [verMapa, setVerMapa] = useState(false)
+  const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -95,7 +97,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
           <h4 className="font-extrabold text-slate-800 text-sm truncate leading-snug" title={pedido.cliente}>
             {pedido.cliente}
           </h4>
-          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[10px] text-slate-450 font-medium">
+          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 font-medium">
             <span>{pedido.telefono}</span>
             <span className="text-slate-300">•</span>
             <span>{pedido.hora}</span>
@@ -104,6 +106,24 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <BadgeEstado estado={pedido.estado} />
           <div className="flex items-center gap-1">
+            <button 
+              onClick={() => setEditandoPedidoCompleto(true)}
+              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+              title="Editar Pedido"
+            >
+              <Pencil size={11} />
+            </button>
+            <button 
+              onClick={() => {
+                if (window.confirm('¿Estás seguro de eliminar este pedido para siempre? (Esta acción no se puede deshacer)')) {
+                  eliminarPedido(pedido.id)
+                }
+              }}
+              className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md border border-red-100 dark:border-red-900 bg-white dark:bg-slate-900 shadow-sm"
+              title="Eliminar Pedido Definitivamente"
+            >
+              <Trash2 size={11} />
+            </button>
             <button 
               onClick={copiarParaWhatsApp}
               className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
@@ -162,8 +182,25 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             <option value="tarjeta">💳 Tarjeta</option>
             <option value="transferencia">📱 Transf.</option>
           </select>
+          {pedido.metodoPago === 'transferencia' && !soloLectura && (
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">¿Impactó?</span>
+              <button 
+                onClick={() => marcarPagoConfirmado(pedido.id, !pedido.pago_confirmado)}
+                className={cn(
+                  "relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors focus:outline-none",
+                  pedido.pago_confirmado ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-700"
+                )}
+              >
+                <span className={cn(
+                  "inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform",
+                  pedido.pago_confirmado ? "translate-x-[11px]" : "translate-x-0.5"
+                )} />
+              </button>
+            </div>
+          )}
           {pedido.costoEnvio !== undefined && pedido.costoEnvio > 0 && (
-            <span className="text-blue-600 font-medium text-[11px]">
+            <span className="text-blue-600 font-medium text-[11px] ml-1">
               + Envío ({formatearPrecio(pedido.costoEnvio)})
             </span>
           )}
@@ -275,6 +312,33 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
         </div>
       )}
 
+      {/* Modal Edición de Pedido Completo */}
+      {editandoPedidoCompleto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative text-left">
+            <div className="sticky top-0 z-10 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-6 pb-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  <Pencil className="text-chefsy" /> Editar Pedido
+                </h2>
+              </div>
+              <button
+                onClick={() => setEditandoPedidoCompleto(false)}
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="px-6 pb-6">
+              <FormularioPedido 
+                pedidoInicial={pedido} 
+                onClose={() => setEditandoPedidoCompleto(false)} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Botones de acción */}
       {!soloLectura && !esFinal && (
         <div className="flex gap-1.5 border-t border-slate-100 pt-2">
@@ -301,6 +365,21 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               Cancelar Pedido
             </button>
           )}
+        </div>
+      )}
+
+      {/* Opción de revertir si ya fue entregado */}
+      {!soloLectura && pedido.estado === 'entregado' && (
+        <div className="flex gap-1.5 border-t border-slate-100 pt-2">
+          <button
+            onClick={() => {
+              const estadoPrevio = pedido.tipoEntrega === 'delivery' ? 'en_reparto' : 'listo'
+              cambiarEstado(pedido.id, estadoPrevio)
+            }}
+            className="w-full px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-semibold rounded-md transition-colors shadow-sm active:scale-[0.98]"
+          >
+            Deshacer Entrega (Volver a {pedido.tipoEntrega === 'delivery' ? 'Reparto' : 'Listo'})
+          </button>
         </div>
       )}
     </div>

@@ -18,7 +18,7 @@ const estilosPorVariante: Record<VarianteColor, { bg: string; iconBg: string; ic
 
 interface PropsTarjetaMetrica {
   etiqueta: string
-  valor: number
+  valor: number | string
   descripcion?: string
   variante?: VarianteColor
   icon?: LucideIcon

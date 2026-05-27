@@ -113,7 +113,8 @@ interface ValorContextoPedidos {
   estaListo: boolean
   agregarPedido: (pedido: Pedido) => void
   editarPedido: (pedido: Pedido) => void
-  cambiarEstado: (id: string, estado: EstadoPedido) => void
+  cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
+  marcarPagoConfirmado: (id: string, confirmado: boolean) => void
   eliminarPedido: (id: string) => void
   actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
   actualizarProductos: (productos: ProductoCatalogo[]) => void
@@ -395,7 +396,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     }
   }
 
-  const cambiarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
+  const cambiarEstado = async (id: string, nuevoEstado: EstadoPedido, mostrarDeshacer: boolean = true) => {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido && pedido.estado !== nuevoEstado) {
       const estadoAnterior = pedido.estado
@@ -412,7 +413,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
       agregarNotificacion(
         `Pedido de ${pedido.cliente} cambiado a "${nombresEstados[nuevoEstado]}".`,
         'info',
-        {
+        mostrarDeshacer ? {
           etiqueta: 'Deshacer',
           alHacerClick: async () => {
             if (!pedido) return
@@ -421,7 +422,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
             despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
             await supabase.from('pedidos').update(updatesAnteriores).eq('id', id)
           }
-        }
+        } : undefined
       )
 
       try {
@@ -429,6 +430,20 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
         if (error) throw error
       } catch (e) {
         console.error('[Supabase] Error al cambiar estado', e)
+      }
+    }
+  }
+
+  const marcarPagoConfirmado = async (id: string, confirmado: boolean) => {
+    esCambioLocalRef.current = true
+    const pedido = estado.pedidos.find((p) => p.id === id)
+    if (pedido) {
+      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, pago_confirmado: confirmado } })
+      try {
+        const { error } = await supabase.from('pedidos').update({ pago_confirmado: confirmado }).eq('id', id)
+        if (error) throw error
+      } catch (e) {
+        console.error('[Supabase] Error al marcar pago confirmado', e)
       }
     }
   }
@@ -470,7 +485,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
 
   const valor: ValorContextoPedidos = {
     pedidos: estado.pedidos, categorias, productos, modificadores, estaListo,
-    agregarPedido, editarPedido, cambiarEstado, eliminarPedido,
+    agregarPedido, editarPedido, cambiarEstado, marcarPagoConfirmado, eliminarPedido,
     actualizarCategorias, actualizarProductos, actualizarModificadores,
     notificaciones, eliminarNotificacion, modoOscuro, alternarModoOscuro,
   }

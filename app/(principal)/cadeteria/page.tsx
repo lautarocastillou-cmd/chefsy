@@ -6,7 +6,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from '@/components/pedidos/BadgeEstado'
 import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
 import { MessageCircle, MapPin, Bike } from 'lucide-react'
 import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
@@ -14,6 +14,7 @@ import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
 import { supabase } from '@/lib/supabase'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -40,7 +41,7 @@ function TarjetaPedidoCadete({
   cambiarEstado,
 }: {
   pedido: Pedido
-  cambiarEstado: (id: string, estado: EstadoPedido) => void
+  cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
 }) {
   const [metodoOriginal, setMetodoOriginal] = useState<string | null>(null)
 
@@ -56,10 +57,22 @@ function TarjetaPedidoCadete({
   }, [pedido.id, pedido.metodoPago])
 
   const handleCambiarEstado = (id: string, nuevoEstado: EstadoPedido) => {
+    let mensaje = ''
+    if (nuevoEstado === 'en_reparto') {
+      mensaje = '¿Estás seguro de iniciar el reparto de este pedido?'
+    } else if (nuevoEstado === 'entregado') {
+      mensaje = '¿Confirmás que entregaste este pedido exitosamente al cliente?'
+    }
+
+    if (mensaje && !window.confirm(mensaje)) {
+      return
+    }
+
     if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
       localStorage.removeItem(`original-pago-${pedido.id}`)
     }
-    cambiarEstado(id, nuevoEstado)
+    // Pasamos false para que NO aparezca el botón de "Deshacer" al cadete
+    cambiarEstado(id, nuevoEstado, false)
   }
 
   const cambioMetodo = metodoOriginal && metodoOriginal !== pedido.metodoPago
@@ -134,11 +147,29 @@ function TarjetaPedidoCadete({
           <p className="text-lg font-bold text-gray-900 dark:text-slate-100">
             {formatearPrecio(pedido.total)}
           </p>
+          {pedido.costoEnvio && (
+            <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+              (Incluye {formatearPrecio(pedido.costoEnvio)} envío)
+            </p>
+          )}
         </div>
         <div className="text-right">
-          <span className="text-sm text-gray-500 dark:text-slate-400 capitalize font-semibold">
+          <span className="text-sm text-gray-500 dark:text-slate-400 capitalize font-semibold block">
             {pedido.metodoPago}
           </span>
+          {pedido.metodoPago === 'transferencia' && (
+            <div className="mt-1">
+              {pedido.pago_confirmado ? (
+                <span className="inline-flex items-center bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  ✅ PAGADO
+                </span>
+              ) : (
+                <span className="inline-flex items-center bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">
+                  ❌ Pendiente Impactar
+                </span>
+              )}
+            </div>
+          )}
           {cambioMetodo && (
             <p className="text-[10px] font-black text-red-600 dark:text-red-400 animate-pulse mt-0.5">
               ⚠️ ¡MÉTODO CAMBIÓ! (Era: {metodoOriginal.toUpperCase()})
@@ -178,14 +209,15 @@ export default function PaginaCadeteria() {
   const { pedidos, cambiarEstado } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
 
-  // Cadetería: solo pedidos delivery listos o en reparto
+  // Cadetería: solo pedidos delivery listos, en reparto o en preparación
   const pedidosCadeteria = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
-      (p.estado === 'listo' || p.estado === 'en_reparto')
+      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_reparto')
   )
 
   const pedidosEnReparto = pedidosCadeteria.filter(p => p.estado === 'en_reparto')
+  const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
 
   // Seguimiento GPS en tiempo real
   useEffect(() => {
@@ -239,7 +271,7 @@ export default function PaginaCadeteria() {
   }, [usuarioActivo, pedidosEnReparto.length])
 
   // Recaudación y conteo del cadete (entregados hoy)
-  const hoy = new Date().toISOString().split('T')[0]
+  const hoy = obtenerFechaNegocio()
   const pedidosEntregadosHoy = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
@@ -315,17 +347,72 @@ export default function PaginaCadeteria() {
                 <span className="text-[10px] text-slate-400 dark:text-slate-500">Entregas hechas hoy</span>
               </div>
             </div>
+            {/* Tabs para Cadete */}
+            <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl mb-4 animate-[slideIn_0.25s_ease-out]">
+              <button
+                onClick={() => setPestaña('activos')}
+                className={cn(
+                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                  pestaña === 'activos' 
+                    ? "bg-white dark:bg-slate-700 text-chefsy-800 dark:text-white shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Activos ({pedidosCadeteria.length})
+              </button>
+              <button
+                onClick={() => setPestaña('historial')}
+                className={cn(
+                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                  pestaña === 'historial' 
+                    ? "bg-white dark:bg-slate-700 text-chefsy-800 dark:text-white shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Entregados ({pedidosEntregadosHoy.length})
+              </button>
+            </div>
           </>
         )}
 
-        {pedidosCadeteria.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 text-sm">
-            No hay pedidos delivery para repartir en este momento.
-          </div>
-        ) : (
-          pedidosCadeteria.map((pedido) => (
-            <TarjetaPedidoCadete key={pedido.id} pedido={pedido} cambiarEstado={cambiarEstado} />
-          ))
+        {esAdmin || pestaña === 'activos' ? (
+          pedidosCadeteria.length === 0 ? (
+            <div className="text-center py-20 text-gray-400 text-sm">
+              No hay pedidos delivery para repartir en este momento.
+            </div>
+          ) : (
+            pedidosCadeteria.map((pedido) => (
+              <TarjetaPedidoCadete key={pedido.id} pedido={pedido} cambiarEstado={cambiarEstado} />
+            ))
+          )
+        ) : null}
+
+        {!esAdmin && pestaña === 'historial' && (
+          pedidosEntregadosHoy.length === 0 ? (
+            <div className="text-center py-20 text-gray-400 text-sm">
+              Aún no tenés pedidos entregados hoy.
+            </div>
+          ) : (
+            <div className="space-y-3 animate-[slideIn_0.15s_ease-out]">
+              {pedidosEntregadosHoy.map(p => (
+                <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                  <div className="min-w-0 pr-2">
+                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{p.cliente}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{p.direccion}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate italic">
+                      {p.productos.map(prod => `${prod.cantidad}x ${prod.nombre}`).join(', ')}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-slate-800 dark:text-slate-200">{formatearPrecio(p.total)}</p>
+                    <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                      Envío: {formatearPrecio(p.costoEnvio || 0)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </main>
     </div>

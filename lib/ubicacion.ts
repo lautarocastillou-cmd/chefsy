@@ -159,3 +159,44 @@ export function obtenerUbicacionActual(): Promise<Coordenadas> {
     )
   })
 }
+
+export interface SugerenciaDireccion {
+  nombre: string
+  coordenadas: Coordenadas
+}
+
+export async function buscarSugerenciasDireccion(
+  texto: string
+): Promise<SugerenciaDireccion[]> {
+  const query = texto.trim()
+  if (query.length < 3) return []
+
+  try {
+    const parametros = new URLSearchParams({
+      format: 'json',
+      q: query,
+      limit: '5',
+      countrycodes: 'ar',
+      addressdetails: '1',
+    })
+
+    const respuesta = await fetch(
+      `https://nominatim.openstreetmap.org/search?${parametros}`,
+      { headers: { 'Accept-Language': 'es' } }
+    )
+
+    if (!respuesta.ok) return []
+
+    const resultados = await respuesta.json()
+    
+    return resultados.map((item: any) => ({
+      nombre: item.display_name,
+      coordenadas: {
+        latitud: parseFloat(item.lat),
+        longitud: parseFloat(item.lon),
+      }
+    }))
+  } catch {
+    return []
+  }
+}
