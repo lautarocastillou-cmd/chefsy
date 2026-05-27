@@ -13,6 +13,7 @@ import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
+import { supabase } from '@/lib/supabase'
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -183,6 +184,59 @@ export default function PaginaCadeteria() {
       esPedidoDelivery(p) &&
       (p.estado === 'listo' || p.estado === 'en_reparto')
   )
+
+  const pedidosEnReparto = pedidosCadeteria.filter(p => p.estado === 'en_reparto')
+
+  // Seguimiento GPS en tiempo real
+  useEffect(() => {
+    // Si no es el cadete o no hay pedidos en reparto, no rastrear
+    if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosEnReparto.length === 0) {
+      return
+    }
+
+    let watchId: number
+
+    const iniciarRastreo = async () => {
+      if (!('geolocation' in navigator)) {
+        console.error('La geolocalización no está soportada en este navegador.')
+        return
+      }
+
+      watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const coords = {
+            latitud: position.coords.latitude,
+            longitud: position.coords.longitude,
+          }
+
+          // Actualizar las coordenadas en supabase para todos los pedidos activos en reparto
+          const pedidosIds = pedidosEnReparto.map(p => p.id)
+          try {
+            const { error } = await supabase
+              .from('pedidos')
+              .update({ cadete_coordenadas: coords })
+              .in('id', pedidosIds)
+
+            if (error) throw error
+          } catch (e) {
+            console.error('Error enviando coordenadas de cadete', e)
+          }
+        },
+        (error) => {
+          console.error('Error obteniendo ubicación', error)
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+      )
+    }
+
+    iniciarRastreo()
+
+    return () => {
+      if (watchId !== undefined) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
+  }, [usuarioActivo, pedidosEnReparto.length])
 
   // Recaudación y conteo del cadete (entregados hoy)
   const hoy = new Date().toISOString().split('T')[0]

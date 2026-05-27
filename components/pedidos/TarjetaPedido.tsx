@@ -10,9 +10,10 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -40,6 +41,7 @@ export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarj
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
+  const [verMapa, setVerMapa] = useState(false)
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -239,6 +241,38 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             )}
           </div>
         )
+      )}
+
+      {/* Botón de Seguimiento GPS */}
+      {pedido.estado === 'en_reparto' && pedido.cadete_coordenadas && (
+        <button
+          onClick={() => setVerMapa(true)}
+          className="w-full mt-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+        >
+          <MapPin size={14} /> Seguir Envío Real-Time
+        </button>
+      )}
+
+      {/* Modal del Mapa */}
+      {verMapa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <MapPin className="text-indigo-500" /> Seguimiento: {pedido.cliente}
+              </h3>
+              <button 
+                onClick={() => setVerMapa(false)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-950">
+              <MapaSeguimiento pedido={pedido} />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Botones de acción */}

@@ -55,6 +55,7 @@ export interface Pedido {
   cocina_at?: string | null
   listo_at?: string | null
   entregado_at?: string | null
+  cadete_coordenadas?: Coordenadas | null
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'
