@@ -30,7 +30,7 @@ interface PropsSidebar {
 
 export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   const rutaActual = usePathname()
-  const { modoOscuro, alternarModoOscuro } = usarPedidos()
+  const { modoOscuro, alternarModoOscuro, dbEstado } = usarPedidos()
   const { usuarioActivo, cerrarSesion } = usarAuth()
 
   const elementosFiltrados = elementosNavegacion.filter((item) => {
@@ -57,6 +57,31 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         <div className="text-center">
           <span className="text-xs font-bold text-chefsy-200 uppercase tracking-widest">
             Sistema de Pedidos
+          </span>
+        </div>
+        {/* Supabase Status Indicator */}
+        <div className={cn(
+          "mt-2 flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
+          dbEstado === 'conectado'
+            ? "bg-emerald-950/20 text-emerald-400 border-emerald-800/40"
+            : dbEstado === 'desconectado'
+              ? "bg-red-950/20 text-red-400 border-red-900/40 animate-pulse"
+              : "bg-slate-800/30 text-slate-400 border-slate-700/30"
+        )}>
+          <span className={cn(
+            "h-1.5 w-1.5 rounded-full shrink-0",
+            dbEstado === 'conectado'
+              ? "bg-emerald-400 animate-pulse"
+              : dbEstado === 'desconectado'
+                ? "bg-red-500 animate-ping"
+                : "bg-slate-400"
+          )} />
+          <span>
+            {dbEstado === 'conectado'
+              ? 'ONLINE'
+              : dbEstado === 'desconectado'
+                ? 'SIN CONEXIÓN'
+                : 'CONECTANDO...'}
           </span>
         </div>
       </div>

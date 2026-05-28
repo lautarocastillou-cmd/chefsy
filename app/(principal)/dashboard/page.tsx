@@ -14,6 +14,7 @@ import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Musi
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { esPedidoDelivery } from '@/lib/entrega'
 
 export default function PaginaDashboard() {
   const { pedidos } = usarPedidos()
@@ -23,12 +24,19 @@ export default function PaginaDashboard() {
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length
   const enCocina  = pedidos.filter((p) => p.estado === 'en_cocina').length
   const enReparto = pedidos.filter((p) => p.estado === 'en_reparto').length
-  const entregados = pedidos.filter((p) => p.estado === 'entregado').length
 
   const hoy = obtenerFechaNegocio()
-  const totalEnvios = pedidos
-    .filter(p => p.fecha === hoy && p.estado === 'entregado')
-    .reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0)
+  const pedidosHoy = pedidos.filter((p) => p.fecha === hoy)
+  
+  // Pedidos completados en general hoy (entregados hoy de cualquier tipo)
+  const completadosHoy = pedidosHoy.filter((p) => p.estado === 'entregado').length
+
+  // Pedidos delivery entregados hoy (viajes)
+  const enviosHoy = pedidosHoy.filter((p) => p.estado === 'entregado' && esPedidoDelivery(p))
+  const totalViajes = enviosHoy.length
+  
+  // Total recaudado por envíos de delivery hoy
+  const totalEnvios = enviosHoy.reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0)
 
   // Últimos 6 pedidos para la vista rápida (excluyendo cancelados y entregados)
   const pedidosRecientes = pedidos.filter(p => p.estado !== 'cancelado' && p.estado !== 'entregado').slice(0, 6)
@@ -79,15 +87,16 @@ export default function PaginaDashboard() {
             icon={Bike}
           />
           <TarjetaMetrica
-            etiqueta="Entregados Hoy"
-            valor={entregados}
+            etiqueta="Completados Hoy"
+            valor={completadosHoy}
+            descripcion="Entregas totales hoy"
             variante="verde"
             icon={CheckCircle2}
           />
           <TarjetaMetrica
-            etiqueta="Total Envíos"
+            etiqueta="Envíos y Viajes"
             valor={formatearPrecio(totalEnvios)}
-            descripcion="Recaudado por cadetes"
+            descripcion={`${totalViajes} ${totalViajes === 1 ? 'viaje realizado' : 'viajes realizados'}`}
             variante="neutro"
             icon={DollarSign}
           />

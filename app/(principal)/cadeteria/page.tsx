@@ -206,8 +206,9 @@ function TarjetaPedidoCadete({
 }
 
 export default function PaginaCadeteria() {
-  const { pedidos, cambiarEstado } = usarPedidos()
+  const { pedidos, cambiarEstado, dbEstado } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
+  const [errorGps, setErrorGps] = useState<string | null>(null)
 
   // Cadetería: solo pedidos delivery listos, en reparto o en preparación
   const pedidosCadeteria = pedidos.filter(
@@ -223,6 +224,7 @@ export default function PaginaCadeteria() {
   useEffect(() => {
     // Si no es el cadete o no hay pedidos en reparto, no rastrear
     if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosEnReparto.length === 0) {
+      setErrorGps(null)
       return
     }
 
@@ -230,12 +232,13 @@ export default function PaginaCadeteria() {
 
     const iniciarRastreo = async () => {
       if (!('geolocation' in navigator)) {
-        console.error('La geolocalización no está soportada en este navegador.')
+        setErrorGps('La geolocalización no está soportada en este navegador.')
         return
       }
 
       watchId = navigator.geolocation.watchPosition(
         async (position) => {
+          setErrorGps(null)
           const coords = {
             latitud: position.coords.latitude,
             longitud: position.coords.longitude,
@@ -256,8 +259,14 @@ export default function PaginaCadeteria() {
         },
         (error) => {
           console.error('Error obteniendo ubicación', error)
+          const mensajes: Record<number, string> = {
+            1: 'Permiso de ubicación denegado. Habilitá el acceso al GPS en la barra del navegador para poder transmitir tu recorrido.',
+            2: 'Ubicación no disponible. Asegurá de tener el GPS activado o de que el emulador esté enviando coordenadas.',
+            3: 'Tiempo de espera agotado al buscar señal GPS. Reintentando...',
+          }
+          setErrorGps(mensajes[error.code] || 'Error al obtener la ubicación.')
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
       )
     }
 
@@ -299,18 +308,62 @@ export default function PaginaCadeteria() {
     <div className={esAdmin ? "min-h-full pb-8" : "min-h-screen bg-chefsy-50"}>
       {esAdmin ? (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-colors">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">🛵 Cadetería</h1>
-            <p className="text-xs text-gray-400 dark:text-slate-400">
-              Pedidos asignados y listos para reparto (Solo Delivery)
-            </p>
+          <div className="flex items-center gap-3.5">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">🛵 Cadetería</h1>
+              <p className="text-xs text-gray-400 dark:text-slate-400">
+                Pedidos asignados y listos para reparto (Solo Delivery)
+              </p>
+            </div>
+            <div className={cn(
+              "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
+              dbEstado === 'conectado'
+                ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
+                : dbEstado === 'desconectado'
+                  ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 animate-pulse"
+                  : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
+            )}>
+              <span className={cn(
+                "h-1.5 w-1.5 rounded-full shrink-0",
+                dbEstado === 'conectado'
+                  ? "bg-emerald-500 animate-pulse"
+                  : dbEstado === 'desconectado'
+                    ? "bg-red-500"
+                    : "bg-slate-400"
+              )} />
+              <span>
+                {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE DE DATOS' : 'CONECTANDO...'}
+              </span>
+            </div>
           </div>
         </div>
       ) : (
         <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
-            <p className="text-xs text-chefsy-200">Solo delivery</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
+              <p className="text-xs text-chefsy-200">Solo delivery</p>
+            </div>
+            <div className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
+              dbEstado === 'conectado'
+                ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40"
+                : dbEstado === 'desconectado'
+                  ? "bg-red-950/40 text-red-400 border-red-900/40 animate-pulse"
+                  : "bg-slate-850/40 text-slate-400 border-slate-700/40"
+            )}>
+              <span className={cn(
+                "h-1.5 w-1.5 rounded-full shrink-0",
+                dbEstado === 'conectado'
+                  ? "bg-emerald-400 animate-pulse"
+                  : dbEstado === 'desconectado'
+                    ? "bg-red-500"
+                    : "bg-slate-400"
+              )} />
+              <span>
+                {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE' : 'CONECTANDO'}
+              </span>
+            </div>
           </div>
           <button
             onClick={cerrarSesion}
@@ -322,6 +375,15 @@ export default function PaginaCadeteria() {
       )}
 
       <main className={esAdmin ? "max-w-xl mx-auto space-y-4" : "max-w-md mx-auto p-4 space-y-4"}>
+        {errorGps && (
+          <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
+            <span className="text-base shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold">Advertencia de Ubicación:</p>
+              <p className="mt-0.5 leading-relaxed">{errorGps}</p>
+            </div>
+          </div>
+        )}
         {!esAdmin && (
           <>
             <div className="bg-gradient-to-r from-chefsy-800 to-chefsy-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden mb-3 animate-[slideIn_0.25s_ease-out]">

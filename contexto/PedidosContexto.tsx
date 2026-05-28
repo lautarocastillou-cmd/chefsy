@@ -14,6 +14,7 @@ import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipo
 import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/datos/productos'
 import { X, CheckCircle2, RotateCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { usarAuth } from '@/contexto/AuthContexto'
 
 // ── Acciones del reducer ──────────────────────────────
 
@@ -27,6 +28,7 @@ type AccionPedidos =
       estado: EstadoPedido;
       cocina_at: string | null;
       listo_at: string | null;
+      reparto_at: string | null;
       entregado_at: string | null;
     }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
@@ -79,6 +81,7 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
                 estado: accion.estado,
                 cocina_at: accion.cocina_at,
                 listo_at: accion.listo_at,
+                reparto_at: accion.reparto_at,
                 entregado_at: accion.entregado_at,
               } 
             : p
@@ -123,6 +126,7 @@ interface ValorContextoPedidos {
   eliminarNotificacion: (id: string) => void
   modoOscuro: boolean
   alternarModoOscuro: () => void
+  dbEstado: 'conectado' | 'desconectado' | 'cargando'
 }
 
 const ContextoPedidos = createContext<ValorContextoPedidos | undefined>(undefined)
@@ -236,6 +240,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   const [estaListo, setEstaListo] = useState(false)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [modoOscuro, setModoOscuro] = useState(false)
+  const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
   
   const prevPedidosRef = useRef<Pedido[]>([])
   const esCambioLocalRef = useRef(false)
@@ -285,8 +290,16 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
       const modsCrud = localStorage.getItem('chefsy-modificadores-v1')
       setModificadores(modsCrud ? JSON.parse(modsCrud) : modificadoresCatalogo)
 
-      // Cargar Pedidos de Supabase
+      // 1.b) Intentar cargar Pedidos desde Supabase
       try {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (!url || !key || url.includes('falta-configurar') || key.includes('falta-configurar')) {
+          setDbEstado('desconectado')
+          setEstaListo(true)
+          return
+        }
+
         const { data: pedidosGuardados, error } = await supabase
           .from('pedidos')
           .select('*')
@@ -294,6 +307,8 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
           .limit(100)
         
         if (error) throw error
+
+        setDbEstado('conectado')
 
         if (pedidosGuardados) {
           // Mapeamos ubicacion_cadete a reparto_at porque usamos la columna existente en Supabase para no romper el esquema
@@ -306,6 +321,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('[Supabase] Error al cargar pedidos:', error)
+        setDbEstado('desconectado')
       } finally {
         setEstaListo(true)
       }
@@ -524,11 +540,89 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     setNotificaciones((prev) => prev.filter((n) => n.id !== id))
   }
 
+  // Alertas de inactividad de pedidos para administradores
+  const { usuarioActivo } = usarAuth()
+  const alertasEnviadasRef = useRef<Record<string, number>>({})
+
+  useEffect(() => {
+    if (usuarioActivo?.rol !== 'admin') return
+
+    const interval = setInterval(() => {
+      const ahora = Date.now()
+
+      estado.pedidos.forEach((pedido) => {
+        const estadoActual = pedido.estado
+        if (!['nuevo', 'en_cocina', 'listo', 'en_reparto'].includes(estadoActual)) return
+
+        let fechaInicio: string | null | undefined = null
+        if (estadoActual === 'nuevo') {
+          fechaInicio = pedido.created_at
+        } else if (estadoActual === 'en_cocina') {
+          fechaInicio = pedido.cocina_at || pedido.created_at
+        } else if (estadoActual === 'listo') {
+          fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
+        } else if (estadoActual === 'en_reparto') {
+          fechaInicio = pedido.reparto_at || pedido.listo_at || pedido.created_at
+        }
+
+        if (!fechaInicio) return
+        const startMs = new Date(fechaInicio).getTime()
+        const transcurridoMs = ahora - startMs
+
+        let limiteMs = 0
+        let repeticionMs: number | null = null
+        let msgEstado = ''
+
+        if (estadoActual === 'nuevo') {
+          limiteMs = 1 * 60 * 1000 // 1 minuto
+          repeticionMs = 1 * 60 * 1000 // Cada 1 minuto
+          msgEstado = 'nuevo'
+        } else if (estadoActual === 'en_cocina') {
+          limiteMs = 45 * 60 * 1000 // 45 minutos
+          repeticionMs = null // Sin repetición
+          msgEstado = 'en cocina'
+        } else if (estadoActual === 'listo') {
+          limiteMs = 10 * 60 * 1000 // 10 minutos
+          repeticionMs = null // Sin repetición
+          msgEstado = 'listo'
+        } else if (estadoActual === 'en_reparto') {
+          limiteMs = 30 * 60 * 1000 // 30 minutos
+          repeticionMs = 2 * 60 * 1000 // Cada 2 minutos
+          msgEstado = 'en reparto'
+        }
+
+        if (transcurridoMs >= limiteMs) {
+          const key = `${pedido.id}_${estadoActual}`
+          const ultimaAlerta = alertasEnviadasRef.current[key]
+
+          let deberiaAlertar = false
+          if (!ultimaAlerta) {
+            deberiaAlertar = true
+          } else if (repeticionMs !== null) {
+            deberiaAlertar = (ahora - ultimaAlerta) >= repeticionMs
+          }
+
+          if (deberiaAlertar) {
+            alertasEnviadasRef.current[key] = ahora
+            const tiempoMinutos = Math.round(transcurridoMs / (60 * 1000))
+            const msg = `⚠️ El pedido de ${pedido.cliente} lleva ${tiempoMinutos} min en estado "${msgEstado}".`
+            
+            agregarNotificacion(msg, 'warning')
+            reproducirSonidoNotificacion()
+          }
+        }
+      })
+    }, 10000) // Verificar cada 10 segundos
+
+    return () => clearInterval(interval)
+  }, [estado.pedidos, usuarioActivo, agregarNotificacion])
+
   const valor: ValorContextoPedidos = {
     pedidos: estado.pedidos, categorias, productos, modificadores, estaListo,
     agregarPedido, editarPedido, cambiarEstado, marcarPagoConfirmado, eliminarPedido,
     actualizarCategorias, actualizarProductos, actualizarModificadores,
     notificaciones, eliminarNotificacion, modoOscuro, alternarModoOscuro,
+    dbEstado,
   }
 
   return (

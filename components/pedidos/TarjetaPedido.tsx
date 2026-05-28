@@ -49,6 +49,42 @@ export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarj
     setNotaTemporal(pedido.observaciones || '')
   }, [pedido.observaciones])
 
+  const [esAtrasado, setEsAtrasado] = useState(false)
+
+  useEffect(() => {
+    const calcularAtraso = () => {
+      const ahora = Date.now()
+      let fechaInicio: string | null | undefined = null
+      let limiteMs = 0
+
+      if (pedido.estado === 'nuevo') {
+        fechaInicio = pedido.created_at
+        limiteMs = 1 * 60 * 1000 // 1 min
+      } else if (pedido.estado === 'en_cocina') {
+        fechaInicio = pedido.cocina_at || pedido.created_at
+        limiteMs = 45 * 60 * 1000 // 45 min
+      } else if (pedido.estado === 'listo') {
+        fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
+        limiteMs = 10 * 60 * 1000 // 10 min
+      } else if (pedido.estado === 'en_reparto') {
+        fechaInicio = pedido.reparto_at || pedido.listo_at || pedido.created_at
+        limiteMs = 30 * 60 * 1000 // 30 min
+      }
+
+      if (!fechaInicio) {
+        setEsAtrasado(false)
+        return
+      }
+
+      const startMs = new Date(fechaInicio).getTime()
+      setEsAtrasado(ahora - startMs >= limiteMs)
+    }
+
+    calcularAtraso()
+    const interval = setInterval(calcularAtraso, 10000) // Recalcular cada 10 segundos
+    return () => clearInterval(interval)
+  }, [pedido])
+
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
 
   const manejarAvance = () => {
@@ -89,7 +125,8 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
   return (
     <div className={cn(
       "bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
-      bordesPorEstado[pedido.estado]
+      bordesPorEstado[pedido.estado],
+      esAtrasado && "border-amber-300 dark:border-amber-900 bg-amber-50/20 dark:bg-amber-950/10 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
     )}>
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
@@ -143,8 +180,19 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       </div>
 
       {/* Línea de Tiempos del Pedido */}
-      <div className="bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100/50 dark:border-slate-800/40 rounded-xl p-2 flex items-center justify-between gap-2 transition-all">
-        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tiempos</span>
+      <div className={cn(
+        "bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100/50 dark:border-slate-800/40 rounded-xl p-2 flex items-center justify-between gap-2 transition-all",
+        esAtrasado && "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
+      )}>
+        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+          {esAtrasado && (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+          )}
+          Tiempos
+        </span>
         <TimerPedido pedido={pedido} />
       </div>
 

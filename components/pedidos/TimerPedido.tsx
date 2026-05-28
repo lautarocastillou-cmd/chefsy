@@ -32,15 +32,34 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
     }
   }, [pedido.estado])
 
-  // Obtener fechas base
-  const fechaCreacion = pedido.created_at
-    ? new Date(pedido.created_at)
-    : parsearFechaHora(pedido.fecha, pedido.hora)
+  // Función de parseo segura compatible con todos los navegadores (incluso Safari de iOS)
+  const parsearFechaSegura = (val: any): Date | null => {
+    if (!val) return null
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val
+    
+    let d = new Date(val)
+    if (!isNaN(d.getTime())) return d
 
-  const fechaCocina = pedido.cocina_at ? new Date(pedido.cocina_at) : null
-  const fechaListo = pedido.listo_at ? new Date(pedido.listo_at) : null
-  const fechaReparto = pedido.reparto_at ? new Date(pedido.reparto_at) : null
-  const fechaEntregado = pedido.entregado_at ? new Date(pedido.entregado_at) : null
+    if (typeof val === 'string') {
+      // Reemplazar espacios por T para compatibilidad estricta
+      const normalizada = val.replace(' ', 'T')
+      d = new Date(normalizada)
+      if (!isNaN(d.getTime())) return d
+
+      // Intentar quitando milisegundos y zonas horarias
+      const limpia = normalizada.split('.')[0]
+      d = new Date(limpia)
+      if (!isNaN(d.getTime())) return d
+    }
+    return null
+  }
+
+  // Obtener fechas base usando el parser seguro
+  const fechaCreacion = parsearFechaSegura(pedido.created_at) || parsearFechaHora(pedido.fecha, pedido.hora)
+  const fechaCocina = parsearFechaSegura(pedido.cocina_at)
+  const fechaListo = parsearFechaSegura(pedido.listo_at)
+  const fechaReparto = parsearFechaSegura(pedido.reparto_at)
+  const fechaEntregado = parsearFechaSegura(pedido.entregado_at)
 
   // ── 1. Temporizador: NUEVO ──────────────────────────────
   // Siempre visible.
@@ -53,7 +72,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
     // Si cambió de estado pero no tiene timestamp, se congela en la creación
     finNuevo = fechaCreacion
   }
-  const segNuevo = calcularDiferenciaSegundos(fechaCreacion, finNuevo)
+  const segNuevo = Math.max(0, calcularDiferenciaSegundos(fechaCreacion, finNuevo))
   const estaNuevoTicking = !fechaCocina && !fechaListo && !fechaEntregado && pedido.estado === 'nuevo'
 
   // ── 2. Temporizador: COCINA ──────────────────────────────
@@ -63,14 +82,14 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
   let segCocina = 0
   let estaCocinaTicking = false
   if (showCocina) {
-    const inicioCocina = fechaCocina || ahora
+    const inicioCocina = fechaCocina || fechaCreacion
     let finCocina = ahora
     if (fechaListo) finCocina = fechaListo
     else if (fechaEntregado) finCocina = fechaEntregado
     else if (pedido.estado !== 'en_cocina') {
       finCocina = inicioCocina
     }
-    segCocina = calcularDiferenciaSegundos(inicioCocina, finCocina)
+    segCocina = Math.max(0, calcularDiferenciaSegundos(inicioCocina, finCocina))
     estaCocinaTicking = !fechaListo && !fechaEntregado && pedido.estado === 'en_cocina'
   }
 
@@ -80,14 +99,14 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
   let segListo = 0
   let estaListoTicking = false
   if (showListo) {
-    const inicioListo = fechaListo || ahora
+    const inicioListo = fechaListo || fechaCocina || fechaCreacion
     let finListo = ahora
     if (fechaReparto) finListo = fechaReparto
     else if (fechaEntregado) finListo = fechaEntregado
     else if (pedido.estado !== 'listo') {
       finListo = inicioListo
     }
-    segListo = calcularDiferenciaSegundos(inicioListo, finListo)
+    segListo = Math.max(0, calcularDiferenciaSegundos(inicioListo, finListo))
     estaListoTicking = !fechaReparto && !fechaEntregado && pedido.estado === 'listo'
   }
 
@@ -97,13 +116,13 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
   let segReparto = 0
   let estaRepartoTicking = false
   if (showReparto) {
-    const inicioReparto = fechaReparto || ahora
+    const inicioReparto = fechaReparto || fechaListo || fechaCocina || fechaCreacion
     let finReparto = ahora
     if (fechaEntregado) finReparto = fechaEntregado
     else if (pedido.estado !== 'en_reparto') {
       finReparto = inicioReparto
     }
-    segReparto = calcularDiferenciaSegundos(inicioReparto, finReparto)
+    segReparto = Math.max(0, calcularDiferenciaSegundos(inicioReparto, finReparto))
     estaRepartoTicking = !fechaEntregado && pedido.estado === 'en_reparto'
   }
 
