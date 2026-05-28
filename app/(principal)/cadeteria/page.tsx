@@ -381,7 +381,7 @@ export default function PaginaCadeteria() {
           </div>
         </div>
       ) : (
-        <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+        <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
@@ -434,8 +434,10 @@ export default function PaginaCadeteria() {
                 <Bike size={120} />
               </div>
               <div className="relative z-10">
-                <h2 className="text-lg font-bold">¡Hola, cadete! 👋</h2>
-                <p className="text-xs text-chefsy-100 mt-1">¿Listo para salir a la calle? Repartí con cuidado.</p>
+                <h2 className="text-lg font-bold">
+                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : usuarioActivo.usuario === 'cufa' ? '¡Hola, Cufa! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
+                </h2>
+                <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
               </div>
             </div>
 

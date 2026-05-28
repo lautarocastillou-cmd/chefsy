@@ -111,7 +111,44 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         </div>
 
         {itemTienda && (
-          <div className="pt-3 border-t border-chefsy-700/50 mt-4">
+          <div className="pt-3 border-t border-chefsy-700/50 mt-4 space-y-1.5">
+            {/* Tarjeta de acceso a Malú Clothing */}
+            <a
+              href="/malu"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => onCloseMobile?.()}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group"
+              style={{
+                background: 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.06) 100%)',
+                border: '1px solid rgba(212,175,55,0.18)',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLAnchorElement).style.background = 'linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.1) 100%)'
+                ;(e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(212,175,55,0.35)'
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLAnchorElement).style.background = 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.06) 100%)'
+                ;(e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(212,175,55,0.18)'
+              }}
+            >
+              <img
+                src="/malu-logo.png"
+                alt="Malú"
+                className="w-7 h-7 rounded-full object-cover shrink-0 transition-transform duration-200 group-hover:scale-105"
+                style={{ border: '1px solid rgba(212,175,55,0.3)' }}
+              />
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-xs font-bold leading-tight" style={{ color: '#d4af37' }}>
+                  Malú Clothing
+                </span>
+                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'rgba(212,175,55,0.5)' }}>
+                  Gestión de deudoras ↗
+                </span>
+              </div>
+            </a>
+
+            {/* Link Tienda */}
             <Link
               href={itemTienda.href}
               onClick={() => onCloseMobile?.()}

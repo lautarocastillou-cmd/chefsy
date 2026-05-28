@@ -85,19 +85,20 @@ export async function POST(request: Request) {
       }
 
       case 'actualizar_estado': {
-        const { id, estado, cocina_at, listo_at, entregado_at } = body
+        const { id, estado, cocina_at, listo_at, reparto_at, entregado_at } = body
         if (!id || !estado) {
           return NextResponse.json({ error: 'Datos incompletos para actualizar_estado.' }, { status: 400 })
         }
 
-        // Un cadete solo puede cambiar el estado a "entregado"
-        if (rol === 'cadete' && estado !== 'entregado') {
+        // Un cadete solo puede cambiar el estado a "en_reparto" o "entregado"
+        if (rol === 'cadete' && estado !== 'en_reparto' && estado !== 'entregado') {
           return NextResponse.json({ error: 'Operación no permitida para el rol de cadete.' }, { status: 403 })
         }
 
         const updatePayload: any = { estado }
         if (cocina_at !== undefined) updatePayload.cocina_at = cocina_at
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
+        if (reparto_at !== undefined) updatePayload.reparto_at = reparto_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
 
         const { error } = await supabaseAdmin
