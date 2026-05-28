@@ -245,6 +245,12 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   const prevPedidosRef = useRef<Pedido[]>([])
   const esCambioLocalRef = useRef(false)
 
+  // Referencias para el catálogo para evitar closures obsoletos en llamadas asíncronas
+  const categoriasRef = useRef<CategoriaCatalogo[]>([])
+  const productosRef = useRef<ProductoCatalogo[]>([])
+  const modificadoresRef = useRef<ModificadorCatalogo[]>([])
+  const esCambioCatalogoLocalRef = useRef(false)
+
   // Cargar tema
   useEffect(() => {
     const temaGuardado = localStorage.getItem('chefsy-tema')
@@ -271,30 +277,81 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     })
   }
 
-  // 1) Al montar: Cargar Catálogo de LocalStorage y Pedidos de Supabase
+  // 1) Al montar: Cargar Catálogo (Supabase con fallback de LocalStorage) y Pedidos
   useEffect(() => {
     async function cargarInicial() {
-      // Cargar Catálogo (Categorías, Productos, Modificadores) de localStorage temporalmente
-      // En una FASE 2, estos también deberían ir a Supabase
+      // 1.a) Primero cargar fallbacks locales desde localStorage o estáticos
       const catsCrud = localStorage.getItem('chefsy-categorias-v1')
       let catsActuales = catsCrud ? JSON.parse(catsCrud) : categoriasCatalogo
       if (!catsActuales.some((c: any) => c.id === 'promos')) {
         catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
       }
       setCategorias(catsActuales)
+      categoriasRef.current = catsActuales
 
       const prodsCrud = localStorage.getItem('chefsy-productos-v1')
       let prodsActuales = prodsCrud ? JSON.parse(prodsCrud) : productosCatalogo
       setProductos(prodsActuales)
+      productosRef.current = prodsActuales
 
       const modsCrud = localStorage.getItem('chefsy-modificadores-v1')
-      setModificadores(modsCrud ? JSON.parse(modsCrud) : modificadoresCatalogo)
+      let modsActuales = modsCrud ? JSON.parse(modsCrud) : modificadoresCatalogo
+      setModificadores(modsActuales)
+      modificadoresRef.current = modsActuales
 
-      // 1.b) Intentar cargar Pedidos desde Supabase
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const credencialesValidas = url && key && !url.includes('falta-configurar') && !key.includes('falta-configurar')
+
+      // 1.b) Intentar cargar catálogo de Supabase si las credenciales existen
+      if (credencialesValidas) {
+        try {
+          const { data: catalogoGuardado, error: catError } = await supabase
+            .from('catalogo')
+            .select('*')
+            .eq('id', 'principal')
+            .single()
+
+          if (catError && catError.code === 'PGRST116') {
+            // El catálogo principal no existe, crearlo con valores iniciales
+            const { error: insError } = await supabase
+              .from('catalogo')
+              .insert({
+                id: 'principal',
+                categorias: catsActuales,
+                productos: prodsActuales,
+                modificadores: modsActuales
+              })
+            if (insError) {
+              console.error('[Supabase] Error al inicializar catálogo:', insError)
+            }
+          } else if (catError) {
+            throw catError
+          } else if (catalogoGuardado) {
+            const cats = catalogoGuardado.categorias || []
+            const prods = catalogoGuardado.productos || []
+            const mods = catalogoGuardado.modificadores || []
+
+            setCategorias(cats)
+            categoriasRef.current = cats
+            localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
+
+            setProductos(prods)
+            productosRef.current = prods
+            localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
+
+            setModificadores(mods)
+            modificadoresRef.current = mods
+            localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
+          }
+        } catch (err) {
+          console.error('[Supabase] Error al cargar catálogo remoto:', err)
+        }
+      }
+
+      // 1.c) Intentar cargar Pedidos desde Supabase
       try {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        if (!url || !key || url.includes('falta-configurar') || key.includes('falta-configurar')) {
+        if (!credencialesValidas) {
           setDbEstado('desconectado')
           setEstaListo(true)
           return
@@ -361,16 +418,69 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     }
   }, [estaListo])
 
-  // 3) Sincronizar Catálogo entre pestañas
+  // 3) Sincronizar Catálogo local entre pestañas (Storage Event)
   useEffect(() => {
     if (!estaListo) return
     const sincronizarTabs = (evento: StorageEvent) => {
-      if (evento.key === 'chefsy-categorias-v1' && evento.newValue) setCategorias(JSON.parse(evento.newValue))
-      if (evento.key === 'chefsy-productos-v1' && evento.newValue) setProductos(JSON.parse(evento.newValue))
-      if (evento.key === 'chefsy-modificadores-v1' && evento.newValue) setModificadores(JSON.parse(evento.newValue))
+      if (evento.key === 'chefsy-categorias-v1' && evento.newValue) {
+        const val = JSON.parse(evento.newValue)
+        setCategorias(val)
+        categoriasRef.current = val
+      }
+      if (evento.key === 'chefsy-productos-v1' && evento.newValue) {
+        const val = JSON.parse(evento.newValue)
+        setProductos(val)
+        productosRef.current = val
+      }
+      if (evento.key === 'chefsy-modificadores-v1' && evento.newValue) {
+        const val = JSON.parse(evento.newValue)
+        setModificadores(val)
+        modificadoresRef.current = val
+      }
     }
     window.addEventListener('storage', sincronizarTabs)
     return () => window.removeEventListener('storage', sincronizarTabs)
+  }, [estaListo])
+
+  // 3.b) Suscripción Realtime para la tabla de catálogo (Supabase)
+  useEffect(() => {
+    if (!estaListo) return
+
+    const channel = supabase
+      .channel('tabla-catalogo')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'catalogo' },
+        (payload) => {
+          if (esCambioCatalogoLocalRef.current) return
+
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const catalogoNuevo = payload.new as any
+            if (catalogoNuevo && catalogoNuevo.id === 'principal') {
+              const cats = catalogoNuevo.categorias || []
+              const prods = catalogoNuevo.productos || []
+              const mods = catalogoNuevo.modificadores || []
+
+              setCategorias(cats)
+              categoriasRef.current = cats
+              localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
+
+              setProductos(prods)
+              productosRef.current = prods
+              localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
+
+              setModificadores(mods)
+              modificadoresRef.current = mods
+              localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [estaListo])
 
   // 4) Notificaciones de cambios
@@ -515,19 +625,48 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
     }
   }
 
+  // Guardar catálogo completo en Supabase
+  const sincronizarCatalogoCompleto = async () => {
+    try {
+      esCambioCatalogoLocalRef.current = true
+      const { error } = await supabase
+        .from('catalogo')
+        .upsert({
+          id: 'principal',
+          categorias: categoriasRef.current,
+          productos: productosRef.current,
+          modificadores: modificadoresRef.current,
+          updated_at: new Date().toISOString()
+        })
+      if (error) throw error
+    } catch (e) {
+      console.error('[Supabase] Error al sincronizar catálogo remoto:', e)
+    } finally {
+      setTimeout(() => {
+        esCambioCatalogoLocalRef.current = false
+      }, 500)
+    }
+  }
+
   const actualizarCategorias = (nuevasCategorias: CategoriaCatalogo[]) => {
     setCategorias(nuevasCategorias)
+    categoriasRef.current = nuevasCategorias
     localStorage.setItem('chefsy-categorias-v1', JSON.stringify(nuevasCategorias))
+    sincronizarCatalogoCompleto()
   }
 
   const actualizarProductos = (nuevosProductos: ProductoCatalogo[]) => {
     setProductos(nuevosProductos)
+    productosRef.current = nuevosProductos
     localStorage.setItem('chefsy-productos-v1', JSON.stringify(nuevosProductos))
+    sincronizarCatalogoCompleto()
   }
 
   const actualizarModificadores = (nuevosModificadores: ModificadorCatalogo[]) => {
     setModificadores(nuevosModificadores)
+    modificadoresRef.current = nuevosModificadores
     localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(nuevosModificadores))
+    sincronizarCatalogoCompleto()
   }
 
   const agregarNotificacion = (mensaje: string, tipo: 'info' | 'success' | 'warning' = 'success', accion?: { etiqueta: string; alHacerClick: () => void }) => {
