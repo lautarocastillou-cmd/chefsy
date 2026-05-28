@@ -2,17 +2,17 @@
 
 // ─────────────────────────────────────────────────────
 // app/(principal)/pedidos/page.tsx
-// Lista completa de pedidos con filtros por estado.
+// Lista completa de pedidos con filtros por estado y fecha.
 // ─────────────────────────────────────────────────────
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
-import { EstadoPedido, TipoEntrega } from '@/tipos'
+import { EstadoPedido, TipoEntrega, Pedido } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
-import { Plus, X } from 'lucide-react'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { Plus, X, Calendar } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 
 // Opciones del filtro de estado
@@ -27,14 +27,44 @@ const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
 ]
 
 export default function PaginaPedidos() {
-  const { pedidos } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha } = usarPedidos()
+  
+  // Vistas: activos (no archivados, tiempo real) o historial (por fecha, incluye archivados)
+  const [vista, setVista] = useState<'activos' | 'historial'>('activos')
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
+  const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+
   const [filtroActivo, setFiltroActivo] = useState<EstadoPedido | 'todos'>('todos')
   const [filtroEntrega, setFiltroEntrega] = useState<TipoEntrega | 'todos'>('todos')
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
 
-  const pedidosFiltrados = pedidos.filter((p) => {
+  // Cargar pedidos del día seleccionado cuando corresponda (sincronizado con cambios en tiempo real)
+  useEffect(() => {
+    if (vista !== 'historial') return
+    let activo = true
+    async function cargar() {
+      setCargandoHistorial(true)
+      const data = await obtenerPedidosPorFecha(fechaSeleccionada)
+      if (activo) {
+        setPedidosHistoricos(data)
+        setCargandoHistorial(false)
+      }
+    }
+    cargar()
+    return () => {
+      activo = false
+    }
+  }, [fechaSeleccionada, vista, obtenerPedidosPorFecha, pedidos])
+
+  // Determinar el conjunto base de pedidos según la pestaña activa
+  const pedidosBase = vista === 'activos' ? pedidos : pedidosHistoricos
+
+  const pedidosFiltrados = pedidosBase.filter((p) => {
+    // Si estamos en activos, por defecto el filtro 'todos' excluye los cancelados.
+    // Si estamos en historial, el filtro 'todos' incluye absolutamente todo.
     const coincideEstado = filtroActivo === 'todos' 
-      ? p.estado !== 'cancelado'
+      ? (vista === 'activos' ? p.estado !== 'cancelado' : true)
       : p.estado === filtroActivo
     const coincideEntrega = filtroEntrega === 'todos' || p.tipoEntrega === filtroEntrega
     return coincideEstado && coincideEntrega
@@ -43,19 +73,65 @@ export default function PaginaPedidos() {
   return (
     <div className="space-y-5">
 
-      {/* ── Barra superior ── */}
+      {/* ── Selector de Vista (Activos vs Historial) ── */}
+      <div className="flex items-center gap-2 border-b border-gray-150 dark:border-slate-800 pb-3 flex-wrap">
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setVista('activos')
+              setFiltroActivo('todos')
+            }}
+            className={cn(
+              "pb-2.5 px-4 font-semibold text-sm transition-all border-b-2 -mb-[13px] cursor-pointer",
+              vista === 'activos'
+                ? "border-chefsy text-chefsy dark:text-chefsy-400"
+                : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+            )}
+          >
+            ⚡ Pedidos Activos
+          </button>
+          <button
+            onClick={() => {
+              setVista('historial')
+              setFiltroActivo('todos')
+            }}
+            className={cn(
+              "pb-2.5 px-4 font-semibold text-sm transition-all border-b-2 -mb-[13px] cursor-pointer",
+              vista === 'historial'
+                ? "border-chefsy text-chefsy dark:text-chefsy-400"
+                : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+            )}
+          >
+            📅 Historial por Fecha
+          </button>
+        </div>
+
+        {vista === 'historial' && (
+          <div className="sm:ml-auto flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-850 px-3 py-1.5 rounded-2xl shadow-sm animate-in fade-in duration-200">
+            <Calendar className="w-4 h-4 text-chefsy dark:text-chefsy-400" />
+            <input
+              type="date"
+              value={fechaSeleccionada}
+              onChange={(e) => setFechaSeleccionada(e.target.value)}
+              className="bg-transparent text-sm font-semibold text-gray-700 dark:text-slate-200 border-none outline-none focus:ring-0 p-0 w-32 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Barra superior (Filtros de Estado y Entrega) ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Filtros */}
+        {/* Filtros de Estado */}
         <div className="flex flex-wrap gap-1.5">
           {opcionesFiltro.map((opcion) => (
             <button
               key={opcion.valor}
               onClick={() => setFiltroActivo(opcion.valor)}
               className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium',
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer',
                 filtroActivo === opcion.valor
                   ? 'bg-chefsy text-white'
-                  : 'bg-white border border-chefsy-200 text-gray-600 hover:bg-chefsy-50'
+                  : 'bg-white dark:bg-slate-900 border border-chefsy-200/60 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-chefsy-50 dark:hover:bg-slate-850'
               )}
             >
               {opcion.etiqueta}
@@ -63,14 +139,15 @@ export default function PaginaPedidos() {
           ))}
         </div>
 
+        {/* Filtros de Entrega */}
         <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
           <button
             onClick={() => setFiltroEntrega('todos')}
             className={cn(
-              'px-3 py-1.5 rounded-md text-xs font-medium border',
+              'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer',
               filtroEntrega === 'todos'
-                ? 'bg-gray-800 text-white border-gray-800'
-                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-850'
             )}
           >
             Todos los tipos
@@ -80,33 +157,42 @@ export default function PaginaPedidos() {
               key={opcion.valor}
               onClick={() => setFiltroEntrega(opcion.valor)}
               className={cn(
-                'px-3 py-1.5 rounded-md text-xs font-medium border',
+                'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer',
                 filtroEntrega === opcion.valor
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-700'
+                  : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-850'
               )}
             >
               {opcion.icono} {opcion.etiqueta}
             </button>
           ))}
         </div>
-
-
       </div>
 
-      {/* ── Contador ── */}
-      <p className="text-sm text-gray-400">
-        {pedidosFiltrados.length}{' '}
-        {pedidosFiltrados.length === 1 ? 'pedido' : 'pedidos'}
-      </p>
+      {/* ── Contador e info de modo ── */}
+      <div className="flex justify-between items-center text-sm text-gray-400">
+        <p>
+          {pedidosFiltrados.length}{' '}
+          {pedidosFiltrados.length === 1 ? 'pedido' : 'pedidos'}
+        </p>
+        {vista === 'historial' && (
+          <p className="text-xs text-chefsy dark:text-chefsy-400 font-medium">
+            Visualizando pedidos del {new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-AR')}
+          </p>
+        )}
+      </div>
 
       {/* ── Lista de pedidos ── */}
-      {pedidosFiltrados.length === 0 ? (
+      {vista === 'historial' && cargandoHistorial ? (
+        <div className="text-center py-16 text-gray-400 text-sm animate-pulse">
+          Cargando historial de pedidos...
+        </div>
+      ) : pedidosFiltrados.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">
-          No hay pedidos en este estado.
+          No hay pedidos en este estado para mostrar.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5 animate-in fade-in duration-200">
           {pedidosFiltrados.map((pedido) => (
             <TarjetaPedido key={pedido.id} pedido={pedido} />
           ))}
@@ -136,7 +222,7 @@ export default function PaginaPedidos() {
               </div>
               <button
                 onClick={() => setModalNuevoPedidoAbierto(false)}
-                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
               >
                 <X size={20} />
               </button>

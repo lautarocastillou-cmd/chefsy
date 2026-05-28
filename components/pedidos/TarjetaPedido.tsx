@@ -5,6 +5,7 @@ import { formatearPrecio } from '@/lib/utils'
 import {
   obtenerEtiquetaAccionEstado,
   obtenerSiguienteEstado,
+  LISTA_CADETES,
 } from '@/lib/entrega'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
@@ -37,7 +38,7 @@ interface PropsTarjetaPedido {
 }
 
 export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
-  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado } = usarPedidos()
+  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
@@ -124,19 +125,19 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
 
   return (
     <div className={cn(
-      "bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
+      "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
       bordesPorEstado[pedido.estado],
       esAtrasado && "border-amber-300 dark:border-amber-900 bg-amber-50/20 dark:bg-amber-950/10 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
     )}>
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h4 className="font-extrabold text-slate-800 text-sm truncate leading-snug" title={pedido.cliente}>
+          <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-snug" title={pedido.cliente}>
             {pedido.cliente}
           </h4>
-          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 font-medium">
+          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 dark:text-[#a8a8a8] font-medium">
             <span>{pedido.telefono}</span>
-            <span className="text-slate-300">•</span>
+            <span className="text-slate-300 dark:text-[#686868]">•</span>
             <span>{pedido.hora}</span>
           </div>
         </div>
@@ -145,7 +146,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
           <div className="flex items-center gap-1">
             <button 
               onClick={() => setEditandoPedidoCompleto(true)}
-              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
               title="Editar Pedido"
             >
               <Pencil size={11} />
@@ -156,24 +157,24 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
                   eliminarPedido(pedido.id)
                 }
               }}
-              className="text-red-400 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md border border-red-100 dark:border-red-900 bg-white dark:bg-slate-900 shadow-sm"
+              className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all p-1 rounded-md border border-red-100 dark:border-red-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
               title="Eliminar Pedido Definitivamente"
             >
               <Trash2 size={11} />
             </button>
             <button 
               onClick={copiarParaWhatsApp}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
               title="Copiar para WhatsApp"
             >
-              {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
+              {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} className="dark:text-[#a8a8a8]" />}
             </button>
             <button 
               onClick={imprimirComanda}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-all p-1 rounded-md border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
               title="Imprimir Comanda"
             >
-              <Printer size={11} />
+              <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
           </div>
         </div>
@@ -181,10 +182,10 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
 
       {/* Línea de Tiempos del Pedido */}
       <div className={cn(
-        "bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100/50 dark:border-slate-800/40 rounded-xl p-2 flex items-center justify-between gap-2 transition-all",
+        "bg-slate-50/70 dark:bg-[#2f2f2f] border border-slate-100/50 dark:border-[#3d3d3d] rounded-xl p-2 flex items-center justify-between gap-2 transition-all",
         esAtrasado && "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
       )}>
-        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+        <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#686868] tracking-wider flex items-center gap-1.5">
           {esAtrasado && (
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -200,14 +201,14 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       <InfoEntregaPedido pedido={pedido} />
 
       {/* Lista de productos (muy compacta) */}
-      <div className="border-t border-slate-100 pt-2 space-y-0.5">
+      <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 space-y-0.5">
         {pedido.productos.map((producto) => (
           <div key={producto.id} className="flex justify-between text-xs py-0.5">
-            <span className="text-gray-600 font-medium truncate max-w-[200px]" title={`${producto.cantidad}x ${producto.nombre}`}>
-              <span className="font-bold text-chefsy-700 mr-1">{producto.cantidad}×</span> 
+            <span className="text-gray-600 dark:text-[#a8a8a8] font-medium truncate max-w-[200px]" title={`${producto.cantidad}x ${producto.nombre}`}>
+              <span className="font-bold text-chefsy-700 dark:text-chefsy-300 mr-1">{producto.cantidad}×</span> 
               {producto.nombre}
             </span>
-            <span className="text-gray-400 font-mono shrink-0 ml-2">
+            <span className="text-gray-400 dark:text-[#686868] font-mono shrink-0 ml-2">
               {formatearPrecio(producto.precio * producto.cantidad)}
             </span>
           </div>
@@ -215,21 +216,42 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       </div>
 
       {/* Resumen de Costos y Pago (una sola línea con selector interactivo) */}
-      <div className="border-t border-slate-100 pt-2 flex items-center justify-between gap-2 text-xs">
+      <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 flex items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-1.5 text-gray-500">
           <select
             value={pedido.metodoPago}
             onChange={(e) => {
               const nuevoMetodo = e.target.value as any
-              editarPedido({ ...pedido, metodoPago: nuevoMetodo })
+              cambiarMetodoPago(pedido.id, nuevoMetodo)
             }}
             disabled={soloLectura}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
+            className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
           >
             <option value="efectivo">💵 Efectivo</option>
             <option value="tarjeta">💳 Tarjeta</option>
             <option value="transferencia">📱 Transf.</option>
           </select>
+          {pedido.tipoEntrega === 'delivery' && (
+            <select
+              value={pedido.cadete_id || ''}
+              onChange={(e) => {
+                const selectedId = e.target.value
+                const cad = LISTA_CADETES.find(c => c.id === selectedId)
+                asignarCadete(
+                  pedido.id,
+                  selectedId || null,
+                  cad ? cad.nombre : null
+                )
+              }}
+              disabled={soloLectura}
+              className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
+            >
+              <option value="">🛵 Sin Cadete</option>
+              {LISTA_CADETES.map(c => (
+                <option key={c.id} value={c.id}>🛵 {c.nombre}</option>
+              ))}
+            </select>
+          )}
           {pedido.metodoPago === 'transferencia' && !soloLectura && (
             <div className="flex items-center gap-1.5 ml-1">
               <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">¿Impactó?</span>
@@ -265,19 +287,19 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
           )}
         </div>
         <div className="text-right shrink-0">
-          <span className="text-[10px] text-gray-400 mr-1.5 font-normal">Total</span>
-          <span className="font-bold text-gray-900 text-sm">{formatearPrecio(pedido.total)}</span>
+          <span className="text-[10px] text-gray-400 dark:text-[#686868] mr-1.5 font-normal">Total</span>
+          <span className="font-bold text-gray-900 dark:text-[#e6e6e6] text-sm">{formatearPrecio(pedido.total)}</span>
         </div>
       </div>
 
       {/* Editor de Notas / Observaciones inline */}
       {editandoNota ? (
-        <div className="flex flex-col gap-1.5 border border-slate-200 bg-slate-50 rounded-lg p-2 animate-[slideIn_0.15s_ease-out]">
+        <div className="flex flex-col gap-1.5 border border-slate-200 dark:border-[#3d3d3d] bg-slate-50 dark:bg-[#2f2f2f] rounded-lg p-2 animate-[slideIn_0.15s_ease-out]">
           <textarea
             value={notaTemporal}
             onChange={(e) => setNotaTemporal(e.target.value)}
             placeholder="Detalles del pago, débito, mitad/mitad, etc..."
-            className="w-full text-xs p-1.5 border border-slate-200 rounded focus:outline-none focus:border-chefsy text-slate-700 bg-white"
+            className="w-full text-xs p-1.5 border border-slate-200 dark:border-[#3d3d3d] rounded focus:outline-none focus:border-chefsy text-slate-700 dark:text-[#e6e6e6] bg-white dark:bg-[#2f2f2f]"
             rows={2}
             autoFocus
           />
@@ -312,15 +334,15 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               }
             }}
             className={cn(
-              "text-[11px] leading-relaxed text-amber-800 bg-amber-50/70 border border-amber-100/50 rounded-md px-2 py-1.5 flex items-start gap-1 relative group",
-              !soloLectura && "cursor-pointer hover:bg-amber-100/50 transition-colors"
+              "text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100/50 dark:border-amber-800/40 rounded-md px-2 py-1.5 flex items-start gap-1 relative group",
+              !soloLectura && "cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-950/50 transition-colors"
             )}
             title={!soloLectura ? "Haz clic para editar la nota" : undefined}
           >
             <span className="shrink-0">💬</span>
             <p className="flex-1 pr-8">{pedido.observaciones}</p>
             {!soloLectura && (
-              <span className="text-[9px] text-amber-600 underline opacity-0 group-hover:opacity-100 absolute right-2 top-1.5 transition-opacity duration-150">
+              <span className="text-[9px] text-amber-600 dark:text-amber-400 underline opacity-0 group-hover:opacity-100 absolute right-2 top-1.5 transition-opacity duration-150">
                 Editar
               </span>
             )}
@@ -389,7 +411,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
 
       {/* Botones de acción */}
       {!soloLectura && !esFinal && (
-        <div className="flex gap-1.5 border-t border-slate-100 pt-2">
+        <div className="flex gap-1.5 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
           {siguienteEstado ? (
             <>
               <button
@@ -400,7 +422,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               </button>
               <button
                 onClick={manejarCancelacion}
-                className="px-2.5 py-1.5 border border-red-100 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 hover:border-red-200 transition-colors shrink-0"
+                className="px-2.5 py-1.5 border border-red-100 dark:border-red-900/50 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition-colors shrink-0"
               >
                 Cancelar
               </button>
@@ -408,7 +430,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
           ) : (
             <button
               onClick={manejarCancelacion}
-              className="w-full px-3 py-1.5 border border-red-100 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 transition-colors"
+              className="w-full px-3 py-1.5 border border-red-100 dark:border-red-900/50 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
             >
               Cancelar Pedido
             </button>

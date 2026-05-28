@@ -115,6 +115,8 @@ interface ValorContextoPedidosInterno {
   editarPedido: (pedido: Pedido) => void
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
+  asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
+  cambiarMetodoPago: (id: string, metodoPago: string) => void
   eliminarPedido: (id: string) => void
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>
@@ -469,6 +471,43 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
+  const asignarCadete = async (id: string, cadete_id: string | null, cadete_nombre: string | null) => {
+    esCambioLocalRef.current = true
+    const pedido = estado.pedidos.find((p) => p.id === id)
+    if (pedido) {
+      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, cadete_id, cadete_nombre } })
+      try {
+        await enviarAccionPedido({
+          accion: 'asignar_cadete',
+          id,
+          cadete_id,
+          cadete_nombre
+        })
+      } catch (e) {
+        console.error('[Servidor/Supabase] Error al asignar cadete', e)
+        agregarNotificacion('Error al asignar el cadete en el servidor.', 'warning')
+      }
+    }
+  }
+
+  const cambiarMetodoPago = async (id: string, metodoPago: string) => {
+    esCambioLocalRef.current = true
+    const pedido = estado.pedidos.find((p) => p.id === id)
+    if (pedido) {
+      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, metodoPago: metodoPago as any } })
+      try {
+        await enviarAccionPedido({
+          accion: 'cambiar_metodo_pago',
+          id,
+          metodoPago
+        })
+      } catch (e) {
+        console.error('[Servidor/Supabase] Error al cambiar método de pago', e)
+        agregarNotificacion('Error al actualizar el método de pago en el servidor.', 'warning')
+      }
+    }
+  }
+
   // 5) Finalizar Turno (Archivar pedidos activos)
   const finalizarTurno = async () => {
     const idsActivos = estado.pedidos.map((p) => p.id)
@@ -609,6 +648,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         editarPedido,
         cambiarEstado,
         marcarPagoConfirmado,
+        asignarCadete,
+        cambiarMetodoPago,
         eliminarPedido,
         dbEstado,
         finalizarTurno,
@@ -644,6 +685,8 @@ interface ValorContextoPedidos {
   editarPedido: (pedido: Pedido) => void
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
+  asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
+  cambiarMetodoPago: (id: string, metodoPago: string) => void
   eliminarPedido: (id: string) => void
   actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
   actualizarProductos: (productos: ProductoCatalogo[]) => void
@@ -674,6 +717,8 @@ export function usarPedidos(): ValorContextoPedidos {
     editarPedido: contextoPedidos.editarPedido,
     cambiarEstado: contextoPedidos.cambiarEstado,
     marcarPagoConfirmado: contextoPedidos.marcarPagoConfirmado,
+    asignarCadete: contextoPedidos.asignarCadete,
+    cambiarMetodoPago: contextoPedidos.cambiarMetodoPago,
     eliminarPedido: contextoPedidos.eliminarPedido,
     dbEstado: contextoPedidos.dbEstado,
     finalizarTurno: contextoPedidos.finalizarTurno,

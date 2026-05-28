@@ -182,6 +182,44 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
 
+      case 'asignar_cadete': {
+        if (rol !== 'admin') {
+          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        }
+
+        const { id, cadete_id, cadete_nombre } = body
+        if (!id) {
+          return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
+        }
+
+        const { error } = await supabaseAdmin
+          .from('pedidos')
+          .update({ cadete_id: cadete_id || null, cadete_nombre: cadete_nombre || null })
+          .eq('id', id)
+
+        if (error) throw error
+        return NextResponse.json({ ok: true })
+      }
+
+      case 'cambiar_metodo_pago': {
+        if (rol !== 'admin') {
+          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        }
+
+        const { id, metodoPago } = body
+        if (!id || !metodoPago) {
+          return NextResponse.json({ error: 'Datos incompletos para cambiar_metodo_pago.' }, { status: 400 })
+        }
+
+        const { error } = await supabaseAdmin
+          .from('pedidos')
+          .update({ metodoPago })
+          .eq('id', id)
+
+        if (error) throw error
+        return NextResponse.json({ ok: true })
+      }
+
       default:
         return NextResponse.json(
           { error: `Acción '${accion}' no válida.` },

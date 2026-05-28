@@ -116,3 +116,13 @@ export function obtenerEtiquetaAccionEstado(
 
   return 'Avanzar estado'
 }
+
+export interface Cadete {
+  id: string
+  nombre: string
+}
+
+export const LISTA_CADETES: Cadete[] = [
+  { id: 'paulo', nombre: 'Paulo' },
+  { id: 'cufa', nombre: 'Cufa' },
+]

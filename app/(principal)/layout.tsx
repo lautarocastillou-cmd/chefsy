@@ -13,6 +13,8 @@ import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import { usePathname } from 'next/navigation'
+import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
+import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
 
 export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
@@ -21,7 +23,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
 
   if (!estaListoAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-chefsy-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-chefsy-50 dark:bg-zinc-950">
         <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -33,6 +35,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
 
   // Si el usuario es cadete, no tiene permiso de ver las páginas de administración (que están en este layout)
   const esCadete = usuarioActivo.rol === 'cadete'
+  const esAdmin = usuarioActivo.rol === 'admin'
 
   // Si es cadete y está en cadetería, renderizamos su vista directamente sin la barra lateral
   if (esCadete && pathname === '/cadeteria') {
@@ -42,7 +45,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
   const tienePermiso = !esCadete || pathname === '/cadeteria'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-chefsy-50 dark:bg-slate-950 transition-colors">
+    <div className="flex h-screen overflow-hidden bg-chefsy-50 dark:bg-zinc-950 transition-colors">
       {/* Sidebar Desktop */}
       <div className="hidden md:flex shrink-0">
         <Sidebar />
@@ -99,6 +102,15 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
           {tienePermiso ? children : <AccesoRestringido />}
         </main>
       </div>
+
+      {/* Herramientas flotantes (solo admin, persisten entre páginas) */}
+      {esAdmin && (
+        <>
+          <NotitaFlotante />
+          <CalculadoraFlotante />
+        </>
+      )}
     </div>
   )
 }
+

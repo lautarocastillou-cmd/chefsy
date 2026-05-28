@@ -214,11 +214,12 @@ export default function PaginaCadeteria() {
   const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
   const ultimaActualizacionGpsRef = useRef<number>(0)
 
-  // Cadetería: solo pedidos delivery listos, en reparto o en preparación
+  // Cadetería: solo pedidos delivery listos, en reparto o en preparación de este cadete (o todos si es admin)
   const pedidosCadeteria = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
-      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_reparto')
+      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_reparto') &&
+      (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
   )
 
   const pedidosEnReparto = pedidosCadeteria.filter(p => p.estado === 'en_reparto')
@@ -326,7 +327,8 @@ export default function PaginaCadeteria() {
     (p) =>
       esPedidoDelivery(p) &&
       p.estado === 'entregado' &&
-      p.fecha === hoy
+      p.fecha === hoy &&
+      (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
   )
   const cantidadEnvios = pedidosEntregadosHoy.length
   const recaudacionEnvios = pedidosEntregadosHoy.reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0)

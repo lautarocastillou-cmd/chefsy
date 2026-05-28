@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos base para Chefsy con escalado de tamaño confortable */
+/* ─── Tipografía base ──────────────────────────────── */
 html {
   font-size: 17px;
 }
@@ -15,27 +15,50 @@ html {
   }
 }
 
+/* ─── Variables de Marca ───────────────────────────── */
 :root {
   --chefsy: #2A6348;
   --chefsy-hover: #234f3a;
   --chefsy-light: #f0f6f3;
+
+  /* Sistema de colores oscuro — gris carbón cálido */
+  --dk-bg:        #1c1c1c;   /* fondo raíz */
+  --dk-surface:   #252525;   /* tarjetas, paneles */
+  --dk-surface-2: #2f2f2f;   /* elementos sobre surface */
+  --dk-surface-3: #3a3a3a;   /* hover / selects */
+  --dk-border:    #3d3d3d;   /* bordes sutiles */
+  --dk-border-2:  #4d4d4d;   /* bordes más visibles */
+  --dk-text:      #e6e6e6;   /* texto principal */
+  --dk-text-2:    #a8a8a8;   /* texto secundario */
+  --dk-text-3:    #686868;   /* texto muy tenue */
 }
 
+/* ─── Modo claro (body) ────────────────────────────── */
 body {
   background-color: var(--chefsy-light);
+  color: #1a1a1a;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* ─── Modo oscuro global ───────────────────────────── */
 .dark body {
-  background-color: #020617; /* slate-950 */
-  color: #f8fafc; /* slate-50 */
+  background-color: var(--dk-bg);
+  color: var(--dk-text);
 }
 
-/* Utilidades para ocultar el scrollbar de los modales y listas manteniendo la funcionalidad */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* ─── Animación slideIn reutilizable ───────────────── */
+@keyframes slideIn {
+  from { transform: translateY(20px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+.toast-animate { animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* ─── Toasts en modo oscuro ────────────────────────── */
+.dark .toast-animate {
+  background-color: var(--dk-surface) !important;
+  border-color: var(--dk-border-2) !important;
 }
+
+/* ─── Scrollbar oculta ─────────────────────────────── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

@@ -147,14 +147,10 @@ function ContenedorToasts({
 }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full px-4 sm:px-0">
-      <style>{`
-        @keyframes slideIn { from { transform: translateY(20px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-        .toast-animate { animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
       {notificaciones.map((n) => (
         <div
           key={n.id}
-          className="toast-animate bg-white border border-slate-100 shadow-2xl rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden"
+          className="toast-animate bg-white dark:bg-[#2a2a2a] border border-slate-100 dark:border-[#4a4a4a] shadow-2xl rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden"
           style={{
             borderLeft:
               n.tipo === 'success'
@@ -172,17 +168,17 @@ function ContenedorToasts({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-[#686868] uppercase tracking-wider">
               Sistema de Pedidos
             </p>
-            <p className="text-sm font-semibold text-slate-800 leading-snug mt-1">{n.mensaje}</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-[#e6e6e6] leading-snug mt-1">{n.mensaje}</p>
             {n.accion && (
               <button
                 onClick={() => {
                   n.accion?.alHacerClick()
                   onEliminar(n.id)
                 }}
-                className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded transition-colors shadow-sm"
+                className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-800 bg-sky-50 dark:bg-sky-950/30 dark:text-sky-400 hover:bg-sky-100 px-2.5 py-1 rounded transition-colors shadow-sm"
               >
                 <RotateCcw size={10} /> {n.accion.etiqueta}
               </button>
@@ -190,7 +186,7 @@ function ContenedorToasts({
           </div>
           <button
             onClick={() => onEliminar(n.id)}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 shrink-0"
+            className="text-slate-400 dark:text-[#686868] hover:text-slate-600 dark:hover:text-[#a8a8a8] transition-colors p-0.5 shrink-0"
           >
             <X size={14} />
           </button>

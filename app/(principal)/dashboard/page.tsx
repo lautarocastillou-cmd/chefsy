@@ -14,11 +14,12 @@ import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Musi
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
-import { esPedidoDelivery } from '@/lib/entrega'
+import { esPedidoDelivery, LISTA_CADETES } from '@/lib/entrega'
 
 export default function PaginaDashboard() {
   const { pedidos } = usarPedidos()
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
+  const [cadeteFiltro, setCadeteFiltro] = useState<string>('todos')
 
   // ── Cálculo de métricas ──
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length
@@ -31,8 +32,12 @@ export default function PaginaDashboard() {
   // Pedidos completados en general hoy (entregados hoy de cualquier tipo)
   const completadosHoy = pedidosHoy.filter((p) => p.estado === 'entregado').length
 
-  // Pedidos delivery entregados hoy (viajes)
-  const enviosHoy = pedidosHoy.filter((p) => p.estado === 'entregado' && esPedidoDelivery(p))
+  // Pedidos delivery entregados hoy (viajes) filtrados por cadete
+  const enviosHoy = pedidosHoy.filter((p) => 
+    p.estado === 'entregado' && 
+    esPedidoDelivery(p) &&
+    (cadeteFiltro === 'todos' || p.cadete_id === cadeteFiltro)
+  )
   const totalViajes = enviosHoy.length
   
   // Total recaudado por envíos de delivery hoy
@@ -96,10 +101,23 @@ export default function PaginaDashboard() {
           <TarjetaMetrica
             etiqueta="Envíos y Viajes"
             valor={formatearPrecio(totalEnvios)}
-            descripcion={`${totalViajes} ${totalViajes === 1 ? 'viaje realizado' : 'viajes realizados'}`}
+            descripcion={`${totalViajes} ${totalViajes === 1 ? 'viaje' : 'viajes'} de delivery hoy`}
             variante="neutro"
             icon={DollarSign}
-          />
+          >
+            <div className="mt-3 pt-2 border-t border-gray-150 dark:border-slate-800/80">
+              <select
+                value={cadeteFiltro}
+                onChange={(e) => setCadeteFiltro(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-[#3a3a3a] border border-slate-200 dark:border-[#4d4d4d] text-gray-700 dark:text-[#e6e6e6] py-1 px-2 rounded-lg text-[11px] font-semibold outline-none cursor-pointer transition-colors"
+              >
+                <option value="todos">👥 Todos los cadetes</option>
+                {LISTA_CADETES.map(c => (
+                  <option key={c.id} value={c.id}>🛵 {c.nombre}</option>
+                ))}
+              </select>
+            </div>
+          </TarjetaMetrica>
         </div>
       </section>
 
@@ -107,7 +125,7 @@ export default function PaginaDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-8">
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-[#e6e6e6] flex items-center gap-2">
               ⏱️ Pedidos recientes
             </h2>
             <Link

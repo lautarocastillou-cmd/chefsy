@@ -149,25 +149,25 @@ _Generado automáticamente desde Chefsy_`.trim()
     <div className="space-y-6 max-w-3xl pb-10">
       
       {/* Selector de fecha, cabecera y botón de finalizar turno */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#252525] p-5 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">💰 Cierre de Caja</h1>
-          <p className="text-xs text-gray-400">Resumen y métricas de facturación diaria</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6]">💰 Cierre de Caja</h1>
+          <p className="text-xs text-gray-400 dark:text-[#686868]">Resumen y métricas de facturación diaria</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50">
-            <Calendar size={16} className="text-slate-400" />
+          <div className="flex items-center gap-2 border border-slate-200 dark:border-[#4d4d4d] rounded-lg px-3 py-1.5 bg-slate-50 dark:bg-[#2f2f2f]">
+            <Calendar size={16} className="text-slate-400 dark:text-[#686868]" />
             <input
               type="date"
               value={fechaSeleccionada}
               onChange={(e) => setFechaSeleccionada(e.target.value)}
-              className="bg-transparent border-none text-sm outline-none text-slate-700 font-semibold cursor-pointer"
+              className="bg-transparent border-none text-sm outline-none text-slate-700 dark:text-[#e6e6e6] font-semibold cursor-pointer"
             />
           </div>
           <button
             onClick={manejarFinalizarTurno}
             disabled={pedidos.length === 0}
-            className="bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed text-red-700 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+            className="bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
             title="Archiva todos los pedidos del panel activo para arrancar un nuevo turno limpio"
           >
             🏁 Finalizar Turno
@@ -199,32 +199,32 @@ _Generado automáticamente desde Chefsy_`.trim()
 
         {/* Métricas secundarias */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-4 flex items-center gap-4">
-            <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
+          <div className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-4 flex items-center gap-4">
+            <div className="bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 p-3 rounded-xl">
               <Calendar size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-400 font-medium">Pedidos Realizados</p>
-              <p className="text-xl font-bold text-gray-800">{totalPedidos} pedidos</p>
+              <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Pedidos Realizados</p>
+              <p className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6]">{totalPedidos} pedidos</p>
             </div>
           </div>
-          <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-4 flex items-center gap-4">
-            <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+          <div className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-4 flex items-center gap-4">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl">
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-400 font-medium">Ticket Promedio</p>
-              <p className="text-xl font-bold text-gray-800">{formatearPrecio(ticketPromedio)}</p>
+              <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Ticket Promedio</p>
+              <p className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6]">{formatearPrecio(ticketPromedio)}</p>
             </div>
           </div>
         </div>
 
         {/* Desglose por Método de Pago */}
-        <section className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 border-b border-slate-100 pb-2">💳 Facturación por Método de Pago</h2>
+        <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2">💳 Facturación por Método de Pago</h2>
           
           {totalPedidos === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6">
+            <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-6">
               {cargando ? 'Cargando registros...' : 'No hay registros de facturación para la fecha seleccionada.'}
             </p>
           ) : (
@@ -232,12 +232,12 @@ _Generado automáticamente desde Chefsy_`.trim()
               {/* Efectivo */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="flex items-center gap-1.5 text-gray-600 dark:text-[#a8a8a8]">
                     <DollarSign size={14} className="text-emerald-500" /> Efectivo ({efectivoCount} ped.)
                   </span>
-                  <span className="text-gray-900">{formatearPrecio(efectivoTotal)}</span>
+                  <span className="text-gray-900 dark:text-[#e6e6e6]">{formatearPrecio(efectivoTotal)}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-100 dark:bg-[#3a3a3a] rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pctEfectivo}%` }} />
                 </div>
               </div>
@@ -245,12 +245,12 @@ _Generado automáticamente desde Chefsy_`.trim()
               {/* Tarjeta */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="flex items-center gap-1.5 text-gray-600 dark:text-[#a8a8a8]">
                     <CreditCard size={14} className="text-blue-500" /> Tarjeta / Débito ({tarjetaCount} ped.)
                   </span>
-                  <span className="text-gray-900">{formatearPrecio(tarjetaTotal)}</span>
+                  <span className="text-gray-900 dark:text-[#e6e6e6]">{formatearPrecio(tarjetaTotal)}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-100 dark:bg-[#3a3a3a] rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${pctTarjeta}%` }} />
                 </div>
               </div>
@@ -258,12 +258,12 @@ _Generado automáticamente desde Chefsy_`.trim()
               {/* Transferencia */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="flex items-center gap-1.5 text-gray-600 dark:text-[#a8a8a8]">
                     <Landmark size={14} className="text-indigo-500" /> Transferencia ({transferenciaCount} ped.)
                   </span>
-                  <span className="text-gray-900">{formatearPrecio(transferenciaTotal)}</span>
+                  <span className="text-gray-900 dark:text-[#e6e6e6]">{formatearPrecio(transferenciaTotal)}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-100 dark:bg-[#3a3a3a] rounded-full overflow-hidden">
                   <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${pctTransf}%` }} />
                 </div>
               </div>
@@ -272,37 +272,37 @@ _Generado automáticamente desde Chefsy_`.trim()
         </section>
 
         {/* Desglose por Modalidad de Entrega */}
-        <section className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 border-b border-slate-100 pb-2">🛵 Facturación por Modalidad</h2>
+        <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2">🛵 Facturación por Modalidad</h2>
           
           {totalPedidos === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6">
+            <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-6">
               {cargando ? 'Cargando registros...' : 'No hay registros de facturación para la fecha seleccionada.'}
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Delivery */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-center space-y-1">
-                <Bike size={20} className="text-blue-600 mx-auto" />
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Delivery</p>
-                <p className="text-lg font-bold text-slate-800">{formatearPrecio(deliveryTotal)}</p>
-                <p className="text-[10px] text-gray-400">{deliveryCount} envíos</p>
+              <div className="bg-slate-50/50 dark:bg-[#2f2f2f] p-4 rounded-xl border border-slate-100 dark:border-[#3d3d3d] text-center space-y-1">
+                <Bike size={20} className="text-blue-600 dark:text-blue-400 mx-auto" />
+                <p className="text-[10px] text-gray-400 dark:text-[#686868] font-bold uppercase tracking-wider">Delivery</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">{formatearPrecio(deliveryTotal)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-[#686868]">{deliveryCount} envíos</p>
               </div>
 
               {/* Retiro */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-center space-y-1">
-                <Store size={20} className="text-amber-600 mx-auto" />
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Retiro Local</p>
-                <p className="text-lg font-bold text-slate-800">{formatearPrecio(retiroTotal)}</p>
-                <p className="text-[10px] text-gray-400">{retiroCount} retiros</p>
+              <div className="bg-slate-50/50 dark:bg-[#2f2f2f] p-4 rounded-xl border border-slate-100 dark:border-[#3d3d3d] text-center space-y-1">
+                <Store size={20} className="text-amber-600 dark:text-amber-400 mx-auto" />
+                <p className="text-[10px] text-gray-400 dark:text-[#686868] font-bold uppercase tracking-wider">Retiro Local</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">{formatearPrecio(retiroTotal)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-[#686868]">{retiroCount} retiros</p>
               </div>
 
               {/* Local */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-center space-y-1">
-                <UtensilsCrossed size={20} className="text-purple-600 mx-auto" />
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Consumo Local</p>
-                <p className="text-lg font-bold text-slate-800">{formatearPrecio(localTotal)}</p>
-                <p className="text-[10px] text-gray-400">{localCount} servidos</p>
+              <div className="bg-slate-50/50 dark:bg-[#2f2f2f] p-4 rounded-xl border border-slate-100 dark:border-[#3d3d3d] text-center space-y-1">
+                <UtensilsCrossed size={20} className="text-purple-600 dark:text-purple-400 mx-auto" />
+                <p className="text-[10px] text-gray-400 dark:text-[#686868] font-bold uppercase tracking-wider">Consumo Local</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">{formatearPrecio(localTotal)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-[#686868]">{localCount} servidos</p>
               </div>
             </div>
           )}

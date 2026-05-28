@@ -18,13 +18,14 @@ function obtenerUsuariosAutorizados(): Record<
   string,
   { clave: string; nombre: string; rol: 'admin' | 'cadete' }
 > {
-  const claveAdmin  = process.env.CHEFSY_ADMIN_PASS
-  const claveCadete = process.env.CHEFSY_CADETE_PASS
+  const claveAdmin = process.env.CHEFSY_ADMIN_PASS
+  const clavePaulo = process.env.CHEFSY_PAULO_PASS || process.env.CHEFSY_CADETE_PASS
+  const claveCufa  = process.env.CHEFSY_CUFA_PASS || process.env.CHEFSY_CADETE2_PASS
 
-  if (!claveAdmin || !claveCadete) {
+  if (!claveAdmin || !clavePaulo || !claveCufa) {
     // En desarrollo local sin .env.local configurado, fallar de forma visible
     console.error(
-      '[Auth] ⚠️  CHEFSY_ADMIN_PASS o CHEFSY_CADETE_PASS no están definidas. ' +
+      '[Auth] ⚠️  CHEFSY_ADMIN_PASS, CHEFSY_PAULO_PASS o CHEFSY_CUFA_PASS no están definidas. ' +
       'Copiar .env.example a .env.local y configurar los valores.'
     )
   }
@@ -35,9 +36,14 @@ function obtenerUsuariosAutorizados(): Record<
       nombre: 'Administrador Chefsy',
       rol:    'admin',
     },
-    cadete: {
-      clave:  claveCadete ?? '',
-      nombre: 'Delivery Cadete',
+    paulo: {
+      clave:  clavePaulo ?? '',
+      nombre: 'Paulo',
+      rol:    'cadete',
+    },
+    cufa: {
+      clave:  claveCufa ?? '',
+      nombre: 'Cufa',
       rol:    'cadete',
     },
   }

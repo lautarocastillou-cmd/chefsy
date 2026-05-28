@@ -20,7 +20,7 @@ export interface Usuario {
 interface ValorContextoAuth {
   usuarioActivo:  Usuario | null
   estaListoAuth:  boolean
-  iniciarSesion:  (usuario: string, clave: string) => Promise<boolean>
+  iniciarSesion:  (usuario: string, clave: string) => Promise<string | null>
   cerrarSesion:   () => Promise<void>
 }
 
@@ -54,7 +54,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
    * Inicia sesión llamando al endpoint del servidor.
    * Retorna true si las credenciales son válidas, false en caso contrario.
    */
-  const iniciarSesion = async (usuario: string, clave: string): Promise<boolean> => {
+  const iniciarSesion = async (usuario: string, clave: string): Promise<string | null> => {
     try {
       const res = await fetch('/api/auth/login', {
         method:      'POST',
@@ -63,7 +63,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         body:        JSON.stringify({ usuario, clave }),
       })
 
-      if (!res.ok) return false
+      if (!res.ok) return null
 
       const data = await res.json()
       if (data.ok && data.usuario) {
@@ -72,12 +72,12 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
           nombre:  data.nombre,
           rol:     data.rol,
         })
-        return true
+        return data.rol
       }
 
-      return false
+      return null
     } catch {
-      return false
+      return null
     }
   }
 

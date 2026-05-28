@@ -28,9 +28,9 @@ export default function LoginPage() {
 
     setCargando(true)
     try {
-      const exito = await iniciarSesion(uLimpio, cLimpia)
-      if (exito) {
-        if (uLimpio.toLowerCase() === 'cadete') {
+      const rol = await iniciarSesion(uLimpio, cLimpia)
+      if (rol) {
+        if (rol === 'cadete') {
           router.push('/cadeteria')
         } else {
           router.push('/dashboard')
