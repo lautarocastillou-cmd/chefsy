@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Pedido, EstadoPedido } from '@/tipos'
+import { useState, useEffect, useRef } from 'react'
+import { Pedido, EstadoPedido, Coordenadas } from '@/tipos'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from '@/components/pedidos/BadgeEstado'
 import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
@@ -9,7 +9,7 @@ import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
 import { MessageCircle, MapPin, Bike } from 'lucide-react'
-import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
+import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
@@ -210,6 +210,10 @@ export default function PaginaCadeteria() {
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
 
+  // Guardar última ubicación y marca de tiempo para el control/throttling de GPS
+  const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
+  const ultimaActualizacionGpsRef = useRef<number>(0)
+
   // Cadetería: solo pedidos delivery listos, en reparto o en preparación
   const pedidosCadeteria = pedidos.filter(
     (p) =>
@@ -225,8 +229,15 @@ export default function PaginaCadeteria() {
     // Si no es el cadete o no hay pedidos en reparto, no rastrear
     if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosEnReparto.length === 0) {
       setErrorGps(null)
+      // Resetear referencias al detener el rastreo
+      ultimasCoordenadasRef.current = null
+      ultimaActualizacionGpsRef.current = 0
       return
     }
+
+    // Forzar actualización inmediata en el primer tick del nuevo rastreo
+    ultimasCoordenadasRef.current = null
+    ultimaActualizacionGpsRef.current = 0
 
     let watchId: number
 
@@ -244,15 +255,45 @@ export default function PaginaCadeteria() {
             longitud: position.coords.longitude,
           }
 
+          const ahora = Date.now()
+          const tiempoTranscurrido = ahora - ultimaActualizacionGpsRef.current
+
+          // 1. Throttling de tiempo: límite máximo de una actualización cada 8 segundos
+          if (tiempoTranscurrido < 8000) {
+            return
+          }
+
+          // 2. Filtro de distancia: solo actualizar si se movió más de 10 metros (0.01 km)
+          if (ultimasCoordenadasRef.current) {
+            const distanciaKm = calcularDistanciaKm(ultimasCoordenadasRef.current, coords)
+            if (distanciaKm < 0.01) {
+              return
+            }
+          }
+
+          // Guardar referencias del último envío exitoso
+          ultimasCoordenadasRef.current = coords
+          ultimaActualizacionGpsRef.current = ahora
+
           // Actualizar las coordenadas en supabase para todos los pedidos activos en reparto
           const pedidosIds = pedidosEnReparto.map(p => p.id)
           try {
-            const { error } = await supabase
-              .from('pedidos')
-              .update({ cadete_coordenadas: coords })
-              .in('id', pedidosIds)
+            const respuesta = await fetch('/api/admin/pedidos', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                accion: 'actualizar_gps',
+                ids: pedidosIds,
+                cadete_coordenadas: coords
+              })
+            })
 
-            if (error) throw error
+            if (!respuesta.ok) {
+              const errorData = await respuesta.json().catch(() => ({}))
+              throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
+            }
           } catch (e) {
             console.error('Error enviando coordenadas de cadete', e)
           }

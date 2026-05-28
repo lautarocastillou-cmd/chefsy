@@ -6,7 +6,8 @@ import {
   crearEnlaceGoogleMaps, 
   formatearCoordenadas,
   buscarSugerenciasDireccion,
-  SugerenciaDireccion
+  SugerenciaDireccion,
+  buscarDireccionPorCoordenadas
 } from '@/lib/ubicacion'
 import ModalSelectorUbicacion from './ModalSelectorUbicacion'
 
@@ -41,6 +42,62 @@ export default function CampoUbicacion({
 
   const wrapperRef = useRef<HTMLDivElement>(null)
 
+  // Referencias para evitar llamadas de geolocalización repetidas o innecesarias
+  const coordenadasProcesadasRef = useRef<string | null>(null)
+  const prevDireccionRef = useRef<string>(direccion)
+
+  // Mantener actualizado el valor anterior de la dirección en cada render
+  useEffect(() => {
+    prevDireccionRef.current = direccion
+  })
+
+  // Sincronizar coordenadas manuales si cambian por fuera (mapa, CRM, etc.)
+  useEffect(() => {
+    setLatManual(coordenadas?.latitud.toString() || '')
+    setLonManual(coordenadas?.longitud.toString() || '')
+  }, [coordenadas])
+
+  // Autocompletar la dirección si cambian las coordenadas
+  useEffect(() => {
+    if (!coordenadas) {
+      coordenadasProcesadasRef.current = null
+      return
+    }
+
+    const key = `${coordenadas.latitud},${coordenadas.longitud}`
+    
+    // Si las coordenadas ya fueron procesadas, no hacer nada
+    if (coordenadasProcesadasRef.current === key) {
+      return
+    }
+
+    // Si la dirección cambió en este mismo render por otros motivos (por ejemplo, autocompletado CRM o carga inicial),
+    // asumimos que el valor de dirección provisto ya es correcto y no sobreescribimos.
+    if (prevDireccionRef.current !== direccion) {
+      coordenadasProcesadasRef.current = key
+      return
+    }
+
+    coordenadasProcesadasRef.current = key
+
+    let activo = true
+    const reverseGeocode = async () => {
+      try {
+        const dir = await buscarDireccionPorCoordenadas(coordenadas)
+        if (dir && activo) {
+          onDireccionChange(dir)
+        }
+      } catch (e) {
+        console.error('Error al resolver dirección por coordenadas:', e)
+      }
+    }
+    reverseGeocode()
+
+    return () => {
+      activo = false
+    }
+  }, [coordenadas, onDireccionChange, direccion])
+
   useEffect(() => {
     const handleClickFuera = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -68,6 +125,8 @@ export default function CampoUbicacion({
   }, [direccion])
 
   const manejarSeleccionSugerencia = (sug: SugerenciaDireccion) => {
+    const key = `${sug.coordenadas.latitud},${sug.coordenadas.longitud}`
+    coordenadasProcesadasRef.current = key
     onDireccionChange(sug.nombre)
     onCoordenadasChange(sug.coordenadas)
     setMostrarSugerencias(false)
@@ -75,6 +134,8 @@ export default function CampoUbicacion({
   }
 
   const manejarConfirmarModal = (nuevasCoordenadas: Coordenadas, direccionInversa?: string) => {
+    const key = `${nuevasCoordenadas.latitud},${nuevasCoordenadas.longitud}`
+    coordenadasProcesadasRef.current = key
     onCoordenadasChange(nuevasCoordenadas)
     if (direccionInversa) {
       onDireccionChange(direccionInversa)
