@@ -64,11 +64,6 @@ export async function POST(request: Request) {
         }
 
         const payload = { ...pedido }
-        // Adaptar reparto_at -> ubicacion_cadete si es necesario
-        if (payload.reparto_at !== undefined) {
-          payload.ubicacion_cadete = payload.reparto_at
-          delete payload.reparto_at
-        }
         
         // Quitar campos autogenerados de base de datos
         delete payload.id
@@ -98,7 +93,7 @@ export async function POST(request: Request) {
         const updatePayload: any = { estado }
         if (cocina_at !== undefined) updatePayload.cocina_at = cocina_at
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
-        if (reparto_at !== undefined) updatePayload.ubicacion_cadete = reparto_at
+        if (reparto_at !== undefined) updatePayload.reparto_at = reparto_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
 
         const { error } = await supabaseAdmin

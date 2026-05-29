@@ -220,12 +220,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         setDbEstado('conectado')
 
         if (pedidosGuardados) {
-          const pedidosMapeados = pedidosGuardados.map((p: any) => ({
-            ...p,
-            reparto_at: p.reparto_at || p.ubicacion_cadete || null
-          }))
-          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMapeados as Pedido[] })
-          prevPedidosRef.current = pedidosMapeados as Pedido[]
+          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados as Pedido[] })
+          prevPedidosRef.current = pedidosGuardados as Pedido[]
         }
       } catch (error) {
         console.error('[Supabase] Error al cargar pedidos, intentando recuperar del caché:', error)
@@ -335,10 +331,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
               // Si el pedido fue archivado, lo quitamos de la pantalla local
               despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedidoCrudo.id })
             } else {
-              const pedido = {
-                ...pedidoCrudo,
-                reparto_at: pedidoCrudo.reparto_at || pedidoCrudo.ubicacion_cadete || null
-              } as Pedido
+              const pedido = pedidoCrudo as Pedido
               despachar({ tipo: 'UPSERT_PEDIDO', pedido })
             }
           } else if (payload.eventType === 'DELETE') {
@@ -393,10 +386,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     
     try {
       const payload: any = { ...pedido, archivado: false }
-      if (payload.reparto_at !== undefined) {
-        payload.ubicacion_cadete = payload.reparto_at
-        delete payload.reparto_at
-      }
       
       const { error } = await supabase.from('pedidos').insert(payload)
       if (error) throw error
@@ -605,10 +594,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      return (data || []).map((p: any) => ({
-        ...p,
-        reparto_at: p.reparto_at || p.ubicacion_cadete || null
-      })) as Pedido[]
+      return (data || []) as Pedido[]
     } catch (err) {
       console.error('[Supabase] Error al cargar pedidos históricos:', err)
       // Fallback: buscar en caché
