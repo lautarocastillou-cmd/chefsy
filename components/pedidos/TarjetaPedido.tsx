@@ -136,7 +136,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             {pedido.cliente}
           </h4>
           <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 dark:text-[#a8a8a8] font-medium">
-            <span>{pedido.telefono}</span>
+            <span>{pedido.telefono === 'Sin especificar' ? 'Tel: Sin especificar' : `Tel: ${pedido.telefono}`}</span>
             <span className="text-slate-300 dark:text-[#686868]">•</span>
             <span>{pedido.hora}</span>
           </div>

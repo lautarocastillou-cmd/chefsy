@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { X, CheckCircle2, RotateCcw } from 'lucide-react'
+import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell } from 'lucide-react'
 
 export interface Notificacion {
   id: string
@@ -146,53 +146,80 @@ function ContenedorToasts({
   onEliminar: (id: string) => void
 }) {
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full px-4 sm:px-0">
-      {notificaciones.map((n) => (
-        <div
-          key={n.id}
-          className="toast-animate bg-white dark:bg-[#2a2a2a] border border-slate-100 dark:border-[#4a4a4a] shadow-2xl rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden"
-          style={{
-            borderLeft:
-              n.tipo === 'success'
-                ? '4px solid #10B981'
-                : n.tipo === 'warning'
-                ? '4px solid #F59E0B'
-                : '4px solid #3B82F6',
-          }}
-        >
-          <div className="text-green-500 shrink-0 mt-0.5">
-            {n.tipo === 'success' ? (
-              <CheckCircle2 size={18} className="text-green-500" />
-            ) : (
-              <CheckCircle2 size={18} className="text-blue-500" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-[#686868] uppercase tracking-wider">
-              Sistema de Pedidos
-            </p>
-            <p className="text-sm font-semibold text-slate-800 dark:text-[#e6e6e6] leading-snug mt-1">{n.mensaje}</p>
-            {n.accion && (
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 max-w-sm w-full px-4 sm:px-0">
+        {notificaciones.map((n) => {
+          const Icono = {
+            success: CheckCircle2,
+            warning: AlertTriangle,
+            info: Bell
+          }[n.tipo] || Bell
+
+          const colorTema = {
+            success: 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-500',
+            warning: 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-500',
+            info: 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-500',
+          }[n.tipo] || 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-500'
+
+          return (
+            <div
+              key={n.id}
+              className="relative overflow-hidden bg-white/90 dark:bg-[#1e1e1e]/90 backdrop-blur-md border border-slate-100 dark:border-zinc-800 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)] rounded-2xl p-4 flex gap-3.5 items-start transition-all duration-350 transform hover:scale-[1.02] border-l-4"
+              style={{
+                borderLeftColor: n.tipo === 'success' ? '#10B981' : n.tipo === 'warning' ? '#F59E0B' : '#3B82F6'
+              }}
+            >
+              <div className={`p-2 rounded-xl shrink-0 ${colorTema}`}>
+                <Icono size={18} />
+              </div>
+              
+              <div className="flex-1 min-w-0 pr-1 text-left">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  {n.tipo === 'success' ? 'Éxito' : n.tipo === 'warning' ? 'Advertencia' : 'Información'}
+                </span>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1 leading-relaxed">
+                  {n.mensaje}
+                </p>
+                {n.accion && (
+                  <button
+                    onClick={() => {
+                      n.accion?.alHacerClick()
+                      onEliminar(n.id)
+                    }}
+                    className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-black text-sky-700 hover:text-sky-800 bg-sky-50 dark:bg-sky-950/30 dark:text-sky-400 hover:bg-sky-100 px-2.5 py-1.5 rounded-lg transition-colors shadow-sm"
+                  >
+                    <RotateCcw size={10} /> {n.accion.etiqueta}
+                  </button>
+                )}
+              </div>
+
               <button
-                onClick={() => {
-                  n.accion?.alHacerClick()
-                  onEliminar(n.id)
-                }}
-                className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-800 bg-sky-50 dark:bg-sky-950/30 dark:text-sky-400 hover:bg-sky-100 px-2.5 py-1 rounded transition-colors shadow-sm"
+                onClick={() => onEliminar(n.id)}
+                className="text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800/50 shrink-0 -mr-1"
               >
-                <RotateCcw size={10} /> {n.accion.etiqueta}
+                <X size={14} />
               </button>
-            )}
-          </div>
-          <button
-            onClick={() => onEliminar(n.id)}
-            className="text-slate-400 dark:text-[#686868] hover:text-slate-600 dark:hover:text-[#a8a8a8] transition-colors p-0.5 shrink-0"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
-    </div>
+
+              {/* Barra de progreso de autodestrucción */}
+              <div 
+                className={`absolute bottom-0 left-0 h-[3px] ${
+                  n.tipo === 'success' ? 'bg-emerald-500' : n.tipo === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                }`}
+                style={{ 
+                  animation: 'toast-progress 6000ms linear forwards' 
+                }} 
+              />
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 

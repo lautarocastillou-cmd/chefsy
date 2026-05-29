@@ -11,6 +11,74 @@ import {
 } from '@/lib/ubicacion'
 import ModalSelectorUbicacion from './ModalSelectorUbicacion'
 
+function dmsToDecimal(degrees: number, minutes: number, seconds: number, direction: string): number {
+  let decimal = degrees + minutes / 60 + seconds / 3600;
+  if (['S', 's', 'W', 'w', 'O', 'o'].includes(direction)) {
+    decimal = -decimal;
+  }
+  return decimal;
+}
+
+// Helper para extraer coordenadas de un texto o link de Google Maps
+function extraerCoordenadasDeTexto(texto: string): Coordenadas | null {
+  // 1. Intentar extraer coordenadas específicas del pin (formato data de Google Maps !3d...!4d)
+  const match3d4d = texto.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
+  if (match3d4d) {
+    return { latitud: parseFloat(match3d4d[1]), longitud: parseFloat(match3d4d[2]) }
+  }
+
+  // 2. Formato query string q=lat,lng (ej: q=-28.468200,-65.782100)
+  const matchQ = texto.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (matchQ) {
+    return { latitud: parseFloat(matchQ[1]), longitud: parseFloat(matchQ[2]) }
+  }
+
+  // 3. Formato destino daddr=lat,lng (ej: daddr=-28.468200,-65.782100)
+  const matchDaddr = texto.match(/[?&]daddr=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (matchDaddr) {
+    return { latitud: parseFloat(matchDaddr[1]), longitud: parseFloat(matchDaddr[2]) }
+  }
+
+  // 4. Formato ll=lat,lng
+  const matchLl = texto.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (matchLl) {
+    return { latitud: parseFloat(matchLl[1]), longitud: parseFloat(matchLl[2]) }
+  }
+
+  // 5. Formato @lat,lng (como fallback si no hay pin explícito)
+  const matchAt = texto.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (matchAt) {
+    return { latitud: parseFloat(matchAt[1]), longitud: parseFloat(matchAt[2]) }
+  }
+
+  // 6. Formato DMS (Degrees, Minutes, Seconds - ej: 28°27'13.5"S 65°47'00.5"W)
+  const dmsRegex = /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])\s*[,/]?\s*(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([WOEwoeOo])/
+  const matchDms = texto.match(dmsRegex)
+  if (matchDms) {
+    const lat = dmsToDecimal(parseFloat(matchDms[1]), parseFloat(matchDms[2]), parseFloat(matchDms[3]), matchDms[4])
+    const lng = dmsToDecimal(parseFloat(matchDms[5]), parseFloat(matchDms[6]), parseFloat(matchDms[7]), matchDms[8])
+    return { latitud: lat, longitud: lng }
+  }
+
+  // 7. Coordenadas sueltas pegadas directamente (ej: -28.468200, -65.782100 o con paréntesis/texto extra)
+  const matchCoordsSueltas = texto.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/)
+  if (matchCoordsSueltas) {
+    const lat = parseFloat(matchCoordsSueltas[1])
+    const lng = parseFloat(matchCoordsSueltas[2])
+    // Validar rangos geográficos para evitar falsos positivos con numeraciones de calle
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { latitud: lat, longitud: lng }
+    }
+  }
+
+  return null
+}
+
+function extraerUrlDeGoogleMaps(texto: string): string | null {
+  const match = texto.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?google\.[a-z]+(?:\.[a-z]+)?\/maps[^\s]*|(?:https?:\/\/)?maps\.app\.goo\.gl\/[^\s]*|(?:https?:\/\/)?goo\.gl\/maps\/[^\s]*/i)
+  return match ? match[0] : null
+}
+
 interface PropsCampoUbicacion {
   direccion: string
   onDireccionChange: (valor: string) => void
@@ -44,6 +112,7 @@ export default function CampoUbicacion({
 
   // Referencias para evitar llamadas de geolocalización repetidas o innecesarias
   const coordenadasProcesadasRef = useRef<string | null>(null)
+  const forzarGeocodificacionRef = useRef<boolean>(false)
   const prevDireccionRef = useRef<string>(direccion)
 
   // Mantener actualizado el valor anterior de la dirección en cada render
@@ -66,18 +135,20 @@ export default function CampoUbicacion({
 
     const key = `${coordenadas.latitud},${coordenadas.longitud}`
     
-    // Si las coordenadas ya fueron procesadas, no hacer nada
-    if (coordenadasProcesadasRef.current === key) {
+    // Si las coordenadas ya fueron procesadas, no hacer nada (a menos que forcemos resolución)
+    if (coordenadasProcesadasRef.current === key && !forzarGeocodificacionRef.current) {
       return
     }
 
-    // Si la dirección cambió en este mismo render por otros motivos (por ejemplo, autocompletado CRM o carga inicial),
-    // asumimos que el valor de dirección provisto ya es correcto y no sobreescribimos.
-    if (prevDireccionRef.current !== direccion) {
+    // Si la dirección cambió en este mismo render por otros motivos,
+    // asumimos que es autocompletado y no sobreescribimos, a menos que forzarGeocodificacionRef esté activo.
+    if (prevDireccionRef.current !== direccion && !forzarGeocodificacionRef.current) {
       coordenadasProcesadasRef.current = key
       return
     }
 
+    // Consumir el flag de forzado
+    forzarGeocodificacionRef.current = false
     coordenadasProcesadasRef.current = key
 
     let activo = true
@@ -162,9 +233,65 @@ export default function CampoUbicacion({
           <input
             type="text"
             value={direccion}
-            onChange={(e) => {
-              onDireccionChange(e.target.value)
+            onChange={async (e) => {
+              const valor = e.target.value
+              onDireccionChange(valor)
               setMostrarSugerencias(true)
+
+              if (valor.trim() === '') {
+                onCoordenadasChange(null)
+                coordenadasProcesadasRef.current = null
+                forzarGeocodificacionRef.current = false
+                return
+              }
+
+              // Extraer link de Google Maps si está embebido en el texto
+              let urlExtraida = extraerUrlDeGoogleMaps(valor)
+              if (urlExtraida && !urlExtraida.startsWith('http://') && !urlExtraida.startsWith('https://')) {
+                urlExtraida = 'https://' + urlExtraida
+              }
+
+              const esCoordenadasSueltas = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/.test(valor)
+              const esCoordenadasDms = /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])/.test(valor)
+
+              if (urlExtraida || esCoordenadasSueltas || esCoordenadasDms) {
+                setMostrarSugerencias(false)
+                
+                // Resetear el tracker y activar bandera de forzado para garantizar geocodificación
+                forzarGeocodificacionRef.current = true
+                coordenadasProcesadasRef.current = null
+
+                // Intentar extraer de inmediato si es un link largo o si contiene coordenadas
+                const coordsLocales = extraerCoordenadasDeTexto(urlExtraida || valor)
+                if (coordsLocales) {
+                  onDireccionChange('Resolviendo dirección...')
+                  onCoordenadasChange(coordsLocales)
+                } else if (urlExtraida && (urlExtraida.includes('maps.app.goo.gl') || urlExtraida.includes('goo.gl/maps'))) {
+                  // Es un link acortado, requiere resolución en servidor
+                  onDireccionChange('Procesando enlace de Google Maps...')
+                  setBuscando(true)
+                  try {
+                    const res = await fetch(`/api/resolve-maps?url=${encodeURIComponent(urlExtraida)}`)
+                    if (res.ok) {
+                      const data = await res.json()
+                      if (data.latitud && data.longitud) {
+                        forzarGeocodificacionRef.current = true
+                        coordenadasProcesadasRef.current = null
+                        onCoordenadasChange({ latitud: data.latitud, longitud: data.longitud })
+                      } else {
+                        onDireccionChange(valor)
+                      }
+                    } else {
+                      onDireccionChange(valor)
+                    }
+                  } catch (err) {
+                    console.error('Error al resolver link acortado:', err)
+                    onDireccionChange(valor)
+                  } finally {
+                    setBuscando(false)
+                  }
+                }
+              }
             }}
             onFocus={() => setMostrarSugerencias(true)}
             placeholder="Calle 123, Barrio Centro"

@@ -173,7 +173,6 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
     setError('')
 
     if (!cliente.trim()) return setError('El nombre del cliente es obligatorio.')
-    if (!telefono.trim()) return setError('El teléfono es obligatorio.')
     if (pideDireccion && !direccion.trim()) {
       return setError('La dirección es obligatoria para delivery.')
     }
@@ -189,7 +188,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
     const nuevoPedido: Pedido = {
       id: pedidoInicial?.id || generarId(),
       cliente: cliente.trim(),
-      telefono: telefono.trim(),
+      telefono: telefono.trim() || 'Sin especificar',
       tipoEntrega,
       direccion: pideDireccion ? direccion.trim() : '',
       coordenadas: pideDireccion ? coordenadas ?? undefined : undefined,
@@ -268,7 +267,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Teléfono <span className="text-red-400">*</span>
+              Teléfono <span className="text-gray-400 font-normal">(opcional)</span>
             </label>
             <input
               type="tel"

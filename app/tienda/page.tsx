@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarAuth } from '@/contexto/AuthContexto'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
@@ -150,8 +151,60 @@ export default function PaginaTienda() {
     alternarModoOscuro 
   } = usarPedidos()
 
+  const { usuarioActivo, estaListoAuth } = usarAuth()
+
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todos')
+
+  // Validar acceso: Solo el administrador puede entrar a la tienda temporalmente
+  if (!estaListoAuth) {
+    return (
+      <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center font-sans">
+        <div className="w-8 h-8 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (usuarioActivo?.rol !== 'admin') {
+    return (
+      <div className="min-h-screen bg-[#0B0F19] text-white flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden">
+        {/* Luces estéticas de fondo */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-chefsy/10 rounded-full blur-3xl -z-10 animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '2s' }} />
+
+        <div className="w-full max-w-md bg-[#161D30]/60 border border-slate-800/80 backdrop-blur-md shadow-2xl rounded-[2.5rem] p-8 space-y-6 animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 rounded-full bg-chefsy/10 text-chefsy flex items-center justify-center mx-auto shadow-inner">
+            <HardHat size={32} className="animate-[bounce_2s_infinite]" />
+          </div>
+
+          <div className="space-y-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-chefsy bg-chefsy/10 px-3 py-1 rounded-full">
+              Próximamente
+            </span>
+            <h2 className="text-2xl font-black tracking-tight text-white pt-1">
+              Tienda Online en Camino
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Estamos preparando la mejor experiencia digital para que puedas hacer tus pedidos de forma rápida y sencilla. ¡Muy pronto disponible!
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <Link 
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-bold bg-[#1d273f] hover:bg-[#253252] px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+            >
+              <Lock size={14} /> Acceso Personal
+            </Link>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-slate-650 absolute bottom-6 font-bold uppercase tracking-wider">
+          Chefsy Burger &copy; {new Date().getFullYear()}
+        </p>
+      </div>
+    )
+  }
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
   

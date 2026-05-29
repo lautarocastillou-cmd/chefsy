@@ -2,7 +2,8 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio } from '@/lib/utils'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import {
   Search,
   Phone,
@@ -32,7 +33,28 @@ interface ClienteAgrupado {
 }
 
 export default function PaginaAgendaClientes() {
-  const { pedidos } = usarPedidos()
+  const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    async function cargarPedidos() {
+      try {
+        const { data, error } = await supabase
+          .from('pedidos')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        if (data) {
+          setPedidosHistoricos(data as Pedido[])
+        }
+      } catch (err) {
+        console.error('Error cargando pedidos históricos:', err)
+      } finally {
+        setCargando(false)
+      }
+    }
+    cargarPedidos()
+  }, [])
 
   // Filtro de búsqueda
   const [busqueda, setBusqueda] = useState('')
@@ -44,7 +66,7 @@ export default function PaginaAgendaClientes() {
     const grupos: Record<string, Pedido[]> = {}
 
     // Agrupar pedidos por teléfono
-    pedidos.forEach((p) => {
+    pedidosHistoricos.forEach((p) => {
       const tel = p.telefono.trim()
       if (!tel) return
       if (!grupos[tel]) {
@@ -105,7 +127,7 @@ export default function PaginaAgendaClientes() {
     })
 
     return listaClientes
-  }, [pedidos])
+  }, [pedidosHistoricos])
 
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
@@ -148,6 +170,15 @@ export default function PaginaAgendaClientes() {
   const enviarWhatsApp = (cliente: ClienteAgrupado) => {
     const saludo = `Hola ${cliente.nombre}, te saludamos de Chefsy! 🍔`
     window.open(`https://wa.me/${cliente.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(saludo)}`, '_blank')
+  }
+
+  if (cargando) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-8 h-8 border-4 border-chefsy-300 border-t-chefsy rounded-full animate-spin" />
+        <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Cargando agenda de clientes...</p>
+      </div>
+    )
   }
 
   return (

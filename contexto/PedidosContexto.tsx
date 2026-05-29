@@ -354,18 +354,22 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify(estado.pedidos))
 
     if (prevPedidosRef.current.length > 0) {
+      const esVistaCadeteria = typeof window !== 'undefined' && window.location.pathname.includes('/cadeteria')
+      
       const nuevosPedidos = estado.pedidos.filter((nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id))
       nuevosPedidos.forEach((nuevo) => {
-        reproducirSonidoCampanaCocina()
-        if (!esCambioLocalRef.current) {
-          agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
+        if (!esVistaCadeteria) {
+          reproducirSonidoCampanaCocina()
+          if (!esCambioLocalRef.current) {
+            agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
+          }
         }
       })
 
       estado.pedidos.forEach((nuevo) => {
         const anterior = prevPedidosRef.current.find((p) => p.id === nuevo.id)
         if (anterior && anterior.estado !== 'entregado' && nuevo.estado === 'entregado') {
-          if (!esCambioLocalRef.current) {
+          if (!esCambioLocalRef.current && !esVistaCadeteria) {
             agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
             reproducirSonidoNotificacion()
           }

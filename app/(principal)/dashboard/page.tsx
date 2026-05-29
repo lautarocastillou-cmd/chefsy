@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
+import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
 import Link from 'next/link'
 import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Music, ExternalLink, DollarSign } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
@@ -19,6 +20,7 @@ import { esPedidoDelivery, LISTA_CADETES } from '@/lib/entrega'
 export default function PaginaDashboard() {
   const { pedidos } = usarPedidos()
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
+  const [pedidoSeleccionadoParaEditar, setPedidoSeleccionadoParaEditar] = useState<any>(null)
   const [cadeteFiltro, setCadeteFiltro] = useState<string>('todos')
 
   // ── Cálculo de métricas ──
@@ -65,6 +67,9 @@ export default function PaginaDashboard() {
           <h1 className="text-3xl md:text-4xl font-bold mb-4">¡Hola Lauta! ¿Listo para el servicio?</h1>
         </div>
       </div>
+
+      {/* ── Sección Inteligente de Problemas Operativos ── */}
+      <SeccionProblemas alAbrirPedido={setPedidoSeleccionadoParaEditar} />
 
       {/* ── Métricas ── */}
       <section>
@@ -260,6 +265,33 @@ export default function PaginaDashboard() {
             {/* Contenido del Modal */}
             <div className="px-6 pb-6">
               <FormularioPedido onClose={() => setModalNuevoPedidoAbierto(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de Editar Pedido (Alertas Operativas) ── */}
+      {pedidoSeleccionadoParaEditar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative">
+            {/* Header del Modal */}
+            <div className="sticky top-0 z-10 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-6 pb-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  📝 Editar Pedido
+                </h2>
+                <p className="text-xs text-gray-400 dark:text-slate-400">Modificar los datos de la orden</p>
+              </div>
+              <button
+                onClick={() => setPedidoSeleccionadoParaEditar(null)}
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* Contenido del Modal */}
+            <div className="px-6 pb-6">
+              <FormularioPedido pedidoInicial={pedidoSeleccionadoParaEditar} onClose={() => setPedidoSeleccionadoParaEditar(null)} />
             </div>
           </div>
         </div>

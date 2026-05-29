@@ -93,7 +93,7 @@ function TarjetaPedidoCadete({
         <div className="min-w-0">
           <p className="text-lg font-extrabold text-gray-900 dark:text-slate-100 leading-snug">{pedido.cliente}</p>
           <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[11px] text-gray-500 dark:text-slate-400 font-medium">
-            <span>{pedido.telefono}</span>
+            <span>{pedido.telefono === 'Sin especificar' ? 'Tel: Sin especificar' : `Tel: ${pedido.telefono}`}</span>
             <span className="text-gray-300 dark:text-slate-700">•</span>
             <span>{pedido.hora}</span>
           </div>
@@ -111,20 +111,24 @@ function TarjetaPedidoCadete({
 
       {/* Acciones de Contacto y Navegación */}
       <div className="flex flex-wrap items-center gap-2">
-        <a
-          href={`tel:${pedido.telefono.replace(/\D/g, '')}`}
-          className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
-        >
-          <Phone size={12} /> Llamar
-        </a>
-        <a
-          href={redireccionarWhatsApp(pedido.telefono, pedido.cliente)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
-        >
-          <MessageCircle size={12} /> WhatsApp
-        </a>
+        {pedido.telefono !== 'Sin especificar' && (
+          <>
+            <a
+              href={`tel:${pedido.telefono.replace(/\D/g, '')}`}
+              className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
+            >
+              <Phone size={12} /> Llamar
+            </a>
+            <a
+              href={redireccionarWhatsApp(pedido.telefono, pedido.cliente)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
+            >
+              <MessageCircle size={12} /> WhatsApp
+            </a>
+          </>
+        )}
         {esPedidoDelivery(pedido) && pedido.coordenadas && (
           <a
             href={crearEnlaceGoogleMaps(pedido.coordenadas)}
