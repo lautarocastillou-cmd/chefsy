@@ -1,5 +1,6 @@
 import { Pedido, EstadoPedido } from '@/tipos'
 import { parsearFechaHora, calcularDiferenciaSegundos } from './tiempo'
+import configuracionOperativa from '../config/operacion.json'
 
 export type TipoProblema =
   | 'atrasado'
@@ -19,6 +20,18 @@ export interface AlertaOperativa {
   prioridad: PrioridadProblema
   minutosTranscurridos: number
   pedido: Pedido
+}
+
+// Extraer límites y prioridades configuradas
+let limitesConfig = configuracionOperativa.limites
+let prioridadesConfig = configuracionOperativa.prioridades
+
+/**
+ * Sobrescribe dinámicamente los límites y prioridades de tiempo en caliente
+ */
+export function actualizarConfiguracionLocal(nuevaConfig: typeof configuracionOperativa) {
+  limitesConfig = nuevaConfig.limites
+  prioridadesConfig = nuevaConfig.prioridades
 }
 
 /**
@@ -68,18 +81,18 @@ export function obtenerMinutosTranscurridos(
 }
 
 /**
- * Calcula la prioridad del problema basado en su tipo y los minutos transcurridos
+ * Calcula la prioridad del problema basado en su tipo y los minutos transcurridos según la configuración
  */
 export function calcularPrioridadProblema(tipo: TipoProblema, minutos: number): PrioridadProblema {
   switch (tipo) {
     case 'atrasado':
-      return minutos >= 45 ? 'alta' : 'media'
+      return minutos >= prioridadesConfig.pedidoAtrasadoAltaMinutos ? 'alta' : 'media'
     case 'listo_demorado':
-      return minutos >= 15 ? 'alta' : 'media'
+      return minutos >= prioridadesConfig.listoDemoradoAltaMinutos ? 'alta' : 'media'
     case 'sin_cadete':
-      return minutos >= 15 ? 'alta' : 'media'
+      return minutos >= prioridadesConfig.sinCadeteAltaMinutos ? 'alta' : 'media'
     case 'cocina_demorado':
-      return minutos >= 30 ? 'alta' : 'media'
+      return minutos >= prioridadesConfig.cocinaDemoradoAltaMinutos ? 'alta' : 'media'
     case 'olvidado':
       return 'alta'
     default:
@@ -88,7 +101,7 @@ export function calcularPrioridadProblema(tipo: TipoProblema, minutos: number): 
 }
 
 /**
- * Retorna todos los pedidos activos que llevan más de 30 minutos desde su creación
+ * Retorna todos los pedidos activos que llevan más de los minutos configurados desde su creación
  */
 export function obtenerPedidosAtrasados(pedidos: Pedido[]): Pedido[] {
   const ahora = new Date()
@@ -102,12 +115,12 @@ export function obtenerPedidosAtrasados(pedidos: Pedido[]): Pedido[] {
       pedido.fecha,
       pedido.hora
     )
-    return minutosActivo > 30
+    return minutosActivo > limitesConfig.pedidoAtrasadoMinutos
   })
 }
 
 /**
- * Analiza los pedidos y retorna una lista de alertas operativas en tiempo real
+ * Analiza los pedidos y retorna una lista de alertas operativas en tiempo real usando límites de configuración
  */
 export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[] {
   const alertas: AlertaOperativa[] = []
@@ -120,8 +133,8 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
     const fechaCreacion = parsearFechaSegura(pedido.created_at, pedido.fecha, pedido.hora)
     const minutosDesdeCreacion = obtenerMinutosTranscurridos(fechaCreacion, ahora)
 
-    // 1. Pedido atrasado (más de 30 minutos activo)
-    if (minutosDesdeCreacion > 30) {
+    // 1. Pedido atrasado (más de los minutos de configuración activos)
+    if (minutosDesdeCreacion > limitesConfig.pedidoAtrasadoMinutos) {
       alertas.push({
         id: `${pedido.id}-atrasado`,
         pedidoId: pedido.id,
@@ -134,10 +147,10 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
       })
     }
 
-    // 2. Pedidos listos hace mucho (estado "Listo" por más de 10 minutos)
+    // 2. Pedidos listos hace mucho (estado "Listo" por más del límite de configuración en minutos)
     if (pedido.estado === 'listo' && pedido.listo_at) {
       const minutosEnListo = obtenerMinutosTranscurridos(pedido.listo_at, ahora)
-      if (minutosEnListo > 10) {
+      if (minutosEnListo > limitesConfig.listoDemoradoMinutos) {
         alertas.push({
           id: `${pedido.id}-listo_demorado`,
           pedidoId: pedido.id,
@@ -174,11 +187,11 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
       })
     }
 
-    // 4. Pedidos demasiado tiempo en cocina (estado "Preparando"/"en_cocina" por más de 20 minutos)
+    // 4. Pedidos demasiado tiempo en cocina (estado "Preparando"/"en_cocina" por más del límite en cocina)
     if (pedido.estado === 'en_cocina') {
       const inicioCocina = pedido.cocina_at || fechaCreacion
       const minutosEnCocina = obtenerMinutosTranscurridos(inicioCocina, ahora)
-      if (minutosEnCocina > 20) {
+      if (minutosEnCocina > limitesConfig.cocinaDemoradoMinutos) {
         alertas.push({
           id: `${pedido.id}-cocina_demorado`,
           pedidoId: pedido.id,
@@ -192,7 +205,7 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
       }
     }
 
-    // 5. Pedidos olvidados (sin cambios de estado hace más de 45 minutos)
+    // 5. Pedidos olvidados (sin cambios de estado hace más del límite configurado)
     // Buscamos la fecha del último evento relevante
     const fechasEventos = [
       fechaCreacion,
@@ -204,7 +217,7 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
     const ultimaFechaActividad = fechasEventos.reduce((max, f) => (f.getTime() > max.getTime() ? f : max), fechaCreacion)
     const minutosSinActividad = obtenerMinutosTranscurridos(ultimaFechaActividad, ahora)
 
-    if (minutosSinActividad > 45) {
+    if (minutosSinActividad > limitesConfig.pedidoOlvidadoMinutos) {
       alertas.push({
         id: `${pedido.id}-olvidado`,
         pedidoId: pedido.id,

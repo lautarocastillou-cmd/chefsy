@@ -20,6 +20,8 @@ import {
   reproducirSonidoCampanaCocina,
 } from './TemaNotificacionContexto'
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
+import configuracionOperativaInicial from '../config/operacion.json'
+import { actualizarConfiguracionLocal } from '../lib/problemas'
 
 // Re-exportar interfaz de Notificación para mantener compatibilidad
 export type { Notificacion } from './TemaNotificacionContexto'
@@ -121,6 +123,8 @@ interface ValorContextoPedidosInterno {
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
+  configuracionOperativa: typeof configuracionOperativaInicial
+  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -186,8 +190,58 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const prevPedidosRef = useRef<Pedido[]>([])
   const esCambioLocalRef = useRef(false)
 
+  // Obtener sesión del usuario activo
+  const { usuarioActivo } = usarAuth()
+
   // Acceder a notificaciones del contexto UI
   const { agregarNotificacion } = usarTemaNotificacion()
+
+  // Estado para la configuración operativa de tiempos
+  const [configuracionOperativa, setConfiguracionOperativa] = useState<typeof configuracionOperativaInicial>(configuracionOperativaInicial)
+
+  // Cargar configuración de tiempos al inicializar
+  useEffect(() => {
+    async function cargarConfig() {
+      try {
+        const res = await fetch('/api/admin/configuracion')
+        if (res.ok) {
+          const config = await res.json()
+          setConfiguracionOperativa(config)
+          actualizarConfiguracionLocal(config)
+        }
+      } catch (err) {
+        console.error('Error cargando configuración operativa:', err)
+      }
+    }
+    cargarConfig()
+  }, [])
+
+  // Guardar la configuración en el servidor y actualizar localmente
+  const guardarConfiguracionOperativa = async (nuevaConfig: typeof configuracionOperativaInicial): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/admin/configuracion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nuevaConfig),
+      })
+      if (res.ok) {
+        setConfiguracionOperativa(nuevaConfig)
+        actualizarConfiguracionLocal(nuevaConfig)
+        agregarNotificacion('Configuración de alertas guardada exitosamente.', 'success')
+        return true
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        agregarNotificacion(`Error al guardar la configuración: ${errorData.error || res.statusText}`, 'warning')
+        return false
+      }
+    } catch (err) {
+      console.error('Error guardando configuración operativa:', err)
+      agregarNotificacion('Error de conexión al guardar la configuración.', 'warning')
+      return false
+    }
+  }
 
   // 1) Al montar: Cargar Pedidos de Supabase (no archivados) con fallback local
   useEffect(() => {
@@ -354,11 +408,14 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify(estado.pedidos))
 
     if (prevPedidosRef.current.length > 0) {
+      const esCadete = usuarioActivo?.rol === 'cadete'
       const esVistaCadeteria = typeof window !== 'undefined' && window.location.pathname.includes('/cadeteria')
       
+      // Notificar NUEVOS pedidos creados
       const nuevosPedidos = estado.pedidos.filter((nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id))
       nuevosPedidos.forEach((nuevo) => {
-        if (!esVistaCadeteria) {
+        // Los cadetes NO reciben notificaciones de pedidos recién ingresados (estado 'nuevo')
+        if (!esCadete && !esVistaCadeteria) {
           reproducirSonidoCampanaCocina()
           if (!esCambioLocalRef.current) {
             agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
@@ -366,12 +423,59 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         }
       })
 
+      // Notificar cambios de estado y asignación
       estado.pedidos.forEach((nuevo) => {
         const anterior = prevPedidosRef.current.find((p) => p.id === nuevo.id)
-        if (anterior && anterior.estado !== 'entregado' && nuevo.estado === 'entregado') {
-          if (!esCambioLocalRef.current && !esVistaCadeteria) {
-            agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
-            reproducirSonidoNotificacion()
+        if (!anterior) return
+
+        // A) Alerta para cuando se le asigna un pedido al cadete logueado
+        const seLeAsignoAlCadete = 
+          esCadete && 
+          nuevo.cadete_id === usuarioActivo?.usuario && 
+          anterior.cadete_id !== nuevo.cadete_id
+
+        if (seLeAsignoAlCadete && !esCambioLocalRef.current) {
+          agregarNotificacion(`🔔 ¡Tenés un nuevo pedido! para ${nuevo.cliente}`, 'info')
+          reproducirSonidoNotificacion()
+        }
+
+        // B) Cambios de estado en general
+        if (anterior.estado !== nuevo.estado) {
+          const nombresEstados: Record<EstadoPedido, string> = {
+            nuevo: 'Nuevo',
+            en_cocina: 'En Cocina',
+            listo: 'Listo',
+            en_reparto: 'En Reparto',
+            entregado: 'Entregado',
+            cancelado: 'Cancelado'
+          }
+
+          const esPedidoPropioDelCadete = esCadete && nuevo.cadete_id === usuarioActivo?.usuario
+
+          if (esPedidoPropioDelCadete && !esCambioLocalRef.current) {
+            // Repartidores: solo alertar de cambios desde Cocina en adelante
+            const estadosPermitidosParaCadete = ['en_cocina', 'listo', 'en_reparto', 'entregado', 'cancelado']
+            if (estadosPermitidosParaCadete.includes(nuevo.estado)) {
+              let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
+              if (nuevo.estado === 'listo') {
+                mensaje = `🛵 ¡El pedido de ${nuevo.cliente} está listo para llevar!`
+              }
+              agregarNotificacion(mensaje, nuevo.estado === 'entregado' ? 'success' : 'info')
+              reproducirSonidoNotificacion()
+            }
+          }
+
+          // Administradores y otros roles (fuera de cadetería)
+          if (!esCadete && !esVistaCadeteria) {
+            if (nuevo.estado === 'entregado') {
+              if (!esCambioLocalRef.current) {
+                agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
+                reproducirSonidoNotificacion()
+              }
+            } else {
+              agregarNotificacion(`Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`, 'info')
+              reproducirSonidoNotificacion()
+            }
           }
         }
       })
@@ -379,7 +483,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     
     setTimeout(() => { esCambioLocalRef.current = false }, 100)
     prevPedidosRef.current = estado.pedidos
-  }, [estado.pedidos, estaListo])
+  }, [estado.pedidos, estaListo, usuarioActivo])
 
   // 4) Operaciones CRUD de Pedidos
 
@@ -614,7 +718,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   // Alertas de inactividad de pedidos para administradores
-  const { usuarioActivo } = usarAuth()
   const alertasEnviadasRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
@@ -705,6 +808,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         dbEstado,
         finalizarTurno,
         obtenerPedidosPorFecha,
+        configuracionOperativa,
+        guardarConfiguracionOperativa,
       }}
     >
       {children}
@@ -749,6 +854,8 @@ interface ValorContextoPedidos {
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
+  configuracionOperativa: typeof configuracionOperativaInicial
+  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
 }
 
 export function usarPedidos(): ValorContextoPedidos {
@@ -774,6 +881,8 @@ export function usarPedidos(): ValorContextoPedidos {
     dbEstado: contextoPedidos.dbEstado,
     finalizarTurno: contextoPedidos.finalizarTurno,
     obtenerPedidosPorFecha: contextoPedidos.obtenerPedidosPorFecha,
+    configuracionOperativa: contextoPedidos.configuracionOperativa,
+    guardarConfiguracionOperativa: contextoPedidos.guardarConfiguracionOperativa,
 
     // Catálogo
     categorias: contextoCatalogo.categorias,

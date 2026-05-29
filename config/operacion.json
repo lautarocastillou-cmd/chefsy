@@ -1,0 +1,14 @@
+{
+  "limites": {
+    "pedidoAtrasadoMinutos": 30,
+    "listoDemoradoMinutos": 10,
+    "cocinaDemoradoMinutos": 20,
+    "pedidoOlvidadoMinutos": 45
+  },
+  "prioridades": {
+    "pedidoAtrasadoAltaMinutos": 45,
+    "listoDemoradoAltaMinutos": 15,
+    "sinCadeteAltaMinutos": 15,
+    "cocinaDemoradoAltaMinutos": 30
+  }
+}

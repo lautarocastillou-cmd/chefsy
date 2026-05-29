@@ -8,12 +8,16 @@
 
 import { usePathname } from 'next/navigation'
 
-// Mapeo de rutas a títulos legibles
 const titulosPorRuta: Record<string, string> = {
-  '/dashboard':    'Dashboard',
-  '/pedidos':      'Pedidos',
-  '/nuevo-pedido': 'Nuevo Pedido',
-  '/cadeteria':    'Cadetería',
+  '/dashboard':     'Dashboard',
+  '/pedidos':       'Pedidos',
+  '/nuevo-pedido':  'Nuevo Pedido',
+  '/cadeteria':     'Cadetería',
+  '/cierre':        'Cierre de Caja',
+  '/productos':     'Productos',
+  '/clientes':      'Clientes',
+  '/tienda':        'Tienda',
+  '/configuracion': 'Configuración del Sistema',
 }
 
 export default function Header() {

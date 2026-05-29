@@ -1,15 +1,10 @@
 'use client'
 
-import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio } from '@/lib/utils'
-import { useState, useMemo, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import {
   Search,
-  Phone,
   MapPin,
   ShoppingBag,
-  TrendingUp,
   MessageCircle,
   Calendar,
   X,
@@ -19,152 +14,19 @@ import {
   DollarSign,
   ChevronRight,
 } from 'lucide-react'
-import { Pedido } from '@/tipos'
-
-interface ClienteAgrupado {
-  telefono: string
-  nombre: string
-  direccionMasReciente: string
-  totalPedidos: number
-  totalGastado: number
-  platoFavorito: string
-  fechaUltimoPedido: string
-  pedidosHistoricos: Pedido[]
-}
+import { useAgendaClientes, ClienteAgrupado } from '@/hooks/useAgendaClientes'
 
 export default function PaginaAgendaClientes() {
-  const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
-  const [cargando, setCargando] = useState(true)
-
-  useEffect(() => {
-    async function cargarPedidos() {
-      try {
-        const { data, error } = await supabase
-          .from('pedidos')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (error) throw error
-        if (data) {
-          setPedidosHistoricos(data as Pedido[])
-        }
-      } catch (err) {
-        console.error('Error cargando pedidos históricos:', err)
-      } finally {
-        setCargando(false)
-      }
-    }
-    cargarPedidos()
-  }, [])
-
-  // Filtro de búsqueda
-  const [busqueda, setBusqueda] = useState('')
-  // Cliente seleccionado para el modal/detalle histórico
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteAgrupado | null>(null)
-
-  // Agrupar pedidos por cliente (teléfono único)
-  const clientesAgrupados = useMemo(() => {
-    const grupos: Record<string, Pedido[]> = {}
-
-    // Agrupar pedidos por teléfono
-    pedidosHistoricos.forEach((p) => {
-      const tel = p.telefono.trim()
-      if (!tel) return
-      if (!grupos[tel]) {
-        grupos[tel] = []
-      }
-      grupos[tel].push(p)
-    })
-
-    // Mapear cada grupo a estadísticas acumuladas
-    const listaClientes: ClienteAgrupado[] = Object.entries(grupos).map(([telefono, pedidosCliente]) => {
-      // Ordenar pedidos del más nuevo al más viejo
-      const ordenados = [...pedidosCliente].sort((a, b) => {
-        const fechaA = new Date(`${a.fecha}T${a.hora || '00:00'}`)
-        const fechaB = new Date(`${b.fecha}T${b.hora || '00:00'}`)
-        return fechaB.getTime() - fechaA.getTime()
-      })
-
-      const ultimoPedido = ordenados[0]
-      const nombre = ultimoPedido.cliente
-
-      // Buscar la dirección más reciente utilizada en entregas tipo delivery
-      const ultimoDelivery = ordenados.find((p) => p.tipoEntrega === 'delivery')
-      const direccionMasReciente = ultimoDelivery?.direccion || 'Retiro / Consumo Local'
-
-      // Contar pedidos válidos (no cancelados) para calcular gasto total
-      const pedidosValidos = pedidosCliente.filter((p) => p.estado !== 'cancelado')
-      const totalGastado = pedidosValidos.reduce((sum, p) => sum + p.total, 0)
-
-      // Encontrar plato preferido (más pedido)
-      const contadorPlatos: Record<string, number> = {}
-      pedidosCliente.forEach((p) => {
-        p.productos.forEach((prod) => {
-          // Extraemos solo el nombre principal del producto para contar bien, quitando modificadores entre paréntesis si los hay
-          const nombreBase = prod.nombre.split(' (+')[0]
-          contadorPlatos[nombreBase] = (contadorPlatos[nombreBase] || 0) + prod.cantidad
-        })
-      })
-
-      let platoFavorito = 'Sin registros'
-      let maxCantidad = 0
-      Object.entries(contadorPlatos).forEach(([plato, cant]) => {
-        if (cant > maxCantidad) {
-          maxCantidad = cant
-          platoFavorito = plato
-        }
-      })
-
-      return {
-        telefono,
-        nombre,
-        direccionMasReciente,
-        totalPedidos: pedidosCliente.length,
-        totalGastado,
-        platoFavorito,
-        fechaUltimoPedido: ultimoPedido.fecha,
-        pedidosHistoricos: ordenados,
-      }
-    })
-
-    return listaClientes
-  }, [pedidosHistoricos])
-
-  // Filtrar clientes
-  const clientesFiltrados = useMemo(() => {
-    return clientesAgrupados.filter((c) => {
-      const query = busqueda.toLowerCase()
-      return c.nombre.toLowerCase().includes(query) || c.telefono.includes(query)
-    })
-  }, [clientesAgrupados, busqueda])
-
-  // Métricas Macro
-  const metricas = useMemo(() => {
-    const totalClientes = clientesAgrupados.length
-    
-    let clienteEstrella = 'N/A'
-    let maxPedidos = 0
-    let clienteTopSpender = 'N/A'
-    let maxGasto = 0
-
-    clientesAgrupados.forEach((c) => {
-      if (c.totalPedidos > maxPedidos) {
-        maxPedidos = c.totalPedidos
-        clienteEstrella = c.nombre
-      }
-      if (c.totalGastado > maxGasto) {
-        maxGasto = c.totalGastado
-        clienteTopSpender = c.nombre
-      }
-    })
-
-    return {
-      totalClientes,
-      clienteEstrella,
-      maxPedidos,
-      clienteTopSpender,
-      maxGasto,
-    }
-  }, [clientesAgrupados])
+  const {
+    cargando,
+    error,
+    busqueda,
+    setBusqueda,
+    clienteSeleccionado,
+    setClienteSeleccionado,
+    clientesFiltrados,
+    metricas
+  } = useAgendaClientes()
 
   // Enviar mensaje de WhatsApp
   const enviarWhatsApp = (cliente: ClienteAgrupado) => {
@@ -177,6 +39,15 @@ export default function PaginaAgendaClientes() {
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <div className="w-8 h-8 border-4 border-chefsy-300 border-t-chefsy rounded-full animate-spin" />
         <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Cargando agenda de clientes...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <p className="text-red-500 font-bold text-lg">⚠️ Ocurrió un error</p>
+        <p className="text-sm text-gray-500">{error}</p>
       </div>
     )
   }
