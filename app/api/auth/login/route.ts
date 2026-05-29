@@ -41,7 +41,8 @@ export async function POST(request: Request) {
 
     // Establecer la cookie segura HttpOnly en la respuesta
     const cookieConfig = configurarCookieSesion(token)
-    cookies().set(cookieConfig as any)
+    const cookieStore = await cookies()
+    cookieStore.set(cookieConfig as any)
 
     // Retornar los datos públicos del usuario (sin el token en el body)
     return NextResponse.json({

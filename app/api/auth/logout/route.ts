@@ -10,7 +10,8 @@ import { NOMBRE_COOKIE_SESION } from '@/lib/auth-server'
 
 export async function POST() {
   // Eliminar la cookie de sesión estableciendo su maxAge a 0
-  cookies().set({
+  const cookieStore = await cookies()
+  cookieStore.set({
     name:     NOMBRE_COOKIE_SESION,
     value:    '',
     httpOnly: true,

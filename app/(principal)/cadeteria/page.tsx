@@ -8,13 +8,14 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone } from 'lucide-react'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
 import { supabase } from '@/lib/supabase'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -68,6 +69,14 @@ function TarjetaPedidoCadete({
       return
     }
 
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (nuevoEstado === 'en_reparto') {
+        navigator.vibrate([100, 50, 100])
+      } else if (nuevoEstado === 'entregado') {
+        navigator.vibrate([200, 100, 200])
+      }
+    }
+
     if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
       localStorage.removeItem(`original-pago-${pedido.id}`)
     }
@@ -102,6 +111,12 @@ function TarjetaPedidoCadete({
 
       {/* Acciones de Contacto y Navegación */}
       <div className="flex flex-wrap items-center gap-2">
+        <a
+          href={`tel:${pedido.telefono.replace(/\D/g, '')}`}
+          className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
+        >
+          <Phone size={12} /> Llamar
+        </a>
         <a
           href={redireccionarWhatsApp(pedido.telefono, pedido.cliente)}
           target="_blank"
@@ -522,6 +537,7 @@ export default function PaginaCadeteria() {
           )
         )}
       </main>
+      <CalculadoraSutil />
     </div>
   )
 }

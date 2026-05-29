@@ -105,7 +105,7 @@ export async function verificarToken(token: string): Promise<PayloadSesion | nul
 
 // ── Leer la sesión activa desde las cookies del servidor ───────────────────
 export async function obtenerSesion(): Promise<PayloadSesion | null> {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const token = cookieStore.get(NOMBRE_COOKIE)?.value
   if (!token) return null
   return verificarToken(token)

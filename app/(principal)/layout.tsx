@@ -104,7 +104,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
       </div>
 
       {/* Herramientas flotantes (solo admin, persisten entre páginas) */}
-      {esAdmin && (
+      {esAdmin && pathname !== '/cadeteria' && (
         <>
           <NotitaFlotante />
           <CalculadoraFlotante />

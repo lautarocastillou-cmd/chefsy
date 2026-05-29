@@ -250,12 +250,54 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cargarInicial()
   }, [])
 
-  // 1.b) Escuchar cambios de conectividad en el navegador para actualizar dbEstado
+  // 1.b) Escuchar cambios de conectividad en el navegador para actualizar dbEstado y sincronizar
   useEffect(() => {
     if (typeof window === 'undefined') return
     
+    const syncOfflineQueue = async () => {
+      const queueStr = localStorage.getItem('chefsy-offline-queue')
+      if (!queueStr) return
+      try {
+        const queue = JSON.parse(queueStr)
+        if (!Array.isArray(queue) || queue.length === 0) return
+        
+        console.log(`[Offline Sync] Sincronizando ${queue.length} acciones pendientes...`)
+        const nuevasEncoladas = []
+        let huboExito = false
+        
+        for (const item of queue) {
+          try {
+            const respuesta = await fetch('/api/admin/pedidos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(item.payload)
+            })
+            if (respuesta.ok) {
+              huboExito = true
+            } else {
+              nuevasEncoladas.push(item)
+            }
+          } catch (err) {
+            console.error('[Offline Sync] Fallo al sincronizar acción:', err)
+            nuevasEncoladas.push(item)
+          }
+        }
+        
+        if (nuevasEncoladas.length === 0) {
+          localStorage.removeItem('chefsy-offline-queue')
+          if (huboExito) agregarNotificacion('Se sincronizaron los cambios pendientes correctamente.', 'success')
+        } else {
+          localStorage.setItem('chefsy-offline-queue', JSON.stringify(nuevasEncoladas))
+        }
+      } catch (e) {
+        console.error('Error procesando offline queue:', e)
+        localStorage.removeItem('chefsy-offline-queue')
+      }
+    }
+
     const handleOnline = () => {
       setDbEstado('conectado')
+      syncOfflineQueue()
     }
     const handleOffline = () => {
       setDbEstado('desconectado')
@@ -263,11 +305,17 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    
+    // Intentar sincronizar al arrancar si está online
+    if (navigator.onLine) {
+      syncOfflineQueue()
+    }
+    
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [])
+  }, [agregarNotificacion])
 
   // 2) Suscripción a Supabase Realtime para pedidos
   useEffect(() => {
@@ -359,16 +407,29 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const enviarAccionPedido = async (payload: any) => {
-    const respuesta = await fetch('/api/admin/pedidos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-    if (!respuesta.ok) {
-      const errorData = await respuesta.json().catch(() => ({}))
-      throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
+    try {
+      const respuesta = await fetch('/api/admin/pedidos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      if (!respuesta.ok) {
+        const errorData = await respuesta.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
+      }
+    } catch (e: any) {
+      if (!navigator.onLine || (e.message && e.message.includes('Failed to fetch'))) {
+        console.warn('[Offline] Petición encolada para sincronizar luego:', payload)
+        const queueStr = localStorage.getItem('chefsy-offline-queue')
+        const queue = queueStr ? JSON.parse(queueStr) : []
+        queue.push({ payload, timestamp: Date.now() })
+        localStorage.setItem('chefsy-offline-queue', JSON.stringify(queue))
+        agregarNotificacion('Sin conexión. Los cambios se sincronizarán al recuperar la señal.', 'info')
+        return
+      }
+      throw e
     }
   }
 
