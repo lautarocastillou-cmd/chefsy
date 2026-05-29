@@ -495,7 +495,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         })
       } catch (e: any) {
         console.error('[Servidor/Supabase] Error al cambiar estado:', e)
-        agregarNotificacion(`Error del servidor: ${e.message}`, 'error')
+        agregarNotificacion(`Error del servidor: ${e.message}`, 'warning')
       }
     }
   }
