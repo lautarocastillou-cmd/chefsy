@@ -13,14 +13,15 @@ const NOMBRE_COOKIE = 'chefsy-token'
 
 // Rutas privadas y los roles que tienen acceso
 const REGLAS_ACCESO = [
-  { prefijo: '/dashboard',  roles: ['admin'] },
-  { prefijo: '/pedidos',    roles: ['admin'] },
-  { prefijo: '/productos',  roles: ['admin'] },
-  { prefijo: '/clientes',   roles: ['admin'] },
-  { prefijo: '/cierre',     roles: ['admin'] },
-  { prefijo: '/nuevo-pedido', roles: ['admin'] },
-  { prefijo: '/cadeteria',  roles: ['admin', 'cadete'] },
-  { prefijo: '/api/admin',  roles: ['admin'] },
+  { prefijo: '/dashboard',          roles: ['admin'] },
+  { prefijo: '/pedidos',            roles: ['admin'] },
+  { prefijo: '/productos',          roles: ['admin'] },
+  { prefijo: '/clientes',           roles: ['admin'] },
+  { prefijo: '/cierre',             roles: ['admin'] },
+  { prefijo: '/nuevo-pedido',       roles: ['admin'] },
+  { prefijo: '/cadeteria',          roles: ['admin', 'cadete'] },
+  { prefijo: '/api/admin/pedidos',  roles: ['admin', 'cadete'] },
+  { prefijo: '/api/admin',          roles: ['admin'] },
 ]
 
 function obtenerClave() {
