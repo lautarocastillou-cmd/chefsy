@@ -107,7 +107,10 @@ export default function CalculadoraSutil() {
       else if (e.key === '*') aplicarOperacion('×')
       else if (e.key === '/') { e.preventDefault(); aplicarOperacion('÷') }
       else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); igual() }
-      else if (e.key === 'Escape') limpiar()
+      else if (e.key === 'Escape') {
+        if (display !== '0' || valorAnterior !== null) limpiar()
+        else setAbierta(false)
+      }
       else if (e.key === 'Backspace') borrar()
       else if (e.key === '%') porcentaje()
     }

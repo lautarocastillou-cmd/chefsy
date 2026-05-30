@@ -16,6 +16,7 @@ import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from 
 import { generarId, generarIdProducto, formatearPrecio } from '@/lib/utils'
 import { useEffect } from 'react'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
 
 const claseInput =
   'w-full border border-gray-300 rounded-md px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent'
@@ -28,6 +29,11 @@ interface PropsFormularioPedido {
 export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormularioPedido = {}) {
   const { agregarPedido, editarPedido, pedidos, productos } = usarPedidos()
   const router = useRouter()
+
+  useEscapeKey(() => {
+    if (onClose) onClose()
+    else router.push('/pedidos')
+  })
 
   const cargarEjemplo = () => {
     setCliente('Lautaro de Prueba')

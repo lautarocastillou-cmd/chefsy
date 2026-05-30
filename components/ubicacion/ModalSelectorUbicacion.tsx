@@ -11,6 +11,7 @@ import {
   formatearCoordenadas,
   obtenerUbicacionActual,
 } from '@/lib/ubicacion'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
 
 const MapaSelector = dynamic(() => import('./MapaSelector'), {
   ssr: false,
@@ -44,6 +45,8 @@ export default function ModalSelectorUbicacion({
   )
   const [cargando, setCargando] = useState(false)
   const [mensaje, setMensaje] = useState('')
+
+  useEscapeKey(onCerrar, abierto)
 
   useEffect(() => {
     if (!abierto) return
