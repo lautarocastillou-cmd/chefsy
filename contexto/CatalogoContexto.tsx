@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/datos/productos'
-import { supabase } from '@/lib/supabase'
+import { obtenerCatalogoPrincipal, inicializarCatalogo, suscribirACatalogo } from '@/servicios/supabase/catalogo'
 
 export interface ValorContextoCatalogo {
   categorias: CategoriaCatalogo[]
@@ -59,28 +59,20 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
       // 1.b) Intentar cargar catálogo de Supabase
       if (credencialesValidas && estaOnline) {
         try {
-          const { data: catalogoGuardado, error: catError } = await supabase
-            .from('catalogo')
-            .select('*')
-            .eq('id', 'principal')
-            .single()
+          const catalogoGuardado = await obtenerCatalogoPrincipal()
 
-          if (catError && catError.code === 'PGRST116') {
+          if (!catalogoGuardado) {
             // El catálogo principal no existe, crearlo con valores iniciales
-            const { error: insError } = await supabase
-              .from('catalogo')
-              .insert({
-                id: 'principal',
+            try {
+              await inicializarCatalogo({
                 categorias: catsActuales,
                 productos: prodsActuales,
                 modificadores: modsActuales
               })
-            if (insError) {
+            } catch (insError) {
               console.error('[Supabase] Error al inicializar catálogo:', insError)
             }
-          } else if (catError) {
-            throw catError
-          } else if (catalogoGuardado) {
+          } else {
             const cats = catalogoGuardado.categorias || []
             const prods = catalogoGuardado.productos || []
             const mods = catalogoGuardado.modificadores || []
@@ -110,40 +102,28 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!estaListoCatalogo) return
 
-    const channel = supabase
-      .channel('tabla-catalogo')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'catalogo' },
-        (payload) => {
-          if (esCambioCatalogoLocalRef.current) return
+    const channel = suscribirACatalogo((catalogoNuevo) => {
+      if (esCambioCatalogoLocalRef.current) return
 
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const catalogoNuevo = payload.new as any
-            if (catalogoNuevo && catalogoNuevo.id === 'principal') {
-              const cats = catalogoNuevo.categorias || []
-              const prods = catalogoNuevo.productos || []
-              const mods = catalogoNuevo.modificadores || []
+      const cats = catalogoNuevo.categorias || []
+      const prods = catalogoNuevo.productos || []
+      const mods = catalogoNuevo.modificadores || []
 
-              setCategorias(cats)
-              categoriasRef.current = cats
-              localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
+      setCategorias(cats)
+      categoriasRef.current = cats
+      localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
 
-              setProductos(prods)
-              productosRef.current = prods
-              localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
+      setProductos(prods)
+      productosRef.current = prods
+      localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
 
-              setModificadores(mods)
-              modificadoresRef.current = mods
-              localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
-            }
-          }
-        }
-      )
-      .subscribe()
+      setModificadores(mods)
+      modificadoresRef.current = mods
+      localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      channel.unsubscribe()
     }
   }, [estaListoCatalogo])
 

@@ -155,6 +155,26 @@ export default function PaginaTienda() {
 
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todos')
+  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
+  const [cartAbierto, setCartAbierto] = useState(false)
+  
+  // Estado para el modal de personalización
+  const [productoAPersonalizar, setProductoAPersonalizar] = useState<ProductoCatalogo | null>(null)
+  const [modsSeleccionados, setModsSeleccionados] = useState<ModificadorCatalogo[]>([])
+  const [cantidadModal, setCantidadModal] = useState(1)
+  const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
+
+  // Estado del flujo de checkout
+  const [mostrarCheckout, setMostrarCheckout] = useState(false)
+  const [nombreCliente, setNombreCliente] = useState('')
+  const [telefonoCliente, setTelefonoCliente] = useState('')
+  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
+  const [direccionCliente, setDireccionCliente] = useState('')
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'>('efectivo')
+  const [observaciones, setObservaciones] = useState('')
+  
+  // Estado de pedido finalizado
+  const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
   // Validar acceso: Solo el administrador puede entrar a la tienda temporalmente
   if (!estaListoAuth) {
@@ -205,26 +225,6 @@ export default function PaginaTienda() {
       </div>
     )
   }
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
-  const [cartAbierto, setCartAbierto] = useState(false)
-  
-  // Estado para el modal de personalización
-  const [productoAPersonalizar, setProductoAPersonalizar] = useState<ProductoCatalogo | null>(null)
-  const [modsSeleccionados, setModsSeleccionados] = useState<ModificadorCatalogo[]>([])
-  const [cantidadModal, setCantidadModal] = useState(1)
-  const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
-
-  // Estado del flujo de checkout
-  const [mostrarCheckout, setMostrarCheckout] = useState(false)
-  const [nombreCliente, setNombreCliente] = useState('')
-  const [telefonoCliente, setTelefonoCliente] = useState('')
-  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
-  const [direccionCliente, setDireccionCliente] = useState('')
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
-  const [observaciones, setObservaciones] = useState('')
-  
-  // Estado de pedido finalizado
-  const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
   const costoEnvio = 350 // Costo de envío fijo simulado para delivery
 

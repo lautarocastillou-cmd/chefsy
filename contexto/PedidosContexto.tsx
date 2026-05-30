@@ -11,7 +11,12 @@ import React, {
 } from 'react'
 import { Pedido, EstadoPedido } from '@/tipos'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { supabase } from '@/lib/supabase'
+import { 
+  obtenerPedidosActivos, 
+  obtenerPedidosHistoricos, 
+  insertarPedidoLocal, 
+  suscribirAPedidos 
+} from '@/servicios/supabase/pedidos'
 import { usarAuth } from '@/contexto/AuthContexto'
 import {
   usarTemaNotificacion,
@@ -116,6 +121,7 @@ interface ValorContextoPedidosInterno {
   agregarPedido: (pedido: Pedido) => void
   editarPedido: (pedido: Pedido) => void
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
+  revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
   asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
   cambiarMetodoPago: (id: string, metodoPago: string) => void
@@ -262,14 +268,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           throw new Error('Navegador offline')
         }
 
-        const { data: pedidosGuardados, error } = await supabase
-          .from('pedidos')
-          .select('*')
-          .eq('archivado', false) // Cargar solo pedidos activos (no archivados)
-          .order('created_at', { ascending: false })
-          .limit(100)
-        
-        if (error) throw error
+        const pedidosGuardados = await obtenerPedidosActivos(100)
 
         setDbEstado('conectado')
 
@@ -371,32 +370,23 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!estaListo) return
 
-    const channel = supabase
-      .channel('tabla-pedidos')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'pedidos' },
-        (payload) => {
-          if (esCambioLocalRef.current) return
-
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const pedidoCrudo = payload.new as any
-            if (pedidoCrudo.archivado) {
-              // Si el pedido fue archivado, lo quitamos de la pantalla local
-              despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedidoCrudo.id })
-            } else {
-              const pedido = pedidoCrudo as Pedido
-              despachar({ tipo: 'UPSERT_PEDIDO', pedido })
-            }
-          } else if (payload.eventType === 'DELETE') {
-            despachar({ tipo: 'ELIMINAR_PEDIDO', id: payload.old.id })
-          }
+    const channel = suscribirAPedidos(
+      (pedido, archivado) => {
+        if (esCambioLocalRef.current) return
+        if (archivado) {
+          despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
+        } else {
+          despachar({ tipo: 'UPSERT_PEDIDO', pedido })
         }
-      )
-      .subscribe()
+      },
+      (id) => {
+        if (esCambioLocalRef.current) return
+        despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+      }
+    )
 
     return () => {
-      supabase.removeChannel(channel)
+      channel.unsubscribe()
     }
   }, [estaListo])
 
@@ -473,8 +463,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
                 reproducirSonidoNotificacion()
               }
             } else {
-              agregarNotificacion(`Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`, 'info')
-              reproducirSonidoNotificacion()
+              if (!esCambioLocalRef.current) {
+                agregarNotificacion(`Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`, 'info')
+                reproducirSonidoNotificacion()
+              }
             }
           }
         }
@@ -494,11 +486,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     
     try {
       const payload: any = { ...pedido, archivado: false }
-      
-      const { error } = await supabase.from('pedidos').insert(payload)
-      if (error) throw error
+      await insertarPedidoLocal(payload)
     } catch (e) {
-      console.error('[Supabase] Error al insertar pedido', e)
       agregarNotificacion('Error al guardar el pedido en la nube', 'warning')
     }
   }
@@ -594,6 +583,51 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         console.error('[Servidor/Supabase] Error al cambiar estado:', e)
         agregarNotificacion(`Error del servidor: ${e.message}`, 'warning')
       }
+    }
+  }
+
+  const revertirEstado = async (id: string) => {
+    const pedido = estado.pedidos.find((p) => p.id === id)
+    if (!pedido) return
+    
+    let estadoAnterior: EstadoPedido = 'nuevo'
+    const updates: any = {}
+
+    switch (pedido.estado) {
+      case 'en_cocina':
+        estadoAnterior = 'nuevo'
+        updates.cocina_at = null
+        break
+      case 'listo':
+        estadoAnterior = 'en_cocina'
+        updates.listo_at = null
+        break
+      case 'en_reparto':
+        estadoAnterior = 'listo'
+        updates.reparto_at = null
+        break
+      case 'entregado':
+        estadoAnterior = pedido.tipoEntrega === 'delivery' ? 'en_reparto' : 'listo'
+        updates.entregado_at = null
+        break
+      default:
+        return
+    }
+
+    esCambioLocalRef.current = true
+    updates.estado = estadoAnterior
+    despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
+
+    try {
+      await enviarAccionPedido({
+        accion: 'actualizar_estado',
+        id,
+        ...updates
+      })
+      agregarNotificacion(`Se ha revertido el estado del pedido.`, 'info')
+    } catch (e: any) {
+      console.error('Error al revertir estado:', e)
+      agregarNotificacion(`Error al revertir: ${e.message}`, 'warning')
     }
   }
 
@@ -694,15 +728,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   // 6) Cargar pedidos históricos de una fecha
   const obtenerPedidosPorFecha = async (fecha: string): Promise<Pedido[]> => {
     try {
-      const { data, error } = await supabase
-        .from('pedidos')
-        .select('*')
-        .eq('fecha', fecha)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      return (data || []) as Pedido[]
+      return await obtenerPedidosHistoricos(fecha)
     } catch (err) {
       console.error('[Supabase] Error al cargar pedidos históricos:', err)
       // Fallback: buscar en caché
@@ -801,6 +827,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         agregarPedido,
         editarPedido,
         cambiarEstado,
+        revertirEstado,
         marcarPagoConfirmado,
         asignarCadete,
         cambiarMetodoPago,
@@ -840,6 +867,7 @@ interface ValorContextoPedidos {
   agregarPedido: (pedido: Pedido) => void
   editarPedido: (pedido: Pedido) => void
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
+  revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
   asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
   cambiarMetodoPago: (id: string, metodoPago: string) => void
@@ -874,6 +902,7 @@ export function usarPedidos(): ValorContextoPedidos {
     agregarPedido: contextoPedidos.agregarPedido,
     editarPedido: contextoPedidos.editarPedido,
     cambiarEstado: contextoPedidos.cambiarEstado,
+    revertirEstado: contextoPedidos.revertirEstado,
     marcarPagoConfirmado: contextoPedidos.marcarPagoConfirmado,
     asignarCadete: contextoPedidos.asignarCadete,
     cambiarMetodoPago: contextoPedidos.cambiarMetodoPago,
