@@ -6,7 +6,9 @@ import SeccionProductosPedido from '@/components/productos/SeccionProductosPedid
 import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { Settings } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -17,6 +19,13 @@ interface PropsFormularioPedido {
 }
 
 export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormularioPedido = {}) {
+  const router = useRouter()
+  
+  useEscapeKey(() => {
+    if (onClose) onClose()
+    else router.push('/pedidos')
+  })
+
   const {
     estado: { 
       clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas, 
