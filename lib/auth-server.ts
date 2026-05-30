@@ -11,42 +11,15 @@ import { cookies } from 'next/headers'
 const NOMBRE_COOKIE = 'chefsy-token'
 const DURACION_SESION_HORAS = 8
 
-// ── Usuarios autorizados — contraseñas vienen de variables de entorno ──────
-// NUNCA escribir contraseñas en este archivo. Configurar en .env.local y
-// en el panel de Variables de Entorno de Vercel.
-function obtenerUsuariosAutorizados(): Record<
-  string,
-  { clave: string; nombre: string; rol: 'admin' | 'cadete' }
-> {
-  const claveAdmin = process.env.CHEFSY_ADMIN_PASS
-  const clavePaulo = process.env.CHEFSY_PAULO_PASS || process.env.CHEFSY_CADETE_PASS
-  const claveCufa  = process.env.CHEFSY_CUFA_PASS || process.env.CHEFSY_CADETE2_PASS
+import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 
-  if (!claveAdmin || !clavePaulo || !claveCufa) {
-    // En desarrollo local sin .env.local configurado, fallar de forma visible
-    console.error(
-      '[Auth] ⚠️  CHEFSY_ADMIN_PASS, CHEFSY_PAULO_PASS o CHEFSY_CUFA_PASS no están definidas. ' +
-      'Copiar .env.example a .env.local y configurar los valores.'
-    )
-  }
-
-  return {
-    admin:  {
-      clave:  claveAdmin  ?? '',
-      nombre: 'Administrador Chefsy',
-      rol:    'admin',
-    },
-    paulo: {
-      clave:  clavePaulo ?? '',
-      nombre: 'Paulo',
-      rol:    'cadete',
-    },
-    cufa: {
-      clave:  claveCufa ?? '',
-      nombre: 'Cufa',
-      rol:    'cadete',
-    },
-  }
+// ── Cliente Supabase de Solo Servidor ──────────────────────────────────────
+function obtenerSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('Variables de entorno Supabase no configuradas para Admin')
+  return createClient(url, key, { auth: { persistSession: false } })
 }
 
 // ── Derivar la clave secreta de la variable de entorno ─────────────────────
@@ -58,6 +31,11 @@ function obtenerClave(): Uint8Array {
   return new TextEncoder().encode(secreto)
 }
 
+// ── Utilidad para hashear contraseñas ──────────────────────────────────────
+export function hashearClave(claveLimpia: string): string {
+  return createHash('sha256').update(claveLimpia).digest('hex')
+}
+
 // ── Tipos ──────────────────────────────────────────────────────────────────
 export interface PayloadSesion extends JWTPayload {
   usuario: string
@@ -66,17 +44,37 @@ export interface PayloadSesion extends JWTPayload {
 }
 
 // ── Validar credenciales y retornar datos del usuario ──────────────────────
-export function validarCredenciales(
+export async function validarCredenciales(
   usuario: string,
   clave: string
-): { usuario: string; nombre: string; rol: 'admin' | 'cadete' } | null {
+): Promise<{ usuario: string; nombre: string; rol: 'admin' | 'cadete' } | null> {
   const uLimpio = usuario.trim().toLowerCase()
-  const usuarios = obtenerUsuariosAutorizados()
-  const match = usuarios[uLimpio]
-  if (match && match.clave === clave) {
-    return { usuario: uLimpio, nombre: match.nombre, rol: match.rol }
+  const hashIntento = hashearClave(clave)
+  
+  try {
+    const supabase = obtenerSupabaseAdmin()
+    const { data: usuarioBd, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('usuario', uLimpio)
+      .single()
+
+    if (error || !usuarioBd) return null
+
+    // Verificar si la clave cifrada coincide
+    if (usuarioBd.clave_hash === hashIntento) {
+      return { 
+        usuario: usuarioBd.usuario, 
+        nombre: usuarioBd.nombre, 
+        rol: usuarioBd.rol as 'admin' | 'cadete' 
+      }
+    }
+    
+    return null
+  } catch (err) {
+    console.error('[Auth] Error al validar credenciales en BD:', err)
+    return null
   }
-  return null
 }
 
 // ── Firmar y emitir un JWT firmado ─────────────────────────────────────────
