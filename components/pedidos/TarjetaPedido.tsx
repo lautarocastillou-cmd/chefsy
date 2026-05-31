@@ -453,24 +453,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* Opción de revertir si ya fue entregado */}
-      {!soloLectura && pedido.estado === 'entregado' && (
-        <div className="flex gap-1.5 border-t border-slate-100 pt-2">
-          <button
-            onClick={() => {
-              const estadoPrevio = 'listo'
-              cambiarEstado(pedido.id, estadoPrevio)
-            }}
-            className="w-full px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-semibold rounded-md transition-colors shadow-sm active:scale-[0.98]"
-          >
-            Deshacer Entrega (Volver a Listo)
-          </button>
-        </div>
-      )}
-=======
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
->>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
     </div>
   )
 }

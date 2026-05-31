@@ -58,24 +58,9 @@ function TarjetaPedidoCadete({
     }
   }, [pedido.id, pedido.metodoPago])
 
-<<<<<<< HEAD
-  const handleCambiarEstado = (id: string, nuevoEstado: EstadoPedido) => {
-    let mensaje = ''
-    if (nuevoEstado === 'entregado') {
-      mensaje = '¿Confirmás que entregaste este pedido exitosamente al cliente?'
-    }
-
-    if (mensaje && !window.confirm(mensaje)) {
-      return
-    }
-
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      if (nuevoEstado === 'entregado') {
-=======
   const entregarPedido = async () => {
     try {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
->>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
         navigator.vibrate([200, 100, 200])
       }
       
