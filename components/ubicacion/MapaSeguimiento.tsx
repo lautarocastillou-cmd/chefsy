@@ -50,9 +50,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
+        markersRef.current = {}
       }
     }
-  }, [pedido.coordenadas, pedido.cliente])
+  }, [pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente])
 
   // 2. Actualizar posición del cadete (Reactivo)
   useEffect(() => {
@@ -74,16 +75,17 @@ export default function MapaSeguimiento({ pedido }: Props) {
         icon: crearIcono('🛵'),
         zIndexOffset: 300
       }).addTo(leafletMapRef.current).bindPopup('Cadete')
-    }
 
-    // Ajustar zoom para mostrar todo
-    const bounds = L.latLngBounds()
-    bounds.extend([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud])
-    if (pedido.coordenadas) bounds.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
-    if (pedido.cadete_coordenadas) bounds.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
-    
-    leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
-  }, [pedido.cadete_coordenadas, pedido.coordenadas])
+      // Ajustar zoom para mostrar todo solo la primera vez
+      const bounds = L.latLngBounds([
+        [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud]
+      ])
+      if (pedido.coordenadas) bounds.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
+      bounds.extend([latitud, longitud])
+      
+      leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+    }
+  }, [pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud])
 
   return (
     <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner relative z-0">

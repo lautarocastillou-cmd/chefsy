@@ -564,10 +564,6 @@ export default function PaginaTienda() {
       {/* --- HERO SECTION TIPO SQEW --- */}
       <div className="relative min-h-[90vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
         
-        {/* Luces atmosféricas para resaltar los textos */}
-        <div className="absolute top-1/4 right-1/4 w-[40rem] h-[40rem] bg-white/60 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-emerald-100/50 rounded-full blur-[100px] pointer-events-none"></div>
-
         {/* Contenedor Principal del Hero */}
         <div className="relative z-10 flex-1 flex flex-col justify-center max-w-7xl mx-auto w-full mt-10 md:mt-0">
           
@@ -598,6 +594,9 @@ export default function PaginaTienda() {
             transition={{ delay: 3.2, duration: 0.8 }}
             className="flex flex-col gap-4 mt-8 md:mt-12 max-w-sm relative z-30"
           >
+            <p className="font-bebas text-xl md:text-2xl text-chefsy-400 tracking-wider uppercase mb-[-10px]">
+              PERO PARÁ, ANTES...
+            </p>
             <p className="font-bebas text-3xl md:text-4xl text-chefsy-300 tracking-wide uppercase">
               ¿Qué tenés pensado comer?
             </p>

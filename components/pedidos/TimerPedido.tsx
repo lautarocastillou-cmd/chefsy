@@ -58,7 +58,6 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
   const fechaCreacion = parsearFechaSegura(pedido.created_at) || parsearFechaHora(pedido.fecha, pedido.hora)
   const fechaCocina = parsearFechaSegura(pedido.cocina_at)
   const fechaListo = parsearFechaSegura(pedido.listo_at)
-  const fechaReparto = parsearFechaSegura(pedido.reparto_at)
   const fechaEntregado = parsearFechaSegura(pedido.entregado_at)
 
   // ── 1. Temporizador: NUEVO ──────────────────────────────
@@ -101,30 +100,14 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
   if (showListo) {
     const inicioListo = fechaListo || fechaCocina || fechaCreacion
     let finListo = ahora
-    if (fechaReparto) finListo = fechaReparto
-    else if (fechaEntregado) finListo = fechaEntregado
+    if (fechaEntregado) finListo = fechaEntregado
     else if (pedido.estado !== 'listo') {
       finListo = inicioListo
     }
     segListo = Math.max(0, calcularDiferenciaSegundos(inicioListo, finListo))
-    estaListoTicking = !fechaReparto && !fechaEntregado && pedido.estado === 'listo'
+    estaListoTicking = !fechaEntregado && pedido.estado === 'listo'
   }
 
-  // ── 4. Temporizador: REPARTO ──────────────────────
-  // Visible solo para delivery que haya entrado a reparto
-  const showReparto = pedido.tipoEntrega === 'delivery' && (!!fechaReparto || pedido.estado === 'en_reparto')
-  let segReparto = 0
-  let estaRepartoTicking = false
-  if (showReparto) {
-    const inicioReparto = fechaReparto || fechaListo || fechaCocina || fechaCreacion
-    let finReparto = ahora
-    if (fechaEntregado) finReparto = fechaEntregado
-    else if (pedido.estado !== 'en_reparto') {
-      finReparto = inicioReparto
-    }
-    segReparto = Math.max(0, calcularDiferenciaSegundos(inicioReparto, finReparto))
-    estaRepartoTicking = !fechaEntregado && pedido.estado === 'en_reparto'
-  }
 
   return (
     <div className="flex items-center gap-1 shrink-0 select-none">
@@ -171,20 +154,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
         </span>
       )}
 
-      {/* Reparto (Naranja si está activo, Gris si está frenado) */}
-      {showReparto && (
-        <span
-          className={cn(
-            "inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold tracking-wide transition-all duration-300 border",
-            estaRepartoTicking
-              ? "bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30 animate-pulse"
-              : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
-          )}
-          title="Tiempo de viaje en Reparto"
-        >
-          <span>R: {formatearSegundos(segReparto)}</span>
-        </span>
-      )}
+
     </div>
   )
 }

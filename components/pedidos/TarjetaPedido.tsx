@@ -27,7 +27,6 @@ const bordesPorEstado: Record<Pedido['estado'], string> = {
   nuevo:      'border-l-[3px] border-l-blue-500',
   en_cocina:  'border-l-[3px] border-l-orange-500',
   listo:      'border-l-[3px] border-l-amber-500',
-  en_reparto: 'border-l-[3px] border-l-purple-500',
   entregado:  'border-l-[3px] border-l-green-500',
   cancelado:  'border-l-[3px] border-l-red-500',
 }
@@ -67,9 +66,6 @@ export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarj
       } else if (pedido.estado === 'listo') {
         fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
         limiteMs = 10 * 60 * 1000 // 10 min
-      } else if (pedido.estado === 'en_reparto') {
-        fechaInicio = pedido.reparto_at || pedido.listo_at || pedido.created_at
-        limiteMs = 30 * 60 * 1000 // 30 min
       }
 
       if (!fechaInicio) {
@@ -370,7 +366,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       )}
 
       {/* Botón de Seguimiento GPS */}
-      {pedido.estado === 'en_reparto' && pedido.cadete_coordenadas && (
+      {pedido.cadete_id && !esFinal && (
         <button
           onClick={() => setVerMapa(true)}
           className="w-full mt-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"

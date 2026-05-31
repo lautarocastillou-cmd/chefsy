@@ -211,7 +211,6 @@ export function obtenerProblemasOperativos(pedidos: Pedido[]): AlertaOperativa[]
       fechaCreacion,
       pedido.cocina_at ? parsearFechaSegura(pedido.cocina_at) : null,
       pedido.listo_at ? parsearFechaSegura(pedido.listo_at) : null,
-      pedido.reparto_at ? parsearFechaSegura(pedido.reparto_at) : null,
     ].filter((f): f is Date => f !== null)
 
     const ultimaFechaActividad = fechasEventos.reduce((max, f) => (f.getTime() > max.getTime() ? f : max), fechaCreacion)

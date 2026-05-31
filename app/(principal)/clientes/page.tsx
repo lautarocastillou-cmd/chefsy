@@ -317,7 +317,6 @@ export default function PaginaAgendaClientes() {
                       nuevo: 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-900/60',
                       en_cocina: 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-900/60',
                       listo: 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/60',
-                      en_reparto: 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-300 dark:border-indigo-900/60',
                       entregado: 'bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-300 dark:border-green-900/60',
                       cancelado: 'bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-300 dark:border-red-900/60',
                     }
@@ -326,7 +325,6 @@ export default function PaginaAgendaClientes() {
                       nuevo: 'Nuevo',
                       en_cocina: 'En Cocina',
                       listo: 'Listo',
-                      en_reparto: 'En Reparto',
                       entregado: 'Entregado',
                       cancelado: 'Cancelado',
                     }

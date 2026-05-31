@@ -21,7 +21,6 @@ const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
   { valor: 'nuevo',      etiqueta: 'Nuevos' },
   { valor: 'en_cocina',  etiqueta: 'En Cocina' },
   { valor: 'listo',      etiqueta: 'Listos' },
-  { valor: 'en_reparto', etiqueta: 'En Reparto' },
   { valor: 'entregado',  etiqueta: 'Entregados' },
   { valor: 'cancelado',  etiqueta: 'Cancelados' },
 ]

@@ -26,7 +26,6 @@ export default function PaginaDashboard() {
   // ── Cálculo de métricas ──
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length
   const enCocina  = pedidos.filter((p) => p.estado === 'en_cocina').length
-  const enReparto = pedidos.filter((p) => p.estado === 'en_reparto').length
 
   const hoy = obtenerFechaNegocio()
   const pedidosHoy = pedidos.filter((p) => p.fecha === hoy)
@@ -89,12 +88,6 @@ export default function PaginaDashboard() {
             valor={enCocina}
             variante="naranja"
             icon={ChefHat}
-          />
-          <TarjetaMetrica
-            etiqueta="En Reparto"
-            valor={enReparto}
-            variante="morado"
-            icon={Bike}
           />
           <TarjetaMetrica
             etiqueta="Completados Hoy"
