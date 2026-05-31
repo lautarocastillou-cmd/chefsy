@@ -217,20 +217,10 @@ function TarjetaPedidoCadete({
         </div>
       )}
 
-<<<<<<< HEAD
       {pedido.estado === 'listo' && (
-        <button
-          onClick={() => handleCambiarEstado(pedido.id, 'entregado')}
-          className="w-full bg-chefsy-500 text-white py-3.5 rounded-md font-semibold text-base hover:bg-chefsy-700"
-        >
-          ✓ Marcar como Entregado
-        </button>
-=======
-      {(pedido.estado === 'listo' || pedido.estado === 'en_reparto') && (
         <div className="pt-2 pb-1">
           <SwipeToConfirm onConfirm={entregarPedido} texto="Deslizar para Entregar" />
         </div>
->>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
       )}
     </div>
   )
