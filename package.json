@@ -12,6 +12,7 @@
     "@supabase/supabase-js": "^2.106.2",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.0",
+    "framer-motion": "^12.40.0",
     "html5-qrcode": "^2.3.8",
     "jose": "^6.2.3",
     "leaflet": "^1.9.4",

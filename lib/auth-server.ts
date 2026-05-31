@@ -9,7 +9,7 @@ import { SignJWT, jwtVerify, JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 
 const NOMBRE_COOKIE = 'chefsy-token'
-const DURACION_SESION_HORAS = 8
+const DURACION_SESION_HORAS = 8760 // 1 año
 
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
@@ -76,6 +76,8 @@ export async function validarCredenciales(
     return null
   }
 }
+
+
 
 // ── Firmar y emitir un JWT firmado ─────────────────────────────────────────
 export async function firmarToken(payload: {
