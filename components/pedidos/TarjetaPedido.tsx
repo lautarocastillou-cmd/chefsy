@@ -366,7 +366,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       )}
 
       {/* Botón de Seguimiento GPS */}
-      {pedido.estado === 'listo' && pedido.cadete_coordenadas && (
+      {pedido.cadete_id && !esFinal && (
         <button
           onClick={() => setVerMapa(true)}
           className="w-full mt-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
