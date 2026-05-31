@@ -1,6 +1,6 @@
 {
   "limites": {
-    "pedidoAtrasadoMinutos": 30,
+    "pedidoAtrasadoMinutos": 40,
     "listoDemoradoMinutos": 10,
     "cocinaDemoradoMinutos": 20,
     "pedidoOlvidadoMinutos": 45

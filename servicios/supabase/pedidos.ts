@@ -1,26 +1,86 @@
 import { supabase } from '@/lib/supabase'
 import { Pedido } from '@/tipos'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 /**
  * Obtiene todos los pedidos ordenados de forma descendente (más nuevos primero)
+ * históricamente de una fecha específica.
  */
-export async function obtenerPedidosHistoricos(): Promise<Pedido[]> {
+export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
   try {
-    const { data, error } = await supabase
-      .from('pedidos')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from('pedidos').select('*')
+    if (fecha) {
+      query = query.eq('fecha', fecha)
+    }
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error en Supabase al obtener pedidos:', error.message)
       throw new Error(error.message)
     }
 
-    // Aseguramos un tipado estricto
     return (data as Pedido[]) || []
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido al obtener pedidos'
     console.error('Error atrapado en la capa de servicios:', errorMessage)
     throw new Error(errorMessage)
   }
+}
+
+/**
+ * Obtiene los pedidos activos de Supabase (no archivados)
+ */
+export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
+  const { data, error } = await supabase
+    .from('pedidos')
+    .select('*')
+    .eq('archivado', false)
+    .order('created_at', { ascending: false })
+    .limit(limite)
+
+  if (error) {
+    console.error('[Servicio Pedidos] Error al obtener pedidos activos:', error.message)
+    throw new Error(error.message)
+  }
+
+  return (data as Pedido[]) || []
+}
+
+/**
+ * Inserta un pedido de forma local (optimista) en Supabase
+ * Nota: Esto se usa para insertar desde el frontend. Para sincronización asíncrona,
+ * se utiliza la API `/api/admin/pedidos`.
+ */
+export async function insertarPedidoLocal(payload: any): Promise<void> {
+  const payloadCompleto = { ...payload, archivado: false }
+  const { error } = await supabase.from('pedidos').insert(payloadCompleto)
+
+  if (error) {
+    console.error('[Servicio Pedidos] Error al insertar pedido:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+/**
+ * Suscribe a los cambios en la tabla de pedidos
+ */
+export function suscribirAPedidos(
+  onInsertOrUpdate: (pedido: Pedido, archivado: boolean) => void,
+  onDelete: (id: string) => void
+): RealtimeChannel {
+  return supabase
+    .channel('tabla-pedidos')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'pedidos' },
+      (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const pedidoCrudo = payload.new as any
+          onInsertOrUpdate(pedidoCrudo as Pedido, !!pedidoCrudo.archivado)
+        } else if (payload.eventType === 'DELETE') {
+          onDelete(payload.old.id)
+        }
+      }
+    )
+    .subscribe()
 }

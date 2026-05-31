@@ -31,7 +31,8 @@ export default function TicketImpresion() {
   const metodoPago = {
     efectivo: 'Efectivo',
     tarjeta: 'Tarjeta',
-    transferencia: 'Transferencia'
+    transferencia: 'Transferencia',
+    sin_especificar: 'Sin especificar'
   }[pedido.metodoPago]
 
   return (

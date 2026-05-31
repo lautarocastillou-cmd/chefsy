@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     // Validar contra la fuente de verdad del servidor
-    const datosUsuario = validarCredenciales(usuario, clave)
+    const datosUsuario = await validarCredenciales(usuario, clave)
 
     if (!datosUsuario) {
       // Delay sintético para dificultar ataques de fuerza bruta en timing

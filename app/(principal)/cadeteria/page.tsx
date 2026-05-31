@@ -16,6 +16,7 @@ import TimerPedido from '@/components/pedidos/TimerPedido'
 import { supabase } from '@/lib/supabase'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
+import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -57,6 +58,7 @@ function TarjetaPedidoCadete({
     }
   }, [pedido.id, pedido.metodoPago])
 
+<<<<<<< HEAD
   const handleCambiarEstado = (id: string, nuevoEstado: EstadoPedido) => {
     let mensaje = ''
     if (nuevoEstado === 'entregado') {
@@ -69,15 +71,31 @@ function TarjetaPedidoCadete({
 
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       if (nuevoEstado === 'entregado') {
+=======
+  const entregarPedido = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+>>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
         navigator.vibrate([200, 100, 200])
       }
-    }
-
-    if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
+      
+      const horaEntregado = new Date().toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })
+      const respuesta = await fetch('/api/admin/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'actualizar_estado', id: pedido.id, estado: 'entregado', horaEntregado })
+      })
+      
+      if (!respuesta.ok) {
+        throw new Error('Error de red')
+      }
+      
       localStorage.removeItem(`original-pago-${pedido.id}`)
+      // No hacemos actualización optimista, dejamos que Supabase Realtime lo oculte 1 segundo después.
+    } catch (e) {
+      alert('Error de conexión al intentar marcar como entregado. Verificá tu internet y reintentá.')
+      throw e
     }
-    // Pasamos false para que NO aparezca el botón de "Deshacer" al cadete
-    cambiarEstado(id, nuevoEstado, false)
   }
 
   const cambioMetodo = metodoOriginal && metodoOriginal !== pedido.metodoPago
@@ -199,6 +217,7 @@ function TarjetaPedidoCadete({
         </div>
       )}
 
+<<<<<<< HEAD
       {pedido.estado === 'listo' && (
         <button
           onClick={() => handleCambiarEstado(pedido.id, 'entregado')}
@@ -206,6 +225,12 @@ function TarjetaPedidoCadete({
         >
           ✓ Marcar como Entregado
         </button>
+=======
+      {(pedido.estado === 'listo' || pedido.estado === 'en_reparto') && (
+        <div className="pt-2 pb-1">
+          <SwipeToConfirm onConfirm={entregarPedido} texto="Deslizar para Entregar" />
+        </div>
+>>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
       )}
     </div>
   )

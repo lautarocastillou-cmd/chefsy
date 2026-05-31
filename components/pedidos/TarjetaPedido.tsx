@@ -11,7 +11,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
@@ -37,7 +37,7 @@ interface PropsTarjetaPedido {
 }
 
 export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
-  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago } = usarPedidos()
+  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
@@ -147,6 +147,19 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             >
               <Pencil size={11} />
             </button>
+            {pedido.estado !== 'nuevo' && pedido.estado !== 'cancelado' && (
+              <button 
+                onClick={() => {
+                  if (window.confirm('¿Seguro que querés revertir este pedido al estado anterior?')) {
+                    revertirEstado(pedido.id)
+                  }
+                }}
+                className="text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all p-1 rounded-md border border-orange-100 dark:border-orange-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+                title="Revertir al estado anterior"
+              >
+                <Undo2 size={11} />
+              </button>
+            )}
             <button 
               onClick={() => {
                 if (window.confirm('¿Estás seguro de eliminar este pedido para siempre? (Esta acción no se puede deshacer)')) {
@@ -221,8 +234,14 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               cambiarMetodoPago(pedido.id, nuevoMetodo)
             }}
             disabled={soloLectura}
-            className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
+            className={cn(
+              "px-1.5 py-0.5 rounded text-[10px] uppercase font-bold border-none outline-none cursor-pointer transition-colors",
+              pedido.metodoPago === 'sin_especificar' 
+                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 animate-pulse ring-1 ring-red-500 shadow-sm" 
+                : "bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6]"
+            )}
           >
+            <option value="sin_especificar">⚠️ Falta Pago</option>
             <option value="efectivo">💵 Efectivo</option>
             <option value="tarjeta">💳 Tarjeta</option>
             <option value="transferencia">📱 Transf.</option>
@@ -434,6 +453,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Opción de revertir si ya fue entregado */}
       {!soloLectura && pedido.estado === 'entregado' && (
         <div className="flex gap-1.5 border-t border-slate-100 pt-2">
@@ -448,6 +468,9 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
           </button>
         </div>
       )}
+=======
+      {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
+>>>>>>> c2d6e22955ab68e8ead42d328436a8bd47e2b5e9
     </div>
   )
 }

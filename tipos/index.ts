@@ -12,7 +12,7 @@ export type EstadoPedido =
   | 'cancelado'
 
 /** Métodos de pago aceptados */
-export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia'
+export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'
 
 /** Forma en que el cliente recibe el pedido */
 export type TipoEntrega = 'delivery' | 'retiro' | 'consumo_local'
