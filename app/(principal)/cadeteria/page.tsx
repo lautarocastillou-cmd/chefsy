@@ -59,9 +59,7 @@ function TarjetaPedidoCadete({
 
   const handleCambiarEstado = (id: string, nuevoEstado: EstadoPedido) => {
     let mensaje = ''
-    if (nuevoEstado === 'en_reparto') {
-      mensaje = '¿Estás seguro de iniciar el reparto de este pedido?'
-    } else if (nuevoEstado === 'entregado') {
+    if (nuevoEstado === 'entregado') {
       mensaje = '¿Confirmás que entregaste este pedido exitosamente al cliente?'
     }
 
@@ -70,9 +68,7 @@ function TarjetaPedidoCadete({
     }
 
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      if (nuevoEstado === 'en_reparto') {
-        navigator.vibrate([100, 50, 100])
-      } else if (nuevoEstado === 'entregado') {
+      if (nuevoEstado === 'entregado') {
         navigator.vibrate([200, 100, 200])
       }
     }
@@ -205,15 +201,6 @@ function TarjetaPedidoCadete({
 
       {pedido.estado === 'listo' && (
         <button
-          onClick={() => handleCambiarEstado(pedido.id, 'en_reparto')}
-          className="w-full bg-chefsy text-white py-3.5 rounded-md font-semibold text-base hover:bg-chefsy-700"
-        >
-          🛵 Iniciar Reparto
-        </button>
-      )}
-
-      {pedido.estado === 'en_reparto' && (
-        <button
           onClick={() => handleCambiarEstado(pedido.id, 'entregado')}
           className="w-full bg-chefsy-500 text-white py-3.5 rounded-md font-semibold text-base hover:bg-chefsy-700"
         >
@@ -233,21 +220,21 @@ export default function PaginaCadeteria() {
   const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
   const ultimaActualizacionGpsRef = useRef<number>(0)
 
-  // Cadetería: solo pedidos delivery listos, en reparto o en preparación de este cadete (o todos si es admin)
+  // Cadetería: solo pedidos delivery listos o en preparación de este cadete (o todos si es admin)
   const pedidosCadeteria = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
-      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_reparto') &&
+      (p.estado === 'en_cocina' || p.estado === 'listo') &&
       (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
   )
 
-  const pedidosEnReparto = pedidosCadeteria.filter(p => p.estado === 'en_reparto')
+  const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo')
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
 
   // Seguimiento GPS en tiempo real
   useEffect(() => {
-    // Si no es el cadete o no hay pedidos en reparto, no rastrear
-    if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosEnReparto.length === 0) {
+    // Si no es el cadete o no hay pedidos listos, no rastrear
+    if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosListos.length === 0) {
       setErrorGps(null)
       // Resetear referencias al detener el rastreo
       ultimasCoordenadasRef.current = null
@@ -295,8 +282,8 @@ export default function PaginaCadeteria() {
           ultimasCoordenadasRef.current = coords
           ultimaActualizacionGpsRef.current = ahora
 
-          // Actualizar las coordenadas en supabase para todos los pedidos activos en reparto
-          const pedidosIds = pedidosEnReparto.map(p => p.id)
+          // Actualizar las coordenadas en supabase para todos los pedidos activos listos
+          const pedidosIds = pedidosListos.map(p => p.id)
           try {
             const respuesta = await fetch('/api/admin/pedidos', {
               method: 'POST',
@@ -338,7 +325,7 @@ export default function PaginaCadeteria() {
         navigator.geolocation.clearWatch(watchId)
       }
     }
-  }, [usuarioActivo, pedidosEnReparto.length])
+  }, [usuarioActivo, pedidosListos.length])
 
   // Recaudación y conteo del cadete (entregados hoy)
   const hoy = obtenerFechaNegocio()

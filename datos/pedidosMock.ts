@@ -35,7 +35,7 @@ export const pedidosMock: Pedido[] = [
       { id: 'prod-4', nombre: 'Ensalada César', cantidad: 1, precio: 1200 },
     ],
     total: 3000,
-    estado: 'en_reparto',
+    estado: 'entregado',
     metodoPago: 'transferencia',
     hora: '19:15',
     fecha: '2024-01-15',

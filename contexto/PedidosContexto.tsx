@@ -38,7 +38,6 @@ type AccionPedidos =
       estado: EstadoPedido;
       cocina_at: string | null;
       listo_at: string | null;
-      reparto_at: string | null;
       entregado_at: string | null;
     }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
@@ -91,7 +90,6 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
                 estado: accion.estado,
                 cocina_at: accion.cocina_at,
                 listo_at: accion.listo_at,
-                reparto_at: accion.reparto_at,
                 entregado_at: accion.entregado_at,
               } 
             : p
@@ -138,36 +136,29 @@ export function obtenerCamposDeTiempoParaEstado(
   estado: EstadoPedido
   cocina_at: string | null
   listo_at: string | null
-  reparto_at: string | null
   entregado_at: string | null
 } {
   const ahora = new Date().toISOString()
   
   let cocina_at = pedidoActual.cocina_at || null
   let listo_at = pedidoActual.listo_at || null
-  let reparto_at = pedidoActual.reparto_at || null
   let entregado_at = pedidoActual.entregado_at || null
 
   if (nuevoEstado === 'nuevo') {
     cocina_at = null
     listo_at = null
-    reparto_at = null
     entregado_at = null
   } else if (nuevoEstado === 'en_cocina') {
     if (!cocina_at) cocina_at = ahora
     listo_at = null
-    reparto_at = null
     entregado_at = null
-  } else if (nuevoEstado === 'listo' || nuevoEstado === 'en_reparto') {
+  } else if (nuevoEstado === 'listo') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = ahora
-    if (nuevoEstado === 'en_reparto' && !reparto_at) reparto_at = ahora
-    if (nuevoEstado === 'listo') reparto_at = null
     entregado_at = null
   } else if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = cocina_at || ahora
-    if (!reparto_at && pedidoActual.tipoEntrega === 'delivery') reparto_at = listo_at || ahora
     if (!entregado_at) entregado_at = ahora
   }
 
@@ -175,7 +166,6 @@ export function obtenerCamposDeTiempoParaEstado(
     estado: nuevoEstado,
     cocina_at,
     listo_at,
-    reparto_at,
     entregado_at,
   }
 }
@@ -445,7 +435,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             nuevo: 'Nuevo',
             en_cocina: 'En Cocina',
             listo: 'Listo',
-            en_reparto: 'En Reparto',
             entregado: 'Entregado',
             cancelado: 'Cancelado'
           }
@@ -454,7 +443,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
           if (esPedidoPropioDelCadete && !esCambioLocalRef.current) {
             // Repartidores: solo alertar de cambios desde Cocina en adelante
-            const estadosPermitidosParaCadete = ['en_cocina', 'listo', 'en_reparto', 'entregado', 'cancelado']
+            const estadosPermitidosParaCadete = ['en_cocina', 'listo', 'entregado', 'cancelado']
             if (estadosPermitidosParaCadete.includes(nuevo.estado)) {
               let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
               if (nuevo.estado === 'listo') {
@@ -557,7 +546,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       
       const nombresEstados: Record<EstadoPedido, string> = {
         nuevo: 'Nuevo', en_cocina: 'En Cocina', listo: 'Listo',
-        en_reparto: 'En Reparto', entregado: 'Entregado', cancelado: 'Cancelado'
+        entregado: 'Entregado', cancelado: 'Cancelado'
       }
 
       agregarNotificacion(
@@ -728,7 +717,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
       estado.pedidos.forEach((pedido) => {
         const estadoActual = pedido.estado
-        if (!['nuevo', 'en_cocina', 'listo', 'en_reparto'].includes(estadoActual)) return
+        if (!['nuevo', 'en_cocina', 'listo'].includes(estadoActual)) return
 
         let fechaInicio: string | null | undefined = null
         if (estadoActual === 'nuevo') {
@@ -737,8 +726,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           fechaInicio = pedido.cocina_at || pedido.created_at
         } else if (estadoActual === 'listo') {
           fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
-        } else if (estadoActual === 'en_reparto') {
-          fechaInicio = pedido.reparto_at || pedido.listo_at || pedido.created_at
         }
 
         if (!fechaInicio) return
@@ -761,10 +748,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           limiteMs = 10 * 60 * 1000
           repeticionMs = null
           msgEstado = 'listo'
-        } else if (estadoActual === 'en_reparto') {
-          limiteMs = 30 * 60 * 1000
-          repeticionMs = 2 * 60 * 1000
-          msgEstado = 'en reparto'
         }
 
         if (transcurridoMs >= limiteMs) {

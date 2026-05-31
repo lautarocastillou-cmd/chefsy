@@ -8,7 +8,6 @@ export type EstadoPedido =
   | 'nuevo'
   | 'en_cocina'
   | 'listo'
-  | 'en_reparto'
   | 'entregado'
   | 'cancelado'
 
@@ -54,7 +53,6 @@ export interface Pedido {
   created_at?: string
   cocina_at?: string | null
   listo_at?: string | null
-  reparto_at?: string | null
   entregado_at?: string | null
   cadete_coordenadas?: Coordenadas | null
   pago_confirmado?: boolean

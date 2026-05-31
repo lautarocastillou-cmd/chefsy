@@ -80,8 +80,7 @@ export function obtenerSiguienteEstado(
     const flujo: Record<EstadoPedido, EstadoPedido | null> = {
       nuevo: 'en_cocina',
       en_cocina: 'listo',
-      listo: 'en_reparto',
-      en_reparto: 'entregado',
+      listo: 'entregado',
       entregado: null,
       cancelado: null,
     }
@@ -92,7 +91,6 @@ export function obtenerSiguienteEstado(
     nuevo: 'en_cocina',
     en_cocina: 'listo',
     listo: 'entregado',
-    en_reparto: 'entregado',
     entregado: null,
     cancelado: null,
   }
@@ -106,7 +104,6 @@ export function obtenerEtiquetaAccionEstado(
   if (siguienteEstado === 'en_cocina') return 'Enviar a Cocina'
   if (siguienteEstado === 'listo') return 'Marcar como Listo'
 
-  if (siguienteEstado === 'en_reparto') return 'Enviar a Reparto'
 
   if (siguienteEstado === 'entregado') {
     if (tipoEntrega === 'retiro') return 'Marcar como Retirado'
