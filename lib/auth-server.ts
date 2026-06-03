@@ -7,12 +7,13 @@
 
 import { SignJWT, jwtVerify, JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
+import { createHash } from 'crypto'
 
 const NOMBRE_COOKIE = 'chefsy-token'
-const DURACION_SESION_HORAS = 8760 // 1 año
-
-import { createClient } from '@supabase/supabase-js'
-import { createHash } from 'crypto'
+const DURACION_SESION_HORAS = 8 // 1 jornada laboral
+const BCRYPT_COST = 12 // ~250ms por hash — buen balance seguridad/performance
 
 // ── Cliente Supabase de Solo Servidor ──────────────────────────────────────
 function obtenerSupabaseAdmin() {
@@ -31,8 +32,13 @@ function obtenerClave(): Uint8Array {
   return new TextEncoder().encode(secreto)
 }
 
-// ── Utilidad para hashear contraseñas ──────────────────────────────────────
-export function hashearClave(claveLimpia: string): string {
+// ── Utilidad para hashear contraseñas con bcrypt ───────────────────────────
+export async function hashearClave(claveLimpia: string): Promise<string> {
+  return bcrypt.hash(claveLimpia, BCRYPT_COST)
+}
+
+// ── Legacy: hash SHA-256 para migración on-login ───────────────────────────
+function hashearClaveLegacy(claveLimpia: string): string {
   return createHash('sha256').update(claveLimpia).digest('hex')
 }
 
@@ -44,13 +50,14 @@ export interface PayloadSesion extends JWTPayload {
 }
 
 // ── Validar credenciales y retornar datos del usuario ──────────────────────
+// Soporta migración transparente: si el hash almacenado es SHA-256 legacy,
+// lo valida y lo reemplaza automáticamente por bcrypt en la DB.
 export async function validarCredenciales(
   usuario: string,
   clave: string
 ): Promise<{ usuario: string; nombre: string; rol: 'admin' | 'cadete' } | null> {
   const uLimpio = usuario.trim().toLowerCase()
-  const hashIntento = hashearClave(clave)
-  
+
   try {
     const supabase = obtenerSupabaseAdmin()
     const { data: usuarioBd, error } = await supabase
@@ -61,15 +68,34 @@ export async function validarCredenciales(
 
     if (error || !usuarioBd) return null
 
-    // Verificar si la clave cifrada coincide
-    if (usuarioBd.clave_hash === hashIntento) {
-      return { 
-        usuario: usuarioBd.usuario, 
-        nombre: usuarioBd.nombre, 
-        rol: usuarioBd.rol as 'admin' | 'cadete' 
-      }
+    const datosUsuario = {
+      usuario: usuarioBd.usuario,
+      nombre:  usuarioBd.nombre,
+      rol:     usuarioBd.rol as 'admin' | 'cadete',
     }
-    
+
+    // ── 1. Intentar bcrypt (formato moderno) ──────────────────────────────
+    // Los hashes bcrypt empiezan con $2a$ o $2b$
+    if (usuarioBd.clave_hash.startsWith('$2')) {
+      const coincide = await bcrypt.compare(clave, usuarioBd.clave_hash)
+      if (coincide) return datosUsuario
+      return null
+    }
+
+    // ── 2. Fallback: migración desde SHA-256 legacy ───────────────────────
+    const hashLegacy = hashearClaveLegacy(clave)
+    if (usuarioBd.clave_hash === hashLegacy) {
+      // Contraseña correcta con hash antiguo → re-hashear con bcrypt
+      const nuevoHash = await bcrypt.hash(clave, BCRYPT_COST)
+      await supabase
+        .from('usuarios')
+        .update({ clave_hash: nuevoHash })
+        .eq('usuario', uLimpio)
+
+      console.log(`[Auth] Migración bcrypt completada para usuario: ${uLimpio}`)
+      return datosUsuario
+    }
+
     return null
   } catch (err) {
     console.error('[Auth] Error al validar credenciales en BD:', err)

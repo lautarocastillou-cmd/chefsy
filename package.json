@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.0",
     "framer-motion": "^12.40.0",
     "html5-qrcode": "^2.3.8",
+    "jimp": "^1.6.1",
     "jose": "^6.2.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.400.0",
@@ -23,6 +25,7 @@
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^18",

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     
     // Preparar el usuario
     const uLimpio = usuario.trim().toLowerCase()
-    const hash = hashearClave(clave)
+    const hash = await hashearClave(clave)
 
     const { error } = await supabase
       .from('usuarios')

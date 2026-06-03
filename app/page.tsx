@@ -9,6 +9,7 @@ import { Pedido } from '@/tipos'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import PantallaCarga from '@/components/tienda/PantallaCarga'
+import BurgerAnimada from '@/components/tienda/BurgerAnimada'
 import { 
   ShoppingCart, Plus, Minus, Trash2, User, Phone, 
   MapPin, CreditCard, CheckCircle2, MessageCircle, 
@@ -492,62 +493,53 @@ export default function PaginaTienda() {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada)
 
   return (
-    <div className="min-h-screen bg-[url('/bg-chefsy.png')] bg-cover bg-fixed bg-center text-slate-200 font-sans pb-16">
+    <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
       {/* Capa de oscurecimiento sutil en toda la página */}
-      <div className="fixed inset-0 bg-black/40 pointer-events-none z-0"></div>
+      <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
       <div className="relative z-10">
         <PantallaCarga />
       
       {/* --- CABECERA DE LA TIENDA --- */}
-      <header className="bg-transparent px-4 py-4 sticky top-0 z-40">
+      <header className="bg-transparent px-4 py-6 sticky top-0 z-40 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 
               src="/logo.jpg" 
               alt="Chefsy Logo" 
-              className="w-10 h-10 object-contain rounded-xl shadow-sm"
+              className="w-10 h-10 object-contain rounded-xl shadow-lg border border-white/10"
             />
             <div className="flex items-center gap-6">
-              <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
                 Chefsy
               </h1>
               {/* Navegación */}
-              <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
-                <Link href="/" className="text-chefsy-600 dark:text-chefsy-400 font-bold transition-colors cursor-pointer">Tienda</Link>
-                <Link href="/sobre-nosotros" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer">Nosotros</Link>
+              <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+                <Link href="/" className="text-white font-semibold transition-colors cursor-pointer">Tienda</Link>
+                <Link href="/sobre-nosotros" className="text-slate-400 hover:text-white transition-colors cursor-pointer">Nosotros</Link>
               </nav>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Tema Claro/Oscuro */}
-            <button
-              onClick={alternarModoOscuro}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 focus:outline-none"
-              title={modoOscuro ? 'Modo claro' : 'Modo oscuro'}
-            >
-              {modoOscuro ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
+          <div className="flex items-center gap-4">
             {/* Acceso Empleados */}
             <Link
               href="/dashboard"
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800"
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2 text-xs font-medium"
               title="Acceso Personal"
             >
               <Lock size={16} />
-              <span className="hidden sm:inline">Empleados</span>
+              <span className="hidden sm:inline">Personal</span>
             </Link>
             
             {/* Carrito Flotante Cabecera Desktop */}
-            <div className="flex items-center gap-2">
-              <span className="hidden md:block text-xs font-bold text-chefsy-600 dark:text-chefsy-400 animate-pulse">
-                ¿Listo para pedir? 👉
+            <div className="flex items-center gap-3">
+              <span className="hidden md:block text-xs font-medium text-slate-400">
+                Tu orden 👉
               </span>
               <button
                 onClick={() => setCartAbierto(true)}
-                className="relative p-2.5 bg-chefsy hover:bg-chefsy-600 text-white rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-chefsy/30 focus:outline-none active:scale-95"
+                className="relative p-3 bg-white text-black hover:bg-slate-200 rounded-xl transition-all flex items-center gap-2 shadow-xl focus:outline-none active:scale-95"
               >
                 <ShoppingCart size={18} />
                 {totalProductosCarrito > 0 && (
@@ -567,23 +559,23 @@ export default function PaginaTienda() {
         {/* Contenedor Principal del Hero */}
         <div className="relative z-10 flex-1 flex flex-col justify-center max-w-7xl mx-auto w-full mt-10 md:mt-0">
           
-          {/* Tipografía Gigante */}
-          <div className="flex flex-col items-start leading-[0.8] mb-8">
+          {/* Tipografía Minimalista Premium */}
+          <div className="flex flex-col items-start leading-[1.1] mb-8">
             <motion.h1 
-              initial={{ opacity: 0, x: -50 }}
+              initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 2.6, duration: 0.8 }}
-              className="font-bebas text-[6rem] md:text-[10rem] lg:text-[13rem] text-stroke uppercase whitespace-nowrap"
+              transition={{ delay: 2.6, duration: 0.8, ease: "easeOut" }}
+              className="font-sans font-light text-[4rem] md:text-[7rem] lg:text-[9rem] text-white tracking-tight"
             >
-              ¿QUÉ HAY EN
+              Exquisito.
             </motion.h1>
             <motion.h1 
-              initial={{ opacity: 0, x: 50 }}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 2.8, duration: 0.8 }}
-              className="font-bebas text-[6.5rem] md:text-[11rem] lg:text-[14rem] text-chefsy-100 uppercase whitespace-nowrap -mt-3 md:-mt-8"
+              transition={{ delay: 2.8, duration: 0.8, ease: "easeOut" }}
+              className="font-sans font-light text-[4rem] md:text-[7rem] lg:text-[9rem] text-slate-400 tracking-tight -mt-2 md:-mt-6"
             >
-              EL MENÚ?
+              Minimalista.
             </motion.h1>
           </div>
 
@@ -594,21 +586,21 @@ export default function PaginaTienda() {
             transition={{ delay: 3.2, duration: 0.8 }}
             className="flex flex-col gap-4 mt-8 md:mt-12 max-w-sm relative z-30"
           >
-            <p className="font-bebas text-xl md:text-2xl text-chefsy-400 tracking-wider uppercase mb-[-10px]">
-              PERO PARÁ, ANTES...
+            <p className="font-sans text-sm md:text-base text-slate-400 font-light tracking-widest uppercase mb-[-10px]">
+              Descubrí nuestro menú
             </p>
-            <p className="font-bebas text-3xl md:text-4xl text-chefsy-300 tracking-wide uppercase">
-              ¿Qué tenés pensado comer?
+            <p className="font-sans text-2xl md:text-3xl text-white font-medium tracking-tight">
+              ¿Qué tenés pensado pedir?
             </p>
             <div className="relative group">
               <select
                 value={categoriaSeleccionada}
                 onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-                className="w-full appearance-none bg-black/30 backdrop-blur-md border border-chefsy hover:border-chefsy-300 text-chefsy-100 py-4 px-6 rounded-none outline-none focus:border-chefsy-300 transition-colors cursor-pointer font-bold uppercase tracking-widest shadow-lg"
+                className="w-full appearance-none bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
               >
-                <option value="todos" className="text-slate-900 font-sans">VER TODO EL MENÚ</option>
+                <option value="todos" className="text-slate-900">Ver todo el menú</option>
                 {categoriasActivas.map(cat => (
-                  <option key={cat.id} value={cat.id} className="text-slate-900 font-sans">{cat.nombre}</option>
+                  <option key={cat.id} value={cat.id} className="text-slate-900">{cat.nombre}</option>
                 ))}
               </select>
               <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-chefsy-300 group-hover:text-chefsy-100 transition-colors">
@@ -619,31 +611,21 @@ export default function PaginaTienda() {
 
         </div>
 
-        {/* Imagen de Producto Gigante Flotante */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8, rotate: -15, x: 100 }}
-          animate={{ opacity: 1, scale: 1, rotate: -5, x: 0 }}
-          transition={{ delay: 3, duration: 1.2, type: "spring", bounce: 0.4 }}
-          className="absolute -bottom-10 md:-bottom-24 -right-16 md:-right-10 w-[350px] md:w-[600px] lg:w-[800px] pointer-events-none z-20"
-        >
-          <motion.img 
-            animate={{ y: [0, -20, 0] }}
-            transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-            src="https://freepngimg.com/thumb/burger/5-2-burger-png.png" 
-            alt="Hamburguesa Chefsy" 
-            className="w-full h-full object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]"
-          />
-        </motion.div>
+        {/* Imagen de Producto Gigante Flotante (Burger Animada) */}
+        <div className="absolute -bottom-10 md:-bottom-24 -right-16 md:-right-10 pointer-events-none z-20">
+          <BurgerAnimada />
+        </div>
 
         {/* Etiqueta de la categoría destacada / producto (bottom left) */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 3.5, duration: 1 }}
-          className="absolute bottom-8 left-6 md:left-12 z-20 border-b-2 border-chefsy/50 pb-2 max-w-[60%] md:max-w-xl w-full"
+          className="absolute bottom-12 left-6 md:left-12 z-20 pb-2 max-w-[60%] md:max-w-xl w-full"
         >
-          <h3 className="font-bebas text-3xl md:text-5xl text-chefsy-100 uppercase tracking-widest truncate">
-            {categoriaSeleccionada === 'todos' ? 'TODO EL SABOR' : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre}
+          <div className="h-[1px] w-12 bg-white/30 mb-4"></div>
+          <h3 className="font-sans text-xl md:text-2xl text-white font-light tracking-widest truncate">
+            {categoriaSeleccionada === 'todos' ? 'Catálogo completo' : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre}
           </h3>
         </motion.div>
       </div>
@@ -688,20 +670,20 @@ export default function PaginaTienda() {
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: (index % 6) * 0.1 }}
+                  transition={{ duration: 0.6, delay: (index % 6) * 0.1, ease: "easeOut" }}
                   key={prod.id}
                   onClick={() => !agotado && abrirModalPersonalizacion(prod)}
-                  className={`bg-black/20 backdrop-blur-md border border-white/10 shadow-sm hover:border-chefsy-300 rounded-[2.25rem] overflow-hidden transition-all group flex flex-col justify-between cursor-pointer ${
-                    agotado ? 'opacity-65' : 'active:scale-98'
+                  className={`bg-white/[0.03] backdrop-blur-xl border border-white/10 hover:border-white/30 hover:bg-white/[0.06] rounded-[2rem] overflow-hidden transition-all duration-300 group flex flex-col justify-between cursor-pointer shadow-2xl shadow-black/50 ${
+                    agotado ? 'opacity-50 grayscale' : ''
                   }`}
                 >
                   <div>
                     {/* Imagen del Producto */}
-                    <div className="relative h-56 w-full overflow-hidden bg-black/10">
+                    <div className="relative h-64 w-full overflow-hidden bg-black/20">
                       <img 
                         src={imagenFinal} 
                         alt={prod.nombre} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03] opacity-90 group-hover:opacity-100"
                       />
                       {prod.esCombo && (
                         <span className="absolute top-4 left-4 text-[10px] font-black bg-chefsy text-white px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
@@ -723,26 +705,26 @@ export default function PaginaTienda() {
                     </div>
 
                     {/* Contenido de la Tarjeta */}
-                    <div className="p-5 space-y-2 text-left">
-                      <div className="flex justify-between items-baseline gap-2">
-                        <h4 className="font-extrabold text-sm text-white leading-snug uppercase tracking-tight">
+                    <div className="p-6 space-y-3 text-left">
+                      <div className="flex justify-between items-start gap-4">
+                        <h4 className="font-sans font-medium text-lg text-white leading-tight tracking-tight">
                           {prod.nombre}
                         </h4>
-                        <span className="font-black text-sm text-chefsy-400 shrink-0">
+                        <span className="font-sans font-light text-base text-slate-300 shrink-0">
                           {formatearPrecio(prod.precio)}
                         </span>
                       </div>
                       
-                      <p className="text-xs text-slate-300 leading-relaxed font-normal line-clamp-3">
+                      <p className="text-sm text-slate-400 font-light leading-relaxed line-clamp-2">
                         {meta?.descripcion_publica || detalles.desc}
                       </p>
                     </div>
                   </div>
 
                   {/* Pie de la Tarjeta */}
-                  <div className="p-5 pt-0 text-left">
-                    <div className="text-xs text-chefsy-400 font-extrabold transition-colors">
-                      Personalizar y añadir +
+                  <div className="px-6 pb-6 pt-0 text-left opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                    <div className="text-xs text-white font-medium tracking-wide flex items-center gap-2">
+                      Añadir a la orden <Plus size={14} />
                     </div>
                   </div>
                 </motion.div>
