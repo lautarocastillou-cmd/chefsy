@@ -341,7 +341,7 @@ export default function CaceriaPage() {
         <div className={cn("absolute inset-0 rounded-full border-4 opacity-50 z-20 pointer-events-none", status.color, status.animation)} />
         
         {/* Contenedor del Radar y el Mapa */}
-        <div className={cn("absolute inset-2 rounded-full border border-slate-700 overflow-hidden flex items-center justify-center transition-colors duration-500 relative", status.bg)}>
+        <div className={cn("absolute inset-2 rounded-full border border-slate-700 overflow-hidden transition-colors duration-500", status.bg)}>
           
           {/* MAPA DE FONDO */}
           <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-slate-900" />
