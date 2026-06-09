@@ -13,7 +13,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { 
   Sun, Moon, LogOut, Settings, 
-  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store,
+  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
   ChevronLeft, ChevronRight, Target
 } from 'lucide-react'
 
@@ -26,6 +26,7 @@ const elementosNavegacion = [
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
   { href: '/caceria',       etiqueta: 'Cacería',       icono: Target },
+  { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },
   { href: '/tienda',        etiqueta: 'Tienda',        icono: Store },
 ]
 
@@ -62,6 +63,9 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   const elementosFiltrados = elementosNavegacion.filter((item) => {
     if (usuarioActivo?.rol === 'cadete') {
       return item.href === '/cadeteria'
+    }
+    if (usuarioActivo?.rol !== 'admin' && item.href === '/dev-tools') {
+      return false
     }
     return true
   })

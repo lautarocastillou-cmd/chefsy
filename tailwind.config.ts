@@ -11,6 +11,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        bebas: ['var(--font-bebas)', 'sans-serif'],
+      },
       colors: {
         chefsy: {
           DEFAULT: '#2A6348',
