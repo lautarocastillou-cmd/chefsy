@@ -16,6 +16,8 @@ import {
   UtensilsCrossed,
   AlertTriangle,
   RotateCcw,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
 
@@ -26,6 +28,7 @@ export default function PaginaCierreCaja() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(false)
+  const [copiado, setCopiado] = useState(false)
 
   // Cargar pedidos de la fecha seleccionada en Supabase (históricos + activos)
   useEffect(() => {
@@ -93,8 +96,8 @@ export default function PaginaCierreCaja() {
   const canceladosCount = pedidosDelDia.filter((p) => p.estado === 'cancelado').length
   const canceladosMonto = pedidosDelDia.filter((p) => p.estado === 'cancelado').reduce((acc, p) => acc + p.total, 0)
 
-  // Enviar reporte por WhatsApp
-  const enviarReporteWhatsApp = () => {
+  // Copiar reporte al portapapeles
+  const copiarReporteAlPortapapeles = () => {
     const formattedDate = new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-AR', {
       weekday: 'long',
       year: 'numeric',
@@ -124,7 +127,14 @@ export default function PaginaCierreCaja() {
 ----------------------------------------
 _Generado automáticamente desde Chefsy_`.trim()
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
+    navigator.clipboard.writeText(mensaje)
+      .then(() => {
+        setCopiado(true)
+        setTimeout(() => setCopiado(false), 2000)
+      })
+      .catch((err) => {
+        console.error('Error al copiar el reporte: ', err)
+      })
   }
 
   // Finalizar el turno (Archivar pedidos de la pantalla)
@@ -189,11 +199,23 @@ _Generado automáticamente desde Chefsy_`.trim()
             <p className="text-xs text-chefsy-100 font-medium">Calculado sobre {totalPedidos} pedidos válidos</p>
           </div>
           <button
-            onClick={enviarReporteWhatsApp}
+            onClick={copiarReporteAlPortapapeles}
             disabled={totalPedidos === 0 && canceladosCount === 0}
-            className="relative z-10 bg-white hover:bg-chefsy-50 text-chefsy-800 px-5 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`relative z-10 px-5 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+              copiado
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                : 'bg-white hover:bg-chefsy-50 text-chefsy-800'
+            }`}
           >
-            <Send size={14} /> Enviar Reporte por WhatsApp
+            {copiado ? (
+              <>
+                <Check size={14} /> ¡Reporte Copiado!
+              </>
+            ) : (
+              <>
+                <Copy size={14} /> Copiar Reporte de Caja
+              </>
+            )}
           </button>
         </div>
 
