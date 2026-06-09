@@ -14,7 +14,7 @@ import { usarAuth } from '@/contexto/AuthContexto'
 import { 
   Sun, Moon, LogOut, Settings, 
   LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Target
 } from 'lucide-react'
 
 // Ítems de navegación principal (Configuración se movió al pie)
@@ -25,6 +25,7 @@ const elementosNavegacion = [
   { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
+  { href: '/caceria',       etiqueta: 'Cacería',       icono: Target },
   { href: '/tienda',        etiqueta: 'Tienda',        icono: Store },
 ]
 
