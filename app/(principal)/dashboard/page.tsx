@@ -15,10 +15,10 @@ import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Musi
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
-import { esPedidoDelivery, LISTA_CADETES } from '@/lib/entrega'
+import { esPedidoDelivery } from '@/lib/entrega'
 
 export default function PaginaDashboard() {
-  const { pedidos } = usarPedidos()
+  const { pedidos, cadetes } = usarPedidos()
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
   const [pedidoSeleccionadoParaEditar, setPedidoSeleccionadoParaEditar] = useState<any>(null)
   const [cadeteFiltro, setCadeteFiltro] = useState<string>('todos')
@@ -110,7 +110,7 @@ export default function PaginaDashboard() {
                 className="w-full bg-slate-50 dark:bg-[#3a3a3a] border border-slate-200 dark:border-[#4d4d4d] text-gray-700 dark:text-[#e6e6e6] py-1 px-2 rounded-lg text-[11px] font-semibold outline-none cursor-pointer transition-colors"
               >
                 <option value="todos">👥 Todos los cadetes</option>
-                {LISTA_CADETES.map(c => (
+                {cadetes.map(c => (
                   <option key={c.id} value={c.id}>🛵 {c.nombre}</option>
                 ))}
               </select>

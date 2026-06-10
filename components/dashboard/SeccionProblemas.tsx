@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { obtenerProblemasOperativos, AlertaOperativa } from '@/lib/problemas'
-import { LISTA_CADETES, obtenerSiguienteEstado, obtenerEtiquetaAccionEstado } from '@/lib/entrega'
+import { obtenerSiguienteEstado, obtenerEtiquetaAccionEstado } from '@/lib/entrega'
 import { AlertTriangle, Clock, ChefHat, Bike, Eye, User, CheckCircle2 } from 'lucide-react'
 
 interface PropsSeccionProblemas {
@@ -11,7 +11,7 @@ interface PropsSeccionProblemas {
 }
 
 export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblemas) {
-  const { pedidos, cambiarEstado, asignarCadete } = usarPedidos()
+  const { pedidos, cambiarEstado, asignarCadete, cadetes } = usarPedidos()
   const [alertas, setAlertas] = useState<AlertaOperativa[]>([])
 
   // Función interna para recalcular las alertas operativas
@@ -114,7 +114,7 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
                     <span className="text-[10px] font-bold px-1.5 text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
                       <User size={10} /> Asignar:
                     </span>
-                    {LISTA_CADETES.map((cadete) => (
+                    {cadetes.map((cadete) => (
                       <button
                         key={cadete.id}
                         onClick={() => asignarCadete(pedido.id, cadete.id, cadete.nombre)}

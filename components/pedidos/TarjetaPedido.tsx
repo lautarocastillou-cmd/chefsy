@@ -5,7 +5,6 @@ import { formatearPrecio } from '@/lib/utils'
 import {
   obtenerEtiquetaAccionEstado,
   obtenerSiguienteEstado,
-  LISTA_CADETES,
 } from '@/lib/entrega'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
@@ -37,7 +36,7 @@ interface PropsTarjetaPedido {
 }
 
 export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
-  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado } = usarPedidos()
+  const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
@@ -251,7 +250,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               value={pedido.cadete_id || ''}
               onChange={(e) => {
                 const selectedId = e.target.value
-                const cad = LISTA_CADETES.find(c => c.id === selectedId)
+                const cad = cadetes.find(c => c.id === selectedId)
                 asignarCadete(
                   pedido.id,
                   selectedId || null,
@@ -262,7 +261,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
               className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
             >
               <option value="">🛵 Sin Cadete</option>
-              {LISTA_CADETES.map(c => (
+              {cadetes.map(c => (
                 <option key={c.id} value={c.id}>🛵 {c.nombre}</option>
               ))}
             </select>

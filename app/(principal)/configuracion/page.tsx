@@ -6,6 +6,7 @@ import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, 
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
+  const { refrescarCadetes } = usarPedidos()
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -53,6 +54,8 @@ function PestanaUsuarios() {
         setExito('Usuario creado exitosamente')
         setNuevoUsuario({ usuario: '', clave: '', nombre: '', rol: 'cadete' })
         cargarUsuarios()
+        // Refrescar la lista de cadetes en todo el panel
+        refrescarCadetes()
       } else {
         const data = await res.json()
         setError(data.error || 'Error al crear usuario')
@@ -74,6 +77,8 @@ function PestanaUsuarios() {
 
       if (res.ok) {
         cargarUsuarios()
+        // Refrescar la lista de cadetes en todo el panel
+        refrescarCadetes()
       } else {
         const data = await res.json()
         alert(data.error || 'Error al eliminar')

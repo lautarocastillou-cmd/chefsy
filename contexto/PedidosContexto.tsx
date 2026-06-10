@@ -10,6 +10,7 @@ import React, {
   ReactNode,
 } from 'react'
 import { Pedido, EstadoPedido } from '@/tipos'
+import { Cadete } from '@/lib/entrega'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { 
   obtenerPedidosActivos, 
@@ -115,6 +116,7 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
 
 interface ValorContextoPedidosInterno {
   pedidos: Pedido[]
+  cadetes: Cadete[]
   estaListo: boolean
   agregarPedido: (pedido: Pedido) => void
   editarPedido: (pedido: Pedido) => void
@@ -129,6 +131,7 @@ interface ValorContextoPedidosInterno {
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
   configuracionOperativa: typeof configuracionOperativaInicial
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
+  refrescarCadetes: () => Promise<void>
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -191,6 +194,27 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   // Acceder a notificaciones del contexto UI
   const { agregarNotificacion } = usarTemaNotificacion()
+
+  // Estado para la lista dinámica de cadetes
+  const [cadetes, setCadetes] = useState<Cadete[]>([])
+
+  // Cargar cadetes desde la API
+  const refrescarCadetes = async () => {
+    try {
+      const res = await fetch('/api/admin/cadetes')
+      if (res.ok) {
+        const data = await res.json()
+        setCadetes(data)
+      }
+    } catch (err) {
+      console.error('Error cargando cadetes:', err)
+    }
+  }
+
+  // Cargar cadetes al montar
+  useEffect(() => {
+    refrescarCadetes()
+  }, [])
 
   // Estado para la configuración operativa de tiempos
   const [configuracionOperativa, setConfiguracionOperativa] = useState<typeof configuracionOperativaInicial>(configuracionOperativaInicial)
@@ -802,6 +826,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     <ContextoPedidosInterno.Provider
       value={{
         pedidos: estado.pedidos,
+        cadetes,
         estaListo,
         agregarPedido,
         editarPedido,
@@ -816,6 +841,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         obtenerPedidosPorFecha,
         configuracionOperativa,
         guardarConfiguracionOperativa,
+        refrescarCadetes,
       }}
     >
       {children}
@@ -839,6 +865,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
 
 interface ValorContextoPedidos {
   pedidos: Pedido[]
+  cadetes: Cadete[]
   categorias: CategoriaCatalogo[]
   productos: ProductoCatalogo[]
   modificadores: ModificadorCatalogo[]
@@ -863,6 +890,7 @@ interface ValorContextoPedidos {
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
   configuracionOperativa: typeof configuracionOperativaInicial
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
+  refrescarCadetes: () => Promise<void>
 }
 
 export function usarPedidos(): ValorContextoPedidos {
@@ -877,6 +905,7 @@ export function usarPedidos(): ValorContextoPedidos {
   return {
     // Pedidos
     pedidos: contextoPedidos.pedidos,
+    cadetes: contextoPedidos.cadetes,
     estaListo: contextoPedidos.estaListo && contextoCatalogo.estaListoCatalogo,
     agregarPedido: contextoPedidos.agregarPedido,
     editarPedido: contextoPedidos.editarPedido,
@@ -891,6 +920,7 @@ export function usarPedidos(): ValorContextoPedidos {
     obtenerPedidosPorFecha: contextoPedidos.obtenerPedidosPorFecha,
     configuracionOperativa: contextoPedidos.configuracionOperativa,
     guardarConfiguracionOperativa: contextoPedidos.guardarConfiguracionOperativa,
+    refrescarCadetes: contextoPedidos.refrescarCadetes,
 
     // Catálogo
     categorias: contextoCatalogo.categorias,
