@@ -27,7 +27,7 @@ const elementosNavegacion = [
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
   { href: '/caceria',       etiqueta: 'Cacería',       icono: Target },
   { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },
-  { href: '/tienda',        etiqueta: 'Tienda',        icono: Store },
+  { href: '/',        etiqueta: 'Tienda',        icono: Store },
 ]
 
 interface PropsSidebar {
@@ -70,8 +70,8 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
     return true
   })
 
-  const itemsPrincipales = elementosFiltrados.filter(item => item.href !== '/tienda')
-  const itemTienda = elementosFiltrados.find(item => item.href === '/tienda')
+  const itemsPrincipales = elementosFiltrados.filter(item => item.href !== '/')
+  const itemTienda = elementosFiltrados.find(item => item.href === '/')
 
   return (
     <aside 
