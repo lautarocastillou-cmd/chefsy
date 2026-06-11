@@ -30,11 +30,13 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
     estado: { 
       clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas, 
       metodoPago, observaciones, filasProductos, error, cargandoEnvio, 
-      envioManual, costoEnvioManualInput, distanciaKm 
+      envioManual, costoEnvioManualInput, distanciaKm,
+      montoEfectivo, montoTransferencia, montoTarjeta
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
-      setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput 
+      setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput,
+      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta
     },
     derivados: { 
       subtotal, pideDireccion, costoEnvioFinal, total 
@@ -179,8 +181,50 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                     <option value="efectivo">💵 Efectivo</option>
                     <option value="transferencia">📱 Transferencia</option>
                     <option value="tarjeta">💳 Tarjeta / Posnet</option>
+                    <option value="mixto">💵📱 Mixto (Dividido)</option>
                   </select>
                 </div>
+
+                {metodoPago === 'mixto' && (
+                  <div className="col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 space-y-3 animate-[slideIn_0.15s_ease-out]">
+                    <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Desglose del pago dividido</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">💵 Efectivo</label>
+                        <input
+                          type="number"
+                          value={montoEfectivo}
+                          onChange={(e) => setMontoEfectivo(e.target.value)}
+                          placeholder="$0"
+                          min="0"
+                          className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/50 rounded-lg px-2 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">📱 Transf.</label>
+                        <input
+                          type="number"
+                          value={montoTransferencia}
+                          onChange={(e) => setMontoTransferencia(e.target.value)}
+                          placeholder="$0"
+                          min="0"
+                          className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/50 rounded-lg px-2 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">💳 Tarjeta</label>
+                        <input
+                          type="number"
+                          value={montoTarjeta}
+                          onChange={(e) => setMontoTarjeta(e.target.value)}
+                          placeholder="$0"
+                          min="0"
+                          className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/50 rounded-lg px-2 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wide">

@@ -244,7 +244,17 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             <option value="efectivo">💵 Efectivo</option>
             <option value="tarjeta">💳 Tarjeta</option>
             <option value="transferencia">📱 Transf.</option>
+            <option value="mixto">💵📱 Mixto</option>
           </select>
+          {pedido.metodoPago === 'mixto' && (
+            <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded">
+              {pedido.montoEfectivo ? `💵${formatearPrecio(pedido.montoEfectivo)}` : ''}
+              {pedido.montoEfectivo && (pedido.montoTransferencia || pedido.montoTarjeta) ? ' + ' : ''}
+              {pedido.montoTransferencia ? `📱${formatearPrecio(pedido.montoTransferencia)}` : ''}
+              {pedido.montoTransferencia && pedido.montoTarjeta ? ' + ' : ''}
+              {pedido.montoTarjeta ? `💳${formatearPrecio(pedido.montoTarjeta)}` : ''}
+            </span>
+          )}
           {pedido.tipoEntrega === 'delivery' && (
             <select
               value={pedido.cadete_id || ''}

@@ -27,6 +27,9 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [coordenadas, setCoordenadas] = useState<Coordenadas | null>(null)
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('sin_especificar')
   const [observaciones, setObservaciones] = useState('')
+  const [montoEfectivo, setMontoEfectivo] = useState('')
+  const [montoTransferencia, setMontoTransferencia] = useState('')
+  const [montoTarjeta, setMontoTarjeta] = useState('')
   const [filasProductos, setFilasProductos] = useState<FilaProductoPedido[]>([
     crearFilaProductoVacia(),
   ])
@@ -47,6 +50,9 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       if (pedidoInicial.coordenadas) setCoordenadas(pedidoInicial.coordenadas)
       setMetodoPago(pedidoInicial.metodoPago)
       if (pedidoInicial.observaciones) setObservaciones(pedidoInicial.observaciones)
+      if (pedidoInicial.montoEfectivo) setMontoEfectivo(String(pedidoInicial.montoEfectivo))
+      if (pedidoInicial.montoTransferencia) setMontoTransferencia(String(pedidoInicial.montoTransferencia))
+      if (pedidoInicial.montoTarjeta) setMontoTarjeta(String(pedidoInicial.montoTarjeta))
       
       const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
         id: p.id,
@@ -219,6 +225,9 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       fecha: pedidoInicial?.fecha || obtenerFechaNegocio(ahora),
       created_at: pedidoInicial?.created_at || ahora.toISOString(),
       pago_confirmado: pedidoInicial?.pago_confirmado,
+      montoEfectivo: metodoPago === 'mixto' && Number(montoEfectivo) > 0 ? Number(montoEfectivo) : undefined,
+      montoTransferencia: metodoPago === 'mixto' && Number(montoTransferencia) > 0 ? Number(montoTransferencia) : undefined,
+      montoTarjeta: metodoPago === 'mixto' && Number(montoTarjeta) > 0 ? Number(montoTarjeta) : undefined,
     }
 
     if (pedidoInicial) {
@@ -234,11 +243,13 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     estado: {
       clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas,
       metodoPago, observaciones, filasProductos, error, costoEnvio, distanciaKm,
-      cargandoEnvio, envioManual, costoEnvioManualInput
+      cargandoEnvio, envioManual, costoEnvioManualInput,
+      montoEfectivo, montoTransferencia, montoTarjeta
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
-      setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput
+      setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput,
+      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta
     },
     derivados: {
       subtotal, pideDireccion, costoEnvioFinal, total

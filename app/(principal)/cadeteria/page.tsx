@@ -441,7 +441,7 @@ export default function PaginaCadeteria() {
               </div>
               <div className="relative z-10">
                 <h2 className="text-lg font-bold">
-                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : usuarioActivo.usuario === 'cufa' ? '¡Hola, Cufa! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
+                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
                 </h2>
                 <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
               </div>

@@ -12,7 +12,7 @@ export type EstadoPedido =
   | 'cancelado'
 
 /** Métodos de pago aceptados */
-export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'
+export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto' | 'sin_especificar'
 
 /** Forma en que el cliente recibe el pedido */
 export type TipoEntrega = 'delivery' | 'retiro' | 'consumo_local'
@@ -58,6 +58,10 @@ export interface Pedido {
   pago_confirmado?: boolean
   cadete_id?: string | null
   cadete_nombre?: string | null
+  /** Montos parciales para pagos mixtos (divididos) */
+  montoEfectivo?: number
+  montoTransferencia?: number
+  montoTarjeta?: number
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

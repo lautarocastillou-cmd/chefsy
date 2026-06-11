@@ -52,31 +52,59 @@ export default function PaginaCierreCaja() {
     return pedidosDelDia.filter((p) => p.estado !== 'cancelado')
   }, [pedidosDelDia])
 
-  // Cálculos estadísticos
-  const facturacionTotal = useMemo(() => {
+  // ── Cálculos de Facturación ──────────────────────────
+
+  // Total bruto (lo que se cobró sumando todo)
+  const facturacionBruta = useMemo(() => {
     return pedidosValidos.reduce((acc, p) => acc + p.total, 0)
   }, [pedidosValidos])
 
-  const totalPedidos = pedidosValidos.length
-  const ticketPromedio = totalPedidos > 0 ? facturacionTotal / totalPedidos : 0
-
-  // Métodos de pago
-  const efectivoTotal = useMemo(() => {
-    return pedidosValidos.filter((p) => p.metodoPago === 'efectivo').reduce((acc, p) => acc + p.total, 0)
+  // Total de costos de envío (= pago a cadetes)
+  const totalCostosEnvio = useMemo(() => {
+    return pedidosValidos.reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
   }, [pedidosValidos])
-  const efectivoCount = pedidosValidos.filter((p) => p.metodoPago === 'efectivo').length
+
+  // Facturación neta del local (lo que realmente queda)
+  const facturacionNeta = facturacionBruta - totalCostosEnvio
+
+  const totalPedidos = pedidosValidos.length
+  const ticketPromedio = totalPedidos > 0 ? facturacionNeta / totalPedidos : 0
+
+  // ── Desglose por Método de Pago (con soporte mixto) ──
+
+  // Helper: obtener cuánto de un pedido corresponde a cada método
+  const obtenerMontosPorMetodo = (p: Pedido) => {
+    if (p.metodoPago === 'mixto') {
+      return {
+        efectivo: p.montoEfectivo || 0,
+        transferencia: p.montoTransferencia || 0,
+        tarjeta: p.montoTarjeta || 0,
+      }
+    }
+    return {
+      efectivo: p.metodoPago === 'efectivo' ? p.total : 0,
+      transferencia: p.metodoPago === 'transferencia' ? p.total : 0,
+      tarjeta: p.metodoPago === 'tarjeta' ? p.total : 0,
+    }
+  }
+
+  const efectivoTotal = useMemo(() => {
+    return pedidosValidos.reduce((acc, p) => acc + obtenerMontosPorMetodo(p).efectivo, 0)
+  }, [pedidosValidos])
+  const efectivoCount = pedidosValidos.filter((p) => p.metodoPago === 'efectivo' || (p.metodoPago === 'mixto' && (p.montoEfectivo || 0) > 0)).length
 
   const tarjetaTotal = useMemo(() => {
-    return pedidosValidos.filter((p) => p.metodoPago === 'tarjeta').reduce((acc, p) => acc + p.total, 0)
+    return pedidosValidos.reduce((acc, p) => acc + obtenerMontosPorMetodo(p).tarjeta, 0)
   }, [pedidosValidos])
-  const tarjetaCount = pedidosValidos.filter((p) => p.metodoPago === 'tarjeta').length
+  const tarjetaCount = pedidosValidos.filter((p) => p.metodoPago === 'tarjeta' || (p.metodoPago === 'mixto' && (p.montoTarjeta || 0) > 0)).length
 
   const transferenciaTotal = useMemo(() => {
-    return pedidosValidos.filter((p) => p.metodoPago === 'transferencia').reduce((acc, p) => acc + p.total, 0)
+    return pedidosValidos.reduce((acc, p) => acc + obtenerMontosPorMetodo(p).transferencia, 0)
   }, [pedidosValidos])
-  const transferenciaCount = pedidosValidos.filter((p) => p.metodoPago === 'transferencia').length
+  const transferenciaCount = pedidosValidos.filter((p) => p.metodoPago === 'transferencia' || (p.metodoPago === 'mixto' && (p.montoTransferencia || 0) > 0)).length
 
-  // Modalidades de entrega
+  // ── Modalidades de entrega ───────────────────────────
+
   const deliveryTotal = useMemo(() => {
     return pedidosValidos.filter((p) => p.tipoEntrega === 'delivery').reduce((acc, p) => acc + p.total, 0)
   }, [pedidosValidos])
@@ -96,6 +124,9 @@ export default function PaginaCierreCaja() {
   const canceladosCount = pedidosDelDia.filter((p) => p.estado === 'cancelado').length
   const canceladosMonto = pedidosDelDia.filter((p) => p.estado === 'cancelado').reduce((acc, p) => acc + p.total, 0)
 
+  // Cantidad de envíos delivery (para la sección cadetes)
+  const enviosDelivery = pedidosValidos.filter((p) => p.tipoEntrega === 'delivery' && (p.costoEnvio || 0) > 0)
+
   // Copiar reporte al portapapeles
   const copiarReporteAlPortapapeles = () => {
     const formattedDate = new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-AR', {
@@ -108,8 +139,8 @@ export default function PaginaCierreCaja() {
     const mensaje = `*CIERRE DE CAJA - CHEFSY* 💰
 📅 *Fecha:* ${formattedDate}
 ----------------------------------------
-💵 *Facturación Total:* ${formatearPrecio(facturacionTotal)}
-📋 *Pedidos Entregados/Activos:* ${totalPedidos}
+💵 *Facturación Neta:* ${formatearPrecio(facturacionNeta)}
+📋 *Pedidos:* ${totalPedidos}
 🎫 *Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
 
 *Por Método de Pago:*
@@ -122,6 +153,7 @@ export default function PaginaCierreCaja() {
 - 🏪 Retiro: ${formatearPrecio(retiroTotal)} (${retiroCount} ped.)
 - 🍽️ Consumo Local: ${formatearPrecio(localTotal)} (${localCount} ped.)
 
+🛵 *Pago a Cadetes:* ${formatearPrecio(totalCostosEnvio)} (${enviosDelivery.length} envíos)
 ----------------------------------------
 ❌ *Pedidos Cancelados:* ${canceladosCount} (${formatearPrecio(canceladosMonto)})
 ----------------------------------------
@@ -151,9 +183,10 @@ _Generado automáticamente desde Chefsy_`.trim()
   }
 
   // Porcentajes para barras visuales
-  const pctEfectivo = facturacionTotal > 0 ? (efectivoTotal / facturacionTotal) * 100 : 0
-  const pctTarjeta = facturacionTotal > 0 ? (tarjetaTotal / facturacionTotal) * 100 : 0
-  const pctTransf = facturacionTotal > 0 ? (transferenciaTotal / facturacionTotal) * 100 : 0
+  const totalMetodos = efectivoTotal + tarjetaTotal + transferenciaTotal
+  const pctEfectivo = totalMetodos > 0 ? (efectivoTotal / totalMetodos) * 100 : 0
+  const pctTarjeta = totalMetodos > 0 ? (tarjetaTotal / totalMetodos) * 100 : 0
+  const pctTransf = totalMetodos > 0 ? (transferenciaTotal / totalMetodos) * 100 : 0
 
   return (
     <div className="space-y-6 max-w-3xl pb-10">
@@ -188,15 +221,17 @@ _Generado automáticamente desde Chefsy_`.trim()
       {/* Contenedor con efecto de carga */}
       <div className={`space-y-6 transition-all duration-300 ${cargando ? 'opacity-40 pointer-events-none' : ''}`}>
         
-        {/* Tarjeta Principal de Facturación */}
+        {/* Tarjeta Principal de Facturación NETA */}
         <div className="bg-gradient-to-br from-chefsy-800 to-chefsy-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/6 -translate-y-1/6">
             <DollarSign size={200} />
           </div>
           <div className="relative z-10 space-y-1">
-            <span className="text-xs text-chefsy-100 uppercase tracking-widest font-bold">Facturación del Día</span>
-            <p className="text-4xl font-black">{formatearPrecio(facturacionTotal)}</p>
-            <p className="text-xs text-chefsy-100 font-medium">Calculado sobre {totalPedidos} pedidos válidos</p>
+            <span className="text-xs text-chefsy-100 uppercase tracking-widest font-bold">Facturación Neta del Local</span>
+            <p className="text-4xl font-black">{formatearPrecio(facturacionNeta)}</p>
+            <p className="text-xs text-chefsy-100 font-medium">
+              {formatearPrecio(facturacionBruta)} bruto − {formatearPrecio(totalCostosEnvio)} envíos cadetes
+            </p>
           </div>
           <button
             onClick={copiarReporteAlPortapapeles}
@@ -220,7 +255,7 @@ _Generado automáticamente desde Chefsy_`.trim()
         </div>
 
         {/* Métricas secundarias */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-4 flex items-center gap-4">
             <div className="bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 p-3 rounded-xl">
               <Calendar size={24} />
@@ -237,6 +272,17 @@ _Generado automáticamente desde Chefsy_`.trim()
             <div>
               <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Ticket Promedio</p>
               <p className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6]">{formatearPrecio(ticketPromedio)}</p>
+            </div>
+          </div>
+          {/* Pago a Cadetes */}
+          <div className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-4 flex items-center gap-4">
+            <div className="bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 p-3 rounded-xl">
+              <Bike size={24} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Pago a Cadetes</p>
+              <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{formatearPrecio(totalCostosEnvio)}</p>
+              <p className="text-[10px] text-gray-400 dark:text-[#686868]">{enviosDelivery.length} envíos con costo</p>
             </div>
           </div>
         </div>
