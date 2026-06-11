@@ -114,6 +114,12 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
 
 // ── Interfaz interna de Pedidos ────────────────────────
 
+export interface EstadoTurno {
+  activo: boolean
+  cajaInicial: number
+  fechaInicio: string | null
+}
+
 interface ValorContextoPedidosInterno {
   pedidos: Pedido[]
   cadetes: Cadete[]
@@ -132,6 +138,8 @@ interface ValorContextoPedidosInterno {
   configuracionOperativa: typeof configuracionOperativaInicial
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
+  estadoTurno: EstadoTurno
+  iniciarTurno: (cajaInicial: number) => Promise<boolean>
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -258,7 +266,55 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Error guardando configuración operativa:', err)
-      agregarNotificacion('Error de conexión al guardar la configuración.', 'warning')
+      agregarNotificacion('Error de red al guardar la configuración.', 'error')
+      return false
+    }
+  }
+
+  // ── Estado del Turno ──────────────────────────────────
+  const [estadoTurno, setEstadoTurno] = useState<EstadoTurno>({
+    activo: false,
+    cajaInicial: 0,
+    fechaInicio: null
+  })
+
+  useEffect(() => {
+    async function cargarTurno() {
+      try {
+        const res = await fetch('/api/admin/turno')
+        if (res.ok) {
+          const data = await res.json()
+          setEstadoTurno(data)
+        }
+      } catch (err) {
+        console.error('Error cargando estado del turno:', err)
+      }
+    }
+    cargarTurno()
+  }, [])
+
+  const iniciarTurno = async (cajaInicial: number): Promise<boolean> => {
+    try {
+      const nuevoTurno = {
+        activo: true,
+        cajaInicial,
+        fechaInicio: new Date().toISOString()
+      }
+      const res = await fetch('/api/admin/turno', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoTurno)
+      })
+      if (res.ok) {
+        setEstadoTurno(nuevoTurno)
+        agregarNotificacion('Turno iniciado correctamente.', 'success')
+        return true
+      }
+      agregarNotificacion('Error al iniciar el turno.', 'warning')
+      return false
+    } catch (err) {
+      console.error('Error iniciando turno:', err)
+      agregarNotificacion('Error de red al iniciar el turno.', 'error')
       return false
     }
   }
@@ -727,6 +783,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       prevPedidosRef.current = []
       localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify([]))
 
+      // Cerrar el turno en el backend
+      const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null }
+      await fetch('/api/admin/turno', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(turnoCerrado)
+      })
+      setEstadoTurno(turnoCerrado)
+
       agregarNotificacion('Turno finalizado. El panel quedó limpio para el próximo turno.', 'success')
     } catch (err) {
       console.error('[Servidor/Supabase] Error al finalizar turno:', err)
@@ -842,6 +907,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         configuracionOperativa,
         guardarConfiguracionOperativa,
         refrescarCadetes,
+        estadoTurno,
+        iniciarTurno
       }}
     >
       {children}
@@ -891,6 +958,8 @@ interface ValorContextoPedidos {
   configuracionOperativa: typeof configuracionOperativaInicial
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
+  estadoTurno: EstadoTurno
+  iniciarTurno: (cajaInicial: number) => Promise<boolean>
 }
 
 export function usarPedidos(): ValorContextoPedidos {
@@ -921,6 +990,8 @@ export function usarPedidos(): ValorContextoPedidos {
     configuracionOperativa: contextoPedidos.configuracionOperativa,
     guardarConfiguracionOperativa: contextoPedidos.guardarConfiguracionOperativa,
     refrescarCadetes: contextoPedidos.refrescarCadetes,
+    estadoTurno: contextoPedidos.estadoTurno,
+    iniciarTurno: contextoPedidos.iniciarTurno,
 
     // Catálogo
     categorias: contextoCatalogo.categorias,

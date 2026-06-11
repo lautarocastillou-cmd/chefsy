@@ -18,17 +18,23 @@ import {
   RotateCcw,
   Copy,
   Check,
+  Play,
+  X
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
 
 export default function PaginaCierreCaja() {
-  const { pedidos, obtenerPedidosPorFecha, finalizarTurno } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno } = usarPedidos()
   
   // Fecha seleccionada (por defecto hoy comercial)
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+
+  // Estado para el modal de Iniciar Turno
+  const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
+  const [cajaInicialInput, setCajaInicialInput] = useState('')
 
   // Cargar pedidos de la fecha seleccionada en Supabase (históricos + activos)
   useEffect(() => {
@@ -127,6 +133,9 @@ export default function PaginaCierreCaja() {
   // Cantidad de envíos delivery (para la sección cadetes)
   const enviosDelivery = pedidosValidos.filter((p) => p.tipoEntrega === 'delivery' && (p.costoEnvio || 0) > 0)
 
+  // Efectivo a rendir al final de la noche (Caja Inicial + Efectivo Entrante)
+  const efectivoARendir = (estadoTurno?.cajaInicial || 0) + efectivoTotal
+
   // Copiar reporte al portapapeles
   const copiarReporteAlPortapapeles = () => {
     const formattedDate = new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-AR', {
@@ -142,6 +151,11 @@ export default function PaginaCierreCaja() {
 💵 *Facturación Neta:* ${formatearPrecio(facturacionNeta)}
 📋 *Pedidos:* ${totalPedidos}
 🎫 *Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
+
+*Estado de la Caja:*
+- 📥 Caja Inicial: ${formatearPrecio(estadoTurno?.cajaInicial || 0)}
+- 💵 Efectivo Ventas: ${formatearPrecio(efectivoTotal)}
+- 💰 *Físico a Rendir:* ${formatearPrecio(efectivoARendir)}
 
 *Por Método de Pago:*
 - 💵 Efectivo: ${formatearPrecio(efectivoTotal)} (${efectivoCount} ped.)
@@ -182,6 +196,17 @@ _Generado automáticamente desde Chefsy_`.trim()
     }
   }
 
+  const manejarIniciarTurno = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const monto = Number(cajaInicialInput)
+    if (isNaN(monto) || monto < 0) return
+    const exito = await iniciarTurno(monto)
+    if (exito) {
+      setModalInicioAbierto(false)
+      setCajaInicialInput('')
+    }
+  }
+
   // Porcentajes para barras visuales
   const totalMetodos = efectivoTotal + tarjetaTotal + transferenciaTotal
   const pctEfectivo = totalMetodos > 0 ? (efectivoTotal / totalMetodos) * 100 : 0
@@ -208,8 +233,21 @@ _Generado automáticamente desde Chefsy_`.trim()
             />
           </div>
           <button
+            onClick={() => setModalInicioAbierto(true)}
+            disabled={estadoTurno.activo}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5",
+              estadoTurno.activo
+                ? "bg-slate-100 text-slate-400 dark:bg-[#333] dark:text-[#666] cursor-not-allowed"
+                : "bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 active:scale-95"
+            )}
+          >
+            <Play size={16} />
+            {estadoTurno.activo ? 'Turno en curso' : 'Iniciar Turno'}
+          </button>
+          <button
             onClick={manejarFinalizarTurno}
-            disabled={pedidos.length === 0}
+            disabled={!estadoTurno.activo || pedidos.length === 0}
             className="bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
             title="Archiva todos los pedidos del panel activo para arrancar un nuevo turno limpio"
           >
@@ -252,6 +290,18 @@ _Generado automáticamente desde Chefsy_`.trim()
               </>
             )}
           </button>
+        </div>
+
+        {/* Tarjeta Extra: Total Efectivo a Rendir */}
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-500 uppercase tracking-wider mb-1">Efectivo Físico a Rendir</p>
+            <p className="text-2xl font-black text-emerald-900 dark:text-emerald-400">{formatearPrecio(efectivoARendir)}</p>
+          </div>
+          <div className="text-right text-xs text-emerald-700 dark:text-emerald-600 font-medium">
+            <p>Caja Inicial: {formatearPrecio(estadoTurno?.cajaInicial || 0)}</p>
+            <p>Efectivo Ventas: {formatearPrecio(efectivoTotal)}</p>
+          </div>
         </div>
 
         {/* Métricas secundarias */}
@@ -391,6 +441,63 @@ _Generado automáticamente desde Chefsy_`.trim()
         )}
         
       </div>
+
+      {/* Modal Iniciar Turno */}
+      {modalInicioAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-5">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                ▶️ Iniciar Turno
+              </h2>
+              <button
+                onClick={() => setModalInicioAbierto(false)}
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={manejarIniciarTurno} className="p-5 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                  Plata en caja (Cambio Inicial)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    required
+                    value={cajaInicialInput}
+                    onChange={(e) => setCajaInicialInput(e.target.value)}
+                    placeholder="Ej: 5000"
+                    className="w-full pl-7 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 font-bold transition-all"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">Esta plata se sumará al efectivo de las ventas al final del día para el conteo de la caja.</p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalInicioAbierto(false)}
+                  className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-sm shadow-emerald-500/20"
+                >
+                  Confirmar e Iniciar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -12,16 +12,26 @@ import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
 import Link from 'next/link'
 import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Music, ExternalLink, DollarSign } from 'lucide-react'
+import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'
 
 export default function PaginaDashboard() {
-  const { pedidos, cadetes } = usarPedidos()
+  const { pedidos, cadetes, estadoTurno } = usarPedidos()
+  const { agregarNotificacion } = usarTemaNotificacion()
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
   const [pedidoSeleccionadoParaEditar, setPedidoSeleccionadoParaEditar] = useState<any>(null)
   const [cadeteFiltro, setCadeteFiltro] = useState<string>('todos')
+
+  const handleAbrirNuevoPedido = () => {
+    if (!estadoTurno.activo) {
+      agregarNotificacion('Debés iniciar el turno desde "Cierre de Caja" para cargar pedidos.', 'warning')
+      return
+    }
+    setModalNuevoPedidoAbierto(true)
+  }
 
   // ── Cálculo de métricas ──
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length
@@ -229,7 +239,7 @@ export default function PaginaDashboard() {
 
       {/* ── Botón Flotante para Crear Pedido ── */}
       <button
-        onClick={() => setModalNuevoPedidoAbierto(true)}
+        onClick={handleAbrirNuevoPedido}
         className="fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
       >
         <Plus size={18} />

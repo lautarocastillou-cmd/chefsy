@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { Plus, X, Calendar, LayoutGrid, List } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
+import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -27,7 +28,8 @@ const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
 ]
 
 export default function PaginaPedidos() {
-  const { pedidos, obtenerPedidosPorFecha } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha, estadoTurno } = usarPedidos()
+  const { agregarNotificacion } = usarTemaNotificacion()
   
   // Vistas: activos (no archivados, tiempo real) o historial (por fecha, incluye archivados)
   const [vista, setVista] = useState<'activos' | 'historial'>('activos')
@@ -43,6 +45,14 @@ export default function PaginaPedidos() {
   
   const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
   const [pedidoAEditar, setPedidoAEditar] = useState<Pedido | null>(null)
+
+  const handleAbrirNuevoPedido = () => {
+    if (!estadoTurno.activo) {
+      agregarNotificacion('Debés iniciar el turno desde "Cierre de Caja" para cargar pedidos.', 'warning')
+      return
+    }
+    setModalNuevoPedidoAbierto(true)
+  }
 
   // Cargar pedidos del día seleccionado cuando corresponda (sincronizado con cambios en tiempo real)
   useEffect(() => {
@@ -263,7 +273,7 @@ export default function PaginaPedidos() {
 
       {/* ── Botón Flotante para Crear Pedido ── */}
       <button
-        onClick={() => setModalNuevoPedidoAbierto(true)}
+        onClick={handleAbrirNuevoPedido}
         className="fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
       >
         <Plus size={18} />
