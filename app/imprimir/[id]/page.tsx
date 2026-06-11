@@ -32,8 +32,9 @@ export default function TicketImpresion() {
     efectivo: 'Efectivo',
     tarjeta: 'Tarjeta',
     transferencia: 'Transferencia',
+    mixto: 'Mixto',
     sin_especificar: 'Sin especificar'
-  }[pedido.metodoPago]
+  }[pedido.metodoPago || 'sin_especificar'] || 'Desconocido'
 
   return (
     <div className="w-full max-w-[300px] mx-auto text-black font-mono text-sm p-4 print:p-0 print:m-0 print:max-w-none">

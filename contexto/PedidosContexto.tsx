@@ -266,7 +266,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Error guardando configuración operativa:', err)
-      agregarNotificacion('Error de red al guardar la configuración.', 'error')
+      agregarNotificacion('Error de red al guardar la configuración.', 'warning')
       return false
     }
   }
@@ -314,7 +314,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       return false
     } catch (err) {
       console.error('Error iniciando turno:', err)
-      agregarNotificacion('Error de red al iniciar el turno.', 'error')
+      agregarNotificacion('Error de red al iniciar el turno.', 'warning')
       return false
     }
   }

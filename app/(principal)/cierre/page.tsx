@@ -1,7 +1,7 @@
 'use client'
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { useState, useMemo, useEffect } from 'react'
 import {
