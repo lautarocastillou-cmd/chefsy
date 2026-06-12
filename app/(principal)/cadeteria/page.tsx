@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
 import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
+import BotonNotificaciones from '@/components/cadeteria/BotonNotificaciones'
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -414,12 +415,15 @@ export default function PaginaCadeteria() {
               </span>
             </div>
           </div>
-          <button
-            onClick={cerrarSesion}
-            className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1"
-          >
-            Cerrar Sesión
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            {usuarioActivo?.rol !== 'admin' && <BotonNotificaciones />}
+            <button
+              onClick={cerrarSesion}
+              className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </header>
       )}
 

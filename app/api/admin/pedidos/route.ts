@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
+import { enviarNotificacionCadete } from '@/lib/webpush'
 
 export async function POST(request: Request) {
   // 1. Validar sesión en el servidor
@@ -99,8 +100,29 @@ export async function POST(request: Request) {
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
+          .select('cadete_id, tipoEntrega, cliente')
+          .single()
 
         if (error) throw error
+
+        // Notificar al cadete si el pedido es delivery y está listo
+        if (estado === 'listo') {
+          // Ya tenemos el dato en la respuesta del update gracias al select()
+          const { data: pedidoAct } = await supabaseAdmin
+            .from('pedidos')
+            .select('cadete_id, tipoEntrega, cliente')
+            .eq('id', id)
+            .single()
+            
+          if (pedidoAct && pedidoAct.cadete_id && pedidoAct.tipoEntrega === 'delivery') {
+            await enviarNotificacionCadete(
+              pedidoAct.cadete_id,
+              '¡Pedido Listo para Retirar! 🛵',
+              `El pedido de ${pedidoAct.cliente} ya está listo en cocina.`
+            )
+          }
+        }
+
         return NextResponse.json({ ok: true })
       }
 
@@ -187,12 +209,23 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
         }
 
-        const { error } = await supabaseAdmin
+        const { data: pedidoAct, error } = await supabaseAdmin
           .from('pedidos')
           .update({ cadete_id: cadete_id || null, cadete_nombre: cadete_nombre || null })
           .eq('id', id)
+          .select('cliente')
+          .single()
 
         if (error) throw error
+
+        if (cadete_id) {
+          await enviarNotificacionCadete(
+            cadete_id,
+            '🛵 Nuevo Pedido Asignado',
+            `Se te ha asignado el pedido de ${pedidoAct?.cliente || 'un cliente'}.`
+          )
+        }
+
         return NextResponse.json({ ok: true })
       }
 
