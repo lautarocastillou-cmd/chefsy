@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import PantallaCarga from '@/components/tienda/PantallaCarga'
 import BurgerAnimada from '@/components/tienda/BurgerAnimada'
+import { SlideButton } from '@/components/ui/slide-button'
 import { 
   ShoppingCart, Plus, Minus, Trash2, User, Phone, 
   MapPin, CreditCard, CheckCircle2, MessageCircle, 
@@ -158,9 +159,21 @@ export default function PaginaTienda() {
 
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todos')
+  const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
   const [metadata, setMetadata] = useState<Record<string, any>>({})
+  
+  // Palabras animadas para el hero
+  const animatedWords = ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
+  const [animatedWordIndex, setAnimatedWordIndex] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimatedWordIndex(prev => (prev + 1) % animatedWords.length)
+    }, 1500)
+    return () => clearInterval(interval)
+  }, [])
 
   // Cargar metadatos públicos de la tienda
   useEffect(() => {
@@ -332,8 +345,8 @@ export default function PaginaTienda() {
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
 
   // --- MÉTODOS DE CHECKOUT ---
-  const procesarCompra = (e: React.FormEvent) => {
-    e.preventDefault()
+  const procesarCompra = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
 
     if (!nombreCliente.trim() || !telefonoCliente.trim()) {
       alert('Por favor completa tu nombre y número de teléfono de contacto.')
@@ -554,82 +567,108 @@ export default function PaginaTienda() {
       </header>
 
       {/* --- HERO SECTION TIPO SQEW --- */}
-      <div className="relative min-h-[90vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
+      <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
         
         {/* Contenedor Principal del Hero */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center max-w-7xl mx-auto w-full mt-10 md:mt-0">
+        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
           
-          {/* Tipografía Minimalista Premium */}
-          <div className="flex flex-col items-start leading-[1.1] mb-8">
+          {/* 1. Tipografía Minimalista Premium (Top Left on Desktop, Top on Mobile) */}
+          <div className="relative z-30 flex flex-col items-start leading-[1.1] order-1 lg:self-end">
             <motion.h1 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 2.6, duration: 0.8, ease: "easeOut" }}
-              className="font-sans font-light text-[4rem] md:text-[7rem] lg:text-[9rem] text-white tracking-tight"
+              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal"
             >
-              Exquisito.
+              POCAS PALABRAS.
             </motion.h1>
             <motion.h1 
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 2.8, duration: 0.8, ease: "easeOut" }}
-              className="font-sans font-light text-[4rem] md:text-[7rem] lg:text-[9rem] text-slate-400 tracking-tight -mt-2 md:-mt-6"
+              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-slate-200 tracking-normal -mt-2 md:-mt-4 lg:-mt-6"
             >
-              Minimalista.
+              MUCHO CHEDDAR.
             </motion.h1>
           </div>
 
-          {/* Selector de Categorías y Subtítulo */}
+          {/* 2. Imagen de Producto Gigante Flotante (Right on Desktop, Middle on Mobile) */}
+          <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2">
+            <motion.img 
+              src="/burger-loca.png"
+              alt="Chefsy Burger"
+              className="w-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] xl:max-w-[800px] h-auto object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+              initial={{ opacity: 0, scale: 0.8, y: 50, rotate: -10 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1, 
+                y: [0, -20, 0],
+                rotate: [-2, 2, -2] 
+              }}
+              transition={{
+                opacity: { duration: 1, delay: 0.5 },
+                scale: { duration: 1, delay: 0.5, type: 'spring', bounce: 0.4 },
+                y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                rotate: { duration: 8, repeat: Infinity, ease: "easeInOut" }
+              }}
+            />
+          </div>
+
+          {/* 3. Selector de Categorías y Subtítulo (Bottom Left on Desktop, Bottom on Mobile) */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 3.2, duration: 0.8 }}
-            className="flex flex-col gap-4 mt-8 md:mt-12 max-w-sm relative z-30"
+            className="flex flex-col gap-4 w-full max-w-sm relative z-30 order-3 lg:self-start"
           >
-            <p className="font-sans text-sm md:text-base text-slate-400 font-light tracking-widest uppercase mb-[-10px]">
-              Descubrí nuestro menú
+            <p className="font-sans text-sm md:text-base text-chefsy-300 font-medium tracking-widest uppercase mb-[-10px]">
+              NO VENIMOS A COMPLICARTE
             </p>
-            <p className="font-sans text-2xl md:text-3xl text-white font-medium tracking-tight">
-              ¿Qué tenés pensado pedir?
+            <p className="font-bebas text-4xl md:text-5xl text-white tracking-wide">
+              ¿QUÉ PINTA HOY?
             </p>
-            <div className="relative group">
-              <select
-                value={categoriaSeleccionada}
-                onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-                className="w-full appearance-none bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
-              >
-                <option value="todos" className="text-slate-900">Ver todo el menú</option>
-                {categoriasActivas.map(cat => (
-                  <option key={cat.id} value={cat.id} className="text-slate-900">{cat.nombre}</option>
-                ))}
-              </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-chefsy-300 group-hover:text-chefsy-100 transition-colors">
-                <ChevronDown size={24} />
+            <div className="flex items-center gap-4">
+              <div className="relative group w-[50%]">
+                <select
+                  value={categoriaSeleccionada}
+                  onChange={(e) => {
+                    setHasInteractedSelect(true)
+                    setCategoriaSeleccionada(e.target.value)
+                  }}
+                  className="w-full appearance-none bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
+                >
+                  <option value="todos" className="text-slate-900">
+                    {hasInteractedSelect ? "Ver todo el menú" : "APRETÁ ACÁ"}
+                  </option>
+                  {categoriasActivas.map(cat => (
+                    <option key={cat.id} value={cat.id} className="text-slate-900">{cat.nombre}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-chefsy-300 group-hover:text-chefsy-100 transition-colors">
+                  <ChevronDown size={20} />
+                </div>
+              </div>
+              
+              <div className="w-[50%] relative flex items-center overflow-hidden h-[60px]">
+                <AnimatePresence mode="popLayout">
+                  <motion.h2 
+                    key={animatedWordIndex}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -30 }}
+                    transition={{ duration: 0.5, ease: "circOut" }}
+                    className="font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide absolute left-0"
+                  >
+                    {animatedWords[animatedWordIndex]}
+                  </motion.h2>
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
 
         </div>
 
-        {/* Imagen de Producto Gigante Flotante (Burger Animada) */}
-        <div className="absolute -bottom-10 md:-bottom-24 -right-16 md:-right-10 pointer-events-none z-20">
-          <BurgerAnimada />
-        </div>
-
-        {/* Etiqueta de la categoría destacada / producto (bottom left) */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 3.5, duration: 1 }}
-          className="absolute bottom-12 left-6 md:left-12 z-20 pb-2 max-w-[60%] md:max-w-xl w-full"
-        >
-          <div className="h-[1px] w-12 bg-white/30 mb-4"></div>
-          <h3 className="font-sans text-xl md:text-2xl text-white font-light tracking-widest truncate">
-            {categoriaSeleccionada === 'todos' ? 'Catálogo completo' : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre}
-          </h3>
-        </motion.div>
       </div>
-
       {/* --- SECCIÓN DEL CONTENIDO CENTRAL --- */}
       <main className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
         
@@ -971,12 +1010,13 @@ export default function PaginaTienda() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 mt-4 cursor-pointer"
-                  >
-                    Confirmar Pedido ({formatearPrecio(totalCarrito)})
-                  </button>
+                  <div className="mt-4 flex w-full">
+                    <SlideButton 
+                      onAction={() => procesarCompra()}
+                      texto={`DESLIZA PARA CONFIRMAR (${formatearPrecio(totalCarrito)})`}
+                      className="w-full"
+                    />
+                  </div>
                 </form>
               )}
             </div>

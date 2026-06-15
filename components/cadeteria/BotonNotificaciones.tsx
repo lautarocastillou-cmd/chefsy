@@ -84,7 +84,7 @@ export default function BotonNotificaciones() {
       agregarNotificacion('¡Notificaciones activadas correctamente!', 'success')
       
       // Test notification
-      new Notification('¡Chefsy Cadetería!', {
+      registration.showNotification('¡Chefsy Cadetería!', {
         body: 'Las notificaciones están funcionando.',
         icon: '/icon-192x192.png'
       })

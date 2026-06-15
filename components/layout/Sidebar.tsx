@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   Sun, Moon, LogOut, Settings, 
   LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
@@ -286,13 +287,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
             </Link>
             
             {/* Tema Oscuro */}
-            <button
-              onClick={alternarModoOscuro}
-              className="p-2 rounded-xl text-chefsy-200 hover:text-white hover:bg-white/10 transition-all focus:outline-none hover:scale-110"
-              title={modoOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            >
-              {modoOscuro ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
+            <ThemeToggle />
             
             {/* Cerrar Sesión */}
             <button

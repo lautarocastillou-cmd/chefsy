@@ -86,6 +86,7 @@ interface PropsCampoUbicacion {
   onCoordenadasChange: (coordenadas: Coordenadas | null) => void
   claseInput?: string
   obligatorio?: boolean
+  distanciaKm?: number
 }
 
 export default function CampoUbicacion({
@@ -95,6 +96,7 @@ export default function CampoUbicacion({
   onCoordenadasChange,
   claseInput = 'w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent',
   obligatorio = false,
+  distanciaKm,
 }: PropsCampoUbicacion) {
   const [modalAbierto, setModalAbierto] = useState(false)
 
@@ -389,6 +391,9 @@ export default function CampoUbicacion({
         <div className="text-xs text-gray-600 bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center justify-between shadow-sm">
           <div>
             <p>✅ <span className="font-semibold">Ubicación señalada:</span> {formatearCoordenadas(coordenadas)}</p>
+            {distanciaKm !== undefined && distanciaKm > 0 && (
+              <p className="mt-0.5 text-chefsy-700 font-medium text-[11px] uppercase tracking-wide">📏 Distancia al local: <span className="font-bold text-chefsy-900">{distanciaKm} km</span></p>
+            )}
             <a
               href={crearEnlaceGoogleMaps(coordenadas)}
               target="_blank"

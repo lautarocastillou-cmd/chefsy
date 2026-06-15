@@ -767,17 +767,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   // 5) Finalizar Turno (Archivar pedidos activos)
   const finalizarTurno = async () => {
-    const idsActivos = estado.pedidos.map((p) => p.id)
-    if (idsActivos.length === 0) {
-      agregarNotificacion('No hay pedidos activos en este turno para finalizar.', 'info')
-      return
-    }
-
     try {
-      await enviarAccionPedido({
-        accion: 'finalizar_turno',
-        ids: idsActivos
-      })
+      const idsActivos = estado.pedidos.map((p) => p.id)
+      
+      if (idsActivos.length > 0) {
+        await enviarAccionPedido({
+          accion: 'finalizar_turno',
+          ids: idsActivos
+        })
+      }
 
       despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: [] })
       prevPedidosRef.current = []

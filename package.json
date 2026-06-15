@@ -9,9 +9,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.5",
     "@supabase/supabase-js": "^2.106.2",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "framer-motion": "^12.40.0",
     "html5-qrcode": "^2.3.8",

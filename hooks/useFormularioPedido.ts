@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Coordenadas, MetodoPago, Pedido, TipoEntrega } from '@/tipos'
 import { FilaProductoPedido } from '@/tipos/catalogo'
@@ -33,7 +33,17 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [filasProductos, setFilasProductos] = useState<FilaProductoPedido[]>([
     crearFilaProductoVacia(),
   ])
-  const [error, setError] = useState('')
+  const [error, setRawError] = useState('')
+  const errorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  const setError = (msg: string) => {
+    setRawError(msg)
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current)
+    if (msg) {
+      errorTimeoutRef.current = setTimeout(() => setRawError(''), 3000)
+    }
+  }
+
   const [costoEnvio, setCostoEnvio] = useState(0)
   const [distanciaKm, setDistanciaKm] = useState(pedidoInicial?.distanciaKm || 0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
@@ -203,6 +213,13 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
     if (productosParseados.length === 0) {
       return setError('Agregá al menos un producto del catálogo.')
+    }
+
+    if (metodoPago === 'mixto') {
+      const sumaMixto = (Number(montoEfectivo) || 0) + (Number(montoTransferencia) || 0) + (Number(montoTarjeta) || 0)
+      if (sumaMixto !== total) {
+        return setError(`El pago mixto ($${sumaMixto}) no coincide con el total ($${total}).`)
+      }
     }
 
     const ahora = new Date()
