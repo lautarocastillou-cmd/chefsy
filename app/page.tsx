@@ -9,7 +9,6 @@ import { Pedido } from '@/tipos'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import PantallaCarga from '@/components/tienda/PantallaCarga'
-import BurgerAnimada from '@/components/tienda/BurgerAnimada'
 import { SlideButton } from '@/components/ui/slide-button'
 import { 
   ShoppingCart, Plus, Minus, Trash2, User, Phone, 

@@ -31,7 +31,7 @@ const BUTTON_STATES = {
 
 const ANIMATION_CONFIG = {
   spring: {
-    type: "spring",
+    type: "spring" as const,
     stiffness: 400,
     damping: 40,
     mass: 0.8,
