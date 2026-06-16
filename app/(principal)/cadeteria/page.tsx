@@ -86,6 +86,24 @@ function TarjetaPedidoCadete({
 
   const cambioMetodo = metodoOriginal && metodoOriginal !== pedido.metodoPago
 
+  const marcarComoListo = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([100, 50, 100])
+      }
+      const listoAt = new Date().toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })
+      const respuesta = await fetch('/api/admin/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'actualizar_estado', id: pedido.id, estado: 'listo', listo_at: listoAt })
+      })
+      if (!respuesta.ok) throw new Error('Error de red')
+    } catch (e) {
+      alert('Error al marcar como listo. Verificá tu internet y reintentá.')
+      throw e
+    }
+  }
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-chefsy-200 dark:border-slate-800 rounded-2xl p-4 space-y-3.5 animate-[slideIn_0.2s_ease-out] transition-colors">
       {/* Cabecera del pedido: Cliente y Estado */}
@@ -203,9 +221,27 @@ function TarjetaPedidoCadete({
         </div>
       )}
 
+      {/* Barra verde: el cadete puede marcar como LISTO él mismo */}
+      {pedido.estado === 'en_cocina' && (
+        <div className="pt-2 pb-1">
+          <SwipeToConfirm
+            key={`listo-${pedido.id}-${pedido.estado}`}
+            onConfirm={marcarComoListo}
+            texto="DESLIZÁ >"
+            variante="verde"
+          />
+        </div>
+      )}
+
+      {/* Barra roja: entregar */}
       {pedido.estado === 'listo' && (
         <div className="pt-2 pb-1">
-          <SwipeToConfirm onConfirm={entregarPedido} texto="Deslizar para Entregar" />
+          <SwipeToConfirm
+            key={`entrega-${pedido.id}-${pedido.estado}`}
+            onConfirm={entregarPedido}
+            texto="Deslizá para Entregar"
+            variante="rojo"
+          />
         </div>
       )}
     </div>

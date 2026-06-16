@@ -8,13 +8,16 @@ interface SwipeToConfirmProps {
   onConfirm: () => Promise<void> | void
   texto?: string
   textoCargando?: string
+  variante?: 'verde' | 'rojo'
 }
 
 export default function SwipeToConfirm({ 
   onConfirm, 
   texto = 'Deslizá para Entregar',
-  textoCargando = 'Guardando...'
+  textoCargando = 'Guardando...',
+  variante = 'verde'
 }: SwipeToConfirmProps) {
+  const esRojo = variante === 'rojo'
   const [deslizamiento, setDeslizamiento] = useState(0)
   const [estaPresionado, setEstaPresionado] = useState(false)
   const [confirmado, setConfirmado] = useState(false)
@@ -113,31 +116,44 @@ export default function SwipeToConfirm({
     ? deslizamiento / (contenedorRef.current.offsetWidth - botonRef.current.offsetWidth)
     : 0
 
+  // Colores según variante
+  const colorFondoConfirmado = esRojo ? 'bg-red-500' : 'bg-emerald-500'
+  const colorFondoBase = esRojo ? 'bg-red-950/20 border border-red-900/30' : 'bg-green-950/20 border border-green-900/30'
+  const colorProgreso = esRojo ? 'bg-red-500/20' : 'bg-green-500/20'
+  const colorTexto = esRojo ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'
+  const colorBoton = esRojo ? 'bg-red-500' : 'bg-green-500'
+  const textoConfirmado = esRojo ? '¡Entregado!' : '¡Listo!'
+
   return (
     <div 
       ref={contenedorRef}
       className={cn(
-        "relative w-full h-14 rounded-xl flex items-center overflow-hidden transition-colors",
-        confirmado 
-          ? "bg-emerald-500" 
-          : "bg-emerald-950/20 border border-emerald-900/30"
+        "relative w-full rounded-xl flex items-center overflow-hidden transition-colors",
+        esRojo ? 'h-14' : 'h-16',
+        confirmado ? colorFondoConfirmado : colorFondoBase
       )}
     >
       {/* Fondo progresivo que se pinta mientras arrastrás */}
       {!confirmado && (
         <div 
-          className="absolute top-0 left-0 h-full bg-emerald-500/20"
+          className={cn('absolute top-0 left-0 h-full', colorProgreso)}
           style={{ width: `${deslizamiento + 56}px` }} 
         />
       )}
 
       {/* Texto de fondo */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 gap-0.5">
+        {!esRojo && !confirmado && !cargando && (
+          <span className="text-[10px] font-black uppercase tracking-widest text-green-800 dark:text-green-400 opacity-90">
+            ¿ESTÁ LISTO?
+          </span>
+        )}
         <span className={cn(
-          "font-bold text-sm tracking-wide transition-all",
-          confirmado ? "text-white scale-110" : "text-emerald-600 dark:text-emerald-400 opacity-80"
+          "font-bold tracking-wide transition-all",
+          esRojo ? 'text-sm' : 'text-xs font-black uppercase',
+          confirmado ? 'text-white scale-110' : colorTexto
         )}>
-          {cargando ? textoCargando : confirmado ? '¡Entregado!' : texto}
+          {cargando ? textoCargando : confirmado ? textoConfirmado : texto}
         </span>
       </div>
 
@@ -149,8 +165,8 @@ export default function SwipeToConfirm({
         style={{ transform: `translateX(${deslizamiento}px)` }}
         className={cn(
           "absolute h-12 w-12 rounded-lg left-1 z-20 flex items-center justify-center cursor-grab active:cursor-grabbing",
-          confirmado ? "bg-white text-emerald-600 opacity-0" : "bg-emerald-500 text-white shadow-md",
-          !estaPresionado && !confirmado && "transition-transform duration-300 ease-out"
+          confirmado ? 'opacity-0' : cn(colorBoton, 'text-white shadow-md'),
+          !estaPresionado && !confirmado && 'transition-transform duration-300 ease-out'
         )}
       >
         {cargando ? (
