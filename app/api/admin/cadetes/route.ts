@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { obtenerSesion } from '@/lib/auth-server'
 
 // ── Cliente Supabase de Solo Servidor ──────────────────────────────────────
 function obtenerSupabaseAdmin() {
@@ -15,6 +16,11 @@ function obtenerSupabaseAdmin() {
 // para todo el panel (incluyendo la vista de cadetería).
 export async function GET() {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase
       .from('usuarios')

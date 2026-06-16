@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { validarCredenciales } from '@/lib/auth-server' // Usamos esto para verificar si es admin? Wait no, las rutas de admin usan el token.
+import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
 
 // Cliente de Supabase Admin para saltarse el RLS
@@ -13,6 +12,11 @@ function obtenerSupabaseAdmin() {
 
 export async function GET() {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase.from('tienda_metadata').select('*')
     if (error) throw error
@@ -24,11 +28,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    // Protección básica: verificar cookie de sesión
-    const cookieStore = await cookies()
-    const token = cookieStore.get('chefsy-token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    // Protección estricta: verificar sesión y rol
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
     const body = await req.json()

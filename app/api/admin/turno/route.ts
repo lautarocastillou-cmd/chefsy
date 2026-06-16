@@ -11,6 +11,11 @@ function obtenerSupabaseAdmin() {
 
 export async function GET() {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase.from('turnos').select('*').eq('id', 1).single()
     
@@ -36,10 +41,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const sesion = await obtenerSesion()
-  if (!sesion || sesion.rol !== 'admin') {
+  if (!sesion) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+  if (sesion.rol !== 'admin') {
     return NextResponse.json(
       { error: 'Acceso denegado. Operación reservada para administradores.' },
-      { status: 401 }
+      { status: 403 }
     )
   }
 

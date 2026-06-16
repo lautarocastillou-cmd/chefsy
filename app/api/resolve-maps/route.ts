@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { obtenerSesion } from '@/lib/auth-server'
 
 function extraerCoordenadasDeUrl(url: string) {
   // 1. Intentar extraer coordenadas específicas del pin (formato data de Google Maps !3d...!4d)
@@ -35,11 +36,26 @@ function extraerCoordenadasDeUrl(url: string) {
 }
 
 export async function GET(request: Request) {
+  const sesion = await obtenerSesion()
+  if (!sesion) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const urlParam = searchParams.get('url')
 
   if (!urlParam) {
     return NextResponse.json({ error: 'URL no provista.' }, { status: 400 })
+  }
+
+  const DOMINIOS_PERMITIDOS = ['maps.google.com', 'goo.gl', 'maps.app.goo.gl', 'www.google.com']
+  try {
+    const parsedUrl = new URL(urlParam)
+    if (!DOMINIOS_PERMITIDOS.includes(parsedUrl.hostname)) {
+      return NextResponse.json({ error: 'Dominio no permitido.' }, { status: 400 })
+    }
+  } catch {
+    return NextResponse.json({ error: 'URL inválida.' }, { status: 400 })
   }
 
   try {

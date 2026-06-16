@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { obtenerSesion } from '@/lib/auth-server'
 
 function obtenerSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -10,11 +11,20 @@ function obtenerSupabaseAdmin() {
 
 export async function POST(request: Request) {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { usuario_id, subscription } = body
 
     if (!usuario_id || !subscription) {
       return NextResponse.json({ error: 'Datos incompletos.' }, { status: 400 })
+    }
+
+    if (usuario_id !== sesion.usuario) {
+      return NextResponse.json({ error: 'Prohibido. No puedes suscribir a otro usuario.' }, { status: 403 })
     }
 
     const supabase = obtenerSupabaseAdmin()

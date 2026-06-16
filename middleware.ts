@@ -28,8 +28,7 @@ const REGLAS_ACCESO = [
 function obtenerClave() {
   const secreto = process.env.CHEFSY_JWT_SECRET
   if (!secreto) {
-    // En desarrollo sin .env.local, usar fallback para no romper el build
-    return new TextEncoder().encode('chefsy-local-secret-super-seguro-cambiar-en-produccion-2024')
+    throw new Error('CHEFSY_JWT_SECRET no configurada')
   }
   return new TextEncoder().encode(secreto)
 }
