@@ -67,6 +67,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('[Cloudinary Admin API] Error:', error)
-    return NextResponse.json({ error: error.message || 'Error al subir la imagen.' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al subir la imagen.' }, { status: 500 })
   }
 }

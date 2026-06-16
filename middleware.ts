@@ -83,8 +83,8 @@ export async function middleware(request: NextRequest) {
       if (rolUsuario === 'cadete') {
         return NextResponse.redirect(new URL('/cadeteria', request.url))
       }
-      // Para otros casos no autorizados, dejar pasar y que el layout muestre el AccesoRestringido
-      return NextResponse.next()
+      // Para otros casos no autorizados, denegar el acceso
+      return rechazarAcceso(request, esPeticionAPI)
     }
 
     // Acceso concedido — continuar con la petición

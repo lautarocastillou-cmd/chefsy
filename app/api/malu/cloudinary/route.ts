@@ -90,7 +90,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[Cloudinary API] Error en backend:', error)
     return NextResponse.json(
-      { error: error.message || 'Error al subir la imagen.' },
+      { error: 'Error al subir la imagen.' },
       { status: 500 }
     )
   }

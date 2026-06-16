@@ -86,6 +86,11 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Datos incompletos para actualizar_estado.' }, { status: 400 })
         }
 
+        const ESTADOS_VALIDOS = ['nuevo', 'en_cocina', 'listo', 'entregado', 'cancelado']
+        if (!ESTADOS_VALIDOS.includes(estado)) {
+          return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 })
+        }
+
         // Un cadete solo puede cambiar el estado a "entregado" o "listo"
         if (rol === 'cadete' && estado !== 'entregado' && estado !== 'listo') {
           return NextResponse.json({ error: 'Operación no permitida para el rol de cadete.' }, { status: 403 })
@@ -257,7 +262,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error(`[API Pedidos] Error al procesar acción '${body?.accion}':`, error)
     return NextResponse.json(
-      { error: error.message || 'Error interno al procesar la operación en el servidor.' },
+      { error: 'Error interno al procesar la operación en el servidor.' },
       { status: 500 }
     )
   }

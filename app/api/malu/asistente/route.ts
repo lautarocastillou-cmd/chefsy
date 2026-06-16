@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[Asistente Malú] Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Error al procesar el mensaje.' },
+      { error: 'Error al procesar el mensaje.' },
       { status: 500 }
     )
   }

@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[WebPush API] Error guardando suscripción:', error)
     return NextResponse.json(
-      { error: error.message || 'Error interno del servidor.' },
+      { error: 'Error interno del servidor.' },
       { status: 500 }
     )
   }

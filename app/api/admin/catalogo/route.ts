@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[API Catalogo] Error al sincronizar:', error)
     return NextResponse.json(
-      { error: error.message || 'Error al guardar el catálogo en el servidor.' },
+      { error: 'Error al guardar el catálogo en el servidor.' },
       { status: 500 }
     )
   }

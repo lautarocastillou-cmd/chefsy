@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[API Turno] Error al escribir estado del turno:', error)
     return NextResponse.json(
-      { error: error.message || 'Error al guardar el turno en Supabase.' },
+      { error: 'Error al guardar el turno en Supabase.' },
       { status: 500 }
     )
   }

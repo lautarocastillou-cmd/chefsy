@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[API Config] Error al escribir la configuración:', error)
     return NextResponse.json(
-      { error: error.message || 'Error al escribir la configuración en el servidor.' },
+      { error: 'Error al escribir la configuración en el servidor.' },
       { status: 500 }
     )
   }
