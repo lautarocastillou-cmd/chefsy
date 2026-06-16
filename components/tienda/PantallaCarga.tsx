@@ -4,26 +4,37 @@ import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function PantallaCarga() {
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(false)
+  const [verificando, setVerificando] = useState(true)
 
   useEffect(() => {
-    // La pantalla de carga desaparece después de 2.5 segundos
+    // Verificar si ya se mostró en esta sesión de navegación
+    const yaVisto = sessionStorage.getItem('animacionVista') === 'true'
+    
+    if (yaVisto) {
+      setVerificando(false)
+      return
+    }
+
+    // Si es la primera vez en la sesión, la mostramos
+    setVerificando(false)
+    setVisible(true)
+    document.body.style.overflow = 'hidden'
+
     const timer = setTimeout(() => {
       setVisible(false)
+      sessionStorage.setItem('animacionVista', 'true')
+      document.body.style.overflow = 'auto'
     }, 2500)
-
-    // Ocultar scrollbar mientras carga
-    if (typeof window !== 'undefined') {
-      document.body.style.overflow = visible ? 'hidden' : 'auto'
-    }
 
     return () => {
       clearTimeout(timer)
-      if (typeof window !== 'undefined') {
-        document.body.style.overflow = 'auto'
-      }
+      document.body.style.overflow = 'auto'
     }
-  }, [visible])
+  }, [])
+
+  // Mientras verifica en el cliente si hay que mostrarla o no, no renderizamos nada
+  if (verificando) return null
 
   return (
     <AnimatePresence>
