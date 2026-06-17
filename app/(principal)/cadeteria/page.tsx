@@ -65,21 +65,10 @@ function TarjetaPedidoCadete({
         navigator.vibrate([200, 100, 200])
       }
       
-      const horaEntregado = new Date().toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })
-      const respuesta = await fetch('/api/admin/pedidos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'actualizar_estado', id: pedido.id, estado: 'entregado', horaEntregado })
-      })
-      
-      if (!respuesta.ok) {
-        throw new Error('Error de red')
-      }
-      
+      cambiarEstado(pedido.id, 'entregado', false)
       localStorage.removeItem(`original-pago-${pedido.id}`)
-      // No hacemos actualización optimista, dejamos que Supabase Realtime lo oculte 1 segundo después.
     } catch (e) {
-      alert('Error de conexión al intentar marcar como entregado. Verificá tu internet y reintentá.')
+      alert('Error al intentar marcar como entregado. Reintentá.')
       throw e
     }
   }
@@ -91,15 +80,9 @@ function TarjetaPedidoCadete({
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([100, 50, 100])
       }
-      const listoAt = new Date().toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })
-      const respuesta = await fetch('/api/admin/pedidos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'actualizar_estado', id: pedido.id, estado: 'listo', listo_at: listoAt })
-      })
-      if (!respuesta.ok) throw new Error('Error de red')
+      cambiarEstado(pedido.id, 'listo', false)
     } catch (e) {
-      alert('Error al marcar como listo. Verificá tu internet y reintentá.')
+      alert('Error al marcar como listo. Reintentá.')
       throw e
     }
   }
