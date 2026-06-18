@@ -646,61 +646,62 @@ export default function PaginaTienda() {
             <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none">
               ¿QUÉ PINTA HOY?
             </p>
-            <div className="relative group w-full sm:w-[80%]">
-              <button
-                type="button"
-                onClick={() => setSelectorAbierto(!selectorAbierto)}
-                className="w-full flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
-              >
-                <span className={categoriaSeleccionada ? 'text-white' : 'text-slate-300'}>
-                  {categoriaSeleccionada === 'todos' 
-                    ? 'Ver todo el menú' 
-                    : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre || 'APRETÁ ACÁ'}
-                </span>
-                <ChevronDown 
-                  size={20} 
-                  className={`text-chefsy-300 transition-transform duration-300 ${selectorAbierto ? 'rotate-180' : ''}`} 
-                />
-              </button>
+            <div className="flex items-center gap-4 w-full">
+              <div className="relative group w-[50%] z-50">
+                <button
+                  type="button"
+                  onClick={() => setSelectorAbierto(!selectorAbierto)}
+                  className="w-full flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-4 sm:px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
+                >
+                  <span className={`truncate mr-2 ${categoriaSeleccionada ? 'text-white' : 'text-slate-300'}`}>
+                    {categoriaSeleccionada === 'todos' 
+                      ? 'Ver todo el menú' 
+                      : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre || 'APRETÁ ACÁ'}
+                  </span>
+                  <ChevronDown 
+                    size={20} 
+                    className={`text-chefsy-300 shrink-0 transition-transform duration-300 ${selectorAbierto ? 'rotate-180' : ''}`} 
+                  />
+                </button>
 
-              <AnimatePresence>
-                {selectorAbierto && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-64 overflow-y-auto custom-scrollbar"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHasInteractedSelect(true)
-                        setCategoriaSeleccionada('todos')
-                        setSelectorAbierto(false)
-                      }}
-                      className="w-full text-left px-6 py-4 text-white hover:bg-white/10 transition-colors font-medium border-b border-white/5"
+                <AnimatePresence>
+                  {selectorAbierto && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-64 overflow-y-auto custom-scrollbar"
                     >
-                      Ver todo el menú
-                    </button>
-                    {categoriasActivas.map(cat => (
                       <button
-                        key={cat.id}
                         type="button"
                         onClick={() => {
                           setHasInteractedSelect(true)
-                          setCategoriaSeleccionada(cat.id)
+                          setCategoriaSeleccionada('todos')
                           setSelectorAbierto(false)
                         }}
-                        className={`w-full text-left px-6 py-4 hover:bg-white/10 transition-colors font-medium border-b border-white/5 last:border-0 ${categoriaSeleccionada === cat.id ? 'bg-white/10 text-chefsy-200' : 'text-white'}`}
+                        className="w-full text-left px-4 sm:px-6 py-4 text-white hover:bg-white/10 transition-colors font-medium border-b border-white/5"
                       >
-                        {cat.nombre}
+                        Ver todo el menú
                       </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                      {categoriasActivas.map(cat => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setHasInteractedSelect(true)
+                            setCategoriaSeleccionada(cat.id)
+                            setSelectorAbierto(false)
+                          }}
+                          className={`w-full text-left px-4 sm:px-6 py-4 hover:bg-white/10 transition-colors font-medium border-b border-white/5 last:border-0 ${categoriaSeleccionada === cat.id ? 'bg-white/10 text-chefsy-200' : 'text-white'}`}
+                        >
+                          {cat.nombre}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="w-[50%] relative flex items-center overflow-hidden h-[60px]">
                 <AnimatePresence mode="popLayout">
                   <motion.h2 
