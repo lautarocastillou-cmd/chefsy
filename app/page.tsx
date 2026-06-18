@@ -213,6 +213,24 @@ export default function PaginaTienda() {
   // Estado de pedido finalizado
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
+  // --- FILTROS DE CATÁLOGO (memoizados — deben estar ANTES de los returns condicionales por las reglas de React Hooks) ---
+  const categoriasActivas = useMemo(() => categorias.filter(c => c.activa), [categorias])
+  const productosFiltrados = useMemo(() => productos.filter(p => {
+    if (!categoriaSeleccionada) return false
+    const perteneceACategoria = categoriaSeleccionada === 'todos' || p.categoriaId === categoriaSeleccionada
+    const esPromoValida = p.categoriaId === 'promos' || p.esCombo
+    const cumpleFiltro = categoriaSeleccionada === 'promos' ? esPromoValida : perteneceACategoria
+    return p.activo && cumpleFiltro
+  }), [productos, categoriaSeleccionada])
+
+  // useCallback — también debe ir antes de returns condicionales
+  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
+    setProductoAPersonalizar(prod)
+    setModsSeleccionados([])
+    setCantidadModal(1)
+    setNotaPersonalizacion('')
+  }, [])
+
   // Validar acceso: Solo el administrador puede entrar a la tienda temporalmente
   if (!estaListoAuth) {
     return (
@@ -265,23 +283,7 @@ export default function PaginaTienda() {
 
   const costoEnvio = 350 // Costo de envío fijo simulado para delivery
 
-  // --- FILTROS DE CATÁLOGO (memoizados para evitar recalcular en cada render) ---
-  const categoriasActivas = useMemo(() => categorias.filter(c => c.activa), [categorias])
-  const productosFiltrados = useMemo(() => productos.filter(p => {
-    if (!categoriaSeleccionada) return false
-    const perteneceACategoria = categoriaSeleccionada === 'todos' || p.categoriaId === categoriaSeleccionada
-    const esPromoValida = p.categoriaId === 'promos' || p.esCombo
-    const cumpleFiltro = categoriaSeleccionada === 'promos' ? esPromoValida : perteneceACategoria
-    return p.activo && cumpleFiltro
-  }), [productos, categoriaSeleccionada])
-
-  // --- MÉTODOS DEL MODAL DE PERSONALIZACIÓN (useCallback para no invalidar React.memo de ProductCard) ---
-  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
-    setProductoAPersonalizar(prod)
-    setModsSeleccionados([])
-    setCantidadModal(1)
-    setNotaPersonalizacion('')
-  }, [])
+  // --- MÉTODOS DEL MODAL DE PERSONALIZACIÓN ---
 
   const alternarModificador = (mod: ModificadorCatalogo) => {
     setModsSeleccionados(prev => 
