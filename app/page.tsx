@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
@@ -265,23 +265,23 @@ export default function PaginaTienda() {
 
   const costoEnvio = 350 // Costo de envío fijo simulado para delivery
 
-  // --- FILTROS DE CATÁLOGO ---
-  const categoriasActivas = categorias.filter(c => c.activa)
-  const productosFiltrados = productos.filter(p => {
+  // --- FILTROS DE CATÁLOGO (memoizados para evitar recalcular en cada render) ---
+  const categoriasActivas = useMemo(() => categorias.filter(c => c.activa), [categorias])
+  const productosFiltrados = useMemo(() => productos.filter(p => {
     if (!categoriaSeleccionada) return false
     const perteneceACategoria = categoriaSeleccionada === 'todos' || p.categoriaId === categoriaSeleccionada
     const esPromoValida = p.categoriaId === 'promos' || p.esCombo
     const cumpleFiltro = categoriaSeleccionada === 'promos' ? esPromoValida : perteneceACategoria
     return p.activo && cumpleFiltro
-  })
+  }), [productos, categoriaSeleccionada])
 
-  // --- MÉTODOS DEL MODAL DE PERSONALIZACIÓN ---
-  const abrirModalPersonalizacion = (prod: ProductoCatalogo) => {
+  // --- MÉTODOS DEL MODAL DE PERSONALIZACIÓN (useCallback para no invalidar React.memo de ProductCard) ---
+  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
     setProductoAPersonalizar(prod)
     setModsSeleccionados([])
     setCantidadModal(1)
     setNotaPersonalizacion('')
-  }
+  }, [])
 
   const alternarModificador = (mod: ModificadorCatalogo) => {
     setModsSeleccionados(prev => 
@@ -509,8 +509,17 @@ export default function PaginaTienda() {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
 
   return (
-    <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
+    <div className="text-slate-200 font-sans pb-16" style={{ backgroundColor: '#0d0d0d' }}>
       <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
+
+      {/* Fondo fijo como div separado — evita background-attachment:fixed que destruye el GPU en mobile */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <picture>
+          <source media="(min-width: 768px)" srcSet="/bg-desktop.webp" />
+          <img src="/bg-mobile.webp" alt="" className="w-full h-full object-cover" loading="eager" decoding="async" />
+        </picture>
+      </div>
+
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
@@ -667,7 +676,7 @@ export default function PaginaTienda() {
                 <AnimatePresence>
                   {selectorAbierto && (
                     <>
-                      {/* Backdrop simple sin blur (performance) */}
+                      {/* Backdrop */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -675,13 +684,14 @@ export default function PaginaTienda() {
                         onClick={() => setSelectorAbierto(false)}
                         className="fixed inset-0 bg-black/70 z-[100]"
                       />
-                      {/* Bottom Sheet en mobile, modal centrado en desktop */}
+                      {/* Wrapper de centrado — independiente del motion.div para evitar conflicto de transforms */}
+                      <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center pointer-events-none">
                       <motion.div
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 40 }}
                         transition={{ type: "spring", damping: 30, stiffness: 250 }}
-                        className="fixed bottom-0 inset-x-0 sm:inset-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl z-[101] flex flex-col max-h-[80vh] overflow-hidden"
+                        className="pointer-events-auto w-full sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden"
                       >
                         <div className="flex justify-center pt-4 pb-2 sm:hidden cursor-grab active:cursor-grabbing" onClick={() => setSelectorAbierto(false)}>
                           <div className="w-12 h-1.5 bg-white/20 rounded-full" />
@@ -720,6 +730,7 @@ export default function PaginaTienda() {
                           ))}
                         </div>
                       </motion.div>
+                      </div>
                     </>
                   )}
                 </AnimatePresence>
