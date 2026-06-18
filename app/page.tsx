@@ -161,6 +161,7 @@ export default function PaginaTienda() {
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
+  const [selectorAbierto, setSelectorAbierto] = useState(false)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
   const [metadata, setMetadata] = useState<Record<string, any>>({})
@@ -509,6 +510,7 @@ export default function PaginaTienda() {
 
   return (
     <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
+      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
@@ -635,40 +637,70 @@ export default function PaginaTienda() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 3.2, duration: 0.8 }}
-            className="flex flex-col gap-4 w-full max-w-sm relative z-30 order-3 lg:self-start"
+            transition={{ 
+              delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.4 : 3.2, 
+              duration: 0.8 
+            }}
+            className="flex flex-col gap-5 w-full max-w-sm relative z-40 order-3 lg:self-start"
           >
-            <p className="font-sans text-sm md:text-base text-chefsy-300 font-medium tracking-widest uppercase mb-[-10px]">
-              NO VENIMOS A COMPLICARTE
-            </p>
-            <p className="font-bebas text-4xl md:text-5xl text-white tracking-wide">
+            <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none">
               ¿QUÉ PINTA HOY?
             </p>
-            <div className="flex items-center gap-4">
-              <div className="relative group w-[50%]">
-                <select
-                  value={categoriaSeleccionada || ""}
-                  onChange={(e) => {
-                    setHasInteractedSelect(true)
-                    setCategoriaSeleccionada(e.target.value || null)
-                  }}
-                  className="w-full appearance-none bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
-                >
-                  <option value="" disabled className="text-slate-900">
-                    APRETÁ ACÁ
-                  </option>
-                  <option value="todos" className="text-slate-900">
-                    Ver todo el menú
-                  </option>
-                  {categoriasActivas.map(cat => (
-                    <option key={cat.id} value={cat.id} className="text-slate-900">{cat.nombre}</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-chefsy-300 group-hover:text-chefsy-100 transition-colors">
-                  <ChevronDown size={20} />
-                </div>
-              </div>
-              
+            <div className="relative group w-full sm:w-[80%]">
+              <button
+                type="button"
+                onClick={() => setSelectorAbierto(!selectorAbierto)}
+                className="w-full flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
+              >
+                <span className={categoriaSeleccionada ? 'text-white' : 'text-slate-300'}>
+                  {categoriaSeleccionada === 'todos' 
+                    ? 'Ver todo el menú' 
+                    : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre || 'APRETÁ ACÁ'}
+                </span>
+                <ChevronDown 
+                  size={20} 
+                  className={`text-chefsy-300 transition-transform duration-300 ${selectorAbierto ? 'rotate-180' : ''}`} 
+                />
+              </button>
+
+              <AnimatePresence>
+                {selectorAbierto && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-64 overflow-y-auto custom-scrollbar"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHasInteractedSelect(true)
+                        setCategoriaSeleccionada('todos')
+                        setSelectorAbierto(false)
+                      }}
+                      className="w-full text-left px-6 py-4 text-white hover:bg-white/10 transition-colors font-medium border-b border-white/5"
+                    >
+                      Ver todo el menú
+                    </button>
+                    {categoriasActivas.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setHasInteractedSelect(true)
+                          setCategoriaSeleccionada(cat.id)
+                          setSelectorAbierto(false)
+                        }}
+                        className={`w-full text-left px-6 py-4 hover:bg-white/10 transition-colors font-medium border-b border-white/5 last:border-0 ${categoriaSeleccionada === cat.id ? 'bg-white/10 text-chefsy-200' : 'text-white'}`}
+                      >
+                        {cat.nombre}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
               <div className="w-[50%] relative flex items-center overflow-hidden h-[60px]">
                 <AnimatePresence mode="popLayout">
                   <motion.h2 
