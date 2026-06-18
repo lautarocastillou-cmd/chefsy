@@ -159,7 +159,7 @@ export default function PaginaTienda() {
   const { usuarioActivo, estaListoAuth } = usarAuth()
 
   // Estados de la tienda
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todos')
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
@@ -267,6 +267,7 @@ export default function PaginaTienda() {
   // --- FILTROS DE CATÁLOGO ---
   const categoriasActivas = categorias.filter(c => c.activa)
   const productosFiltrados = productos.filter(p => {
+    if (!categoriaSeleccionada) return false
     const perteneceACategoria = categoriaSeleccionada === 'todos' || p.categoriaId === categoriaSeleccionada
     const esPromoValida = p.categoriaId === 'promos' || p.esCombo
     const cumpleFiltro = categoriaSeleccionada === 'promos' ? esPromoValida : perteneceACategoria
@@ -570,26 +571,32 @@ export default function PaginaTienda() {
       </header>
 
       {/* --- HERO SECTION TIPO SQEW --- */}
-      <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
+          <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
         
         {/* Contenedor Principal del Hero */}
         <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
           
-          {/* 1. Tipografía Minimalista Premium (Top Left on Desktop, Top on Mobile) */}
-          <div className="relative z-30 flex flex-col items-start leading-[1.1] order-1 lg:self-end">
+          {/* 1. Tipografía Gigante (Hero) */}
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left pt-6 pb-0 lg:py-10 z-30 pointer-events-none order-1">
             <motion.h1 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 2.6, duration: 0.8, ease: "easeOut" }}
-              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal"
+              transition={{ 
+                delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0 : 2.6, 
+                duration: 0.8, ease: "easeOut" 
+              }}
+              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]"
             >
               POCAS PALABRAS.
             </motion.h1>
             <motion.h1 
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 2.8, duration: 0.8, ease: "easeOut" }}
-              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-slate-200 tracking-normal -mt-2 md:-mt-4 lg:-mt-6"
+              transition={{ 
+                delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.2 : 2.8, 
+                duration: 0.8, ease: "easeOut" 
+              }}
+              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-[#FF9800] tracking-normal leading-[0.85]"
             >
               MUCHO CHEDDAR.
             </motion.h1>
@@ -640,15 +647,18 @@ export default function PaginaTienda() {
             <div className="flex items-center gap-4">
               <div className="relative group w-[50%]">
                 <select
-                  value={categoriaSeleccionada}
+                  value={categoriaSeleccionada || ""}
                   onChange={(e) => {
                     setHasInteractedSelect(true)
-                    setCategoriaSeleccionada(e.target.value)
+                    setCategoriaSeleccionada(e.target.value || null)
                   }}
                   className="w-full appearance-none bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
                 >
+                  <option value="" disabled className="text-slate-900">
+                    APRETÁ ACÁ
+                  </option>
                   <option value="todos" className="text-slate-900">
-                    {hasInteractedSelect ? "Ver todo el menú" : "APRETÁ ACÁ"}
+                    Ver todo el menú
                   </option>
                   {categoriasActivas.map(cat => (
                     <option key={cat.id} value={cat.id} className="text-slate-900">{cat.nombre}</option>
@@ -683,25 +693,30 @@ export default function PaginaTienda() {
       <main className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
         
         {/* Encabezado del Menú Seleccionado */}
-        <div className="space-y-1 text-left border-b border-white/10 pb-3 flex items-baseline justify-between">
+        {categoriaSeleccionada && (
+        <div className="text-left border-b border-white/10 pb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-black text-slate-850 dark:text-slate-100 flex items-center gap-2">
-              <span>{catDetalles.icono}</span>
+            <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
+              {catDetalles.icono === '🍔' ? (
+                <img src="/burger-icon.png" alt="Burger" className="w-12 h-12 md:w-14 h-14 object-contain drop-shadow-md -translate-y-[2px]" />
+              ) : (
+                <span>{catDetalles.icono}</span>
+              )}
               {catDetalles.nombre}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-500 font-medium">
-              {catDetalles.subtitulo}
-            </p>
           </div>
         </div>
+        )}
 
-        {/* Listado de Productos (Grid de 3 Columnas al estilo Freddy Burger) */}
-        {productosFiltrados.length === 0 ? (
+        {/* Listado de Productos (Lista vertical al estilo de la imagen) */}
+        {!categoriaSeleccionada ? (
+          null
+        ) : productosFiltrados.length === 0 ? (
           <div className="text-center py-20 text-slate-300 text-sm bg-black/20 rounded-3xl border border-dashed border-white/20 p-6">
             No encontramos productos activos en esta categoría.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-col gap-6">
             {productosFiltrados.map((prodOriginal, index) => {
               const meta = metadata[prodOriginal.id]
               const prod = meta ? {
@@ -1016,77 +1031,97 @@ export default function PaginaTienda() {
 
       {/* --- MODAL DE PERSONALIZACIÓN / MODIFICADORES --- */}
       {productoAPersonalizar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
             onClick={() => setProductoAPersonalizar(null)}
           />
 
-          <div className="relative w-full max-w-md bg-slate-900/90 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden border border-white/10 z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            {/* Cabecera */}
-            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between text-left">
-              <div>
-                <h3 className="font-extrabold text-sm text-white leading-tight">
+          {/* Modal Panel */}
+          <div className="relative w-full sm:max-w-md bg-gradient-to-b from-[#1a1f2e] to-[#0d1117] backdrop-blur-xl shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-white/10 z-10 flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
+            
+            {/* Barra decorativa superior (solo mobile) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-white/20" />
+            </div>
+
+            {/* Cabecera con imagen del producto si existe */}
+            <div className="px-6 pt-4 pb-5 border-b border-white/8 flex items-start justify-between gap-3 text-left relative overflow-hidden">
+              {/* Fondo decorativo */}
+              <div className="absolute inset-0 bg-gradient-to-br from-chefsy-500/10 via-transparent to-transparent pointer-events-none" />
+              
+              <div className="relative z-10">
+                <p className="text-[10px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-1">Estás pidiendo</p>
+                <h3 className="font-bebas text-3xl text-white leading-none tracking-wide">
                   Personalizá tu {productoAPersonalizar.nombre}
                 </h3>
-                <p className="text-[10px] text-slate-400">Agregá modificadores a tu plato</p>
               </div>
+
               <button
                 onClick={() => setProductoAPersonalizar(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 transition-colors focus:outline-none"
+                className="relative z-10 mt-1 w-8 h-8 flex items-center justify-center rounded-full bg-white/8 hover:bg-white/15 text-slate-400 hover:text-white transition-all shrink-0 focus:outline-none"
               >
-                <X size={18} />
+                <X size={15} />
               </button>
             </div>
 
             {/* Cuerpo del Modal */}
-            <div className="p-5 overflow-y-auto scrollbar-hide space-y-4 flex-1 text-left">
-              <div className="bg-black/20 border border-white/5 rounded-2xl p-4 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-400">Precio base</span>
-                <span className="font-black text-white">{formatearPrecio(productoAPersonalizar.precio)}</span>
+            <div className="p-5 overflow-y-auto scrollbar-hide space-y-5 flex-1 text-left">
+              
+              {/* Precio base — pill estilizada */}
+              <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
+                  <span className="text-xs font-semibold text-slate-300">Precio base</span>
+                </div>
+                <span className="font-bebas text-xl text-white tracking-wider">{formatearPrecio(productoAPersonalizar.precio)}</span>
               </div>
 
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">¿Querés cambiarle algo?</h4>
-                <textarea
-                  value={notaPersonalizacion}
-                  onChange={(e) => setNotaPersonalizacion(e.target.value)}
-                  placeholder="Ej: Sin cebolla, con extra mayonesa..."
-                  className="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600 resize-none"
-                  rows={2}
-                />
+              {/* Nota libre */}
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-bold text-slate-300 leading-snug">
+                  ¿Querés cambiarle algo a tu <span className="text-chefsy-400">{productoAPersonalizar.nombre}</span>?
+                </h4>
+                <div className="relative">
+                  <textarea
+                    value={notaPersonalizacion}
+                    onChange={(e) => setNotaPersonalizacion(e.target.value)}
+                    placeholder="Ej: Sin cebolla, con extra mayonesa..."
+                    className="w-full border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-black/30 text-white placeholder:text-slate-600 resize-none transition-all"
+                    rows={3}
+                  />
+                </div>
               </div>
 
+              {/* Modificadores disponibles */}
               {productoAPersonalizar.modificadoresIds && productoAPersonalizar.modificadoresIds.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Modificadores Disponibles</h4>
-                  
-                  <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Extras disponibles</h4>
+                  <div className="space-y-2">
                   {productoAPersonalizar.modificadoresIds?.map(modId => {
                     const modObj = modificadores.find(m => m.id === modId)
                     if (!modObj) return null
-
                     const seleccionado = modsSeleccionados.some(m => m.id === modId)
-
                     return (
                       <button
                         key={modId}
                         onClick={() => alternarModificador(modObj)}
-                        className={`w-full flex items-center justify-between p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-sm font-semibold transition-all cursor-pointer ${
                           seleccionado
-                            ? 'bg-chefsy-500/20 text-chefsy-400 border-chefsy-500 shadow-sm'
-                            : 'border-white/10 bg-black/20 text-slate-400 hover:border-chefsy-300/50'
+                            ? 'bg-chefsy-500/20 text-chefsy-300 border-chefsy-500/60 shadow-[inset_0_0_12px_rgba(255,100,0,0.08)]'
+                            : 'border-white/8 bg-white/4 text-slate-400 hover:border-white/20 hover:bg-white/8'
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] text-white ${
-                            seleccionado ? 'bg-chefsy-500 border-transparent' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
+                        <span className="flex items-center gap-2.5">
+                          <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                            seleccionado ? 'bg-chefsy-500 border-transparent' : 'border-slate-600 bg-transparent'
                           }`}>
-                            {seleccionado && '✓'}
+                            {seleccionado && <span className="text-[7px] text-white font-black">✓</span>}
                           </span>
                           {modObj.nombre}
                         </span>
-                        <span className="text-slate-455 dark:text-slate-500">
+                        <span className={`text-xs font-bold ${seleccionado ? 'text-chefsy-400' : 'text-slate-500'}`}>
                           + {formatearPrecio(modObj.precioExtra)}
                         </span>
                       </button>
@@ -1098,30 +1133,32 @@ export default function PaginaTienda() {
             </div>
 
             {/* Footer del Modal */}
-            <div className="p-5 border-t border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-between gap-4">
-              <div className="flex items-center border border-slate-250 dark:border-slate-850 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shrink-0">
+            <div className="px-5 py-4 border-t border-white/8 bg-black/20 flex items-center gap-3">
+              {/* Selector de cantidad */}
+              <div className="flex items-center bg-white/8 border border-white/10 rounded-xl overflow-hidden shrink-0">
                 <button
                   onClick={() => setCantidadModal(prev => Math.max(1, prev - 1))}
-                  className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors text-slate-550 focus:outline-none"
+                  className="w-9 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
                 >
-                  <Minus size={12} />
+                  <Minus size={13} />
                 </button>
-                <span className="px-3 text-xs font-black text-slate-855 dark:text-slate-200">
+                <span className="w-8 text-center text-sm font-black text-white">
                   {cantidadModal}
                 </span>
                 <button
                   onClick={() => setCantidadModal(prev => prev + 1)}
-                  className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors text-slate-555 focus:outline-none"
+                  className="w-9 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
                 >
-                  <Plus size={12} />
+                  <Plus size={13} />
                 </button>
               </div>
 
+              {/* Botón agregar */}
               <button
                 onClick={agregarAlCarritoDesdeModal}
-                className="flex-1 bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer text-center"
+                className="flex-1 bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-xl tracking-wider py-2.5 px-4 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
               >
-                Agregar {formatearPrecio(calcularPrecioUnitarioModal() * cantidadModal)}
+                Agregar · {formatearPrecio(calcularPrecioUnitarioModal() * cantidadModal)}
               </button>
             </div>
           </div>
