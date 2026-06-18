@@ -510,7 +510,7 @@ export default function PaginaTienda() {
 
   return (
     <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
-      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; overflow-x: hidden; }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
@@ -666,39 +666,61 @@ export default function PaginaTienda() {
 
                 <AnimatePresence>
                   {selectorAbierto && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-64 overflow-y-auto custom-scrollbar"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHasInteractedSelect(true)
-                          setCategoriaSeleccionada('todos')
-                          setSelectorAbierto(false)
-                        }}
-                        className="w-full text-left px-4 sm:px-6 py-4 text-white hover:bg-white/10 transition-colors font-medium border-b border-white/5"
+                    <>
+                      {/* Backdrop */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSelectorAbierto(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                      />
+                      {/* Modal/Drawer flotante */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 100 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 100 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-slate-900/95 backdrop-blur-3xl sm:border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-[101] flex flex-col max-h-[85vh] overflow-hidden"
                       >
-                        Ver todo el menú
-                      </button>
-                      {categoriasActivas.map(cat => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => {
-                            setHasInteractedSelect(true)
-                            setCategoriaSeleccionada(cat.id)
-                            setSelectorAbierto(false)
-                          }}
-                          className={`w-full text-left px-4 sm:px-6 py-4 hover:bg-white/10 transition-colors font-medium border-b border-white/5 last:border-0 ${categoriaSeleccionada === cat.id ? 'bg-white/10 text-chefsy-200' : 'text-white'}`}
-                        >
-                          {cat.nombre}
-                        </button>
-                      ))}
-                    </motion.div>
+                        <div className="flex justify-center pt-4 pb-2 sm:hidden cursor-grab active:cursor-grabbing" onClick={() => setSelectorAbierto(false)}>
+                          <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                        </div>
+                        <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                          <h3 className="text-white font-bebas tracking-wide text-2xl">¿QUÉ PINTA HOY?</h3>
+                          <button onClick={() => setSelectorAbierto(false)} className="text-white/50 hover:text-white p-2 bg-white/5 rounded-full transition-colors">
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHasInteractedSelect(true)
+                              setCategoriaSeleccionada('todos')
+                              setSelectorAbierto(false)
+                            }}
+                            className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                          >
+                            Ver todo el menú
+                          </button>
+                          {categoriasActivas.map(cat => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                setHasInteractedSelect(true)
+                                setCategoriaSeleccionada(cat.id)
+                                setSelectorAbierto(false)
+                              }}
+                              className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                            >
+                              {cat.nombre}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
                   )}
                 </AnimatePresence>
               </div>
