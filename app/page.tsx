@@ -667,21 +667,21 @@ export default function PaginaTienda() {
                 <AnimatePresence>
                   {selectorAbierto && (
                     <>
-                      {/* Backdrop */}
+                      {/* Backdrop simple sin blur (performance) */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setSelectorAbierto(false)}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                        className="fixed inset-0 bg-black/70 z-[100]"
                       />
-                      {/* Modal/Drawer flotante */}
+                      {/* Bottom Sheet en mobile, modal centrado en desktop */}
                       <motion.div
-                        initial={{ opacity: 0, y: 100 }}
+                        initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md bg-slate-900/95 backdrop-blur-3xl sm:border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-[101] flex flex-col max-h-[85vh] overflow-hidden"
+                        exit={{ opacity: 0, y: 40 }}
+                        transition={{ type: "spring", damping: 30, stiffness: 250 }}
+                        className="fixed bottom-0 inset-x-0 sm:inset-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl z-[101] flex flex-col max-h-[80vh] overflow-hidden"
                       >
                         <div className="flex justify-center pt-4 pb-2 sm:hidden cursor-grab active:cursor-grabbing" onClick={() => setSelectorAbierto(false)}>
                           <div className="w-12 h-1.5 bg-white/20 rounded-full" />
