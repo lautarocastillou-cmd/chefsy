@@ -610,11 +610,7 @@ export default function PaginaTienda() {
       <div className="relative min-h-[80vh] lg:min-h-[85vh] w-full flex flex-col px-6 md:px-12 py-4 lg:py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
-<<<<<<< HEAD
         <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-4 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-4 lg:gap-y-4 items-start lg:items-center">
-=======
-        <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-16 md:pt-20 lg:pt-24 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
->>>>>>> 79c4fbd0a32396ef2f3473668a2ff31901913074
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left pb-0 lg:pb-10 z-30 pointer-events-none order-1">
