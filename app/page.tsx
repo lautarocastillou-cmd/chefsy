@@ -510,7 +510,7 @@ export default function PaginaTienda() {
 
   return (
     <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
-      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; overflow-x: hidden; }` }} />
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
@@ -573,7 +573,7 @@ export default function PaginaTienda() {
       </header>
 
       {/* --- HERO SECTION TIPO SQEW --- */}
-          <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-hidden">
+          <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
         <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
