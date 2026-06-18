@@ -9,7 +9,6 @@ import { Pedido } from '@/tipos'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
-import PantallaCarga from '@/components/tienda/PantallaCarga'
 import ProductCard from '@/components/tienda/ProductCard'
 import { SlideButton } from '@/components/ui/slide-button'
 import { 
@@ -521,7 +520,6 @@ export default function PaginaTienda() {
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
       
       <div className="relative z-10">
-        <PantallaCarga />
       
       {/* --- CABECERA DE LA TIENDA --- */}
       <header className="bg-transparent px-4 py-6 sticky top-0 z-40 backdrop-blur-sm border-b border-white/5">
@@ -579,10 +577,10 @@ export default function PaginaTienda() {
       </header>
 
       {/* --- HERO SECTION TIPO SQEW --- */}
-          <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-visible">
+      <div className="relative min-h-[80vh] lg:min-h-[85vh] w-full flex flex-col px-6 md:px-12 py-4 lg:py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
-        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
+        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-4 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-4 lg:gap-y-4 items-start lg:items-center">
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left pt-6 pb-0 lg:py-10 z-30 pointer-events-none order-1">
@@ -590,7 +588,7 @@ export default function PaginaTienda() {
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ 
-                delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0 : 2.6, 
+                delay: 0, 
                 duration: 0.8, ease: "easeOut" 
               }}
               className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]"
@@ -601,7 +599,7 @@ export default function PaginaTienda() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ 
-                delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.2 : 2.8, 
+                delay: 0.2, 
                 duration: 0.8, ease: "easeOut" 
               }}
               className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-[#FF9800] tracking-normal leading-[0.85]"
@@ -644,7 +642,7 @@ export default function PaginaTienda() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
-              delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.4 : 3.2, 
+              delay: 0.4, 
               duration: 0.8 
             }}
             className="flex flex-col gap-5 w-full max-w-sm relative z-40 order-3 lg:self-start"
