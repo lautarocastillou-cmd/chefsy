@@ -109,4 +109,17 @@ body {
     min-height: 100vh;
     width: 100%;
   }
+
+  .bg-tienda-premium-fixed {
+    background-image: url('/bg-mobile.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  @media (min-width: 768px) {
+    .bg-tienda-premium-fixed {
+      background-image: url('/bg-desktop.webp');
+    }
+  }
 }

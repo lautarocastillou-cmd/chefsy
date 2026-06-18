@@ -515,7 +515,7 @@ export default function PaginaTienda() {
       <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
 
       {/* Fondo fijo como div — sin background-attachment:fixed para máximo rendimiento en mobile */}
-      <div className="fixed inset-0 -z-10 pointer-events-none bg-[url('/bg-mobile.webp')] md:bg-[url('/bg-desktop.webp')] bg-cover bg-center" />
+      <div className="fixed inset-0 -z-10 pointer-events-none bg-tienda-premium-fixed" />
 
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
