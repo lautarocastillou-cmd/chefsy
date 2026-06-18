@@ -512,13 +512,8 @@ export default function PaginaTienda() {
     <div className="text-slate-200 font-sans pb-16" style={{ backgroundColor: '#0d0d0d' }}>
       <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
 
-      {/* Fondo fijo como div separado — evita background-attachment:fixed que destruye el GPU en mobile */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <picture>
-          <source media="(min-width: 768px)" srcSet="/bg-desktop.webp" />
-          <img src="/bg-mobile.webp" alt="" className="w-full h-full object-cover" loading="eager" decoding="async" />
-        </picture>
-      </div>
+      {/* Fondo fijo como div — sin background-attachment:fixed para máximo rendimiento en mobile */}
+      <div className="fixed inset-0 -z-10 pointer-events-none bg-[url('/bg-mobile.webp')] md:bg-[url('/bg-desktop.webp')] bg-cover bg-center" />
 
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
