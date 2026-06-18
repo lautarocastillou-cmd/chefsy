@@ -15,7 +15,7 @@ import { SlideButton } from '@/components/ui/slide-button'
 import { 
   ShoppingCart, Plus, Minus, Trash2, User, Phone, 
   MapPin, CreditCard, CheckCircle2, MessageCircle, 
-  X, Moon, Sun, Lock, ChevronRight, ChevronDown, Sparkles,
+  X, Moon, Sun, Lock, ChevronRight, ChevronDown, Sparkles, Search,
   Settings, Wrench, Hammer, HardHat, ArrowLeft
 } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
@@ -124,7 +124,7 @@ const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
     case 'todos': 
       return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y pedí 🔥', icono: '🍔' }
     case 'lomos-y-milas': 
-      return { nombre: 'Lomos y Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '🥩' }
+      return { nombre: 'Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '🥩' }
     case 'zapping': 
       return { nombre: 'Zapping', subtitulo: 'Tostados gigantes rellenos', icono: '🌯' }
     case 'patys': 
@@ -141,6 +141,10 @@ const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
       return { nombre: 'Bebidas', subtitulo: 'Refrescos, aguas y latas de cerveza heladas', icono: '🥤' }
     case 'promos': 
       return { nombre: 'Promos', subtitulo: 'Los combos perfectos para ahorrar y compartir', icono: '🎁' }
+    case 'porciones-de-papas':
+    case 'papas':
+    case 'papas-fritas':
+      return { nombre: 'Porciones de Papas', subtitulo: 'Crujientes y doradas, ideales para compartir', icono: '🍟' }
     default: 
       return { nombre: 'Menú Especial', subtitulo: 'Platos frescos de la cocina', icono: '👨‍🍳' }
   }
@@ -160,6 +164,8 @@ export default function PaginaTienda() {
 
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [categoriaVisible, setCategoriaVisible] = useState<string>('')
   const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
@@ -214,14 +220,42 @@ export default function PaginaTienda() {
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
   // --- FILTROS DE CATÁLOGO (memoizados — deben estar ANTES de los returns condicionales por las reglas de React Hooks) ---
-  const categoriasActivas = useMemo(() => categorias.filter(c => c.activa), [categorias])
+  const categoriasActivas = useMemo(() => {
+    return categorias
+      .filter(c => c.activa && c.id !== 'burgers')
+      .map(c => c.id === 'patys' ? { ...c, nombre: 'Burgers / Patys' } : c)
+  }, [categorias])
+
   const productosFiltrados = useMemo(() => productos.filter(p => {
-    if (!categoriaSeleccionada) return false
-    const perteneceACategoria = categoriaSeleccionada === 'todos' || p.categoriaId === categoriaSeleccionada
-    const esPromoValida = p.categoriaId === 'promos' || p.esCombo
-    const cumpleFiltro = categoriaSeleccionada === 'promos' ? esPromoValida : perteneceACategoria
-    return p.activo && cumpleFiltro
-  }), [productos, categoriaSeleccionada])
+    const hayBusqueda = busqueda.trim() !== ''
+    if (!categoriaSeleccionada && !hayBusqueda) return false
+
+    const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+    
+    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === 'patys' && p.categoriaId === 'burgers')
+    const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
+    
+    return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
+  }), [productos, categoriaSeleccionada, busqueda])
+
+  useEffect(() => {
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        entradas.forEach((entrada) => {
+          if (entrada.isIntersecting) {
+            setCategoriaVisible(entrada.target.id)
+          }
+        })
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    )
+
+    const elementos = document.querySelectorAll('.categoria-seccion')
+    elementos.forEach((el) => observador.observe(el))
+
+    return () => observador.disconnect()
+  }, [productosFiltrados])
 
   // useCallback — también debe ir antes de returns condicionales
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
@@ -514,8 +548,7 @@ export default function PaginaTienda() {
     <div className="text-slate-200 font-sans pb-16" style={{ backgroundColor: '#0d0d0d' }}>
       <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
 
-      {/* Fondo fijo como div — sin background-attachment:fixed para máximo rendimiento en mobile */}
-      <div className="fixed inset-0 -z-10 pointer-events-none bg-tienda-premium-fixed" />
+      {/* Fondo fijo removido para mantener el color oscuro que funcionó */}
 
       {/* Capa de oscurecimiento sutil en toda la página */}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0"></div>
@@ -527,23 +560,20 @@ export default function PaginaTienda() {
       <header className="bg-transparent px-4 py-6 sticky top-0 z-40 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image 
-              src="/logo.jpg" 
-              alt="Chefsy Logo" 
-              width={40} height={40}
-              priority
-              className="object-contain rounded-xl shadow-lg border border-white/10"
-            />
-            <div className="flex items-center gap-6">
-              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-                Chefsy
-              </h1>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative">
+              <Image 
+                src="/logo.jpg" 
+                alt="Chefsy" 
+                fill
+                className="object-cover"
+              />
+            </div>
+            <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
               {/* Navegación */}
               <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                 <Link href="/" className="text-white font-semibold transition-colors cursor-pointer">Tienda</Link>
                 <Link href="/sobre-nosotros" className="text-slate-400 hover:text-white transition-colors cursor-pointer">Nosotros</Link>
               </nav>
-            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -582,7 +612,7 @@ export default function PaginaTienda() {
           <div className="relative min-h-[80vh] w-full flex flex-col px-6 md:px-12 py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
-        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
+        <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-8 md:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-6 lg:gap-y-4 items-center">
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left pt-6 pb-0 lg:py-10 z-30 pointer-events-none order-1">
@@ -604,7 +634,7 @@ export default function PaginaTienda() {
                 delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.2 : 2.8, 
                 duration: 0.8, ease: "easeOut" 
               }}
-              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-[#FF9800] tracking-normal leading-[0.85]"
+              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]"
             >
               MUCHO CHEDDAR.
             </motion.h1>
@@ -647,11 +677,21 @@ export default function PaginaTienda() {
               delay: typeof window !== 'undefined' && sessionStorage.getItem('animacionVista') === 'true' ? 0.4 : 3.2, 
               duration: 0.8 
             }}
-            className="flex flex-col gap-5 w-full max-w-sm relative z-40 order-3 lg:self-start"
+            className="flex flex-col gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start"
           >
-            <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none">
+            <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap">
               ¿QUÉ PINTA HOY?
             </p>
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Ej. Cheddar, Papas, Mila especial..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            </div>
             <div className="flex items-center gap-4 w-full">
               <div className="relative group w-[50%] z-50">
                 <button
@@ -765,56 +805,109 @@ export default function PaginaTienda() {
               ) : (
                 <span>{catDetalles.icono}</span>
               )}
-              {catDetalles.nombre}
+              {catDetalles.nombre === 'Menú Especial' ? (categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre.toUpperCase() || catDetalles.nombre) : catDetalles.nombre}
             </h3>
           </div>
         </div>
         )}
 
-        {/* Listado de Productos (Lista vertical al estilo de la imagen) */}
-        {!categoriaSeleccionada ? (
+        {/* Listado de Productos */}
+        {!categoriaSeleccionada && !busqueda ? (
           null
         ) : productosFiltrados.length === 0 ? (
           <div className="text-center py-20 text-slate-300 text-sm bg-black/20 rounded-3xl border border-dashed border-white/20 p-6">
-            No encontramos productos activos en esta categoría.
+            No encontramos productos activos.
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            {productosFiltrados.map((prodOriginal, index) => {
-              const meta = metadata[prodOriginal.id]
-              const prod = meta ? {
-                ...prodOriginal,
-                nombre: meta.nombre_publico || prodOriginal.nombre
-              } : prodOriginal
+          <>
+            {/* Barra Scrollspy (solo visible si no hay categoría específica seleccionada o es 'todos') */}
+            {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && (
+              <div className="sticky top-[80px] z-30 bg-[#0d0d0d]/90 backdrop-blur-xl py-3 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 mb-8 shadow-2xl">
+                {categoriasActivas.map(cat => {
+                  const tieneProductos = productosFiltrados.some(p => p.categoriaId === cat.id)
+                  if (!tieneProductos) return null
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        document.getElementById(cat.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }}
+                      className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
+                        categoriaVisible === cat.id ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      {cat.nombre}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
-              const tieneStockLimitado = prodOriginal.stock !== undefined && prodOriginal.stock !== null
-              const agotado = tieneStockLimitado && (prodOriginal.stock || 0) <= 0
-              const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
-              const imagenFinal = meta?.imagen_url || detalles.img
-              
-              return (
-                <ProductCard
-                  key={prod.id}
-                  prod={prod}
-                  meta={meta}
-                  detalles={detalles}
-                  agotado={agotado || false}
-                  imagenFinal={imagenFinal}
-                  index={index}
-                  onAbrirModal={abrirModalPersonalizacion}
-                />
-              )
-            })}
-          </div>
+            <div className="flex flex-col gap-10">
+              {categoriasActivas.map(cat => {
+                const productosDeCat = productosFiltrados.filter(p => 
+                  p.categoriaId === cat.id || (cat.id === 'patys' && p.categoriaId === 'burgers')
+                )
+                if (productosDeCat.length === 0) return null
+
+                return (
+                  <div key={cat.id} id={cat.id} className="categoria-seccion flex flex-col gap-4 scroll-mt-36">
+                    {/* Título de Categoría en la lista */}
+                    {(!categoriaSeleccionada || categoriaSeleccionada === 'todos' || busqueda) && (
+                      <h3 className="font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2">
+                        {cat.nombre}
+                      </h3>
+                    )}
+
+                    {productosDeCat.filter(p => !p.esCombo).map((prodOriginal, index) => {
+                      const meta = metadata[prodOriginal.id]
+                      const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
+                      const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
+                      const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                      return (
+                        <ProductCard
+                          key={prod.id} prod={prod} meta={meta} detalles={detalles}
+                          agotado={agotado || false} imagenFinal={meta?.imagen_url || detalles.img}
+                          index={index} onAbrirModal={abrirModalPersonalizacion}
+                        />
+                      )
+                    })}
+
+                    {productosDeCat.some(p => p.esCombo) && (
+                      <div className="mt-4 mb-2">
+                        <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
+                          COMBOS
+                        </h4>
+                      </div>
+                    )}
+
+                    {productosDeCat.filter(p => p.esCombo).map((prodOriginal, index) => {
+                      const meta = metadata[prodOriginal.id]
+                      const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
+                      const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
+                      const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                      return (
+                        <ProductCard
+                          key={prod.id} prod={prod} meta={meta} detalles={detalles}
+                          agotado={agotado || false} imagenFinal={meta?.imagen_url || detalles.img}
+                          index={index + 100} onAbrirModal={abrirModalPersonalizacion}
+                        />
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </main>
 
-      {/* --- CARRITO DE COMPRAS FLOTANTE (BOTÓN MÓVIL) --- */}
+      {/* --- CARRITO DE COMPRAS FLOTANTE (BOTÓN MÓVIL Y DESKTOP) --- */}
       {totalProductosCarrito > 0 && (
-        <div className="fixed bottom-6 left-4 right-4 z-40 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
+        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
           <button
             onClick={() => setCartAbierto(true)}
-            className="w-full bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-4 px-5 rounded-[1.5rem] flex items-center justify-between shadow-2xl shadow-chefsy/40 active:scale-95 transition-all cursor-pointer border border-chefsy-400/30"
+            className="w-full max-w-sm bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 px-5 rounded-full flex items-center justify-between shadow-[0_10px_40px_rgba(42,99,72,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 pointer-events-auto"
           >
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-xl">
