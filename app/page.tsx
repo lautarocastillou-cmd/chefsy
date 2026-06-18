@@ -505,7 +505,7 @@ export default function PaginaTienda() {
   }
 
   // --- DETALLES DE LA CATEGORÍA ACTIVA ---
-  const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada)
+  const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
 
   return (
     <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
