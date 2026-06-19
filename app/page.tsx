@@ -729,9 +729,11 @@ export default function PaginaTienda() {
                           <button
                             type="button"
                             onClick={() => {
-                              setHasInteractedSelect(true)
-                              setCategoriaSeleccionada('todos')
                               setSelectorAbierto(false)
+                              setTimeout(() => {
+                                setHasInteractedSelect(true)
+                                setCategoriaSeleccionada('todos')
+                              }, 200) // Evita que el renderizado congele la animación de cierre
                             }}
                             className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
                           >
@@ -742,9 +744,11 @@ export default function PaginaTienda() {
                               key={cat.id}
                               type="button"
                               onClick={() => {
-                                setHasInteractedSelect(true)
-                                setCategoriaSeleccionada(cat.id)
                                 setSelectorAbierto(false)
+                                setTimeout(() => {
+                                  setHasInteractedSelect(true)
+                                  setCategoriaSeleccionada(cat.id)
+                                }, 200)
                               }}
                               className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
                             >

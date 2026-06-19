@@ -26,12 +26,9 @@ function ProductCard({
   onAbrirModal
 }: ProductCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: (index % 6) * 0.1, ease: "easeOut" }}
+    <div
       onClick={() => !agotado && onAbrirModal(prod)}
-      className={`bg-transparent group flex items-center gap-4 cursor-pointer transition-all duration-300 ${
+      className={`bg-transparent group flex items-center gap-4 cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${
         agotado ? 'opacity-50 grayscale' : 'hover:bg-white/5 p-2 -m-2 rounded-2xl'
       }`}
     >
@@ -73,7 +70,7 @@ function ProductCard({
           {meta?.descripcion_publica || detalles.desc}
         </p>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
