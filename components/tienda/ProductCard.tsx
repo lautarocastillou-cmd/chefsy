@@ -28,8 +28,7 @@ function ProductCard({
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: (index % 6) * 0.1, ease: "easeOut" }}
       onClick={() => !agotado && onAbrirModal(prod)}
       className={`bg-transparent group flex items-center gap-4 cursor-pointer transition-all duration-300 ${

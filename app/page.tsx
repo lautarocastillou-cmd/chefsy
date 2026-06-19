@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import ProductCard from '@/components/tienda/ProductCard'
+import { ScrollSpyNavBar } from '@/components/tienda/ScrollSpyNavBar'
 import { SlideButton } from '@/components/ui/slide-button'
 import { 
   ShoppingCart, Plus, Minus, Trash2, User, Phone, 
@@ -18,6 +19,7 @@ import {
   Settings, Wrench, Hammer, HardHat, ArrowLeft
 } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
+import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 
 interface ItemCarrito {
   idCart: string // Combinación única del ID de producto + IDs de modificadores
@@ -153,18 +155,14 @@ export default function PaginaTienda() {
   const { 
     productos, 
     categorias, 
-    modificadores, 
-    agregarPedido, 
-    modoOscuro, 
-    alternarModoOscuro 
-  } = usarPedidos()
+    modificadores,
+  } = usarCatalogo()
 
   const { usuarioActivo, estaListoAuth } = usarAuth()
 
   // Estados de la tienda
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
-  const [categoriaVisible, setCategoriaVisible] = useState<string>('')
   const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
@@ -237,24 +235,6 @@ export default function PaginaTienda() {
     
     return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
   }), [productos, categoriaSeleccionada, busqueda])
-
-  useEffect(() => {
-    const observador = new IntersectionObserver(
-      (entradas) => {
-        entradas.forEach((entrada) => {
-          if (entrada.isIntersecting) {
-            setCategoriaVisible(entrada.target.id)
-          }
-        })
-      },
-      { rootMargin: '-20% 0px -70% 0px' }
-    )
-
-    const elementos = document.querySelectorAll('.categoria-seccion')
-    elementos.forEach((el) => observador.observe(el))
-
-    return () => observador.disconnect()
-  }, [productosFiltrados])
 
   // useCallback — también debe ir antes de returns condicionales
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
@@ -383,7 +363,7 @@ export default function PaginaTienda() {
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
 
   // --- MÉTODOS DE CHECKOUT ---
-  const procesarCompra = (e?: React.FormEvent) => {
+  const procesarCompra = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
 
     if (!nombreCliente.trim() || !telefonoCliente.trim()) {
@@ -433,7 +413,15 @@ export default function PaginaTienda() {
       created_at: new Date().toISOString()
     }
 
-    agregarPedido(nuevoPedido)
+    // Insertar en la nube sin atar la tienda al estado de los pedidos de la cocina
+    try {
+      await insertarPedidoLocal({ ...nuevoPedido, archivado: false })
+    } catch (err) {
+      console.error('Error enviando pedido', err)
+      alert('Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.')
+      return
+    }
+
     setPedidoCompletado(nuevoPedido)
     setCarrito([])
     setMostrarCheckout(false)
@@ -555,7 +543,7 @@ export default function PaginaTienda() {
       <div className="relative z-10">
       
       {/* --- CABECERA DE LA TIENDA --- */}
-      <header className="bg-transparent px-4 py-6 sticky top-0 z-40 backdrop-blur-sm border-b border-white/5">
+      <header className="bg-transparent px-4 py-6 relative z-40 border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative">
@@ -662,7 +650,7 @@ export default function PaginaTienda() {
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 800px"
-                className="object-contain"
+                className="object-contain object-top drop-shadow-2xl"
               />
             </motion.div>
           </div>
@@ -818,27 +806,12 @@ export default function PaginaTienda() {
           </div>
         ) : (
           <>
-            {/* Barra Scrollspy (solo visible si no hay categoría específica seleccionada o es 'todos') */}
+            {/* Barra Scrollspy aislada para no causar re-renders de page.tsx */}
             {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && (
-              <div className="sticky top-[80px] z-30 bg-[#0d0d0d]/90 backdrop-blur-xl py-3 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 mb-8 shadow-2xl">
-                {categoriasActivas.map(cat => {
-                  const tieneProductos = productosFiltrados.some(p => p.categoriaId === cat.id)
-                  if (!tieneProductos) return null
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        document.getElementById(cat.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }}
-                      className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
-                        categoriaVisible === cat.id ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {cat.nombre}
-                    </button>
-                  )
-                })}
-              </div>
+              <ScrollSpyNavBar 
+                categoriasActivas={categoriasActivas} 
+                productosFiltrados={productosFiltrados} 
+              />
             )}
 
             <div className="flex flex-col gap-10">
