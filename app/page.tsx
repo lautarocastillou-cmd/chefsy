@@ -639,7 +639,7 @@ export default function PaginaTienda() {
           </div>
 
           {/* 2. Imagen de Producto Gigante Flotante (Right on Desktop, Middle on Mobile) */}
-          <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2">
+          <div className="relative w-full flex items-start justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-2 lg:pt-0">
             <motion.div 
               className="relative w-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
               initial={{ opacity: 0, scale: 0.8, y: 50, rotate: -10 }}
