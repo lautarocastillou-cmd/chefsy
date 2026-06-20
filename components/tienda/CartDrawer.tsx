@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { SlideButton } from '@/components/ui/slide-button'
@@ -60,6 +60,17 @@ export default function CartDrawer({
   onSetObservaciones,
   onProcesarCompra,
 }: CartDrawerProps) {
+  useEffect(() => {
+    if (cartAbierto) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [cartAbierto])
+
   if (!cartAbierto) return null
 
   return (

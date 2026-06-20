@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Plus, Minus, X } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio } from '@/lib/utils'
@@ -34,6 +34,15 @@ export default function ModalPersonalizacion({
   onSetNota,
   onAgregar,
 }: ModalPersonalizacionProps) {
+  useEffect(() => {
+    // Deshabilitar scroll del body al montar
+    document.body.style.overflow = 'hidden'
+    return () => {
+      // Restaurar scroll al desmontar
+      document.body.style.overflow = ''
+    }
+  }, [])
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
@@ -56,7 +65,7 @@ export default function ModalPersonalizacion({
             {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
               <div key={i} className="relative w-full h-full shrink-0 snap-center">
                 <img 
-                  src={imgUrl} 
+                  src={imgUrl.trim()} 
                   alt={`${producto.nombre} - Foto ${i+1}`} 
                   className="w-full h-full object-cover" 
                   loading={i === 0 ? "eager" : "lazy"} 
