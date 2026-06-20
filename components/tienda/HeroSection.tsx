@@ -49,15 +49,7 @@ export default function HeroSection({
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Acceso Empleados */}
-            <Link
-              href="/dashboard"
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2 text-xs font-medium"
-              title="Acceso Personal"
-            >
-              <Lock size={16} />
-              <span className="hidden sm:inline">Personal</span>
-            </Link>
+            {/* El botón de acceso a personal fue removido por seguridad. Se accede ingresando a /dashboard */}
           </div>
         </div>
       </header>
