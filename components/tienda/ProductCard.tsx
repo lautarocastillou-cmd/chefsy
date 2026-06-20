@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import Image from 'next/image'
 import { Plus } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 
@@ -33,12 +32,12 @@ function ProductCard({
     >
       {/* Imagen a la izquierda */}
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-black/20">
-        <Image
+        <img
           src={(imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()}
           alt={prod.nombre}
-          fill
-          sizes="96px"
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {prod.esCombo && (
           <span className="absolute top-1 left-1 text-[8px] font-black bg-chefsy text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-lg">
