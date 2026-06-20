@@ -109,6 +109,10 @@ export default function DevToolsPage() {
           })
           const uploadData = await uploadRes.json()
           if (uploadData.error) throw new Error(uploadData.error)
+          // Si Cloudinary no está configurado, bloquear: no guardar base64 crudo
+          if (uploadData.modoDemo) {
+            throw new Error('⚠️ Cloudinary no está configurado. Configurá CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en .env.local antes de subir imágenes.')
+          }
           return uploadData.urlTransformada || uploadData.urlOriginal
         }))
         finalImageUrls = subidas.join(' | ')

@@ -404,10 +404,13 @@ export default function PaginaTienda() {
           <Suspense fallback={null}>
             <ModalPersonalizacion
               producto={productoAPersonalizar}
-              imagenFinal={
-                metadata[productoAPersonalizar.id]?.imagen_url ||
-                OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
-              }
+              imagenFinal={(() => {
+                const url = metadata[productoAPersonalizar.id]?.imagen_url
+                const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
+                // No mostrar base64 crudo: falla en Chrome moderno (S24, etc.)
+                if (!url || url.startsWith('data:')) return fallback
+                return url
+              })()}
               modificadoresDisponibles={
                 (productoAPersonalizar.modificadoresIds ?? [])
                   .map(id => modificadores.find(m => m.id === id))

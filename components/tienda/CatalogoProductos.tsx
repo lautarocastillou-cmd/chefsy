@@ -6,6 +6,14 @@ import ProductCard from '@/components/tienda/ProductCard'
 import { CategoriaCatalogo, ProductoCatalogo } from '@/tipos/catalogo'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA } from '@/lib/tienda-helpers'
 
+// Si imagen_url es un base64 crudo (no configurado Cloudinary), usar fallback
+function resolverImagen(imagenUrl: string | undefined, fallback: string): string {
+  if (!imagenUrl) return fallback
+  // Los data: URIs base64 son enormes y fallan en Chrome moderno
+  if (imagenUrl.startsWith('data:')) return fallback
+  return imagenUrl
+}
+
 interface CatalogoProductosProps {
   categoriasActivas: CategoriaCatalogo[]
   productosFiltrados: ProductoCatalogo[]
@@ -87,7 +95,7 @@ export default function CatalogoProductos({
                     return (
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
-                        agotado={agotado || false} imagenFinal={meta?.imagen_url || detalles.img}
+                        agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
                         index={index} onAbrirModal={onAbrirModal}
                       />
                     )
@@ -109,7 +117,7 @@ export default function CatalogoProductos({
                     return (
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
-                        agotado={agotado || false} imagenFinal={meta?.imagen_url || detalles.img}
+                        agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
                         index={index + 100} onAbrirModal={onAbrirModal}
                       />
                     )
