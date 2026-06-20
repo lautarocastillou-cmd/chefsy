@@ -51,6 +51,8 @@ export default function CatalogoProductos({
             <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
               {catDetalles.icono === '🍔' ? (
                 <img src="/burger-icon.png" alt="Burger" className="w-12 h-12 md:w-14 h-14 object-contain drop-shadow-md -translate-y-[2px]" />
+              ) : catDetalles.icono.startsWith('/') ? (
+                <img src={catDetalles.icono} alt={catDetalles.nombre} className="w-12 h-12 md:w-14 h-14 object-contain drop-shadow-md -translate-y-[2px]" />
               ) : (
                 <span>{catDetalles.icono}</span>
               )}
@@ -77,10 +79,11 @@ export default function CatalogoProductos({
 
           <div className="flex flex-col gap-10">
             {categoriasActivas.map(cat => {
+              const esCategoriaPrincipal = cat.id === idBurgers || cat.id === idPatys;
               const productosDeCat = productosFiltrados.filter(p => 
-                p.categoriaId === cat.id || (cat.id === idBurgers && p.categoriaId === 'patys') || (cat.id === idBurgers && p.categoriaId === idPatys)
+                p.categoriaId === cat.id || (esCategoriaPrincipal && (p.categoriaId === idBurgers || p.categoriaId === idPatys || p.categoriaId === 'burgers' || p.categoriaId === 'patys'))
               ).sort((a, b) => {
-                if (cat.id === idBurgers) {
+                if (esCategoriaPrincipal) {
                   const aIsBurger = a.categoriaId === idBurgers || a.categoriaId === 'burgers';
                   const bIsPaty = b.categoriaId === idPatys || b.categoriaId === 'patys';
                   if (aIsBurger && bIsPaty) return -1;

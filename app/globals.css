@@ -16,9 +16,21 @@ html {
 
 /* ─── Variables de Marca ───────────────────────────── */
 :root {
-  --chefsy: #2A6348;
-  --chefsy-hover: #234f3a;
-  --chefsy-light: #f0f6f3;
+  --chefsy-main: #2A6348;
+  --color-chefsy-50: color-mix(in srgb, var(--chefsy-main) 10%, white);
+  --color-chefsy-100: color-mix(in srgb, var(--chefsy-main) 20%, white);
+  --color-chefsy-200: color-mix(in srgb, var(--chefsy-main) 30%, white);
+  --color-chefsy-300: color-mix(in srgb, var(--chefsy-main) 50%, white);
+  --color-chefsy-400: color-mix(in srgb, var(--chefsy-main) 70%, white);
+  --color-chefsy-500: var(--chefsy-main);
+  --color-chefsy-600: color-mix(in srgb, var(--chefsy-main) 80%, black);
+  --color-chefsy-700: color-mix(in srgb, var(--chefsy-main) 60%, black);
+  --color-chefsy-800: color-mix(in srgb, var(--chefsy-main) 40%, black);
+  --color-chefsy-900: color-mix(in srgb, var(--chefsy-main) 30%, black);
+
+  --chefsy: var(--chefsy-main);
+  --chefsy-hover: var(--color-chefsy-600);
+  --chefsy-light: var(--color-chefsy-50);
 
   /* Sistema de colores oscuro — gris carbón cálido */
   --dk-bg:        #1c1c1c;   /* fondo raíz */

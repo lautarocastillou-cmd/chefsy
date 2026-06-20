@@ -2,7 +2,8 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2 } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette } from 'lucide-react'
+import Link from 'next/link'
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
@@ -467,6 +468,13 @@ export default function PaginaConfiguracion() {
             Administrá los usuarios del local y los parámetros de alerta de los pedidos.
           </p>
         </div>
+        <Link 
+          href="/configuracion/editor"
+          className="flex items-center gap-2 bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-extrabold py-2 px-4 rounded-xl shadow-lg transition-all active:scale-95"
+        >
+          <Palette size={18} />
+          <span>Editor de Diseño Visual</span>
+        </Link>
       </div>
 
       {/* Navegación de Pestañas */}

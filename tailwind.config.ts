@@ -16,22 +16,31 @@ const config: Config = {
       },
       colors: {
         chefsy: {
-          DEFAULT: '#2A6348',
-          50: '#f0f6f3',
-          100: '#dce8e2',
-          200: '#b8d1c5',
-          300: '#8fb39f',
-          400: '#5d9175',
-          500: '#3d7a5c',
-          600: '#2A6348',
-          700: '#234f3a',
-          800: '#1a3d2e',
-          900: '#153026',
+          DEFAULT: 'var(--chefsy-main)',
+          50: 'var(--color-chefsy-50)',
+          100: 'var(--color-chefsy-100)',
+          200: 'var(--color-chefsy-200)',
+          300: 'var(--color-chefsy-300)',
+          400: 'var(--color-chefsy-400)',
+          500: 'var(--color-chefsy-500)',
+          600: 'var(--color-chefsy-600)',
+          700: 'var(--color-chefsy-700)',
+          800: 'var(--color-chefsy-800)',
+          900: 'var(--color-chefsy-900)',
         },
       },
+      keyframes: {
+        'logo-bounce': {
+          '0%, 100%': { transform: 'translateY(-15%) scale(1.05)' },
+          '50%': { transform: 'translateY(0) scale(0.95)' },
+        }
+      },
+      animation: {
+        'logo-bounce': 'logo-bounce 1.5s ease-in-out infinite',
+      }
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 }
 
 export default config

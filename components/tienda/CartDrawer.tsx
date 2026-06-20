@@ -169,19 +169,19 @@ export default function CartDrawer({
         onClick={onCerrar}
       />
       
-      <div className="relative w-full max-w-md bg-slate-900/90 backdrop-blur-xl shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-250 border-l border-white/10">
+      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-250 border-l border-[#3d3d3d]">
         {/* Cabecera del Drawer */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+        <div className="px-5 py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart className="text-chefsy-500" size={20} />
             <h2 className="font-extrabold text-white text-sm">Tu Carrito</h2>
-            <span className="bg-white/10 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-[#252525] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#3d3d3d]">
               {totalProductosCarrito} items
             </span>
           </div>
           <button
             onClick={onCerrar}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 transition-colors focus:outline-none"
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] transition-colors focus:outline-none"
           >
             <X size={18} />
           </button>
@@ -198,7 +198,7 @@ export default function CartDrawer({
               {carrito.map(item => (
                 <div 
                   key={item.idCart}
-                  className="flex justify-between gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl transition-all hover:bg-white/10"
+                  className="flex justify-between gap-3 p-3 bg-[#252525] border border-[#3d3d3d] rounded-2xl transition-all hover:bg-[#2a2a2a]"
                 >
                   <div className="flex-1 space-y-1 text-left">
                     <h4 className="font-bold text-base text-white leading-tight">
@@ -223,10 +223,10 @@ export default function CartDrawer({
                       <Trash2 size={20} />
                     </button>
 
-                    <div className="flex items-center border border-white/10 rounded-lg bg-black/20 overflow-hidden">
+                    <div className="flex items-center border border-[#3d3d3d] rounded-lg bg-[#1a1a1a] overflow-hidden">
                       <button
                         onClick={() => onActualizarCantidad(item.idCart, -1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
+                        className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none"
                       >
                         <Minus size={18} />
                       </button>
@@ -235,7 +235,7 @@ export default function CartDrawer({
                       </span>
                       <button
                         onClick={() => onActualizarCantidad(item.idCart, 1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
+                        className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none"
                       >
                         <Plus size={18} />
                       </button>
@@ -249,7 +249,7 @@ export default function CartDrawer({
             <div className="flex-1 overflow-y-auto scrollbar-hide p-5">
               <form onSubmit={(e) => { e.preventDefault(); onProcesarCompra() }} className="flex flex-col h-full relative">
                 {/* Header con botón de volver y progreso */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 shrink-0">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#3d3d3d] shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -263,7 +263,7 @@ export default function CartDrawer({
                   </button>
                   <div className="flex gap-1.5">
                     {[1, 2, 3].map(s => (
-                      <div key={s} className={`h-1.5 w-6 rounded-full transition-all duration-300 ${s === checkoutStep ? 'bg-chefsy-500' : s < checkoutStep ? 'bg-chefsy-500/50' : 'bg-white/10'}`} />
+                      <div key={s} className={`h-1.5 w-6 rounded-full transition-all duration-300 ${s === checkoutStep ? 'bg-chefsy-500' : s < checkoutStep ? 'bg-chefsy-500/50' : 'bg-[#3d3d3d]'}`} />
                     ))}
                   </div>
                 </div>
@@ -283,7 +283,7 @@ export default function CartDrawer({
                           required={checkoutStep === 1}
                           value={nombreCliente}
                           onChange={(e) => onSetNombreCliente(e.target.value)}
-                          className="peer w-full border border-white/10 rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-black/20 text-white placeholder-transparent transition-all"
+                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-all"
                           placeholder="Nombre Completo"
                         />
                         <label htmlFor="nombre_cliente" className="absolute left-12 top-4 -translate-y-1/2 text-[10px] font-bold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-focus:top-4 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-chefsy-400 transition-all pointer-events-none uppercase tracking-wider">
@@ -300,7 +300,7 @@ export default function CartDrawer({
                           required={checkoutStep === 1}
                           value={telefonoCliente}
                           onChange={(e) => onSetTelefonoCliente(e.target.value)}
-                          className="peer w-full border border-white/10 rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-black/20 text-white placeholder-transparent transition-all"
+                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-all"
                           placeholder="Teléfono"
                         />
                         <label htmlFor="telefono_cliente" className="absolute left-12 top-4 -translate-y-1/2 text-[10px] font-bold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-focus:top-4 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-chefsy-400 transition-all pointer-events-none uppercase tracking-wider">
@@ -335,7 +335,7 @@ export default function CartDrawer({
                           className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${
                             tipoEntrega === 'delivery'
                               ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(42,99,72,0.3)]'
-                              : 'border-white/5 bg-black/20 text-slate-400 hover:bg-white/5 hover:border-white/10'
+                              : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
                           <span className="text-3xl mb-1">🛵</span>
@@ -347,7 +347,7 @@ export default function CartDrawer({
                           className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${
                             tipoEntrega === 'retiro'
                               ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(42,99,72,0.3)]'
-                              : 'border-white/5 bg-black/20 text-slate-400 hover:bg-white/5 hover:border-white/10'
+                              : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
                           <span className="text-3xl mb-1">🏪</span>
@@ -382,7 +382,7 @@ export default function CartDrawer({
                               required={checkoutStep === 2 && tipoEntrega === 'delivery'}
                               value={direccionCliente}
                               onChange={(e) => onSetDireccionCliente(e.target.value)}
-                              className="w-full border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-black/20 text-white placeholder:text-slate-500 transition-all"
+                              className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-all"
                               placeholder="Calle, Altura, Barrio..."
                             />
                           </div>
@@ -401,11 +401,11 @@ export default function CartDrawer({
 
                           {/* Renderizado del Mapa */}
                           {mostrarMapa && (
-                            <div className="mt-3 bg-black/20 border border-white/10 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="mt-3 bg-[#1a1a1a] border border-[#3d3d3d] rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300">
                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 text-center">
                                 Arrastrá el marcador a tu ubicación exacta
                               </p>
-                              <div className="rounded-xl overflow-hidden shadow-inner relative border border-white/5">
+                              <div className="rounded-xl overflow-hidden shadow-inner relative border border-[#3d3d3d]">
                                 <MapaSelector
                                   centro={{ latitud: -28.4695, longitud: -65.7852 }}
                                   coordenadas={coordsMapa}
@@ -417,7 +417,7 @@ export default function CartDrawer({
                                 type="button"
                                 onClick={confirmarUbicacionMapa}
                                 disabled={cargandoMapaDir}
-                                className="w-full mt-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full mt-3 bg-[#252525] hover:bg-[#3d3d3d] text-white text-xs font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                               >
                                 {cargandoMapaDir ? 'Cargando dirección...' : 'Confirmar esta ubicación'}
                               </button>
@@ -457,7 +457,7 @@ export default function CartDrawer({
                             id="metodo_pago"
                             value={metodoPago}
                             onChange={(e) => onSetMetodoPago(e.target.value as any)}
-                            className="w-full border border-white/10 rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-slate-800 text-white appearance-none cursor-pointer"
+                            className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-[#1a1a1a] text-white appearance-none cursor-pointer"
                           >
                             <option value="efectivo">💵 Efectivo al recibir</option>
                             <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
@@ -478,12 +478,12 @@ export default function CartDrawer({
                           onChange={(e) => onSetObservaciones(e.target.value)}
                           placeholder="Ej: Sin cebolla, tocar timbre de abajo..."
                           rows={2}
-                          className="w-full border border-white/10 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600 resize-none"
+                          className="w-full border border-[#3d3d3d] rounded-2xl px-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-600 resize-none"
                         />
                       </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-white/10">
+                    <div className="mt-8 pt-6 border-t border-[#3d3d3d]">
                       <SlideButton 
                         onAction={onProcesarCompra}
                         texto={`DESLIZA PARA CONFIRMAR (${formatearPrecio(totalCarrito)})`}
@@ -499,7 +499,7 @@ export default function CartDrawer({
 
         {/* Footer de Drawer */}
         {carrito.length > 0 && (
-          <div className="p-5 border-t border-white/10 bg-black/10 space-y-4">
+          <div className="p-5 border-t border-[#3d3d3d] bg-[#1a1a1a] space-y-4">
             <div className="space-y-1.5 text-xs text-slate-400 text-left">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -511,7 +511,7 @@ export default function CartDrawer({
                   <span className="font-semibold text-white">{formatearPrecio(costoEnvio)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t border-white/10 pt-2 text-sm font-black text-white">
+              <div className="flex justify-between border-t border-[#3d3d3d] pt-2 text-sm font-black text-white">
                 <span>Total a pagar</span>
                 <span className="text-chefsy-400">{formatearPrecio(totalCarrito)}</span>
               </div>

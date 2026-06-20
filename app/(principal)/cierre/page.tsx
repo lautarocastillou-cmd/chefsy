@@ -19,18 +19,20 @@ import {
   Copy,
   Check,
   Play,
-  X
+  X,
+  BarChart3
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
+import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 
 export default function PaginaCierreCaja() {
   const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno } = usarPedidos()
   
-  // Fecha seleccionada (por defecto hoy comercial)
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
 
   // Estado para el modal de Iniciar Turno
   const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
@@ -256,8 +258,37 @@ _Generado automáticamente desde Chefsy_`.trim()
         </div>
       </div>
 
-      {/* Contenedor con efecto de carga */}
-      <div className={`space-y-6 transition-all duration-300 ${cargando ? 'opacity-40 pointer-events-none' : ''}`}>
+      {/* Selector de Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-[#3d3d3d]">
+        <button
+          onClick={() => setTabActual('calculadora')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold transition-all border-b-2",
+            tabActual === 'calculadora' 
+              ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          )}
+        >
+          Calculadora en Vivo
+        </button>
+        <button
+          onClick={() => setTabActual('metricas')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold transition-all border-b-2 flex items-center gap-2",
+            tabActual === 'metricas' 
+              ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          )}
+        >
+          <BarChart3 size={16} />
+          Métricas Históricas
+        </button>
+      </div>
+
+      {tabActual === 'metricas' ? (
+        <MetricasHistoricas />
+      ) : (
+        <div className={`space-y-6 transition-all duration-300 ${cargando ? 'opacity-40 pointer-events-none' : ''}`}>
         
         {/* Tarjeta Principal de Facturación NETA */}
         <div className="bg-gradient-to-br from-chefsy-800 to-chefsy-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -441,6 +472,7 @@ _Generado automáticamente desde Chefsy_`.trim()
         )}
         
       </div>
+      )}
 
       {/* Modal Iniciar Turno */}
       {modalInicioAbierto && (

@@ -768,12 +768,54 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   // 5) Finalizar Turno (Archivar pedidos activos)
   const finalizarTurno = async () => {
     try {
-      const idsActivos = estado.pedidos.map((p) => p.id)
+      const pedidosActivos = estado.pedidos
+      const idsActivos = pedidosActivos.map((p) => p.id)
       
       if (idsActivos.length > 0) {
+        // --- Calcular Snapshot para cierres_diarios ---
+        const validos = pedidosActivos.filter((p) => p.estado !== 'cancelado')
+        const facturacion_neta = validos.reduce((acc, p) => acc + (p.total - (p.costoEnvio || 0)), 0)
+        
+        const obtenerMontoMetodo = (p: Pedido, m: string) => p.metodoPago === m ? p.total : 0
+        const efectivo_ventas = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'efectivo'), 0)
+        const tarjeta_total = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'tarjeta'), 0)
+        const transferencia_total = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'transferencia'), 0)
+        
+        const caja_inicial = estadoTurno?.cajaInicial || 0
+        const efectivo_rendir = caja_inicial + efectivo_ventas
+        
+        const total_pedidos = validos.length
+        const ticket_promedio = total_pedidos > 0 ? facturacion_neta / total_pedidos : 0
+        
+        const total_envios_delivery = validos.filter((p) => p.tipoEntrega === 'delivery').length
+        const costo_envios_cadetes = validos.filter((p) => p.tipoEntrega === 'delivery').reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
+        const total_retiros = validos.filter((p) => p.tipoEntrega === 'retiro').length
+        const total_consumo_local = validos.filter((p) => p.tipoEntrega === 'consumo_local').length
+        
+        const cancelados = pedidosActivos.filter((p) => p.estado === 'cancelado')
+        const pedidos_cancelados = cancelados.length
+        const monto_cancelados = cancelados.reduce((acc, p) => acc + p.total, 0)
+        // ----------------------------------------------
+
         await enviarAccionPedido({
           accion: 'finalizar_turno',
-          ids: idsActivos
+          ids: idsActivos,
+          snapshot: {
+            facturacion_neta,
+            efectivo_ventas,
+            caja_inicial,
+            efectivo_rendir,
+            tarjeta_total,
+            transferencia_total,
+            total_pedidos,
+            total_envios_delivery,
+            costo_envios_cadetes,
+            total_retiros,
+            total_consumo_local,
+            ticket_promedio,
+            pedidos_cancelados,
+            monto_cancelados
+          }
         })
       }
 

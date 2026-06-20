@@ -174,11 +174,43 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
         }
 
-        const { ids } = body
+        const { ids, snapshot } = body
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
           return NextResponse.json({ error: 'IDs de pedidos no provistos o vacíos.' }, { status: 400 })
         }
 
+        // 1. Guardar el snapshot en la nueva tabla segura cierres_diarios
+        if (snapshot) {
+          // Obtener fecha local de Argentina usando la misma lógica de negocio (YYYY-MM-DD)
+          const now = new Date()
+          const utcOffset = -3 // ARG
+          const argTime = new Date(now.getTime() + utcOffset * 3600000)
+          const fechaStr = argTime.toISOString().split('T')[0]
+
+          const { error: errorSnapshot } = await supabaseAdmin
+            .from('cierres_diarios')
+            .upsert({
+              fecha: fechaStr,
+              facturacion_neta: snapshot.facturacion_neta,
+              efectivo_ventas: snapshot.efectivo_ventas,
+              caja_inicial: snapshot.caja_inicial,
+              efectivo_rendir: snapshot.efectivo_rendir,
+              tarjeta_total: snapshot.tarjeta_total,
+              transferencia_total: snapshot.transferencia_total,
+              total_pedidos: snapshot.total_pedidos,
+              total_envios_delivery: snapshot.total_envios_delivery,
+              costo_envios_cadetes: snapshot.costo_envios_cadetes,
+              total_retiros: snapshot.total_retiros,
+              total_consumo_local: snapshot.total_consumo_local,
+              ticket_promedio: snapshot.ticket_promedio,
+              pedidos_cancelados: snapshot.pedidos_cancelados,
+              monto_cancelados: snapshot.monto_cancelados
+            }, { onConflict: 'fecha' })
+
+          if (errorSnapshot) console.error('Error insertando snapshot:', errorSnapshot)
+        }
+
+        // 2. Archivar los pedidos (limpiar panel)
         const { error } = await supabaseAdmin
           .from('pedidos')
           .update({ archivado: true })

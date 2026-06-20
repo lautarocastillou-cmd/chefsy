@@ -48,16 +48,16 @@ export default function ModalPersonalizacion({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out"
         onClick={onCerrar}
       />
 
       {/* Modal Panel */}
-      <div className="relative w-full sm:max-w-md bg-gradient-to-b from-[#1a1f2e] to-[#0d1117] backdrop-blur-xl shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-white/10 z-10 flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
+      <div className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-[#3d3d3d] z-10 flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out">
         
         {/* Barra decorativa superior (solo mobile) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
-          <div className="w-10 h-1.5 rounded-full bg-white/40 backdrop-blur-md shadow-sm" />
+          <div className="w-10 h-1.5 rounded-full bg-slate-600/80 backdrop-blur-md shadow-sm" />
         </div>
 
         {/* Galería de Imágenes */}
@@ -73,7 +73,7 @@ export default function ModalPersonalizacion({
                   priority={true}
                   className="object-cover" 
                 />
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1a1f2e] to-transparent pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
               </div>
             ))}
             {/* Botón de cerrar superpuesto a la imagen */}
@@ -93,9 +93,9 @@ export default function ModalPersonalizacion({
         )}
 
         {/* Cabecera */}
-        <div className="px-6 pt-2 pb-5 border-b border-white/8 flex items-start justify-between gap-3 text-left relative overflow-hidden">
+        <div className="px-6 pt-2 pb-5 border-b border-[#3d3d3d] flex items-start justify-between gap-3 text-left relative overflow-hidden">
           {/* Fondo decorativo */}
-          <div className="absolute inset-0 bg-gradient-to-br from-chefsy-500/10 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-chefsy-500/5 via-transparent to-transparent pointer-events-none" />
           
           <div className="relative z-10">
             <p className="text-[10px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-1">Estás pidiendo</p>
@@ -109,7 +109,7 @@ export default function ModalPersonalizacion({
         <div className="p-5 overflow-y-auto scrollbar-hide space-y-5 flex-1 text-left">
           
           {/* Precio base */}
-          <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-2xl px-4 py-3">
+          <div className="flex items-center justify-between bg-[#252525] border border-[#3d3d3d] rounded-2xl px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
               <span className="text-xs font-semibold text-slate-300">Precio base</span>
@@ -127,7 +127,7 @@ export default function ModalPersonalizacion({
                 value={notaPersonalizacion}
                 onChange={(e) => onSetNota(e.target.value)}
                 placeholder="Ej: Sin cebolla, con extra mayonesa..."
-                className="w-full border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-black/30 text-white placeholder:text-slate-600 resize-none transition-all"
+                className="w-full border border-[#3d3d3d] rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-[#1a1a1a] text-white placeholder:text-slate-500 resize-none transition-all"
                 rows={3}
               />
             </div>
@@ -146,8 +146,8 @@ export default function ModalPersonalizacion({
                       onClick={() => onAlternarModificador(modObj)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-sm font-semibold transition-all cursor-pointer ${
                         seleccionado
-                          ? 'bg-chefsy-500/20 text-chefsy-300 border-chefsy-500/60 shadow-[inset_0_0_12px_rgba(255,100,0,0.08)]'
-                          : 'border-white/8 bg-white/4 text-slate-400 hover:border-white/20 hover:bg-white/8'
+                          ? 'bg-chefsy-500/20 text-chefsy-300 border-chefsy-500/60 shadow-[inset_0_0_12px_rgba(42,99,72,0.08)]'
+                          : 'border-[#3d3d3d] bg-[#252525] text-slate-400 hover:border-[#4d4d4d]'
                       }`}
                     >
                       <span className="flex items-center gap-2.5">
@@ -170,12 +170,12 @@ export default function ModalPersonalizacion({
         </div>
 
         {/* Footer del Modal */}
-        <div className="px-5 py-4 border-t border-white/8 bg-black/20 flex items-center gap-3">
+        <div className="px-5 py-4 border-t border-[#3d3d3d] bg-[#1a1a1a] flex items-center gap-3">
           {/* Selector de cantidad */}
-          <div className="flex items-center bg-white/8 border border-white/10 rounded-xl overflow-hidden shrink-0">
+          <div className="flex items-center bg-[#252525] border border-[#3d3d3d] rounded-xl overflow-hidden shrink-0">
             <button
               onClick={() => onSetCantidad(Math.max(1, cantidadModal - 1))}
-              className="w-14 h-14 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
+              className="w-14 h-14 flex items-center justify-center hover:bg-[#3d3d3d] transition-colors text-slate-300 focus:outline-none"
             >
               <Minus size={22} />
             </button>
@@ -184,7 +184,7 @@ export default function ModalPersonalizacion({
             </span>
             <button
               onClick={() => onSetCantidad(cantidadModal + 1)}
-              className="w-14 h-14 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
+              className="w-14 h-14 flex items-center justify-center hover:bg-[#3d3d3d] transition-colors text-slate-300 focus:outline-none"
             >
               <Plus size={22} />
             </button>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
+import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
@@ -43,8 +44,8 @@ export default function PaginaTienda() {
   const [cartAbierto, setCartAbierto] = useState(false)
   const [metadata, setMetadata] = useState<Record<string, any>>({})
   
-  // Palabras animadas para el hero
-  const animatedWords = ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
+  const { configuracion } = usarConfiguracionTienda()
+  const animatedWords = configuracion?.palabras_animadas || ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
   const [animatedWordIndex, setAnimatedWordIndex] = useState(0)
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function PaginaTienda() {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [])
+  }, [animatedWords.length])
 
   // Cargar metadatos públicos de la tienda
   useEffect(() => {
@@ -121,9 +122,21 @@ export default function PaginaTienda() {
   const idBurgers = useMemo(() => categorias.find(c => c.nombre.toLowerCase().includes('burger') || c.id === 'burgers')?.id || 'burgers', [categorias])
 
   const categoriasActivas = useMemo(() => {
+    const burgersExiste = categorias.some(c => c.id === idBurgers)
     return categorias
-      .filter(c => c.activa && c.id !== idPatys)
-      .map(c => c.id === idBurgers ? { ...c, nombre: 'Burgers / Patys' } : c)
+      .filter(c => {
+        if (!c.activa) return false
+        // Si existe burgers, ocultamos patys. Si no existe burgers, dejamos patys y lo renombramos
+        if (burgersExiste && c.id === idPatys) return false
+        return true
+      })
+      .map(c => {
+        // Renombramos la categoria principal (burgers o patys) a "Burgers / Patys"
+        if ((burgersExiste && c.id === idBurgers) || (!burgersExiste && c.id === idPatys)) {
+          return { ...c, nombre: 'Burgers / Patys' }
+        }
+        return c
+      })
   }, [categorias, idPatys, idBurgers])
 
   const productosFiltrados = useMemo(() => productos.filter(p => {
@@ -133,7 +146,8 @@ export default function PaginaTienda() {
     const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
     const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
     
-    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === idBurgers && p.categoriaId === idPatys)
+    const esFiltroPrincipal = catFiltro === idBurgers || catFiltro === idPatys;
+    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroPrincipal && (p.categoriaId === idBurgers || p.categoriaId === idPatys || p.categoriaId === 'burgers' || p.categoriaId === 'patys'))
     const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
     
     return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { CheckCircle2, MessageCircle, BellRing } from 'lucide-react'
+import Image from 'next/image'
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 
@@ -86,63 +87,76 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
     }
   }
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors font-sans">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xl rounded-3xl p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200">
-        <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
-          <CheckCircle2 size={44} className="animate-bounce" />
+    <div className="min-h-screen bg-[#1c1c1c] flex items-center justify-center p-4 transition-colors font-sans">
+      <div className="w-full max-w-lg bg-[#252525] border border-[#3d3d3d] shadow-[0_8px_30px_rgb(0,0,0,0.2)] rounded-3xl p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200">
+        <div className="w-24 h-24 rounded-full border-4 border-emerald-500/20 flex items-center justify-center mx-auto shadow-inner overflow-hidden animate-logo-bounce bg-white">
+          <Image 
+            src="/logo.jpg" 
+            alt="Chefsy Logo" 
+            width={96} 
+            height={96} 
+            className="w-full h-full object-cover"
+            priority
+          />
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-slate-850 dark:text-slate-100 tracking-tight">
+          <h2 className="text-2xl font-black text-slate-100 tracking-tight">
             ¡Pedido Recibido con Éxito!
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Tu pedido <span className="font-extrabold text-slate-700 dark:text-slate-300">#{pedido.id}</span> ha sido ingresado en nuestra cocina.
+          <p className="text-sm text-slate-400">
+            Tu pedido <span className="font-extrabold text-slate-300">#{pedido.id}</span> ha sido ingresado en nuestra cocina.
           </p>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800 rounded-2xl p-5 space-y-3.5 text-left text-xs text-slate-700 dark:text-slate-350">
-          <h3 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[10px]">
-            📋 Resumen de Entrega
+        <div className="bg-[#1c1c1c] border border-[#3d3d3d] rounded-2xl p-5 space-y-4 text-left text-xs text-slate-300 shadow-sm">
+          <h3 className="font-bold text-slate-200 uppercase tracking-wider text-sm border-b border-[#3d3d3d] pb-2">
+            Resumen de Entrega
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Cliente</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{pedido.cliente}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Cliente</p>
+              <p className="font-semibold text-slate-200">{pedido.cliente}</p>
             </div>
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Teléfono</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{pedido.telefono}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Teléfono</p>
+              <p className="font-semibold text-slate-200">{pedido.telefono}</p>
             </div>
             <div className="col-span-2">
-              <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Destino</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{pedido.direccion}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Destino</p>
+              <p className="font-semibold text-slate-200">{pedido.direccion}</p>
             </div>
             <div>
-              <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Pago</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200 capitalize">{pedido.metodoPago}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Pago</p>
+              <p className="font-semibold text-slate-200 capitalize">{pedido.metodoPago.replace('_', ' ')}</p>
             </div>
-            {pedido.costoEnvio !== undefined && pedido.costoEnvio > 0 && (
-              <div>
-                <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Envío</p>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">{formatearPrecio(pedido.costoEnvio)}</p>
-              </div>
-            )}
-            <div className={pedido.costoEnvio ? 'col-span-2' : ''}>
-              <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Total</p>
-              <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{formatearPrecio(pedido.total)}</p>
+            {pedido.costoEnvio !== undefined && pedido.costoEnvio > 0 ? (
+              <>
+                <div className="col-span-2 flex justify-between border-t border-[#3d3d3d] pt-3 mt-1">
+                  <p className="text-slate-400 font-semibold">Subtotal</p>
+                  <p className="font-semibold text-slate-200">{formatearPrecio(pedido.total - pedido.costoEnvio)}</p>
+                </div>
+                <div className="col-span-2 flex justify-between">
+                  <p className="text-slate-400 font-semibold">Costo de Envío</p>
+                  <p className="font-semibold text-slate-200">{formatearPrecio(pedido.costoEnvio)}</p>
+                </div>
+              </>
+            ) : null}
+            <div className="col-span-2 flex justify-between bg-[#252525] p-3 rounded-xl mt-1 border border-[#3d3d3d]">
+              <p className="text-slate-300 font-bold uppercase tracking-wider">Total Final</p>
+              <p className="font-black text-emerald-400 text-lg leading-none">{formatearPrecio(pedido.total)}</p>
             </div>
           </div>
 
-          <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-4 mt-2">
-            <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider mb-2.5">Tu Pedido</p>
+          <div className="border-t border-[#3d3d3d] pt-4 mt-2">
+            <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider mb-2.5">Tu Pedido</p>
             <ul className="space-y-2">
               {pedido.productos.map((prod) => (
                 <li key={prod.id} className="flex justify-between items-start gap-3">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">
-                    <span className="text-emerald-600 dark:text-emerald-500">{prod.cantidad}x</span> {prod.nombre}
+                  <span className="font-semibold text-slate-200 leading-tight">
+                    <span className="text-emerald-500">{prod.cantidad}x</span> {prod.nombre}
                   </span>
-                  <span className="text-slate-600 dark:text-slate-400 font-bold shrink-0">{formatearPrecio(prod.precio * prod.cantidad)}</span>
+                  <span className="text-slate-400 font-bold shrink-0">{formatearPrecio(prod.precio * prod.cantidad)}</span>
                 </li>
               ))}
             </ul>
@@ -161,7 +175,9 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
               ) : (
                 <>
                   <BellRing size={18} className="animate-pulse" />
-                  ¿Avisarme al celular cuando esté en camino?
+                  {pedido.tipoEntrega === 'delivery' 
+                    ? 'Avisarme al celular cuando esté en camino' 
+                    : 'Avisarme al celular cuando esté listo'}
                 </>
               )}
             </button>
@@ -183,9 +199,9 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
           
           <button
             onClick={onNuevoPedido}
-            className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 font-bold py-3.5 px-4 rounded-xl text-sm transition-all active:scale-98"
+            className="w-full bg-[#1c1c1c] hover:bg-[#2f2f2f] text-slate-300 font-bold py-3.5 px-4 rounded-xl text-sm transition-all active:scale-98 border border-[#3d3d3d]"
           >
-            Hacer otro Pedido
+            Hacer otro pedido
           </button>
         </div>
       </div>

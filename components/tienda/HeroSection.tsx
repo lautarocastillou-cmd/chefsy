@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Lock, Search } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
+import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -30,6 +31,8 @@ export default function HeroSection({
   onToggleSelector,
   onSeleccionarCategoria,
 }: HeroSectionProps) {
+  const { configuracion } = usarConfiguracionTienda()
+
   return (
     <>
       {/* --- CABECERA DE LA TIENDA --- */}
@@ -38,7 +41,7 @@ export default function HeroSection({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative">
               <Image 
-                src="/logo.jpg" 
+                src={configuracion?.logo_url || "/logo.jpg"} 
                 alt="Chefsy" 
                 fill
                 className="object-cover"
@@ -62,11 +65,11 @@ export default function HeroSection({
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
-            <h1 className="hero-title-1 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85]">
-              POCAS PALABRAS.
+            <h1 className="hero-title-1 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85] uppercase">
+              {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
             </h1>
-            <h1 className="hero-title-2 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85]">
-              MUCHO CHEDDAR.
+            <h1 className="hero-title-2 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85] uppercase">
+              {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
             </h1>
           </div>
 
@@ -77,8 +80,8 @@ export default function HeroSection({
               <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/60 blur-3xl rounded-full scale-y-50 -z-10 mix-blend-multiply opacity-70"></div>
               
               <Image 
-                src="/burger-loca.webp" 
-                alt="Chefsy Burger" 
+                src={configuracion?.hero_image_url || "/burger-loca.webp"} 
+                alt="Chefsy Hero" 
                 fill
                 priority
                 placeholder="blur"
@@ -91,8 +94,8 @@ export default function HeroSection({
 
           {/* 3. Selector de Categorías y Subtítulo */}
           <div className="hero-controls flex flex-col gap-3 lg:gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start mt-2 lg:mt-0">
-            <p className="font-bebas text-4xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap text-center lg:text-left">
-              ¿QUÉ PINTA HOY?
+            <p className="font-bebas text-4xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap text-center lg:text-left uppercase">
+              {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
             </p>
             <div className="relative w-full">
               <input

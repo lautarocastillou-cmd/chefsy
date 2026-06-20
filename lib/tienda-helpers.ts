@@ -97,30 +97,35 @@ export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: st
 export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
   switch (catId) {
     case 'todos': 
-      return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y pedí 🔥', icono: '🍔' }
+      return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y pedí 🔥', icono: '/burger-icon.png' }
+    case 'lomos':
+    case 'milas':
+      return { nombre: 'Lomos', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
     case 'lomos-y-milas': 
-      return { nombre: 'Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '🥩' }
+      return { nombre: 'Lomos y Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
     case 'zapping': 
-      return { nombre: 'Zapping', subtitulo: 'Tostados gigantes rellenos', icono: '🌯' }
+      return { nombre: 'Zapping', subtitulo: 'Tostados gigantes rellenos', icono: '/zapping-icon.png' }
     case 'patys': 
-      return { nombre: 'Burgers / Patys', subtitulo: 'Con papas crujientes y aderezo especial', icono: '🍔' }
+      return { nombre: 'Burgers / Patys', subtitulo: 'Con papas crujientes y aderezo especial', icono: '/patys-icon.png' }
     case 'pizzas': 
-      return { nombre: 'Pizzas', subtitulo: 'Masa casera cocida al horno de piedra', icono: '🍕' }
+      return { nombre: 'Pizzas', subtitulo: 'Masa casera cocida al horno de piedra', icono: '/pizzas-icon.png' }
     case 'choripan': 
-      return { nombre: 'Choripanes', subtitulo: 'Chorizos premium en pan de campo crocante', icono: '🌭' }
+      return { nombre: 'Choripanes', subtitulo: 'Chorizos premium en pan de campo crocante', icono: '/choripan-icon.png' }
     case 'mila-al-plato': 
-      return { nombre: 'Mila al Plato', subtitulo: 'Milanesas abundantes para compartir', icono: '🍽️' }
+      return { nombre: 'Mila al Plato', subtitulo: 'Milanesas abundantes para compartir', icono: '/mila-plato-icon.png' }
     case 'tartas-xl': 
-      return { nombre: 'Tartas XL', subtitulo: 'Tartas saladas con masa de hojaldre casera', icono: '🥮' }
+      return { nombre: 'Tartas XL', subtitulo: 'Tartas saladas con masa de hojaldre casera', icono: '/tartas-icon.png' }
     case 'bebidas': 
-      return { nombre: 'Bebidas', subtitulo: 'Refrescos, aguas y latas de cerveza heladas', icono: '🥤' }
+      return { nombre: 'Bebidas', subtitulo: 'Refrescos, aguas y latas de cerveza heladas', icono: '/bebidas-icon.png' }
     case 'promos': 
-      return { nombre: 'Promos', subtitulo: 'Los combos perfectos para ahorrar y compartir', icono: '🎁' }
+      return { nombre: 'Promos', subtitulo: 'Los combos perfectos para ahorrar y compartir', icono: '/promos-icon.png' }
     case 'porciones-de-papas':
+    case 'porciones_de_papas':
     case 'papas':
     case 'papas-fritas':
-      return { nombre: 'Porciones de Papas', subtitulo: 'Crujientes y doradas, ideales para compartir', icono: '🍟' }
+    case 'papas_fritas':
+      return { nombre: 'Porciones de Papas', subtitulo: 'Crujientes y doradas, ideales para compartir', icono: '/papas-icon.png' }
     default: 
-      return { nombre: 'Menú Especial', subtitulo: 'Platos frescos de la cocina', icono: '👨‍🍳' }
+      return { nombre: 'Menú Especial', subtitulo: 'Platos frescos de la cocina', icono: '/especial-icon.png' }
   }
 }

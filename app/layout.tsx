@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
+import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
 import { Playfair_Display, Bebas_Neue } from 'next/font/google'
 
 const bebas = Bebas_Neue({
@@ -46,11 +47,13 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body className={`font-sans antialiased ${playfair.variable} ${bebas.variable}`}>
-        <ProveedorAuth>
-          <ProveedorPedidos>
-            {children}
-          </ProveedorPedidos>
-        </ProveedorAuth>
+        <ConfiguracionTiendaProvider>
+          <ProveedorAuth>
+            <ProveedorPedidos>
+              {children}
+            </ProveedorPedidos>
+          </ProveedorAuth>
+        </ConfiguracionTiendaProvider>
       </body>
     </html>
   )
