@@ -9,12 +9,14 @@ interface PropsMapaSelector {
   centro: Coordenadas
   coordenadas: Coordenadas | null
   onCoordenadasChange: (coordenadas: Coordenadas) => void
+  className?: string
 }
 
 export default function MapaSelector({
   centro,
   coordenadas,
   onCoordenadasChange,
+  className = "h-64 w-full rounded-md border border-gray-300 z-0"
 }: PropsMapaSelector) {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const mapaRef = useRef<MapaLeaflet | null>(null)
@@ -111,7 +113,7 @@ export default function MapaSelector({
   return (
     <div
       ref={contenedorRef}
-      className="h-64 w-full rounded-md border border-gray-300 z-0"
+      className={className}
     />
   )
 }

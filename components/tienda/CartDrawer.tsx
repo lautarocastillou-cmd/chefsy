@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { SlideButton } from '@/components/ui/slide-button'
 import { ItemCarrito } from '@/tipos/tienda'
 import { formatearPrecio } from '@/lib/utils'
+
+const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector'), { ssr: false })
 
 interface CartDrawerProps {
   carrito: ItemCarrito[]
@@ -62,6 +65,11 @@ export default function CartDrawer({
 }: CartDrawerProps) {
   const [checkoutStep, setCheckoutStep] = useState(1)
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
+  
+  // Estados para el selector de mapa
+  const [mostrarMapa, setMostrarMapa] = useState(false)
+  const [coordsMapa, setCoordsMapa] = useState<{ latitud: number, longitud: number }>({ latitud: -28.4695, longitud: -65.7852 }) // Plaza 25 de Mayo
+  const [cargandoMapaDir, setCargandoMapaDir] = useState(false)
 
   // Resetear paso cuando se cierra el carrito o se abre el checkout
   useEffect(() => {
@@ -95,6 +103,7 @@ export default function CartDrawer({
           alert('No pudimos encontrar la calle exacta, por favor ingresala manualmente.')
         }
       } catch (error) {
+        console.error('Error obteniendo ubicación:', error)
         alert('Error al obtener la dirección. Ingresala manualmente.')
       } finally {
         setBuscandoUbicacion(false)
@@ -103,6 +112,33 @@ export default function CartDrawer({
       setBuscandoUbicacion(false)
       alert('No pudimos acceder a tu ubicación. Verificá los permisos del navegador.')
     }, { enableHighAccuracy: true, timeout: 10000 })
+  }
+
+  const confirmarUbicacionMapa = async () => {
+    setCargandoMapaDir(true)
+    try {
+      const { latitud, longitud } = coordsMapa
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitud}&lon=${longitud}`)
+      const data = await response.json()
+      
+      if (data && data.address) {
+        const calle = data.address.road || ''
+        const numero = data.address.house_number || ''
+        const barrio = data.address.suburb || data.address.neighbourhood || ''
+        const ciudad = data.address.city || data.address.town || data.address.village || ''
+        
+        let direccionFormateada = `${calle} ${numero}`.trim()
+        if (barrio) direccionFormateada += `, Barrio ${barrio}`
+        if (ciudad) direccionFormateada += `, ${ciudad}`
+        
+        onSetDireccionCliente(direccionFormateada.trim())
+      }
+    } catch (error) {
+      console.error('Error en geocoding inverso del mapa:', error)
+    } finally {
+      setCargandoMapaDir(false)
+      setMostrarMapa(false)
+    }
   }
 
   useEffect(() => {
@@ -342,6 +378,43 @@ export default function CartDrawer({
                               placeholder="Calle, Altura, Barrio..."
                             />
                           </div>
+
+                          {/* Botón para abrir/cerrar mapa */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setMostrarMapa(!mostrarMapa)}
+                              className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                            >
+                              <Map size={12} />
+                              {mostrarMapa ? 'Ocultar mapa' : 'Elegir en el mapa'}
+                            </button>
+                          </div>
+
+                          {/* Renderizado del Mapa */}
+                          {mostrarMapa && (
+                            <div className="mt-3 bg-black/20 border border-white/10 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 text-center">
+                                Arrastrá el marcador a tu ubicación exacta
+                              </p>
+                              <div className="rounded-xl overflow-hidden shadow-inner relative border border-white/5">
+                                <MapaSelector
+                                  centro={{ latitud: -28.4695, longitud: -65.7852 }}
+                                  coordenadas={coordsMapa}
+                                  onCoordenadasChange={(c) => setCoordsMapa(c)}
+                                  className="h-48 w-full z-0 relative"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={confirmarUbicacionMapa}
+                                disabled={cargandoMapaDir}
+                                className="w-full mt-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {cargandoMapaDir ? 'Cargando dirección...' : 'Confirmar esta ubicación'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
