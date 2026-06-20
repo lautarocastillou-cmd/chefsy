@@ -74,12 +74,13 @@ function ProductCard({
   )
 }
 
-// React.memo previene que las tarjetas de productos se re-rendericen innecesariamente
-// cuando cambia el estado del carrito u otros estados de page.tsx
 export default React.memo(ProductCard, (prevProps, nextProps) => {
   return (
     prevProps.prod.id === nextProps.prod.id &&
+    prevProps.prod.nombre === nextProps.prod.nombre &&
     prevProps.agotado === nextProps.agotado &&
-    prevProps.imagenFinal === nextProps.imagenFinal
+    prevProps.imagenFinal === nextProps.imagenFinal &&
+    prevProps.meta?.descripcion_publica === nextProps.meta?.descripcion_publica &&
+    prevProps.meta?.nombre_publico === nextProps.meta?.nombre_publico
   )
 })

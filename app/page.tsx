@@ -80,6 +80,17 @@ export default function PaginaTienda() {
       }
     }
     fetchMeta()
+
+    const onFocus = () => {
+      if (!document.hidden) fetchMeta()
+    }
+    document.addEventListener('visibilitychange', onFocus)
+    window.addEventListener('focus', onFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [])
   
   // ── Estado del modal de personalización ──────────────────────────────
