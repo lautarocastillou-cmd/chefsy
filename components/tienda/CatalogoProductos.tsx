@@ -96,7 +96,7 @@ export default function CatalogoProductos({
                   {productosDeCat.some(p => p.esCombo) && (
                     <div className="mt-4 mb-2">
                       <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
-                        COMBOS
+                        PROMOS {cat.nombre.toUpperCase()}
                       </h4>
                     </div>
                   )}
