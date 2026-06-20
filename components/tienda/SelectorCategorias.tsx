@@ -60,9 +60,9 @@ export default function SelectorCategorias({
       <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center pointer-events-none">
         {/* Panel modal — CSS transition translateY */}
         <div
-          className={`selector-panel pointer-events-auto w-full sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden transition-all duration-300 ease-out ${
+          className={`selector-panel w-full sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden transition-all duration-300 ease-out ${
             selectorAbierto
-              ? 'translate-y-0 opacity-100'
+              ? 'translate-y-0 opacity-100 pointer-events-auto'
               : 'translate-y-10 opacity-0 pointer-events-none'
           }`}
         >
