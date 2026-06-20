@@ -14,11 +14,6 @@ function obtenerSupabaseAdmin() {
 
 export async function GET() {
   try {
-    const sesion = await obtenerSesion()
-    if (!sesion || sesion.rol !== 'admin') {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    }
-
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase.from('tienda_metadata').select('*')
     if (error) throw error
