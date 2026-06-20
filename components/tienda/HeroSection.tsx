@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Lock, Search } from 'lucide-react'
@@ -75,48 +74,17 @@ export default function HeroSection({
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left pb-0 lg:pb-10 z-30 pointer-events-none order-1">
-            <motion.h1 
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ 
-                delay: 0, 
-                duration: 0.8, ease: "easeOut" 
-              }}
-              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]"
-            >
+            <h1 className="hero-title-1 font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]">
               POCAS PALABRAS.
-            </motion.h1>
-            <motion.h1 
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ 
-                delay: 0.2, 
-                duration: 0.8, ease: "easeOut" 
-              }}
-              className="font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]"
-            >
+            </h1>
+            <h1 className="hero-title-2 font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]">
               MUCHO CHEDDAR.
-            </motion.h1>
+            </h1>
           </div>
 
           {/* 2. Imagen de Producto Gigante Flotante */}
           <div className="relative w-full flex items-start justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-2 lg:pt-0">
-            <motion.div 
-              className="relative w-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
-              initial={{ opacity: 0, scale: 0.8, y: 50, rotate: -10 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1, 
-                y: [0, -20, 0],
-                rotate: [-2, 2, -2] 
-              }}
-              transition={{
-                opacity: { duration: 1, delay: 0.5 },
-                scale: { duration: 1, delay: 0.5, type: 'spring', bounce: 0.4 },
-                y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                rotate: { duration: 8, repeat: Infinity, ease: "easeInOut" }
-              }}
-            >
+            <div className="burger-float-wrapper relative w-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
               <Image 
                 src="/burger-loca.webp" 
                 alt="Chefsy Burger" 
@@ -127,19 +95,11 @@ export default function HeroSection({
                 sizes="(max-width: 768px) 100vw, 800px"
                 className="object-contain object-top drop-shadow-2xl"
               />
-            </motion.div>
+            </div>
           </div>
 
           {/* 3. Selector de Categorías y Subtítulo */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ 
-              delay: 0.4, 
-              duration: 0.8 
-            }}
-            className="flex flex-col gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start"
-          >
+          <div className="hero-controls flex flex-col gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start">
             <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap">
               ¿QUÉ PINTA HOY?
             </p>
@@ -161,22 +121,16 @@ export default function HeroSection({
                 onToggleSelector={onToggleSelector}
                 onSeleccionarCategoria={onSeleccionarCategoria}
               />
-              <div className="w-[50%] relative flex items-center overflow-hidden h-[60px]">
-                <AnimatePresence mode="popLayout">
-                  <motion.h2 
-                    key={animatedWordIndex}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -30 }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                    className="font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide absolute left-0"
-                  >
-                    {animatedWords[animatedWordIndex]}
-                  </motion.h2>
-                </AnimatePresence>
+              <div className="word-carousel w-[50%] h-[60px]">
+                <h2
+                  key={animatedWordIndex}
+                  className="word-enter font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide"
+                >
+                  {animatedWords[animatedWordIndex]}
+                </h2>
               </div>
             </div>
-          </motion.div>
+          </div>
 
         </div>
 
