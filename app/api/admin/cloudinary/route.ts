@@ -54,9 +54,9 @@ export async function POST(request: Request) {
     const uploadData = await response.json()
     const secureUrl = uploadData.secure_url
 
-    let urlTransformada = secureUrl
+    let urlTransformada = secureUrl.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_800/')
     if (transformacion === 'eliminar_fondo') {
-      urlTransformada = secureUrl.replace('/image/upload/', '/image/upload/e_background_removal/')
+      urlTransformada = secureUrl.replace('/image/upload/', '/image/upload/e_background_removal,f_auto,q_auto,w_800/')
     }
 
     return NextResponse.json({

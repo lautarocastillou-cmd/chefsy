@@ -23,7 +23,12 @@ export default function DevToolsPage() {
   
   const [busqueda, setBusqueda] = useState('')
   const [productoEditando, setProductoEditando] = useState<string | null>(null)
-  const [form, setForm] = useState({ nombre_publico: '', descripcion_publica: '', imagen_base64: '', preview_url: '' })
+  const [form, setForm] = useState<{
+    nombre_publico: string;
+    descripcion_publica: string;
+    imagenes_nuevas: string[];
+    preview_urls: string[];
+  }>({ nombre_publico: '', descripcion_publica: '', imagenes_nuevas: [], preview_urls: [] })
   const [guardando, setGuardando] = useState(false)
 
   // Redirigir si no es admin
@@ -66,20 +71,24 @@ export default function DevToolsPage() {
     setForm({
       nombre_publico: meta.nombre_publico || '',
       descripcion_publica: meta.descripcion_publica || '',
-      imagen_base64: '',
-      preview_url: meta.imagen_url || ''
+      imagenes_nuevas: [],
+      preview_urls: meta.imagen_url ? meta.imagen_url.split(',') : []
     })
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string
-      setForm(prev => ({ ...prev, imagen_base64: base64, preview_url: base64 }))
-    }
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    Promise.all(files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => resolve(ev.target?.result as string)
+        reader.readAsDataURL(file)
+      })
+    })).then(base64s => {
+      setForm(prev => ({ ...prev, imagenes_nuevas: base64s, preview_urls: base64s }))
+    })
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -88,18 +97,21 @@ export default function DevToolsPage() {
     setGuardando(true)
 
     try {
-      let finalImageUrl = form.preview_url
+      let finalImageUrls = form.preview_urls.join(',')
 
       // Si hay una imagen nueva en base64, subir a Cloudinary
-      if (form.imagen_base64) {
-        const uploadRes = await fetch('/api/admin/cloudinary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagen: form.imagen_base64 })
-        })
-        const uploadData = await uploadRes.json()
-        if (uploadData.error) throw new Error(uploadData.error)
-        finalImageUrl = uploadData.urlTransformada || uploadData.urlOriginal
+      if (form.imagenes_nuevas.length > 0) {
+        const subidas = await Promise.all(form.imagenes_nuevas.map(async (base64) => {
+          const uploadRes = await fetch('/api/admin/cloudinary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagen: base64 })
+          })
+          const uploadData = await uploadRes.json()
+          if (uploadData.error) throw new Error(uploadData.error)
+          return uploadData.urlTransformada || uploadData.urlOriginal
+        }))
+        finalImageUrls = subidas.join(',')
       }
 
       // Guardar en tienda_metadata
@@ -110,7 +122,7 @@ export default function DevToolsPage() {
           producto_id: productoEditando,
           nombre_publico: form.nombre_publico,
           descripcion_publica: form.descripcion_publica,
-          imagen_url: finalImageUrl
+          imagen_url: finalImageUrls
         })
       })
 
@@ -180,7 +192,7 @@ export default function DevToolsPage() {
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 flex items-center justify-center">
                     {meta?.imagen_url ? (
-                      <img src={meta.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                      <img src={meta.imagen_url.split(',')[0]} alt={prod.nombre} className="w-full h-full object-cover" />
                     ) : (
                       <ImageIcon className="text-slate-400" />
                     )}
@@ -243,17 +255,22 @@ export default function DevToolsPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Foto Profesional</label>
-                <div className="flex items-center gap-4">
-                  {form.preview_url && (
-                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
-                      <img src={form.preview_url} alt="Preview" className="w-full h-full object-cover" />
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Galería de Fotos (Álbum)</label>
+                <div className="flex flex-col gap-3">
+                  {form.preview_urls.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      {form.preview_urls.map((url, i) => (
+                        <div key={i} className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
+                          <img src={url} alt={`Preview ${i+1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
                     </div>
                   )}
                   <label className="flex-1 cursor-pointer bg-slate-50 hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl py-3 text-center text-sm font-semibold text-slate-600 transition-colors">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                    {form.preview_url ? 'Cambiar Imagen' : 'Subir Imagen'}
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
+                    {form.preview_urls.length > 0 ? `Subir Nuevas Fotos (${form.preview_urls.length} actuales)` : 'Subir Fotos del Producto'}
                   </label>
+                  <p className="text-[10px] text-slate-400">Podés seleccionar múltiples fotos a la vez manteniendo presionado Ctrl o Cmd al elegir los archivos.</p>
                 </div>
               </div>
 

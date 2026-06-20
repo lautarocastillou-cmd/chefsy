@@ -7,6 +7,7 @@ import { formatearPrecio } from '@/lib/utils'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
+  imagenFinal: string
   modificadoresDisponibles: ModificadorCatalogo[]
   modsSeleccionados: ModificadorCatalogo[]
   cantidadModal: number
@@ -21,6 +22,7 @@ interface ModalPersonalizacionProps {
 
 export default function ModalPersonalizacion({
   producto,
+  imagenFinal,
   modificadoresDisponibles,
   modsSeleccionados,
   cantidadModal,
@@ -44,28 +46,51 @@ export default function ModalPersonalizacion({
       <div className="relative w-full sm:max-w-md bg-gradient-to-b from-[#1a1f2e] to-[#0d1117] backdrop-blur-xl shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-white/10 z-10 flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
         
         {/* Barra decorativa superior (solo mobile) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
+          <div className="w-10 h-1.5 rounded-full bg-white/40 backdrop-blur-md shadow-sm" />
         </div>
 
+        {/* Galería de Imágenes */}
+        {imagenFinal && (
+          <div className="relative w-full h-52 sm:h-64 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
+            {imagenFinal.split(',').map((imgUrl, i) => (
+              <div key={i} className="relative w-full h-full shrink-0 snap-center">
+                <img 
+                  src={imgUrl} 
+                  alt={`${producto.nombre} - Foto ${i+1}`} 
+                  className="w-full h-full object-cover" 
+                  loading={i === 0 ? "eager" : "lazy"} 
+                />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1a1f2e] to-transparent pointer-events-none" />
+              </div>
+            ))}
+            {/* Botón de cerrar superpuesto a la imagen */}
+            <button
+              onClick={onCerrar}
+              className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shrink-0 focus:outline-none"
+            >
+              <X size={16} />
+            </button>
+            {imagenFinal.split(',').length > 1 && (
+              <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
+                Deslizá para ver más
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Cabecera */}
-        <div className="px-6 pt-4 pb-5 border-b border-white/8 flex items-start justify-between gap-3 text-left relative overflow-hidden">
+        <div className="px-6 pt-2 pb-5 border-b border-white/8 flex items-start justify-between gap-3 text-left relative overflow-hidden">
           {/* Fondo decorativo */}
           <div className="absolute inset-0 bg-gradient-to-br from-chefsy-500/10 via-transparent to-transparent pointer-events-none" />
           
           <div className="relative z-10">
             <p className="text-[10px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-1">Estás pidiendo</p>
             <h3 className="font-bebas text-3xl text-white leading-none tracking-wide">
-              Personalizá tu {producto.nombre}
+              {producto.nombre}
             </h3>
           </div>
-
-          <button
-            onClick={onCerrar}
-            className="relative z-10 mt-1 w-8 h-8 flex items-center justify-center rounded-full bg-white/8 hover:bg-white/15 text-slate-400 hover:text-white transition-all shrink-0 focus:outline-none"
-          >
-            <X size={15} />
-          </button>
         </div>
 
         {/* Cuerpo del Modal */}

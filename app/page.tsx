@@ -12,6 +12,7 @@ import Image from 'next/image'
 import { ShoppingCart, Lock, HardHat } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
+import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 
 // Componentes de carga inmediata (siempre visibles al entrar)
 import HeroSection from '@/components/tienda/HeroSection'
@@ -403,6 +404,10 @@ export default function PaginaTienda() {
           <Suspense fallback={null}>
             <ModalPersonalizacion
               producto={productoAPersonalizar}
+              imagenFinal={
+                metadata[productoAPersonalizar.id]?.imagen_url ||
+                OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
+              }
               modificadoresDisponibles={
                 (productoAPersonalizar.modificadoresIds ?? [])
                   .map(id => modificadores.find(m => m.id === id))
