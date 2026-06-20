@@ -35,8 +35,6 @@ function ProductCard({
         <img
           src={(imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()}
           alt={prod.nombre}
-          loading="lazy"
-          decoding="async"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {prod.esCombo && (
