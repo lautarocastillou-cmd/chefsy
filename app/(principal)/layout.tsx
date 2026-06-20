@@ -10,7 +10,8 @@ import { useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import { Menu, X } from 'lucide-react'
 import { usarAuth } from '@/contexto/AuthContexto'
-import LoginPage from '@/components/auth/LoginPage'
+import VerificadorLogin from '@/components/auth/VerificadorLogin'
+import NotificadorAccesos from '@/components/auth/NotificadorAccesos'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import { usePathname } from 'next/navigation'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
@@ -30,7 +31,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
   }
 
   if (!usuarioActivo) {
-    return <LoginPage />
+    return <VerificadorLogin />
   }
 
   // Si el usuario es cadete, no tiene permiso de ver las páginas de administración (que están en este layout)
@@ -106,6 +107,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
       {/* Herramientas flotantes (solo admin, persisten entre páginas) */}
       {esAdmin && pathname !== '/cadeteria' && (
         <>
+          <NotificadorAccesos />
           <NotitaFlotante />
           <CalculadoraFlotante />
         </>
