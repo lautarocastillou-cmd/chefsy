@@ -28,20 +28,37 @@ export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): n
 }
 
 export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Coordenadas): Promise<number> {
+  // 1. Intentamos con el servidor oficial de OpenStreetMap (mucho más estable pero requiere User-Agent)
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${coord1.longitud},${coord1.latitud};${coord2.longitud},${coord2.latitud}?overview=false`
-    const res = await fetch(url)
-    const data = await res.json()
-    if (data && data.routes && data.routes.length > 0) {
-      // OSRM returns distance in meters
-      return data.routes[0].distance / 1000
+    const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coord1.longitud},${coord1.latitud};${coord2.longitud},${coord2.latitud}?overview=false`
+    const res1 = await fetch(url1, { headers: { 'User-Agent': 'ChefsyApp/1.0' } })
+    if (res1.ok) {
+      const data1 = await res1.json()
+      if (data1 && data1.routes && data1.routes.length > 0) {
+        return data1.routes[0].distance / 1000
+      }
     }
-  } catch (error) {
-    console.error("Error consultando OSRM", error)
+  } catch (err) {
+    // Falla silenciada para intentar el plan B
   }
-  // Si falla la API, aplicamos un factor de 1.4 a la distancia en línea recta 
-  // para simular las calles de la ciudad (Manhattan/Grilla urbana aproximada).
-  return calcularDistanciaKm(coord1, coord2) * 1.4
+
+  // 2. Si falla el alemán, intentamos con el demo principal de OSRM
+  try {
+    const url2 = `https://router.project-osrm.org/route/v1/driving/${coord1.longitud},${coord1.latitud};${coord2.longitud},${coord2.latitud}?overview=false`
+    const res2 = await fetch(url2)
+    if (res2.ok) {
+      const data2 = await res2.json()
+      if (data2 && data2.routes && data2.routes.length > 0) {
+        return data2.routes[0].distance / 1000
+      }
+    }
+  } catch (err) {
+    console.warn("Ambos servidores OSRM fallaron. Usando fallback matemático.")
+  }
+  
+  // 3. Fallback final matemático ultra-preciso para tramas urbanas (Manhattan aproximado)
+  // Reducimos el multiplicador de 1.4 a 1.25 para simular que la moto evita ciertos rodeos que daría un auto
+  return calcularDistanciaKm(coord1, coord2) * 1.25
 }
 
 export function calcularCostoEnvio(distanciaKm: number): number {

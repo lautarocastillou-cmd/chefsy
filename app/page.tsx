@@ -13,6 +13,8 @@ import { ShoppingCart, Lock, HardHat } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
+import { Coordenadas } from '@/tipos'
 
 // Componentes de carga inmediata (siempre visibles al entrar)
 import HeroSection from '@/components/tienda/HeroSection'
@@ -100,13 +102,16 @@ export default function PaginaTienda() {
   const [cantidadModal, setCantidadModal] = useState(1)
   const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
 
-  // ── Estado del flujo de checkout ──────────────────────────────────────
+  // ── Estados de Checkout ───────────────────────────────────────────────
   const [mostrarCheckout, setMostrarCheckout] = useState(false)
+  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
   const [nombreCliente, setNombreCliente] = useState('')
   const [telefonoCliente, setTelefonoCliente] = useState('')
-  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
   const [direccionCliente, setDireccionCliente] = useState('')
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'>('efectivo')
+  const [coordenadasCliente, setCoordenadasCliente] = useState<Coordenadas | null>(null)
+  const [distanciaClienteKm, setDistanciaClienteKm] = useState<number | undefined>(undefined)
+  const [costoEnvio, setCostoEnvio] = useState(1500) // Default o calculado dinámicamente
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'>('sin_especificar')
   const [observaciones, setObservaciones] = useState('')
   
   // ── Estado de pedido finalizado ───────────────────────────────────────
@@ -198,8 +203,20 @@ export default function PaginaTienda() {
     setCarrito(prev => prev.filter(item => item.idCart !== idCart))
   }, [])
 
+  // ── Calculo dinámico de distancia y costo de envío ────────────────────
+  useEffect(() => {
+    if (tipoEntrega === 'delivery' && coordenadasCliente) {
+      obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadasCliente).then(dist => {
+        setDistanciaClienteKm(Number(dist.toFixed(2)))
+        setCostoEnvio(calcularCostoEnvio(dist))
+      })
+    } else {
+      setDistanciaClienteKm(undefined)
+      setCostoEnvio(0)
+    }
+  }, [coordenadasCliente, tipoEntrega])
+
   // ── Totales ───────────────────────────────────────────────────────────
-  const costoEnvio = 350
   const totalProductosCarrito = carrito.reduce((acc, curr) => acc + curr.cantidad, 0)
   const subtotalCarrito = carrito.reduce((acc, curr) => acc + (curr.precioUnitario * curr.cantidad), 0)
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
@@ -254,6 +271,8 @@ export default function PaginaTienda() {
       }),
       total: totalCarrito,
       costoEnvio: tipoEntrega === 'delivery' ? costoEnvio : 0,
+      distanciaKm: distanciaClienteKm,
+      coordenadas: coordenadasCliente || undefined,
       estado: 'nuevo',
       metodoPago,
       observaciones: observaciones.trim() || undefined,
@@ -434,6 +453,7 @@ export default function PaginaTienda() {
               onSetMetodoPago={setMetodoPago}
               onSetObservaciones={setObservaciones}
               onProcesarCompra={procesarCompra}
+              onSetCoordenadasCliente={setCoordenadasCliente}
             />
           </Suspense>
         )}

@@ -35,6 +35,7 @@ interface CartDrawerProps {
   onSetMetodoPago: (v: 'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar') => void
   onSetObservaciones: (v: string) => void
   onProcesarCompra: () => void
+  onSetCoordenadasCliente?: (coords: { latitud: number, longitud: number } | null) => void
 }
 
 export default function CartDrawer({
@@ -62,6 +63,7 @@ export default function CartDrawer({
   onSetMetodoPago,
   onSetObservaciones,
   onProcesarCompra,
+  onSetCoordenadasCliente,
 }: CartDrawerProps) {
   const [checkoutStep, setCheckoutStep] = useState(1)
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
@@ -96,6 +98,9 @@ export default function CartDrawer({
           const direccionFinal = `${calle} ${nro}, ${barrio}`.trim().replace(/,$/, '')
           if (direccionFinal.length > 3) {
             onSetDireccionCliente(direccionFinal)
+            if (onSetCoordenadasCliente) {
+              onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
+            }
           } else {
             alert('No pudimos encontrar la calle exacta, por favor ingresala manualmente.')
           }
@@ -132,6 +137,9 @@ export default function CartDrawer({
         if (ciudad) direccionFormateada += `, ${ciudad}`
         
         onSetDireccionCliente(direccionFormateada.trim())
+        if (onSetCoordenadasCliente) {
+          onSetCoordenadasCliente({ latitud, longitud })
+        }
       }
     } catch (error) {
       console.error('Error en geocoding inverso del mapa:', error)
