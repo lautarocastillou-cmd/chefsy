@@ -38,6 +38,7 @@ function ProductCard({
           alt={prod.nombre}
           fill
           unoptimized={true}
+          priority={true}
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {prod.esCombo && (
