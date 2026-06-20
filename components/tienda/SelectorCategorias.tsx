@@ -83,7 +83,7 @@ export default function SelectorCategorias({
                   <X size={20} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 pointer-events-auto">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5">
                 <button
                   type="button"
                   onClick={() => {
