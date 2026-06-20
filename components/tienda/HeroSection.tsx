@@ -45,11 +45,7 @@ export default function HeroSection({
               />
             </div>
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
-              {/* Navegación */}
-              <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                <Link href="/" className="text-white font-semibold transition-colors cursor-pointer">Tienda</Link>
-                <Link href="/sobre-nosotros" className="text-slate-400 hover:text-white transition-colors cursor-pointer">Nosotros</Link>
-              </nav>
+              {/* Navegación eliminada por ahora para enfocar en el menú online */}
           </div>
 
           <div className="flex items-center gap-4">
