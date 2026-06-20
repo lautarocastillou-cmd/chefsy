@@ -14,11 +14,12 @@ export default function VerificadorLogin() {
   const accesoSecreto = searchParams.get('acceso')
 
   useEffect(() => {
-    // Si usó el link secreto o ya está aprobado, no hacer nada
-    if (accesoSecreto === 'coquisan' || estado === 'aprobado') return
+    // Si usó el link secreto o ya está aprobado o rechazado, no hacer nada
+    if (accesoSecreto === 'coquisan' || estado === 'aprobado' || estado === 'rechazado') return
 
     // Canal dedicado a autorizaciones
     const channel = supabase.channel('canal_autorizaciones')
+    let interval: NodeJS.Timeout
 
     channel
       .on('broadcast', { event: `respuesta_${clientId}` }, (payload) => {
@@ -32,20 +33,18 @@ export default function VerificadorLogin() {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           // Enviar ping cada 3 segundos para que los admins online lo vean
-          const interval = setInterval(() => {
+          interval = setInterval(() => {
             channel.send({
               type: 'broadcast',
               event: 'peticion_acceso',
               payload: { clientId, timestamp: Date.now() }
             })
           }, 3000)
-          
-          // Cleanup del interval al desmontar
-          return () => clearInterval(interval)
         }
       })
 
     return () => {
+      if (interval) clearInterval(interval)
       supabase.removeChannel(channel)
     }
   }, [clientId, accesoSecreto, estado, router])
