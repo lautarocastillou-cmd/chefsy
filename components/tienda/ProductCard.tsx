@@ -27,7 +27,7 @@ function ProductCard({
   return (
     <div
       onClick={() => !agotado && onAbrirModal(prod)}
-      className={`bg-transparent group flex items-center gap-4 cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${
+      className={`bg-transparent group flex items-center gap-4 cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 touch-pan-y ${
         agotado ? 'opacity-50 grayscale' : 'hover:bg-white/5 p-2 -m-2 rounded-2xl'
       }`}
     >

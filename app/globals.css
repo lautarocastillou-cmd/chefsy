@@ -37,6 +37,17 @@ body {
   background-color: var(--chefsy-light);
   color: #1a1a1a;
   transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevenir toques accidentales al scrollear y quitar delay en celulares */
+button, 
+a, 
+input,
+[role="button"],
+.cursor-pointer {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ─── Modo oscuro global ───────────────────────────── */

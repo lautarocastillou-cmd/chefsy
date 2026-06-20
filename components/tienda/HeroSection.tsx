@@ -62,17 +62,20 @@ export default function HeroSection({
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
-            <h1 className="hero-title-1 font-bebas text-[3rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]">
+            <h1 className="hero-title-1 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85]">
               POCAS PALABRAS.
             </h1>
-            <h1 className="hero-title-2 font-bebas text-[3rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]">
+            <h1 className="hero-title-2 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85]">
               MUCHO CHEDDAR.
             </h1>
           </div>
 
           {/* 2. Imagen de Producto Gigante Flotante */}
           <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-1 lg:pt-0">
-            <div className="burger-float-wrapper relative w-full max-w-[200px] sm:max-w-[300px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
+            <div className="burger-float-wrapper relative w-full max-w-[250px] sm:max-w-[350px] md:max-w-[650px] xl:max-w-[850px] aspect-square">
+              {/* Sombra de alto rendimiento (Radial Gradient en lugar de drop-shadow CSS que laguea celulares) */}
+              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/60 blur-3xl rounded-full scale-y-50 -z-10 mix-blend-multiply opacity-70"></div>
+              
               <Image 
                 src="/burger-loca.webp" 
                 alt="Chefsy Burger" 
@@ -80,8 +83,8 @@ export default function HeroSection({
                 priority
                 placeholder="blur"
                 blurDataURL="data:image/jpeg;base64,/9j/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////m8H////6/+b9//j/2wBDASstLTw1PHZBQXb4pYyl+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj/wAARCAAWABQDASIAAhEBAxEB/8QAGQABAAIDAAAAAAAAAAAAAAAAAAIDAQQF/8QAGxAAAgMAAwAAAAAAAAAAAAAAAAECAxESITH/xAAXAQEBAQEAAAAAAAAAAAAAAAABAAID/8QAFxEBAQEBAAAAAAAAAAAAAAAAABEBAv/aAAwDAQACEQMRAD8A0a6dJzoxeF1LWE7GsOe9N5jnSr7BfJrkBoiELWjMrXgBRKXN6ABgf//Z"
-                sizes="(max-width: 768px) 100vw, 800px"
-                className="object-contain object-top drop-shadow-2xl"
+                sizes="(max-width: 768px) 100vw, 850px"
+                className="object-contain object-top"
               />
             </div>
           </div>
