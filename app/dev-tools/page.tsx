@@ -42,7 +42,12 @@ export default function DevToolsPage() {
   const cargarMetadata = async () => {
     setCargandoMetadata(true)
     try {
-      const res = await fetch('/api/admin/tienda-metadata')
+      const res = await fetch('/api/admin/tienda-metadata?t=' + Date.now(), {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       const data = await res.json()
       if (Array.isArray(data)) {
         const mapa: Record<string, TiendaMetadata> = {}
