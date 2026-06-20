@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { ChevronDown, X } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 
@@ -19,6 +19,17 @@ export default function SelectorCategorias({
   onToggleSelector,
   onSeleccionarCategoria,
 }: SelectorCategoriasProps) {
+  useEffect(() => {
+    if (selectorAbierto) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [selectorAbierto])
+
   return (
     <div className="relative group w-[50%] z-50">
       <button

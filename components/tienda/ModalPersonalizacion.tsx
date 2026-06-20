@@ -53,7 +53,7 @@ export default function ModalPersonalizacion({
         {/* Galería de Imágenes */}
         {imagenFinal && (
           <div className="relative w-full h-52 sm:h-64 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
-            {imagenFinal.split(',').map((imgUrl, i) => (
+            {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
               <div key={i} className="relative w-full h-full shrink-0 snap-center">
                 <img 
                   src={imgUrl} 
@@ -71,7 +71,7 @@ export default function ModalPersonalizacion({
             >
               <X size={16} />
             </button>
-            {imagenFinal.split(',').length > 1 && (
+            {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).length > 1 && (
               <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
                 Deslizá para ver más

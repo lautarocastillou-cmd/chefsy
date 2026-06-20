@@ -34,7 +34,7 @@ function ProductCard({
       {/* Imagen a la izquierda */}
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-black/20">
         <Image
-          src={imagenFinal.split(',')[0]}
+          src={imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal}
           alt={prod.nombre}
           fill
           sizes="96px"

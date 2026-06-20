@@ -72,7 +72,7 @@ export default function DevToolsPage() {
       nombre_publico: meta.nombre_publico || '',
       descripcion_publica: meta.descripcion_publica || '',
       imagenes_nuevas: [],
-      preview_urls: meta.imagen_url ? meta.imagen_url.split(',') : []
+      preview_urls: meta.imagen_url ? (meta.imagen_url.includes(' | ') ? meta.imagen_url.split(' | ') : [meta.imagen_url]) : []
     })
   }
 
@@ -97,7 +97,7 @@ export default function DevToolsPage() {
     setGuardando(true)
 
     try {
-      let finalImageUrls = form.preview_urls.join(',')
+      let finalImageUrls = form.preview_urls.join(' | ')
 
       // Si hay una imagen nueva en base64, subir a Cloudinary
       if (form.imagenes_nuevas.length > 0) {
@@ -111,7 +111,7 @@ export default function DevToolsPage() {
           if (uploadData.error) throw new Error(uploadData.error)
           return uploadData.urlTransformada || uploadData.urlOriginal
         }))
-        finalImageUrls = subidas.join(',')
+        finalImageUrls = subidas.join(' | ')
       }
 
       // Guardar en tienda_metadata
@@ -192,7 +192,7 @@ export default function DevToolsPage() {
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 flex items-center justify-center">
                     {meta?.imagen_url ? (
-                      <img src={meta.imagen_url.split(',')[0]} alt={prod.nombre} className="w-full h-full object-cover" />
+                      <img src={meta.imagen_url.includes(' | ') ? meta.imagen_url.split(' | ')[0] : meta.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
                     ) : (
                       <ImageIcon className="text-slate-400" />
                     )}

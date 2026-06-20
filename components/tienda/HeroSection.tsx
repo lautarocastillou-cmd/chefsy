@@ -70,7 +70,7 @@ export default function HeroSection({
       <div className="relative min-h-[40vh] lg:min-h-[85vh] w-full flex flex-col px-4 md:px-12 py-2 lg:py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
-        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-2 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-2 lg:gap-y-4 items-center">
+        <div className="relative z-50 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-2 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-2 lg:gap-y-4 items-center">
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
