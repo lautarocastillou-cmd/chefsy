@@ -112,11 +112,10 @@ export default function PaginaTienda() {
   // ── Estado de pedido finalizado ───────────────────────────────────────
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
-  // ── Filtros de catálogo (memoizados) ──────────────────────────────────
   const categoriasActivas = useMemo(() => {
     return categorias
-      .filter(c => c.activa && c.id !== 'burgers')
-      .map(c => c.id === 'patys' ? { ...c, nombre: 'Burgers / Patys' } : c)
+      .filter(c => c.activa && c.id !== 'patys')
+      .map(c => c.id === 'burgers' ? { ...c, nombre: 'Burgers / Patys' } : c)
   }, [categorias])
 
   const productosFiltrados = useMemo(() => productos.filter(p => {
@@ -126,7 +125,7 @@ export default function PaginaTienda() {
     const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
     const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
     
-    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === 'patys' && p.categoriaId === 'burgers')
+    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === 'burgers' && p.categoriaId === 'patys')
     const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
     
     return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda

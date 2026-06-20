@@ -74,8 +74,14 @@ export default function CatalogoProductos({
           <div className="flex flex-col gap-10">
             {categoriasActivas.map(cat => {
               const productosDeCat = productosFiltrados.filter(p => 
-                p.categoriaId === cat.id || (cat.id === 'patys' && p.categoriaId === 'burgers')
-              )
+                p.categoriaId === cat.id || (cat.id === 'burgers' && p.categoriaId === 'patys')
+              ).sort((a, b) => {
+                if (cat.id === 'burgers') {
+                  if (a.categoriaId === 'burgers' && b.categoriaId === 'patys') return -1;
+                  if (a.categoriaId === 'patys' && b.categoriaId === 'burgers') return 1;
+                }
+                return 0;
+              })
               if (productosDeCat.length === 0) return null
 
               return (
