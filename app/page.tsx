@@ -63,7 +63,8 @@ export default function PaginaTienda() {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const res = await fetch('/api/admin/tienda-metadata?t=' + Date.now(), {
+        // Ruta pública — no requiere sesión de administrador
+        const res = await fetch('/api/tienda-metadata?t=' + Date.now(), {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
