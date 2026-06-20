@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import 'leaflet/dist/leaflet.css'
 import type { Map as MapaLeaflet, Marker as MarcadorLeaflet } from 'leaflet'
 import { Coordenadas } from '@/tipos'
 

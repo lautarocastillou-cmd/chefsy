@@ -100,43 +100,43 @@ export default function CartDrawer({
                 className="flex justify-between gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl transition-all"
               >
                 <div className="flex-1 space-y-1 text-left">
-                  <h4 className="font-bold text-xs text-white leading-tight">
+                  <h4 className="font-bold text-base text-white leading-tight">
                     {item.producto.nombre}
                   </h4>
                   {item.modificadoresSeleccionados.length > 0 && (
-                    <p className="text-[10px] text-slate-400 italic">
+                    <p className="text-sm text-slate-400 italic">
                       + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
                     </p>
                   )}
-                  <p className="text-[11px] font-bold text-slate-400">
+                  <p className="text-sm font-bold text-slate-400">
                     {formatearPrecio(item.precioUnitario)}
                   </p>
                 </div>
 
-                <div className="flex flex-col items-end justify-between gap-2.5 min-w-[100px]">
+                <div className="flex flex-col items-end justify-between gap-2.5 min-w-[120px]">
                   <button
                     onClick={() => onEliminar(item.idCart)}
-                    className="text-slate-500 hover:text-red-500 p-1 rounded transition-colors focus:outline-none"
+                    className="text-slate-500 hover:text-red-500 p-2 rounded transition-colors focus:outline-none"
                     title="Eliminar ítem"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={20} />
                   </button>
 
                   <div className="flex items-center border border-white/10 rounded-lg bg-black/20 overflow-hidden">
                     <button
                       onClick={() => onActualizarCantidad(item.idCart, -1)}
-                      className="px-2 py-1 hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
+                      className="w-12 h-12 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
                     >
-                      <Minus size={11} />
+                      <Minus size={20} />
                     </button>
-                    <span className="px-2.5 text-xs font-bold text-white">
+                    <span className="px-3 text-base font-bold text-white">
                       {item.cantidad}
                     </span>
                     <button
                       onClick={() => onActualizarCantidad(item.idCart, 1)}
-                      className="px-2 py-1 hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
+                      className="w-12 h-12 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-400 focus:outline-none"
                     >
-                      <Plus size={11} />
+                      <Plus size={20} />
                     </button>
                   </div>
                 </div>
@@ -144,12 +144,12 @@ export default function CartDrawer({
             ))
           ) : (
             /* --- FORMULARIO DE CHECKOUT --- */
-            <form onSubmit={(e) => { e.preventDefault(); onProcesarCompra() }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); onProcesarCompra() }} className="space-y-6">
               <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
                 <button
                   type="button"
                   onClick={() => onSetMostrarCheckout(false)}
-                  className="text-xs text-chefsy-400 hover:underline font-bold cursor-pointer"
+                  className="text-sm text-chefsy-400 hover:underline font-bold cursor-pointer"
                 >
                   ← Volver al carrito
                 </button>
@@ -157,50 +157,52 @@ export default function CartDrawer({
 
               {/* Campo Nombre */}
               <div className="space-y-1 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <label htmlFor="nombre_cliente" className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                   Nombre Completo
                 </label>
                 <div className="relative flex items-center">
-                  <User size={14} className="absolute left-3 text-slate-500" />
+                  <User size={20} className="absolute left-4 text-slate-500" />
                   <input
+                    id="nombre_cliente"
                     type="text"
                     required
                     value={nombreCliente}
                     onChange={(e) => onSetNombreCliente(e.target.value)}
                     placeholder="Ej: Juan Pérez"
-                    className="w-full border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
+                    className="w-full border border-white/10 rounded-xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
                   />
                 </div>
               </div>
 
               {/* Campo Teléfono */}
               <div className="space-y-1 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <label htmlFor="telefono_cliente" className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                   Teléfono de Contacto
                 </label>
                 <div className="relative flex items-center">
-                  <Phone size={14} className="absolute left-3 text-slate-500" />
+                  <Phone size={20} className="absolute left-4 text-slate-500" />
                   <input
+                    id="telefono_cliente"
                     type="tel"
                     required
                     value={telefonoCliente}
                     onChange={(e) => onSetTelefonoCliente(e.target.value)}
                     placeholder="Ej: 1122334455"
-                    className="w-full border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
+                    className="w-full border border-white/10 rounded-xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
                   />
                 </div>
               </div>
 
               {/* Tipo de Entrega */}
               <div className="space-y-1 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <label className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                   Modalidad de Entrega
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => onSetTipoEntrega('delivery')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`py-4 px-3 rounded-xl border text-base font-bold transition-all cursor-pointer ${
                       tipoEntrega === 'delivery'
                         ? 'bg-chefsy-500/20 text-chefsy-400 border-chefsy-500'
                         : 'border-white/10 bg-black/20 text-slate-400'
@@ -211,7 +213,7 @@ export default function CartDrawer({
                   <button
                     type="button"
                     onClick={() => onSetTipoEntrega('retiro')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`py-4 px-3 rounded-xl border text-base font-bold transition-all cursor-pointer ${
                       tipoEntrega === 'retiro'
                         ? 'bg-chefsy-500/20 text-chefsy-400 border-chefsy-500'
                         : 'border-white/10 bg-black/20 text-slate-400'
@@ -225,18 +227,19 @@ export default function CartDrawer({
               {/* Campo Dirección */}
               {tipoEntrega === 'delivery' && (
                 <div className="space-y-1 text-left animate-in fade-in slide-in-from-top-2 duration-150">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  <label htmlFor="direccion_cliente" className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                     Dirección de Envío
                   </label>
                   <div className="relative flex items-center">
-                    <MapPin size={14} className="absolute left-3 text-slate-500" />
+                    <MapPin size={20} className="absolute left-4 text-slate-500" />
                     <input
+                      id="direccion_cliente"
                       type="text"
                       required
                       value={direccionCliente}
                       onChange={(e) => onSetDireccionCliente(e.target.value)}
                       placeholder="Calle, Altura, Piso / Depto"
-                      className="w-full border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
+                      className="w-full border border-white/10 rounded-xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600"
                     />
                   </div>
                 </div>
@@ -244,15 +247,16 @@ export default function CartDrawer({
 
               {/* Método de Pago */}
               <div className="space-y-1 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <label htmlFor="metodo_pago" className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                   Método de Pago
                 </label>
                 <div className="relative flex items-center">
-                  <CreditCard size={14} className="absolute left-3 text-slate-500" />
+                  <CreditCard size={20} className="absolute left-4 text-slate-500" />
                   <select
+                    id="metodo_pago"
                     value={metodoPago}
                     onChange={(e) => onSetMetodoPago(e.target.value as any)}
-                    className="w-full border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white"
+                    className="w-full border border-white/10 rounded-xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white"
                   >
                     <option value="efectivo">💵 Efectivo (Paga al recibir)</option>
                     <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
@@ -263,15 +267,16 @@ export default function CartDrawer({
 
               {/* Observaciones */}
               <div className="space-y-1 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <label htmlFor="observaciones" className="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-1">
                   Aclaraciones / Notas (Opcional)
                 </label>
                 <textarea
+                  id="observaciones"
                   value={observaciones}
                   onChange={(e) => onSetObservaciones(e.target.value)}
                   placeholder="Ej: Sin cebolla, tocar timbre de abajo..."
                   rows={2}
-                  className="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600 resize-none"
+                  className="w-full border border-white/10 rounded-xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-black/20 text-white placeholder:text-slate-600 resize-none"
                 />
               </div>
 

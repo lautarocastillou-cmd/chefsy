@@ -67,24 +67,24 @@ export default function HeroSection({
       </header>
 
       {/* --- HERO SECTION TIPO SQEW --- */}
-      <div className="relative min-h-[80vh] lg:min-h-[85vh] w-full flex flex-col px-6 md:px-12 py-4 lg:py-10 overflow-visible">
+      <div className="relative min-h-[40vh] lg:min-h-[85vh] w-full flex flex-col px-4 md:px-12 py-2 lg:py-10 overflow-visible">
         
         {/* Contenedor Principal del Hero */}
-        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-4 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-4 lg:gap-y-4 items-start lg:items-center">
+        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-2 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-2 lg:gap-y-4 items-center">
           
           {/* 1. Tipografía Gigante (Hero) */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left pb-0 lg:pb-10 z-30 pointer-events-none order-1">
-            <h1 className="hero-title-1 font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
+            <h1 className="hero-title-1 font-bebas text-[3rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-white tracking-normal leading-[0.85]">
               POCAS PALABRAS.
             </h1>
-            <h1 className="hero-title-2 font-bebas text-[4rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]">
+            <h1 className="hero-title-2 font-bebas text-[3rem] md:text-[6rem] lg:text-[6.5rem] xl:text-[8rem] 2xl:text-[9rem] text-chefsy tracking-normal leading-[0.85]">
               MUCHO CHEDDAR.
             </h1>
           </div>
 
           {/* 2. Imagen de Producto Gigante Flotante */}
-          <div className="relative w-full flex items-start justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-2 lg:pt-0">
-            <div className="burger-float-wrapper relative w-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
+          <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-1 lg:pt-0">
+            <div className="burger-float-wrapper relative w-full max-w-[200px] sm:max-w-[300px] md:max-w-[600px] xl:max-w-[800px] aspect-square drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
               <Image 
                 src="/burger-loca.webp" 
                 alt="Chefsy Burger" 
@@ -99,8 +99,8 @@ export default function HeroSection({
           </div>
 
           {/* 3. Selector de Categorías y Subtítulo */}
-          <div className="hero-controls flex flex-col gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start">
-            <p className="font-bebas text-6xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap">
+          <div className="hero-controls flex flex-col gap-3 lg:gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start mt-2 lg:mt-0">
+            <p className="font-bebas text-4xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap text-center lg:text-left">
               ¿QUÉ PINTA HOY?
             </p>
             <div className="relative w-full">

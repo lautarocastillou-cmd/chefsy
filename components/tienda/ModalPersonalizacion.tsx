@@ -138,18 +138,18 @@ export default function ModalPersonalizacion({
           <div className="flex items-center bg-white/8 border border-white/10 rounded-xl overflow-hidden shrink-0">
             <button
               onClick={() => onSetCantidad(Math.max(1, cantidadModal - 1))}
-              className="w-9 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
+              className="w-14 h-14 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
             >
-              <Minus size={13} />
+              <Minus size={22} />
             </button>
-            <span className="w-8 text-center text-sm font-black text-white">
+            <span className="w-12 text-center text-lg font-black text-white">
               {cantidadModal}
             </span>
             <button
               onClick={() => onSetCantidad(cantidadModal + 1)}
-              className="w-9 h-10 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
+              className="w-14 h-14 flex items-center justify-center hover:bg-white/10 transition-colors text-slate-300 focus:outline-none"
             >
-              <Plus size={13} />
+              <Plus size={22} />
             </button>
           </div>
 
