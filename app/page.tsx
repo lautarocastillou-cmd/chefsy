@@ -118,40 +118,28 @@ export default function PaginaTienda() {
   // ── Estado de pedido finalizado ───────────────────────────────────────
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
-  const idPatys = useMemo(() => categorias.find(c => c.nombre.toLowerCase().includes('patys') || c.id === 'patys')?.id || 'patys', [categorias])
-  const idBurgers = useMemo(() => categorias.find(c => c.nombre.toLowerCase().includes('burger') || c.id === 'burgers')?.id || 'burgers', [categorias])
-
   const categoriasActivas = useMemo(() => {
-    const burgersExiste = categorias.some(c => c.id === idBurgers)
-    return categorias
-      .filter(c => {
-        if (!c.activa) return false
-        // Si existe burgers, ocultamos patys. Si no existe burgers, dejamos patys y lo renombramos
-        if (burgersExiste && c.id === idPatys) return false
-        return true
-      })
-      .map(c => {
-        // Renombramos la categoria principal (burgers o patys) a "Burgers / Patys"
-        if ((burgersExiste && c.id === idBurgers) || (!burgersExiste && c.id === idPatys)) {
-          return { ...c, nombre: 'Burgers / Patys' }
-        }
-        return c
-      })
-  }, [categorias, idPatys, idBurgers])
+    return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
+  }, [categorias])
 
-  const productosFiltrados = useMemo(() => productos.filter(p => {
-    const hayBusqueda = busqueda.trim() !== ''
-    if (!categoriaSeleccionada && !hayBusqueda) return false
+  const productosFiltrados = useMemo(() => {
+    const idPatys = categorias.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
+    const idBurgers = categorias.find(c => c.nombre.toLowerCase().includes('burger'))?.id
+    
+    return productos.filter(p => {
+      const hayBusqueda = busqueda.trim() !== ''
+      if (!categoriaSeleccionada && !hayBusqueda) return false
 
-    const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-    const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
-    
-    const esFiltroPrincipal = catFiltro === idBurgers || catFiltro === idPatys;
-    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroPrincipal && (p.categoriaId === idBurgers || p.categoriaId === idPatys || p.categoriaId === 'burgers' || p.categoriaId === 'patys'))
-    const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
-    
-    return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
-  }), [productos, categoriaSeleccionada, busqueda, idBurgers, idPatys])
+      const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+      
+      const esFiltroCombinado = catFiltro === idPatys || catFiltro === idBurgers
+      const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroCombinado && (p.categoriaId === idPatys || p.categoriaId === idBurgers))
+      const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
+      
+      return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
+    })
+  }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   // ── Callbacks ──────────────────────────────────────────────────────────
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {

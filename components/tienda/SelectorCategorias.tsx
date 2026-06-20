@@ -45,7 +45,14 @@ export default function SelectorCategorias({
         <span className={`truncate mr-2 ${categoriaSeleccionada ? 'text-white' : 'text-slate-300'}`}>
           {categoriaSeleccionada === 'todos' 
             ? 'Ver todo el menú' 
-            : categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre || 'APRETÁ ACÁ'}
+            : (() => {
+                const cat = categoriasActivas.find(c => c.id === categoriaSeleccionada)
+                if (!cat) return 'APRETÁ ACÁ'
+                const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
+                const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
+                if (cat.id === idBurgers || cat.id === idPatys) return 'Burgers / Patys'
+                return cat.nombre
+              })()}
         </span>
         <ChevronDown 
           size={20} 
@@ -94,19 +101,34 @@ export default function SelectorCategorias({
                 >
                   Ver todo el menú
                 </button>
-                {categoriasActivas.map(cat => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      onToggleSelector()
-                      setTimeout(() => onSeleccionarCategoria(cat.id), 200)
-                    }}
-                    className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
-                  >
-                    {cat.nombre}
-                  </button>
-                ))}
+                {(() => {
+                  const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
+                  const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
+                  const burgersExiste = categoriasActivas.some(c => c.id === idBurgers)
+                  
+                  return categoriasActivas
+                    .filter(c => {
+                      if (burgersExiste && c.id === idPatys) return false
+                      return true
+                    })
+                    .map(cat => {
+                      const esNavBurgers = (burgersExiste && cat.id === idBurgers) || (!burgersExiste && cat.id === idPatys)
+                      const nombreMostrar = esNavBurgers ? 'Burgers / Patys' : cat.nombre
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            onToggleSelector()
+                            setTimeout(() => onSeleccionarCategoria(cat.id), 200)
+                          }}
+                          className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id || (esNavBurgers && categoriaSeleccionada === idPatys) ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                        >
+                          {nombreMostrar}
+                        </button>
+                      )
+                    })
+                })()}
               </div>
             </div>
           </div>

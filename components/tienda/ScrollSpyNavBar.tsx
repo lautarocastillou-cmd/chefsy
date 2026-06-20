@@ -25,23 +25,38 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
 
   return (
     <div className="relative z-30 bg-[#0d0d0d] py-3 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 mb-8">
-      {categoriasActivas.map(cat => {
-        const tieneProductos = productosFiltrados.some(p => p.categoriaId === cat.id)
-        if (!tieneProductos) return null
-        return (
-          <button
-            key={cat.id}
-            onClick={() => {
-              document.getElementById(cat.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
-              categoriaVisible === cat.id ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {cat.nombre}
-          </button>
-        )
-      })}
+      {(() => {
+        const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
+        const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
+        const burgersExiste = categoriasActivas.some(c => c.id === idBurgers)
+
+        return categoriasActivas
+          .filter(c => {
+            if (burgersExiste && c.id === idPatys) return false
+            return true
+          })
+          .map(cat => {
+            const tieneProductos = productosFiltrados.some(p => p.categoriaId === cat.id || (cat.id === idBurgers && p.categoriaId === idPatys))
+            if (!tieneProductos) return null
+            
+            const esNavBurgers = (burgersExiste && cat.id === idBurgers) || (!burgersExiste && cat.id === idPatys)
+            const nombreMostrar = esNavBurgers ? 'Burgers / Patys' : cat.nombre
+            
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  document.getElementById(cat.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
+                  categoriaVisible === cat.id || (esNavBurgers && categoriaVisible === idPatys) ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {nombreMostrar}
+              </button>
+            )
+          })
+      })()}
     </div>
   )
 }

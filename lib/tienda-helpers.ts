@@ -100,12 +100,14 @@ export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
       return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y pedí 🔥', icono: '/burger-icon.png' }
     case 'lomos':
     case 'milas':
+    case 'cat-1780506096615':
       return { nombre: 'Lomos', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
     case 'lomos-y-milas': 
       return { nombre: 'Lomos y Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
     case 'zapping': 
       return { nombre: 'Zapping', subtitulo: 'Tostados gigantes rellenos', icono: '/zapping-icon.png' }
     case 'patys': 
+    case 'cat-1781570568487':
       return { nombre: 'Burgers / Patys', subtitulo: 'Con papas crujientes y aderezo especial', icono: '/patys-icon.png' }
     case 'pizzas': 
       return { nombre: 'Pizzas', subtitulo: 'Masa casera cocida al horno de piedra', icono: '/pizzas-icon.png' }
@@ -124,6 +126,7 @@ export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
     case 'papas':
     case 'papas-fritas':
     case 'papas_fritas':
+    case 'cat-1781574714354':
       return { nombre: 'Porciones de Papas', subtitulo: 'Crujientes y doradas, ideales para compartir', icono: '/papas-icon.png' }
     default: 
       return { nombre: 'Menú Especial', subtitulo: 'Platos frescos de la cocina', icono: '/especial-icon.png' }
