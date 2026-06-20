@@ -205,6 +205,16 @@ export default function PaginaTienda() {
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
 
   // ── Checkout ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    // Autocompletar datos guardados
+    const n = localStorage.getItem('chefsy_nombre')
+    const t = localStorage.getItem('chefsy_telefono')
+    const d = localStorage.getItem('chefsy_direccion')
+    if (n) setNombreCliente(n)
+    if (t) setTelefonoCliente(t)
+    if (d) setDireccionCliente(d)
+  }, [])
+
   const procesarCompra = useCallback(async () => {
     if (!nombreCliente.trim() || !telefonoCliente.trim()) {
       alert('Por favor completa tu nombre y número de teléfono de contacto.')
@@ -258,6 +268,13 @@ export default function PaginaTienda() {
       console.error('Error enviando pedido', err)
       alert('Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.')
       return
+    }
+
+    // Guardar para próxima compra
+    localStorage.setItem('chefsy_nombre', nombreCliente.trim())
+    localStorage.setItem('chefsy_telefono', telefonoCliente.trim())
+    if (tipoEntrega === 'delivery') {
+      localStorage.setItem('chefsy_direccion', direccionCliente.trim())
     }
 
     setPedidoCompletado(nuevoPedido)
