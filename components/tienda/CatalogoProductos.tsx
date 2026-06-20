@@ -37,6 +37,10 @@ export default function CatalogoProductos({
     return null
   }
 
+  const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().includes('patys') || c.id === 'patys')?.id || 'patys'
+  // Note: the category might already be renamed to Burgers / Patys in categoriasActivas, so we check for burger
+  const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger') || c.id === 'burgers')?.id || 'burgers'
+
   return (
     <main className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
       
@@ -74,11 +78,16 @@ export default function CatalogoProductos({
           <div className="flex flex-col gap-10">
             {categoriasActivas.map(cat => {
               const productosDeCat = productosFiltrados.filter(p => 
-                p.categoriaId === cat.id || (cat.id === 'burgers' && p.categoriaId === 'patys')
+                p.categoriaId === cat.id || (cat.id === idBurgers && p.categoriaId === 'patys') || (cat.id === idBurgers && p.categoriaId === idPatys)
               ).sort((a, b) => {
-                if (cat.id === 'burgers') {
-                  if (a.categoriaId === 'burgers' && b.categoriaId === 'patys') return -1;
-                  if (a.categoriaId === 'patys' && b.categoriaId === 'burgers') return 1;
+                if (cat.id === idBurgers) {
+                  const aIsBurger = a.categoriaId === idBurgers || a.categoriaId === 'burgers';
+                  const bIsPaty = b.categoriaId === idPatys || b.categoriaId === 'patys';
+                  if (aIsBurger && bIsPaty) return -1;
+                  
+                  const aIsPaty = a.categoriaId === idPatys || a.categoriaId === 'patys';
+                  const bIsBurger = b.categoriaId === idBurgers || b.categoriaId === 'burgers';
+                  if (aIsPaty && bIsBurger) return 1;
                 }
                 return 0;
               })

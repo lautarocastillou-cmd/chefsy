@@ -112,11 +112,14 @@ export default function PaginaTienda() {
   // ── Estado de pedido finalizado ───────────────────────────────────────
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
+  const idPatys = useMemo(() => categorias.find(c => c.nombre.toLowerCase().includes('patys') || c.id === 'patys')?.id || 'patys', [categorias])
+  const idBurgers = useMemo(() => categorias.find(c => c.nombre.toLowerCase().includes('burger') || c.id === 'burgers')?.id || 'burgers', [categorias])
+
   const categoriasActivas = useMemo(() => {
     return categorias
-      .filter(c => c.activa && c.id !== 'patys')
-      .map(c => c.id === 'burgers' ? { ...c, nombre: 'Burgers / Patys' } : c)
-  }, [categorias])
+      .filter(c => c.activa && c.id !== idPatys)
+      .map(c => c.id === idBurgers ? { ...c, nombre: 'Burgers / Patys' } : c)
+  }, [categorias, idPatys, idBurgers])
 
   const productosFiltrados = useMemo(() => productos.filter(p => {
     const hayBusqueda = busqueda.trim() !== ''
@@ -125,11 +128,11 @@ export default function PaginaTienda() {
     const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
     const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
     
-    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === 'burgers' && p.categoriaId === 'patys')
+    const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (catFiltro === idBurgers && p.categoriaId === idPatys)
     const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
     
     return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
-  }), [productos, categoriaSeleccionada, busqueda])
+  }), [productos, categoriaSeleccionada, busqueda, idBurgers, idPatys])
 
   // ── Callbacks ──────────────────────────────────────────────────────────
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
