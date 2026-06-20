@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+
 // Cliente de Supabase Admin para saltarse el RLS
 function obtenerSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

@@ -63,7 +63,12 @@ export default function PaginaTienda() {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const res = await fetch('/api/admin/tienda-metadata')
+        const res = await fetch('/api/admin/tienda-metadata?t=' + Date.now(), {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        })
         const data = await res.json()
         if (Array.isArray(data)) {
           const m: Record<string, any> = {}
