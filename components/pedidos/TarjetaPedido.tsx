@@ -10,7 +10,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2 } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
@@ -43,6 +43,7 @@ export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarj
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
   const [verMapa, setVerMapa] = useState(false)
   const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
+  const [menuNotificacionesAbierto, setMenuNotificacionesAbierto] = useState(false)
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -112,6 +113,16 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
     navigator.clipboard.writeText(texto)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2000)
+  }
+
+  const enviarNotificacion = (mensaje: string) => {
+    editarPedido({
+      ...pedido,
+      notificacion_manual: `${mensaje}|${Date.now()}`
+    })
+    setMenuNotificacionesAbierto(false)
+    // Mostramos un alert o toast local para feedback del admin
+    alert(`Notificación enviada al cliente: "${mensaje}"`)
   }
 
   const imprimirComanda = () => {
@@ -184,6 +195,29 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             >
               <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
+            <div className="relative">
+              <button 
+                onClick={() => setMenuNotificacionesAbierto(!menuNotificacionesAbierto)}
+                className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950/30 transition-all p-1 rounded-md border border-yellow-100 dark:border-yellow-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+                title="Avisar al cliente por la App"
+              >
+                <Bell size={11} className="dark:text-yellow-400" />
+              </button>
+              
+              {menuNotificacionesAbierto && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-[#3d3d3d] rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.2)] z-50 overflow-hidden flex flex-col">
+                  <button onClick={() => enviarNotificacion('¡Tu pedido está en cocina! 🍳')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] border-b border-slate-100 dark:border-[#333] transition-colors">
+                    Avisar: En Cocina
+                  </button>
+                  <button onClick={() => enviarNotificacion('¡Tu pedido está en camino! 🛵')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] border-b border-slate-100 dark:border-[#333] transition-colors">
+                    Avisar: En Camino
+                  </button>
+                  <button onClick={() => enviarNotificacion('¡Tu pedido está listo para retirar! 🏪')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
+                    Avisar: Listo / Retiro
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

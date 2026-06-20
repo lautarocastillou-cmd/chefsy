@@ -58,6 +58,7 @@ export interface Pedido {
   pago_confirmado?: boolean
   cadete_id?: string | null
   cadete_nombre?: string | null
+  notificacion_manual?: string | null
   /** Montos parciales para pagos mixtos (divididos) */
   montoEfectivo?: number
   montoTransferencia?: number

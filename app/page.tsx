@@ -13,6 +13,7 @@ import { ShoppingCart, Lock, HardHat } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import RastreadorPedido from '@/components/tienda/RastreadorPedido'
 
 // Componentes de carga inmediata (siempre visibles al entrar)
 import HeroSection from '@/components/tienda/HeroSection'
@@ -270,12 +271,15 @@ export default function PaginaTienda() {
       return
     }
 
-    // Guardar para próxima compra
+    // Guardar para próxima compra y seguimiento
     localStorage.setItem('chefsy_nombre', nombreCliente.trim())
     localStorage.setItem('chefsy_telefono', telefonoCliente.trim())
     if (tipoEntrega === 'delivery') {
       localStorage.setItem('chefsy_direccion', direccionCliente.trim())
     }
+    
+    // Guardamos el ID del pedido para mostrarle el tracker en la app
+    localStorage.setItem('chefsy_ultimo_pedido_id', nuevoPedido.id)
 
     setPedidoCompletado(nuevoPedido)
     setCarrito([])
@@ -402,6 +406,9 @@ export default function PaginaTienda() {
             </button>
           </div>
         )}
+
+        {/* ── RASTREADOR DE PEDIDOS IN-APP ── */}
+        <RastreadorPedido />
 
         {/* ── CART DRAWER (lazy — se descarga solo cuando se abre el carrito) ── */}
         {cartAbierto && (
