@@ -49,10 +49,30 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
               <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Pago</p>
               <p className="font-semibold text-slate-800 dark:text-slate-200 capitalize">{pedido.metodoPago}</p>
             </div>
-            <div>
+            {pedido.costoEnvio !== undefined && pedido.costoEnvio > 0 && (
+              <div>
+                <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Envío</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">{formatearPrecio(pedido.costoEnvio)}</p>
+              </div>
+            )}
+            <div className={pedido.costoEnvio ? 'col-span-2' : ''}>
               <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider">Total</p>
               <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{formatearPrecio(pedido.total)}</p>
             </div>
+          </div>
+
+          <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-4 mt-2">
+            <p className="text-slate-400 dark:text-slate-500 text-[9px] uppercase font-bold tracking-wider mb-2.5">Tu Pedido</p>
+            <ul className="space-y-2">
+              {pedido.productos.map((prod) => (
+                <li key={prod.id} className="flex justify-between items-start gap-3">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">
+                    <span className="text-emerald-600 dark:text-emerald-500">{prod.cantidad}x</span> {prod.nombre}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-bold shrink-0">{formatearPrecio(prod.precio * prod.cantidad)}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 

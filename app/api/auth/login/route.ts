@@ -12,8 +12,30 @@ import {
   configurarCookieSesion,
 } from '@/lib/auth-server'
 
+// Diccionario en memoria para rastrear intentos fallidos (Rate Limiting básico)
+const intentosFallidos = new Map<string, { cantidad: number; ultimoIntento: number }>();
+const MAX_INTENTOS = 5;
+const TIEMPO_BLOQUEO_MS = 15 * 60 * 1000; // 15 minutos
+
 export async function POST(request: Request) {
   try {
+    // Obtener IP para el Rate Limiting
+    const ip = request.headers.get('x-forwarded-for') || 'ip-desconocida';
+    const intento = intentosFallidos.get(ip) || { cantidad: 0, ultimoIntento: Date.now() };
+
+    // Verificar si la IP está bloqueada
+    if (intento.cantidad >= MAX_INTENTOS) {
+      if (Date.now() - intento.ultimoIntento < TIEMPO_BLOQUEO_MS) {
+        return NextResponse.json(
+          { error: 'Demasiados intentos fallidos. Tu IP fue bloqueada por 15 minutos por seguridad.' },
+          { status: 429 }
+        )
+      } else {
+        // Expiró el bloqueo
+        intentosFallidos.delete(ip);
+      }
+    }
+
     const body = await request.json()
     const { usuario, clave } = body
 
@@ -28,13 +50,24 @@ export async function POST(request: Request) {
     const datosUsuario = await validarCredenciales(usuario, clave)
 
     if (!datosUsuario) {
-      // Delay sintético para dificultar ataques de fuerza bruta en timing
-      await new Promise((r) => setTimeout(r, 400))
+      // Registrar intento fallido
+      intentosFallidos.set(ip, {
+        cantidad: (intentosFallidos.get(ip)?.cantidad || 0) + 1,
+        ultimoIntento: Date.now()
+      });
+
+      // Delay sintético progresivo
+      const penalizacion = Math.min((intentosFallidos.get(ip)?.cantidad || 1) * 500, 3000);
+      await new Promise((r) => setTimeout(r, penalizacion))
+      
       return NextResponse.json(
-        { error: 'Usuario o contraseña incorrectos.' },
+        { error: `Usuario o contraseña incorrectos. (Intento ${(intentosFallidos.get(ip)?.cantidad || 1)} de ${MAX_INTENTOS})` },
         { status: 401 }
       )
     }
+
+    // Si el login es exitoso, resetear contador de la IP
+    intentosFallidos.delete(ip);
 
     // Firmar el JWT con los datos del usuario
     const token = await firmarToken(datosUsuario)
