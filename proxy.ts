@@ -49,7 +49,7 @@ function rechazarAcceso(request: NextRequest, esPeticionAPI: boolean) {
   return NextResponse.redirect(url)
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Buscar si la ruta coincide con alguna regla de acceso privado
