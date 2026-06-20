@@ -13,7 +13,6 @@ import { ShoppingCart, Lock, HardHat } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
-import RastreadorPedido from '@/components/tienda/RastreadorPedido'
 
 // Componentes de carga inmediata (siempre visibles al entrar)
 import HeroSection from '@/components/tienda/HeroSection'
@@ -406,9 +405,6 @@ export default function PaginaTienda() {
             </button>
           </div>
         )}
-
-        {/* ── RASTREADOR DE PEDIDOS IN-APP ── */}
-        <RastreadorPedido />
 
         {/* ── CART DRAWER (lazy — se descarga solo cuando se abre el carrito) ── */}
         {cartAbierto && (

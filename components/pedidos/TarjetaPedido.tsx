@@ -115,14 +115,23 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
     setTimeout(() => setCopiado(false), 2000)
   }
 
-  const enviarNotificacion = (mensaje: string) => {
-    editarPedido({
-      ...pedido,
-      notificacion_manual: `${mensaje}|${Date.now()}`
-    })
+  const enviarNotificacion = async (mensaje: string) => {
     setMenuNotificacionesAbierto(false)
-    // Mostramos un alert o toast local para feedback del admin
-    alert(`Notificación enviada al cliente: "${mensaje}"`)
+    try {
+      const res = await fetch('/api/webpush/notificar-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId: pedido.id, mensaje })
+      })
+      const data = await res.json()
+      if (data.ok) {
+        alert(`Notificación push enviada al cliente: "${mensaje}"`)
+      } else {
+        alert(data.error || 'El cliente no tiene notificaciones activadas para este pedido.')
+      }
+    } catch (e) {
+      alert('Hubo un error al enviar la notificación.')
+    }
   }
 
   const imprimirComanda = () => {

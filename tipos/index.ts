@@ -63,6 +63,7 @@ export interface Pedido {
   montoEfectivo?: number
   montoTransferencia?: number
   montoTarjeta?: number
+  push_subscription?: any | null
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

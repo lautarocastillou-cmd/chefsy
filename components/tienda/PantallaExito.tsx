@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { CheckCircle2, MessageCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { CheckCircle2, MessageCircle, BellRing } from 'lucide-react'
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 
@@ -11,7 +11,80 @@ interface PantallaExitoProps {
   onNuevoPedido: () => void
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPedido }: PantallaExitoProps) {
+  const [suscribiendo, setSuscribiendo] = useState(false)
+  const [suscrito, setSuscrito] = useState(false)
+
+  const habilitarNotificaciones = async () => {
+    try {
+      setSuscribiendo(true)
+      
+      // Validar si soporta Service Workers y Push
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('Tu navegador no soporta notificaciones push. Probá con Chrome o Safari actualizado.')
+        setSuscribiendo(false)
+        return
+      }
+
+      // Pedir permiso
+      const permiso = await Notification.requestPermission()
+      if (permiso !== 'granted') {
+        alert('Tenés que permitir las notificaciones en tu navegador para que te avisemos.')
+        setSuscribiendo(false)
+        return
+      }
+
+      // Registrar o obtener el Service Worker
+      const registro = await navigator.serviceWorker.register('/sw.js')
+      await navigator.serviceWorker.ready
+
+      // Obtener clave pública
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!vapidPublicKey) {
+        throw new Error('VAPID Key no configurada')
+      }
+
+      // Crear suscripción
+      const subscription = await registro.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+      })
+
+      // Guardar en backend
+      const res = await fetch('/api/webpush/suscribir-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pedido_id: pedido.id,
+          subscription: subscription
+        })
+      })
+
+      if (!res.ok) throw new Error('Error guardando suscripción')
+
+      setSuscrito(true)
+    } catch (err) {
+      console.error('Error al suscribir', err)
+      alert('Hubo un problema al activar las notificaciones.')
+    } finally {
+      setSuscribiendo(false)
+    }
+  }
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors font-sans">
       <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xl rounded-3xl p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200">
@@ -77,6 +150,27 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
         </div>
 
         <div className="flex flex-col gap-3 pt-2">
+          {!suscrito ? (
+            <button
+              onClick={habilitarNotificaciones}
+              disabled={suscribiendo}
+              className="w-full bg-blue-500 hover:bg-blue-600 active:scale-98 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {suscribiendo ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <BellRing size={18} className="animate-pulse" />
+                  ¿Avisarme al celular cuando esté en camino?
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900/50">
+              <CheckCircle2 size={18} />
+              ¡Suscrito! Te avisaremos al celular.
+            </div>
+          )}
           <a
             href={generarEnlaceWhatsApp(pedido)}
             target="_blank"
