@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
+import Image from 'next/image'
 import { Plus, Minus, X } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio } from '@/lib/utils'
@@ -64,10 +65,12 @@ export default function ModalPersonalizacion({
           <div className="relative w-full h-52 sm:h-64 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
             {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
               <div key={i} className="relative w-full h-full shrink-0 snap-center">
-                <img 
+                <Image 
                   src={imgUrl.trim()} 
                   alt={`${producto.nombre} - Foto ${i+1}`} 
-                  className="w-full h-full object-cover" 
+                  fill
+                  unoptimized={true}
+                  className="object-cover" 
                 />
                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1a1f2e] to-transparent pointer-events-none" />
               </div>
