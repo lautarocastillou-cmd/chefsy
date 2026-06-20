@@ -14,6 +14,8 @@ function obtenerSupabaseAdmin() {
 
 export async function GET() {
   try {
+    // Eliminamos la validación de sesión para que la tienda pública pueda
+    // cargar los metadatos de los productos sin necesidad de estar logueado.
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase.from('tienda_metadata').select('*')
     if (error) throw error
