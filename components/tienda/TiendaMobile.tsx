@@ -77,8 +77,6 @@ export default function TiendaMobile() {
   const productosFiltrados = useMemo(() => {
     return productos.filter(p => {
       const hayBusqueda = busqueda.trim() !== ''
-      if (!categoriaSeleccionada && !hayBusqueda) return false
-
       const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
       const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
       
@@ -132,9 +130,9 @@ export default function TiendaMobile() {
   const fuenteClase = configuracion?.fuente_principal === 'inter' ? 'font-inter' : 'font-bebas'
 
   return (
-    <div className={`bg-[#0B0F19] text-slate-200 ${fuenteClase} min-h-screen pb-24`}>
+    <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24`}>
       {/* Header App-like minimalista */}
-      <div className="bg-[#121827] sticky top-0 z-40 px-4 py-3 shadow-md border-b border-white/5">
+      <div className="bg-[#141414] sticky top-0 z-40 px-4 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full overflow-hidden relative">
             <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill className="object-cover" />
@@ -150,11 +148,46 @@ export default function TiendaMobile() {
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full bg-[#1A2235] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors"
+            className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         </div>
       </div>
+
+      {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
+      {!categoriaSeleccionada && !busqueda && (
+        <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-6 border-b border-white/5 flex flex-col items-center text-center">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            {configuracion?.textura_fondo_url && (
+              <img src={configuracion.textura_fondo_url} alt="" className="w-full h-full object-cover" />
+            )}
+          </div>
+
+          <div className="relative w-full max-w-[200px] aspect-square my-2 drop-shadow-2xl">
+            <Image
+              src={configuracion?.hero_image_url || "/burger-loca.webp"}
+              alt="Hero Image"
+              fill
+              priority
+              className="object-contain"
+              style={{
+                objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
+                transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
+              }}
+            />
+          </div>
+
+          <h1 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none mt-2">
+            {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
+          </h1>
+          <h2 className="font-bebas text-4xl sm:text-5xl text-chefsy tracking-wide uppercase leading-none">
+            {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
+          </h2>
+          <p className="font-bebas text-xl sm:text-2xl text-slate-300 tracking-wider uppercase mt-2">
+            {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
+          </p>
+        </div>
+      )}
 
       {/* Categorías Swipeables horizontales */}
       <div className="mt-2 py-3 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
@@ -162,7 +195,7 @@ export default function TiendaMobile() {
           onClick={() => setCategoriaSeleccionada(null)}
           className={cn(
             "snap-start shrink-0 px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-colors",
-            categoriaSeleccionada === null && !busqueda ? "bg-chefsy-500 text-white" : "bg-[#1A2235] text-slate-400 border border-white/5"
+            categoriaSeleccionada === null && !busqueda ? "bg-chefsy-500 text-white" : "bg-[#222222] text-slate-400 border border-white/5"
           )}
         >
           Destacados
@@ -173,7 +206,7 @@ export default function TiendaMobile() {
             onClick={() => setCategoriaSeleccionada(cat.id)}
             className={cn(
               "snap-start shrink-0 px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-colors flex items-center gap-2",
-              categoriaSeleccionada === cat.id ? "bg-chefsy-500 text-white" : "bg-[#1A2235] text-slate-400 border border-white/5"
+              categoriaSeleccionada === cat.id ? "bg-chefsy-500 text-white" : "bg-[#222222] text-slate-400 border border-white/5"
             )}
           >
             {cat.nombre}
@@ -186,7 +219,7 @@ export default function TiendaMobile() {
         <CatalogoProductos
           categoriasActivas={categoriasActivas}
           productosFiltrados={productosFiltrados}
-          categoriaSeleccionada={categoriaSeleccionada}
+          categoriaSeleccionada={categoriaSeleccionada || 'todos'}
           busqueda={busqueda}
           metadata={metadata}
           onAbrirModal={abrirModalPersonalizacion}

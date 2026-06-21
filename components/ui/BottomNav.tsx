@@ -14,7 +14,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   const { totalProductosCarrito, subtotalCarrito } = usarCarrito()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#0B0F19]/95 backdrop-blur-xl border-t border-white/10 z-[9999] px-6 py-3 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 bg-[#141414]/95 backdrop-blur-xl border-t border-white/10 z-[9999] px-6 py-3 pb-safe">
       <div className="flex justify-between items-center max-w-md mx-auto">
         <button 
           onClick={() => onNavClick('home')}
@@ -47,7 +47,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
           <div className="relative">
             <ShoppingCart size={24} className={activeTab === 'cart' ? 'fill-chefsy-400/20' : ''} />
             {totalProductosCarrito > 0 && (
-              <span className="absolute -top-2 -right-2 bg-chefsy-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#0B0F19]">
+              <span className="absolute -top-2 -right-2 bg-chefsy-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#141414]">
                 {totalProductosCarrito}
               </span>
             )}
