@@ -84,8 +84,6 @@ export default function HeroSection({
                 alt="Chefsy Hero" 
                 fill
                 priority
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////m8H////6/+b9//j/2wBDASstLTw1PHZBQXb4pYyl+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj/wAARCAAWABQDASIAAhEBAxEB/8QAGQABAAIDAAAAAAAAAAAAAAAAAAIDAQQF/8QAGxAAAgMAAwAAAAAAAAAAAAAAAAECAxESITH/xAAXAQEBAQEAAAAAAAAAAAAAAAABAAID/8QAFxEBAQEBAAAAAAAAAAAAAAAAABEBAv/aAAwDAQACEQMRAD8A0a6dJzoxeF1LWE7GsOe9N5jnSr7BfJrkBoiELWjMrXgBRKXN6ABgf//Z"
                 sizes="(max-width: 768px) 100vw, 850px"
                 className="object-contain object-top"
               />
