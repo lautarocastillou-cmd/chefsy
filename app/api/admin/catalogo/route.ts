@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import { createClient } from '@supabase/supabase-js'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(request: Request) {
   // 1. Validar sesión del administrador en el servidor
@@ -29,24 +29,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Inicializar cliente de Supabase administrativo con service_role
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!url || !serviceRoleKey) {
-      console.error('[API Catalogo] Falta NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en variables de entorno.')
-      return NextResponse.json(
-        { error: 'Configuración del servidor incompleta.' },
-        { status: 500 }
-      )
-    }
-
-    const supabaseAdmin = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      }
-    })
+    // 2. Obtener el cliente de Supabase administrativo (singleton — se reutiliza entre requests)
+    const supabaseAdmin = obtenerSupabaseAdmin()
 
     // 3. Escribir de forma segura en la base de datos (evitando RLS público)
     const { error } = await supabaseAdmin

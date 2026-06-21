@@ -4,18 +4,12 @@ import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
-import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { ProveedorCarrito, usarCarrito } from '@/contexto/CarritoContexto'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { ItemCarrito } from '@/tipos/tienda'
-import Link from 'next/link'
-import Image from 'next/image'
-import { ShoppingCart, Lock, HardHat } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
-import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
-import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
-import { Coordenadas } from '@/tipos'
 
 // Componentes de carga inmediata (siempre visibles al entrar)
 import HeroSection from '@/components/tienda/HeroSection'
@@ -26,27 +20,40 @@ const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
 const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
 const PantallaExito = lazy(() => import('@/components/tienda/PantallaExito'))
 
-export default function PaginaTienda() {
-  const { 
-    productos, 
-    categorias, 
-    modificadores,
-  } = usarCatalogo()
-
-  const { usuarioActivo, estaListoAuth } = usarAuth()
+function ContenidoTienda() {
+  const { productos, categorias, modificadores } = usarCatalogo()
+  const { estaListoAuth } = usarAuth()
 
   // ── Estados de la tienda ──────────────────────────────────────────────
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [hasInteractedSelect, setHasInteractedSelect] = useState(false)
   const [selectorAbierto, setSelectorAbierto] = useState(false)
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([])
-  const [cartAbierto, setCartAbierto] = useState(false)
   const [metadata, setMetadata] = useState<Record<string, any>>({})
   
   const { configuracion } = usarConfiguracionTienda()
   const animatedWords = configuracion?.palabras_animadas || ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
   const [animatedWordIndex, setAnimatedWordIndex] = useState(0)
+
+  const {
+    cartAbierto,
+    setCartAbierto,
+    productoAPersonalizar,
+    modsSeleccionados,
+    cantidadModal,
+    notaPersonalizacion,
+    setProductoAPersonalizar,
+    setCantidadModal,
+    setNotaPersonalizacion,
+    abrirModalPersonalizacion,
+    alternarModificador,
+    calcularPrecioUnitarioModal,
+    agregarAlCarritoDesdeModal,
+    totalProductosCarrito,
+    subtotalCarrito,
+    pedidoCompletado,
+    setPedidoCompletado
+  } = usarCarrito()
 
   useEffect(() => {
     const tick = () => setAnimatedWordIndex(prev => (prev + 1) % animatedWords.length)
@@ -64,10 +71,16 @@ export default function PaginaTienda() {
 
   // Cargar metadatos públicos de la tienda
   useEffect(() => {
-    const fetchMeta = async () => {
+    let ultimaLlamada = 0
+
+    const fetchMeta = async (esFocus = false) => {
+      const ahora = Date.now()
+      // Cooldown de 30s solo si proviene de eventos focus/visibility (para no agotar servidor)
+      if (esFocus && ahora - ultimaLlamada < 30000) return
+      ultimaLlamada = ahora
+
       try {
-        // Ruta pública — no requiere sesión de administrador
-        const res = await fetch('/api/tienda-metadata?t=' + Date.now(), {
+        const res = await fetch('/api/tienda-metadata?t=' + ahora, {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -86,7 +99,7 @@ export default function PaginaTienda() {
     fetchMeta()
 
     const onFocus = () => {
-      if (!document.hidden) fetchMeta()
+      if (!document.hidden) fetchMeta(true)
     }
     document.addEventListener('visibilitychange', onFocus)
     window.addEventListener('focus', onFocus)
@@ -97,27 +110,6 @@ export default function PaginaTienda() {
     }
   }, [])
   
-  // ── Estado del modal de personalización ──────────────────────────────
-  const [productoAPersonalizar, setProductoAPersonalizar] = useState<ProductoCatalogo | null>(null)
-  const [modsSeleccionados, setModsSeleccionados] = useState<ModificadorCatalogo[]>([])
-  const [cantidadModal, setCantidadModal] = useState(1)
-  const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
-
-  // ── Estados de Checkout ───────────────────────────────────────────────
-  const [mostrarCheckout, setMostrarCheckout] = useState(false)
-  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
-  const [nombreCliente, setNombreCliente] = useState('')
-  const [telefonoCliente, setTelefonoCliente] = useState('')
-  const [direccionCliente, setDireccionCliente] = useState('')
-  const [coordenadasCliente, setCoordenadasCliente] = useState<Coordenadas | null>(null)
-  const [distanciaClienteKm, setDistanciaClienteKm] = useState<number | undefined>(undefined)
-  const [costoEnvio, setCostoEnvio] = useState(1500) // Default o calculado dinámicamente
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'>('sin_especificar')
-  const [observaciones, setObservaciones] = useState('')
-  
-  // ── Estado de pedido finalizado ───────────────────────────────────────
-  const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
-
   const categoriasActivas = useMemo(() => {
     return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
   }, [categorias])
@@ -140,172 +132,6 @@ export default function PaginaTienda() {
       return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
     })
   }, [productos, categoriaSeleccionada, busqueda, categorias])
-
-  // ── Callbacks ──────────────────────────────────────────────────────────
-  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
-    setProductoAPersonalizar(prod)
-    setModsSeleccionados([])
-    setCantidadModal(1)
-    setNotaPersonalizacion('')
-  }, [])
-
-  const alternarModificador = useCallback((mod: ModificadorCatalogo) => {
-    setModsSeleccionados(prev => 
-      prev.some(m => m.id === mod.id)
-        ? prev.filter(m => m.id !== mod.id)
-        : [...prev, mod]
-    )
-  }, [])
-
-  const calcularPrecioUnitarioModal = useCallback((): number => {
-    if (!productoAPersonalizar) return 0
-    const extra = modsSeleccionados.reduce((acc, curr) => acc + curr.precioExtra, 0)
-    return productoAPersonalizar.precio + extra
-  }, [productoAPersonalizar, modsSeleccionados])
-
-  const agregarAlCarritoDesdeModal = useCallback(() => {
-    if (!productoAPersonalizar) return
-    const precioUnitario = calcularPrecioUnitarioModal()
-    const modsIdsStr = modsSeleccionados.map(m => m.id).sort().join('-')
-    const idCart = modsIdsStr ? `${productoAPersonalizar.id}-${modsIdsStr}` : productoAPersonalizar.id
-
-    setCarrito(prev => {
-      const indexExistente = prev.findIndex(item => item.idCart === idCart)
-      if (indexExistente > -1) {
-        const nuevoCarrito = [...prev]
-        nuevoCarrito[indexExistente].cantidad += cantidadModal
-        return nuevoCarrito
-      } else {
-        return [...prev, {
-          idCart,
-          producto: productoAPersonalizar,
-          cantidad: cantidadModal,
-          modificadoresSeleccionados: modsSeleccionados,
-          precioUnitario,
-          notaPersonalizacion: notaPersonalizacion.trim() || undefined
-        }]
-      }
-    })
-    setProductoAPersonalizar(null)
-  }, [productoAPersonalizar, cantidadModal, modsSeleccionados, notaPersonalizacion, calcularPrecioUnitarioModal])
-
-  const actualizarCantidadCarrito = useCallback((idCart: string, delta: number) => {
-    setCarrito(prev => 
-      prev.map(item => {
-        if (item.idCart === idCart) {
-          const nuevaCantidad = item.cantidad + delta
-          return nuevaCantidad > 0 ? { ...item, cantidad: nuevaCantidad } : item
-        }
-        return item
-      }).filter(item => item.cantidad > 0)
-    )
-  }, [])
-
-  const eliminarDelCarrito = useCallback((idCart: string) => {
-    setCarrito(prev => prev.filter(item => item.idCart !== idCart))
-  }, [])
-
-  // ── Calculo dinámico de distancia y costo de envío ────────────────────
-  useEffect(() => {
-    if (tipoEntrega === 'delivery' && coordenadasCliente) {
-      obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadasCliente).then(dist => {
-        setDistanciaClienteKm(Number(dist.toFixed(2)))
-        setCostoEnvio(calcularCostoEnvio(dist))
-      })
-    } else {
-      setDistanciaClienteKm(undefined)
-      setCostoEnvio(0)
-    }
-  }, [coordenadasCliente, tipoEntrega])
-
-  // ── Totales ───────────────────────────────────────────────────────────
-  const totalProductosCarrito = carrito.reduce((acc, curr) => acc + curr.cantidad, 0)
-  const subtotalCarrito = carrito.reduce((acc, curr) => acc + (curr.precioUnitario * curr.cantidad), 0)
-  const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
-
-  // ── Checkout ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    // Autocompletar datos guardados
-    const n = localStorage.getItem('chefsy_nombre')
-    const t = localStorage.getItem('chefsy_telefono')
-    const d = localStorage.getItem('chefsy_direccion')
-    if (n) setNombreCliente(n)
-    if (t) setTelefonoCliente(t)
-    if (d) setDireccionCliente(d)
-  }, [])
-
-  const procesarCompra = useCallback(async () => {
-    if (!nombreCliente.trim() || !telefonoCliente.trim()) {
-      alert('Por favor completa tu nombre y número de teléfono de contacto.')
-      return
-    }
-    if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
-      alert('Por favor ingresa la dirección para la entrega del delivery.')
-      return
-    }
-
-    const nuevoPedido: Pedido = {
-      id: 'PED-' + Date.now().toString().slice(-6),
-      cliente: nombreCliente.trim(),
-      telefono: telefonoCliente.trim(),
-      tipoEntrega,
-      direccion: tipoEntrega === 'delivery' ? direccionCliente.trim() : 'Retiro por el local',
-      productos: carrito.map(item => {
-        let nombreFormateado = item.producto.nombre
-        const anexos = []
-        if (item.modificadoresSeleccionados.length > 0) {
-          anexos.push(item.modificadoresSeleccionados.map(m => m.nombre).join(', '))
-        }
-        if (item.notaPersonalizacion) {
-          anexos.push(`"${item.notaPersonalizacion}"`)
-        }
-        if (anexos.length > 0) {
-          nombreFormateado += ` (+ ${anexos.join(' | ')})`
-        }
-        return {
-          id: `${item.producto.id}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          nombre: nombreFormateado,
-          cantidad: item.cantidad,
-          precio: item.precioUnitario,
-          idCatalogo: item.producto.id,
-          categoriaId: item.producto.categoriaId
-        }
-      }),
-      total: totalCarrito,
-      costoEnvio: tipoEntrega === 'delivery' ? costoEnvio : 0,
-      distanciaKm: distanciaClienteKm,
-      coordenadas: coordenadasCliente || undefined,
-      estado: 'nuevo',
-      metodoPago,
-      observaciones: observaciones.trim() || undefined,
-      hora: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      fecha: obtenerFechaNegocio(),
-      created_at: new Date().toISOString()
-    }
-
-    try {
-      await insertarPedidoLocal({ ...nuevoPedido, archivado: false })
-    } catch (err) {
-      console.error('Error enviando pedido', err)
-      alert('Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.')
-      return
-    }
-
-    // Guardar para próxima compra y seguimiento
-    localStorage.setItem('chefsy_nombre', nombreCliente.trim())
-    localStorage.setItem('chefsy_telefono', telefonoCliente.trim())
-    if (tipoEntrega === 'delivery') {
-      localStorage.setItem('chefsy_direccion', direccionCliente.trim())
-    }
-    
-    // Guardamos el ID del pedido para mostrarle el tracker en la app
-    localStorage.setItem('chefsy_ultimo_pedido_id', nuevoPedido.id)
-
-    setPedidoCompletado(nuevoPedido)
-    setCarrito([])
-    setMostrarCheckout(false)
-    setCartAbierto(false)
-  }, [nombreCliente, telefonoCliente, tipoEntrega, direccionCliente, carrito, totalCarrito, costoEnvio, metodoPago, observaciones])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
     const telefono = process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || ''
@@ -336,14 +162,12 @@ export default function PaginaTienda() {
     return urlBase
   }, [])
 
-  // ── Handlers del selector de categoría ───────────────────────────────
   const handleToggleSelector = useCallback(() => setSelectorAbierto(prev => !prev), [])
   const handleSeleccionarCategoria = useCallback((id: string | null) => {
     setHasInteractedSelect(true)
     setCategoriaSeleccionada(id)
   }, [])
 
-  // ── Guards de auth ────────────────────────────────────────────────────
   if (!estaListoAuth) {
     return (
       <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center font-sans">
@@ -352,9 +176,6 @@ export default function PaginaTienda() {
     )
   }
 
-
-
-  // ── Vista de éxito (lazy) ─────────────────────────────────────────────
   if (pedidoCompletado) {
     return (
       <Suspense fallback={
@@ -371,17 +192,10 @@ export default function PaginaTienda() {
     )
   }
 
-  // ── Vista principal ───────────────────────────────────────────────────
   return (
-    <div className="text-slate-200 font-sans pb-16" style={{ backgroundColor: '#0d0d0d' }}>
-      <style dangerouslySetInnerHTML={{ __html: `html, body { background-color: #0d0d0d !important; overscroll-behavior-y: none; }` }} />
-
-      {/* Capa de oscurecimiento sutil en toda la página */}
+    <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
-      
       <div className="relative z-10">
-
-        {/* ── HERO (carga inmediata) ── */}
         <HeroSection
           categoriasActivas={categoriasActivas}
           categoriaSeleccionada={categoriaSeleccionada}
@@ -393,8 +207,6 @@ export default function PaginaTienda() {
           onToggleSelector={handleToggleSelector}
           onSeleccionarCategoria={handleSeleccionarCategoria}
         />
-
-        {/* ── CATÁLOGO (carga inmediata) ── */}
         <CatalogoProductos
           categoriasActivas={categoriasActivas}
           productosFiltrados={productosFiltrados}
@@ -403,8 +215,6 @@ export default function PaginaTienda() {
           metadata={metadata}
           onAbrirModal={abrirModalPersonalizacion}
         />
-
-        {/* ── BOTÓN FLOTANTE DEL CARRITO ── */}
         {totalProductosCarrito > 0 && (
           <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
             <button
@@ -426,41 +236,11 @@ export default function PaginaTienda() {
             </button>
           </div>
         )}
-
-        {/* ── CART DRAWER (lazy — se descarga solo cuando se abre el carrito) ── */}
         {cartAbierto && (
           <Suspense fallback={null}>
-            <CartDrawer
-              carrito={carrito}
-              cartAbierto={cartAbierto}
-              mostrarCheckout={mostrarCheckout}
-              tipoEntrega={tipoEntrega}
-              nombreCliente={nombreCliente}
-              telefonoCliente={telefonoCliente}
-              direccionCliente={direccionCliente}
-              metodoPago={metodoPago}
-              observaciones={observaciones}
-              subtotalCarrito={subtotalCarrito}
-              totalCarrito={totalCarrito}
-              totalProductosCarrito={totalProductosCarrito}
-              costoEnvio={costoEnvio}
-              onCerrar={() => setCartAbierto(false)}
-              onActualizarCantidad={actualizarCantidadCarrito}
-              onEliminar={eliminarDelCarrito}
-              onSetMostrarCheckout={setMostrarCheckout}
-              onSetTipoEntrega={setTipoEntrega}
-              onSetNombreCliente={setNombreCliente}
-              onSetTelefonoCliente={setTelefonoCliente}
-              onSetDireccionCliente={setDireccionCliente}
-              onSetMetodoPago={setMetodoPago}
-              onSetObservaciones={setObservaciones}
-              onProcesarCompra={procesarCompra}
-              onSetCoordenadasCliente={setCoordenadasCliente}
-            />
+            <CartDrawer />
           </Suspense>
         )}
-
-        {/* ── MODAL PERSONALIZACIÓN (lazy — se descarga solo al tocar un producto) ── */}
         {productoAPersonalizar && (
           <Suspense fallback={null}>
             <ModalPersonalizacion
@@ -468,7 +248,6 @@ export default function PaginaTienda() {
               imagenFinal={(() => {
                 const url = metadata[productoAPersonalizar.id]?.imagen_url
                 const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
-                // No mostrar base64 crudo: falla en Chrome moderno (S24, etc.)
                 if (!url || url.startsWith('data:')) return fallback
                 return url
               })()}
@@ -489,8 +268,15 @@ export default function PaginaTienda() {
             />
           </Suspense>
         )}
-
       </div>
     </div>
+  )
+}
+
+export default function PaginaTienda() {
+  return (
+    <ProveedorCarrito>
+      <ContenidoTienda />
+    </ProveedorCarrito>
   )
 }

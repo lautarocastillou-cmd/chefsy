@@ -187,14 +187,28 @@ export default function CampoUbicacion({
       return
     }
 
+    const controller = new AbortController()
+
     const timer = setTimeout(async () => {
       setBuscando(true)
-      const resultados = await buscarSugerenciasDireccion(direccion)
-      setSugerencias(resultados)
-      setBuscando(false)
+      try {
+        const resultados = await buscarSugerenciasDireccion(direccion, controller.signal)
+        setSugerencias(resultados)
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Error buscando sugerencias:', err)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setBuscando(false)
+        }
+      }
     }, 800) // Debounce
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [direccion])
 
   const manejarSeleccionSugerencia = (sug: SugerenciaDireccion) => {

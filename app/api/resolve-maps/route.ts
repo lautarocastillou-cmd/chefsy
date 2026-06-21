@@ -44,8 +44,44 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const urlParam = searchParams.get('url')
 
+  // -- NUEVO: PROXY OSRM --
+  const origenLon = searchParams.get('origenLon')
+  const origenLat = searchParams.get('origenLat')
+  const destinoLon = searchParams.get('destinoLon')
+  const destinoLat = searchParams.get('destinoLat')
+
+  if (origenLon && origenLat && destinoLon && destinoLat) {
+    try {
+      const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?overview=false`
+      const res1 = await fetch(url1, { 
+        headers: { 'User-Agent': 'ChefsyApp/1.0' },
+        signal: AbortSignal.timeout(5000)
+      })
+      if (res1.ok) {
+        const data1 = await res1.json()
+        if (data1?.routes?.[0]?.distance !== undefined) {
+          return NextResponse.json({ distance: data1.routes[0].distance / 1000 })
+        }
+      }
+    } catch (err) {}
+
+    try {
+      const url2 = `https://router.project-osrm.org/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?overview=false`
+      const res2 = await fetch(url2, { signal: AbortSignal.timeout(5000) })
+      if (res2.ok) {
+        const data2 = await res2.json()
+        if (data2?.routes?.[0]?.distance !== undefined) {
+          return NextResponse.json({ distance: data2.routes[0].distance / 1000 })
+        }
+      }
+    } catch (err) {}
+
+    return NextResponse.json({ error: 'No se pudo calcular la ruta' }, { status: 502 })
+  }
+  // -- FIN PROXY OSRM --
+
   if (!urlParam) {
-    return NextResponse.json({ error: 'URL no provista.' }, { status: 400 })
+    return NextResponse.json({ error: 'URL o coordenadas no provistas.' }, { status: 400 })
   }
 
   const DOMINIOS_PERMITIDOS = ['maps.google.com', 'goo.gl', 'maps.app.goo.gl', 'www.google.com']

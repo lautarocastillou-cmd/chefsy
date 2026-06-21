@@ -97,19 +97,29 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const costoEnvioFinal = envioManual ? (Number(costoEnvioManualInput) || 0) : costoEnvio
   const total = subtotal + costoEnvioFinal
 
-  // 4. API de Mapa (Google Maps)
+  // 4. API de Mapa (Google Maps / OSRM)
   useEffect(() => {
+    const controller = new AbortController()
+
     if (pideDireccion && coordenadas) {
       setCargandoEnvio(true)
-      obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas).then((dist) => {
-        setDistanciaKm(dist)
-        setCostoEnvio(calcularCostoEnvio(dist))
-        setCargandoEnvio(false)
-      })
+      obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas, controller.signal)
+        .then((dist) => {
+          setDistanciaKm(dist)
+          setCostoEnvio(calcularCostoEnvio(dist))
+          setCargandoEnvio(false)
+        })
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            setCargandoEnvio(false)
+          }
+        })
     } else {
       setDistanciaKm(0)
       setCostoEnvio(0)
     }
+
+    return () => controller.abort()
   }, [coordenadas, pideDireccion])
 
   // 5. Acciones

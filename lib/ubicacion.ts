@@ -27,36 +27,28 @@ export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): n
   return R * c
 }
 
-export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Coordenadas): Promise<number> {
-  // 1. Intentamos con el servidor oficial de OpenStreetMap (mucho más estable pero requiere User-Agent)
+export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Coordenadas, signal?: AbortSignal): Promise<number> {
   try {
-    const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coord1.longitud},${coord1.latitud};${coord2.longitud},${coord2.latitud}?overview=false`
-    const res1 = await fetch(url1, { headers: { 'User-Agent': 'ChefsyApp/1.0' } })
-    if (res1.ok) {
-      const data1 = await res1.json()
-      if (data1 && data1.routes && data1.routes.length > 0) {
-        return data1.routes[0].distance / 1000
+    const params = new URLSearchParams({
+      origenLon: coord1.longitud.toString(),
+      origenLat: coord1.latitud.toString(),
+      destinoLon: coord2.longitud.toString(),
+      destinoLat: coord2.latitud.toString()
+    })
+    
+    const res = await fetch(`/api/resolve-maps?${params}`, { signal })
+    if (res.ok) {
+      const data = await res.json()
+      if (data && typeof data.distance === 'number') {
+        return data.distance
       }
     }
-  } catch (err) {
-    // Falla silenciada para intentar el plan B
-  }
-
-  // 2. Si falla el alemán, intentamos con el demo principal de OSRM
-  try {
-    const url2 = `https://router.project-osrm.org/route/v1/driving/${coord1.longitud},${coord1.latitud};${coord2.longitud},${coord2.latitud}?overview=false`
-    const res2 = await fetch(url2)
-    if (res2.ok) {
-      const data2 = await res2.json()
-      if (data2 && data2.routes && data2.routes.length > 0) {
-        return data2.routes[0].distance / 1000
-      }
-    }
-  } catch (err) {
-    console.warn("Ambos servidores OSRM fallaron. Usando fallback matemático.")
+  } catch (err: any) {
+    if (err.name === 'AbortError') throw err // Dejar pasar para que el hook lo maneje
+    console.warn("Proxy OSRM falló. Usando fallback matemático.")
   }
   
-  // 3. Fallback final matemático ultra-preciso para tramas urbanas (Manhattan aproximado)
+  // Fallback final matemático ultra-preciso para tramas urbanas (Manhattan aproximado)
   // Reducimos el multiplicador de 1.4 a 1.25 para simular que la moto evita ciertos rodeos que daría un auto
   return calcularDistanciaKm(coord1, coord2) * 1.25
 }
@@ -115,9 +107,16 @@ export async function buscarCoordenadasPorDireccion(
   }
 }
 
+const cacheDirecciones = new Map<string, string | null>()
+
 export async function buscarDireccionPorCoordenadas(
   coordenadas: Coordenadas
 ): Promise<string | null> {
+  const cacheKey = `${coordenadas.latitud},${coordenadas.longitud}`
+  if (cacheDirecciones.has(cacheKey)) {
+    return cacheDirecciones.get(cacheKey)!
+  }
+
   try {
     const parametros = new URLSearchParams({
       format: 'json',
@@ -144,7 +143,15 @@ export async function buscarDireccionPorCoordenadas(
 
     if (!calle) return null
 
-    return `${calle} ${numero}${barrio}, ${localidad}`.trim().replace(/,$/, '')
+    const dir = `${calle} ${numero}${barrio}, ${localidad}`.trim().replace(/,$/, '')
+    
+    if (cacheDirecciones.size > 50) {
+      const firstKey = cacheDirecciones.keys().next().value
+      if (firstKey) cacheDirecciones.delete(firstKey)
+    }
+    cacheDirecciones.set(cacheKey, dir)
+
+    return dir
   } catch {
     return null
   }
@@ -182,11 +189,19 @@ export interface SugerenciaDireccion {
   coordenadas: Coordenadas
 }
 
+const cacheSugerencias = new Map<string, SugerenciaDireccion[]>()
+
 export async function buscarSugerenciasDireccion(
-  texto: string
+  texto: string,
+  signal?: AbortSignal
 ): Promise<SugerenciaDireccion[]> {
   const query = texto.trim()
   if (query.length < 3) return []
+
+  const cacheKey = query.toLowerCase()
+  if (cacheSugerencias.has(cacheKey)) {
+    return cacheSugerencias.get(cacheKey)!
+  }
 
   try {
     const parametros = new URLSearchParams({
@@ -199,21 +214,31 @@ export async function buscarSugerenciasDireccion(
 
     const respuesta = await fetch(
       `https://nominatim.openstreetmap.org/search?${parametros}`,
-      { headers: { 'Accept-Language': 'es' } }
+      { headers: { 'Accept-Language': 'es' }, signal }
     )
 
     if (!respuesta.ok) return []
 
     const resultados = await respuesta.json()
     
-    return resultados.map((item: any) => ({
+    const sugerencias = resultados.map((item: any) => ({
       nombre: item.display_name,
       coordenadas: {
         latitud: parseFloat(item.lat),
         longitud: parseFloat(item.lon),
       }
     }))
-  } catch {
+
+    // Limitar caché a 50 entradas para no devorar memoria
+    if (cacheSugerencias.size > 50) {
+      const firstKey = cacheSugerencias.keys().next().value
+      if (firstKey) cacheSugerencias.delete(firstKey)
+    }
+    cacheSugerencias.set(cacheKey, sugerencias)
+
+    return sugerencias
+  } catch (err: any) {
+    if (err.name === 'AbortError') throw err // Dejar que lo capture el caller
     return []
   }
 }

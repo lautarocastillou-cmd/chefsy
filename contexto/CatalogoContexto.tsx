@@ -18,6 +18,18 @@ export interface ValorContextoCatalogo {
 
 const ContextoCatalogo = createContext<ValorContextoCatalogo | undefined>(undefined)
 
+function parsearLocalStorageSeguro<T>(clave: string, fallback: T): T {
+  const raw = localStorage.getItem(clave)
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    console.warn(`[Cache] Dato corrupto en localStorage['${clave}']. Usando fallback.`)
+    localStorage.removeItem(clave) // Limpiar el dato corrupto
+    return fallback
+  }
+}
+
 export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   const [categorias, setCategorias] = useState<CategoriaCatalogo[]>([])
   const [productos, setProductos] = useState<ProductoCatalogo[]>([])
@@ -33,21 +45,18 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function cargarInicial() {
       // 1.a) Primero cargar fallbacks locales desde localStorage o estáticos
-      const catsCrud = localStorage.getItem('chefsy-categorias-v1')
-      let catsActuales = catsCrud ? JSON.parse(catsCrud) : categoriasCatalogo
+      let catsActuales = parsearLocalStorageSeguro<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
       if (!catsActuales.some((c: any) => c.id === 'promos')) {
         catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
       }
       setCategorias(catsActuales)
       categoriasRef.current = catsActuales
 
-      const prodsCrud = localStorage.getItem('chefsy-productos-v1')
-      let prodsActuales = prodsCrud ? JSON.parse(prodsCrud) : productosCatalogo
+      let prodsActuales = parsearLocalStorageSeguro<ProductoCatalogo[]>('chefsy-productos-v1', productosCatalogo)
       setProductos(prodsActuales)
       productosRef.current = prodsActuales
 
-      const modsCrud = localStorage.getItem('chefsy-modificadores-v1')
-      let modsActuales = modsCrud ? JSON.parse(modsCrud) : modificadoresCatalogo
+      let modsActuales = parsearLocalStorageSeguro<ModificadorCatalogo[]>('chefsy-modificadores-v1', modificadoresCatalogo)
       setModificadores(modsActuales)
       modificadoresRef.current = modsActuales
 

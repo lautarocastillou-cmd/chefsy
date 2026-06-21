@@ -132,6 +132,11 @@ input,
     width: 100%;
   }
 
+  body:has(.bg-tienda-premium) {
+    background-color: #0d0d0d !important;
+    overscroll-behavior-y: none;
+  }
+
   .bg-tienda-premium-fixed {
     background-image: url('/bg-mobile.webp');
     background-size: cover;

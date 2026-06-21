@@ -10,61 +10,39 @@ import { formatearPrecio } from '@/lib/utils'
 
 const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector'), { ssr: false })
 
-interface CartDrawerProps {
-  carrito: ItemCarrito[]
-  cartAbierto: boolean
-  mostrarCheckout: boolean
-  tipoEntrega: 'delivery' | 'retiro'
-  nombreCliente: string
-  telefonoCliente: string
-  direccionCliente: string
-  metodoPago: 'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'
-  observaciones: string
-  subtotalCarrito: number
-  totalCarrito: number
-  totalProductosCarrito: number
-  costoEnvio: number
-  onCerrar: () => void
-  onActualizarCantidad: (idCart: string, delta: number) => void
-  onEliminar: (idCart: string) => void
-  onSetMostrarCheckout: (v: boolean) => void
-  onSetTipoEntrega: (v: 'delivery' | 'retiro') => void
-  onSetNombreCliente: (v: string) => void
-  onSetTelefonoCliente: (v: string) => void
-  onSetDireccionCliente: (v: string) => void
-  onSetMetodoPago: (v: 'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar') => void
-  onSetObservaciones: (v: string) => void
-  onProcesarCompra: () => void
-  onSetCoordenadasCliente?: (coords: { latitud: number, longitud: number } | null) => void
-}
+import { usarCarrito } from '@/contexto/CarritoContexto'
 
-export default function CartDrawer({
-  carrito,
-  cartAbierto,
-  mostrarCheckout,
-  tipoEntrega,
-  nombreCliente,
-  telefonoCliente,
-  direccionCliente,
-  metodoPago,
-  observaciones,
-  subtotalCarrito,
-  totalCarrito,
-  totalProductosCarrito,
-  costoEnvio,
-  onCerrar,
-  onActualizarCantidad,
-  onEliminar,
-  onSetMostrarCheckout,
-  onSetTipoEntrega,
-  onSetNombreCliente,
-  onSetTelefonoCliente,
-  onSetDireccionCliente,
-  onSetMetodoPago,
-  onSetObservaciones,
-  onProcesarCompra,
-  onSetCoordenadasCliente,
-}: CartDrawerProps) {
+export default function CartDrawer() {
+  const {
+    carrito,
+    cartAbierto,
+    mostrarCheckout,
+    tipoEntrega,
+    nombreCliente,
+    telefonoCliente,
+    direccionCliente,
+    metodoPago,
+    observaciones,
+    subtotalCarrito,
+    totalCarrito,
+    totalProductosCarrito,
+    costoEnvio,
+    setCartAbierto,
+    actualizarCantidadCarrito: onActualizarCantidad,
+    eliminarDelCarrito: onEliminar,
+    setMostrarCheckout: onSetMostrarCheckout,
+    setTipoEntrega: onSetTipoEntrega,
+    setNombreCliente: onSetNombreCliente,
+    setTelefonoCliente: onSetTelefonoCliente,
+    setDireccionCliente: onSetDireccionCliente,
+    setMetodoPago: onSetMetodoPago,
+    setObservaciones: onSetObservaciones,
+    procesarCompra: onProcesarCompra,
+    setCoordenadasCliente: onSetCoordenadasCliente,
+  } = usarCarrito()
+
+  const onCerrar = () => setCartAbierto(false)
+
   const [checkoutStep, setCheckoutStep] = useState(1)
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
   

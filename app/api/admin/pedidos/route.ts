@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import { createClient } from '@supabase/supabase-js'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { enviarNotificacionCadete } from '@/lib/webpush'
 
 export async function POST(request: Request) {
@@ -33,24 +33,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Inicializar cliente de Supabase administrativo con service_role
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!url || !serviceRoleKey) {
-      console.error('[API Pedidos] Falta configurar variables de entorno en el servidor.')
-      return NextResponse.json(
-        { error: 'Configuración del servidor incompleta.' },
-        { status: 500 }
-      )
-    }
-
-    const supabaseAdmin = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      }
-    })
+    // 2. Obtener el cliente de Supabase administrativo (singleton — se reutiliza entre requests)
+    const supabaseAdmin = obtenerSupabaseAdmin()
 
     // 3. Procesar acciones con validación de roles
     switch (accion) {
@@ -101,7 +85,8 @@ export async function POST(request: Request) {
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
 
-        const { error } = await supabaseAdmin
+        // C4: Una sola query — update + select en la misma operación
+        const { data: pedidoAct, error } = await supabaseAdmin
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
@@ -111,21 +96,13 @@ export async function POST(request: Request) {
         if (error) throw error
 
         // Notificar al cadete si el pedido es delivery y está listo
-        if (estado === 'listo') {
-          // Ya tenemos el dato en la respuesta del update gracias al select()
-          const { data: pedidoAct } = await supabaseAdmin
-            .from('pedidos')
-            .select('cadete_id, tipoEntrega, cliente')
-            .eq('id', id)
-            .single()
-            
-          if (pedidoAct && pedidoAct.cadete_id && pedidoAct.tipoEntrega === 'delivery') {
-            await enviarNotificacionCadete(
-              pedidoAct.cadete_id,
-              '¡Pedido Listo para Retirar! 🛵',
-              `El pedido de ${pedidoAct.cliente} ya está listo en cocina.`
-            )
-          }
+        // Usamos pedidoAct directamente — sin segunda query a la base de datos
+        if (estado === 'listo' && pedidoAct?.cadete_id && pedidoAct?.tipoEntrega === 'delivery') {
+          await enviarNotificacionCadete(
+            pedidoAct.cadete_id,
+            '¡Pedido Listo para Retirar! 🛵',
+            `El pedido de ${pedidoAct.cliente} ya está listo en cocina.`
+          )
         }
 
         return NextResponse.json({ ok: true })

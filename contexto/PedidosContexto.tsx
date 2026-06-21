@@ -1,23 +1,36 @@
 'use client'
+// ─────────────────────────────────────────────────────
+// contexto/PedidosContexto.tsx
+// Orquestador principal del dominio de pedidos.
+//
+// Responsabilidades que quedan acá (solo CRUD y wiring):
+//   • Reducer de pedidos (puro, sin side-effects)
+//   • Operaciones CRUD: agregar, editar, cambiarEstado,
+//     revertirEstado, marcarPago, asignarCadete,
+//     cambiarMetodoPago, eliminar, finalizarTurno,
+//     obtenerPedidosPorFecha
+//   • Configuración operativa
+//   • Notificaciones reactivas al cambio de pedidos
+//   • Delegación a hooks especializados:
+//       usePedidosRealtime, useSincronizacionOffline,
+//       useAlertasInactividad, useTurno, useCadetes
+//
+// La API pública (usarPedidos) es idéntica a la versión
+// anterior — ningún componente consumidor necesita cambios.
+// ─────────────────────────────────────────────────────
 
 import React, {
   createContext,
   useContext,
   useReducer,
   useEffect,
-  useState,
   useRef,
   ReactNode,
 } from 'react'
 import { Pedido, EstadoPedido } from '@/tipos'
 import { Cadete } from '@/lib/entrega'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { 
-  obtenerPedidosActivos, 
-  obtenerPedidosHistoricos, 
-  insertarPedidoLocal, 
-  suscribirAPedidos 
-} from '@/servicios/supabase/pedidos'
+import { insertarPedidoLocal, obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
 import { usarAuth } from '@/contexto/AuthContexto'
 import {
   usarTemaNotificacion,
@@ -28,6 +41,14 @@ import {
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
 import configuracionOperativaInicial from '../config/operacion.json'
 import { actualizarConfiguracionLocal } from '../lib/problemas'
+import { usePathname } from 'next/navigation'
+
+// Hooks especializados
+import { usePedidosRealtime } from '@/hooks/usePedidosRealtime'
+import { useSincronizacionOffline } from '@/hooks/useSincronizacionOffline'
+import { useAlertasInactividad } from '@/hooks/useAlertasInactividad'
+import { useTurno } from '@/hooks/useTurno'
+import { useCadetes } from '@/hooks/useCadetes'
 
 // Re-exportar interfaz de Notificación para mantener compatibilidad
 export type { Notificacion } from './TemaNotificacionContexto'
@@ -38,13 +59,13 @@ type AccionPedidos =
   | { tipo: 'CARGAR_PEDIDOS'; pedidos: Pedido[] }
   | { tipo: 'AGREGAR_PEDIDO'; pedido: Pedido }
   | { tipo: 'EDITAR_PEDIDO'; pedido: Pedido }
-  | { 
-      tipo: 'CAMBIAR_ESTADO'; 
-      id: string; 
-      estado: EstadoPedido;
-      cocina_at: string | null;
-      listo_at: string | null;
-      entregado_at: string | null;
+  | {
+      tipo: 'CAMBIAR_ESTADO'
+      id: string
+      estado: EstadoPedido
+      cocina_at: string | null
+      listo_at: string | null
+      entregado_at: string | null
     }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
   | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido }
@@ -77,7 +98,9 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
       }
       return {
         pedidos: [accion.pedido, ...estado.pedidos].sort(
-          (a, b) => new Date(b.created_at || b.fecha).getTime() - new Date(a.created_at || a.fecha).getTime()
+          (a, b) =>
+            new Date(b.created_at || b.fecha).getTime() -
+            new Date(a.created_at || a.fecha).getTime()
         ),
       }
     }
@@ -90,14 +113,14 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
     case 'CAMBIAR_ESTADO':
       return {
         pedidos: estado.pedidos.map((p) =>
-          p.id === accion.id 
-            ? { 
-                ...p, 
+          p.id === accion.id
+            ? {
+                ...p,
                 estado: accion.estado,
                 cocina_at: accion.cocina_at,
                 listo_at: accion.listo_at,
                 entregado_at: accion.entregado_at,
-              } 
+              }
             : p
         ),
       }
@@ -112,7 +135,7 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
   }
 }
 
-// ── Interfaz interna de Pedidos ────────────────────────
+// ── Tipos exportados ──────────────────────────────────
 
 export interface EstadoTurno {
   activo: boolean
@@ -144,7 +167,7 @@ interface ValorContextoPedidosInterno {
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
 
-// ── Helpers de Estado de Tiempos ───────────────────────
+// ── Helper de campos de tiempo (exportado para uso externo) ──
 
 export function obtenerCamposDeTiempoParaEstado(
   nuevoEstado: EstadoPedido,
@@ -156,7 +179,7 @@ export function obtenerCamposDeTiempoParaEstado(
   entregado_at: string | null
 } {
   const ahora = new Date().toISOString()
-  
+
   let cocina_at = pedidoActual.cocina_at || null
   let listo_at = pedidoActual.listo_at || null
   let entregado_at = pedidoActual.entregado_at || null
@@ -179,55 +202,46 @@ export function obtenerCamposDeTiempoParaEstado(
     if (!entregado_at) entregado_at = ahora
   }
 
-  return {
-    estado: nuevoEstado,
-    cocina_at,
-    listo_at,
-    entregado_at,
-  }
+  return { estado: nuevoEstado, cocina_at, listo_at, entregado_at }
 }
 
-// ── Proveedor Interno enfocado en Pedidos ──────────────
+// ── Proveedor Interno ─────────────────────────────────
 
 function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const [estado, despachar] = useReducer(reducerPedidos, estadoInicial)
-  const [estaListo, setEstaListo] = useState(false)
-  const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
-  
+  const pathname = usePathname()
+
   const prevPedidosRef = useRef<Pedido[]>([])
   const esCambioLocalRef = useRef(false)
 
-  // Obtener sesión del usuario activo
   const { usuarioActivo } = usarAuth()
-
-  // Acceder a notificaciones del contexto UI
   const { agregarNotificacion } = usarTemaNotificacion()
 
-  // Estado para la lista dinámica de cadetes
-  const [cadetes, setCadetes] = useState<Cadete[]>([])
+  // ── Hooks especializados ──────────────────────────────
 
-  // Cargar cadetes desde la API
-  const refrescarCadetes = async () => {
-    try {
-      const res = await fetch('/api/admin/cadetes')
-      if (res.ok) {
-        const data = await res.json()
-        setCadetes(data)
-      }
-    } catch (err) {
-      console.error('Error cargando cadetes:', err)
-    }
-  }
+  const { estaListo, dbEstado, setDbEstado } = usePedidosRealtime({
+    despachar,
+    prevPedidosRef,
+    esCambioLocalRef,
+  })
 
-  // Cargar cadetes al montar
-  useEffect(() => {
-    refrescarCadetes()
-  }, [])
+  useSincronizacionOffline({ setDbEstado, agregarNotificacion })
 
-  // Estado para la configuración operativa de tiempos
-  const [configuracionOperativa, setConfiguracionOperativa] = useState<typeof configuracionOperativaInicial>(configuracionOperativaInicial)
+  const { cadetes, refrescarCadetes } = useCadetes()
 
-  // Cargar configuración de tiempos al inicializar
+  const { estadoTurno, setEstadoTurno, iniciarTurno } = useTurno({ agregarNotificacion })
+
+  useAlertasInactividad({
+    pedidos: estado.pedidos,
+    usuarioActivo,
+    agregarNotificacion,
+  })
+
+  // ── Configuración operativa ───────────────────────────
+  const [configuracionOperativa, setConfiguracionOperativa] = React.useState<
+    typeof configuracionOperativaInicial
+  >(configuracionOperativaInicial)
+
   useEffect(() => {
     async function cargarConfig() {
       try {
@@ -244,14 +258,13 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cargarConfig()
   }, [])
 
-  // Guardar la configuración en el servidor y actualizar localmente
-  const guardarConfiguracionOperativa = async (nuevaConfig: typeof configuracionOperativaInicial): Promise<boolean> => {
+  const guardarConfiguracionOperativa = async (
+    nuevaConfig: typeof configuracionOperativaInicial
+  ): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/configuracion', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevaConfig),
       })
       if (res.ok) {
@@ -261,7 +274,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         return true
       } else {
         const errorData = await res.json().catch(() => ({}))
-        agregarNotificacion(`Error al guardar la configuración: ${errorData.error || res.statusText}`, 'warning')
+        agregarNotificacion(
+          `Error al guardar la configuración: ${errorData.error || res.statusText}`,
+          'warning'
+        )
         return false
       }
     } catch (err) {
@@ -271,210 +287,25 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
-  // ── Estado del Turno ──────────────────────────────────
-  const [estadoTurno, setEstadoTurno] = useState<EstadoTurno>({
-    activo: false,
-    cajaInicial: 0,
-    fechaInicio: null
-  })
+  // ── Notificaciones reactivas al cambio de pedidos ─────
 
-  useEffect(() => {
-    async function cargarTurno() {
-      try {
-        const res = await fetch('/api/admin/turno')
-        if (res.ok) {
-          const data = await res.json()
-          setEstadoTurno(data)
-        }
-      } catch (err) {
-        console.error('Error cargando estado del turno:', err)
-      }
-    }
-    cargarTurno()
-  }, [])
-
-  const iniciarTurno = async (cajaInicial: number): Promise<boolean> => {
-    try {
-      const nuevoTurno = {
-        activo: true,
-        cajaInicial,
-        fechaInicio: new Date().toISOString()
-      }
-      const res = await fetch('/api/admin/turno', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevoTurno)
-      })
-      if (res.ok) {
-        setEstadoTurno(nuevoTurno)
-        agregarNotificacion('Turno iniciado correctamente.', 'success')
-        return true
-      }
-      agregarNotificacion('Error al iniciar el turno.', 'warning')
-      return false
-    } catch (err) {
-      console.error('Error iniciando turno:', err)
-      agregarNotificacion('Error de red al iniciar el turno.', 'warning')
-      return false
-    }
-  }
-
-  // 1) Al montar: Cargar Pedidos de Supabase (no archivados) con fallback local
-  useEffect(() => {
-    async function cargarInicial() {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      const credencialesValidas = url && key && !url.includes('falta-configurar') && !key.includes('falta-configurar')
-      const estaOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
-
-      try {
-        if (!credencialesValidas) {
-          setDbEstado('desconectado')
-          setEstaListo(true)
-          return
-        }
-
-        if (!estaOnline) {
-          throw new Error('Navegador offline')
-        }
-
-        const pedidosGuardados = await obtenerPedidosActivos(100)
-
-        setDbEstado('conectado')
-
-        if (pedidosGuardados) {
-          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados as Pedido[] })
-          prevPedidosRef.current = pedidosGuardados as Pedido[]
-        }
-      } catch (error) {
-        console.error('[Supabase] Error al cargar pedidos, intentando recuperar del caché:', error)
-        setDbEstado('desconectado')
-
-        const cache = localStorage.getItem('chefsy-pedidos-cache-v1')
-        if (cache) {
-          try {
-            const pedidosCache = JSON.parse(cache) as Pedido[]
-            // Cargar solo los no archivados del caché
-            const noArchivados = pedidosCache.filter(p => !(p as any).archivado)
-            despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: noArchivados })
-            prevPedidosRef.current = noArchivados
-          } catch (e) {
-            console.error('Error al parsear el caché de pedidos:', e)
-          }
-        }
-      } finally {
-        setEstaListo(true)
-      }
-    }
-    cargarInicial()
-  }, [])
-
-  // 1.b) Escuchar cambios de conectividad en el navegador para actualizar dbEstado y sincronizar
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    
-    const syncOfflineQueue = async () => {
-      const queueStr = localStorage.getItem('chefsy-offline-queue')
-      if (!queueStr) return
-      try {
-        const queue = JSON.parse(queueStr)
-        if (!Array.isArray(queue) || queue.length === 0) return
-        
-        console.log(`[Offline Sync] Sincronizando ${queue.length} acciones pendientes...`)
-        const nuevasEncoladas = []
-        let huboExito = false
-        
-        for (const item of queue) {
-          try {
-            const respuesta = await fetch('/api/admin/pedidos', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(item.payload)
-            })
-            if (respuesta.ok) {
-              huboExito = true
-            } else {
-              nuevasEncoladas.push(item)
-            }
-          } catch (err) {
-            console.error('[Offline Sync] Fallo al sincronizar acción:', err)
-            nuevasEncoladas.push(item)
-          }
-        }
-        
-        if (nuevasEncoladas.length === 0) {
-          localStorage.removeItem('chefsy-offline-queue')
-          if (huboExito) agregarNotificacion('Se sincronizaron los cambios pendientes correctamente.', 'success')
-        } else {
-          localStorage.setItem('chefsy-offline-queue', JSON.stringify(nuevasEncoladas))
-        }
-      } catch (e) {
-        console.error('Error procesando offline queue:', e)
-        localStorage.removeItem('chefsy-offline-queue')
-      }
-    }
-
-    const handleOnline = () => {
-      setDbEstado('conectado')
-      syncOfflineQueue()
-    }
-    const handleOffline = () => {
-      setDbEstado('desconectado')
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    
-    // Intentar sincronizar al arrancar si está online
-    if (navigator.onLine) {
-      syncOfflineQueue()
-    }
-    
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [agregarNotificacion])
-
-  // 2) Suscripción a Supabase Realtime para pedidos
   useEffect(() => {
     if (!estaListo) return
 
-    const channel = suscribirAPedidos(
-      (pedido, archivado) => {
-        if (esCambioLocalRef.current) return
-        if (archivado) {
-          despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
-        } else {
-          despachar({ tipo: 'UPSERT_PEDIDO', pedido })
-        }
-      },
-      (id) => {
-        if (esCambioLocalRef.current) return
-        despachar({ tipo: 'ELIMINAR_PEDIDO', id })
-      }
-    )
-
-    return () => {
-      channel.unsubscribe()
-    }
-  }, [estaListo])
-
-  // 3) Notificaciones de cambios y guardar caché local
-  useEffect(() => {
-    if (!estaListo) return
-
-    // Guardar copia local de pedidos en caché
-    localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify(estado.pedidos))
+    // Diferir el guardado en caché al siguiente tick (no bloquear el hilo de render)
+    const timeoutCache = setTimeout(() => {
+      localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify(estado.pedidos))
+    }, 0)
 
     if (prevPedidosRef.current.length > 0) {
       const esCadete = usuarioActivo?.rol === 'cadete'
-      const esVistaCadeteria = typeof window !== 'undefined' && window.location.pathname.includes('/cadeteria')
-      
+      const esVistaCadeteria = pathname?.includes('/cadeteria')
+
       // Notificar NUEVOS pedidos creados
-      const nuevosPedidos = estado.pedidos.filter((nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id))
+      const nuevosPedidos = estado.pedidos.filter(
+        (nuevo) => !prevPedidosRef.current.some((prev) => prev.id === nuevo.id)
+      )
       nuevosPedidos.forEach((nuevo) => {
-        // Los cadetes NO reciben notificaciones de pedidos recién ingresados (estado 'nuevo')
         if (!esCadete && !esVistaCadeteria) {
           reproducirSonidoCampanaCocina()
           if (!esCambioLocalRef.current) {
@@ -489,9 +320,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         if (!anterior) return
 
         // A) Alerta para cuando se le asigna un pedido al cadete logueado
-        const seLeAsignoAlCadete = 
-          esCadete && 
-          nuevo.cadete_id === usuarioActivo?.usuario && 
+        const seLeAsignoAlCadete =
+          esCadete &&
+          nuevo.cadete_id === usuarioActivo?.usuario &&
           anterior.cadete_id !== nuevo.cadete_id
 
         if (seLeAsignoAlCadete && !esCambioLocalRef.current) {
@@ -506,13 +337,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             en_cocina: 'En Cocina',
             listo: 'Listo',
             entregado: 'Entregado',
-            cancelado: 'Cancelado'
+            cancelado: 'Cancelado',
           }
 
           const esPedidoPropioDelCadete = esCadete && nuevo.cadete_id === usuarioActivo?.usuario
 
           if (esPedidoPropioDelCadete && !esCambioLocalRef.current) {
-            // Repartidores: solo alertar de cambios desde Cocina en adelante
             const estadosPermitidosParaCadete = ['en_cocina', 'listo', 'entregado', 'cancelado']
             if (estadosPermitidosParaCadete.includes(nuevo.estado)) {
               let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
@@ -524,7 +354,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             }
           }
 
-          // Administradores y otros roles (fuera de cadetería)
           if (!esCadete && !esVistaCadeteria) {
             if (nuevo.estado === 'entregado') {
               if (!esCambioLocalRef.current) {
@@ -533,7 +362,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
               }
             } else {
               if (!esCambioLocalRef.current) {
-                agregarNotificacion(`Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`, 'info')
+                agregarNotificacion(
+                  `Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`,
+                  'info'
+                )
                 reproducirSonidoNotificacion()
               }
             }
@@ -541,34 +373,26 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         }
       })
     }
-    
-    setTimeout(() => { esCambioLocalRef.current = false }, 100)
+
+    const timeoutFlag = setTimeout(() => {
+      esCambioLocalRef.current = false
+    }, 100)
     prevPedidosRef.current = estado.pedidos
+
+    return () => {
+      clearTimeout(timeoutCache)
+      clearTimeout(timeoutFlag)
+    }
   }, [estado.pedidos, estaListo, usuarioActivo])
 
-  // 4) Operaciones CRUD de Pedidos
-
-  const agregarPedido = async (pedido: Pedido) => {
-    esCambioLocalRef.current = true
-    despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
-    reproducirSonidoCampanaCocina()
-    
-    try {
-      const payload: any = { ...pedido, archivado: false }
-      await insertarPedidoLocal(payload)
-    } catch (e) {
-      agregarNotificacion('Error al guardar el pedido en la nube', 'warning')
-    }
-  }
+  // ── Función auxiliar: enviar acciones al servidor ─────
 
   const enviarAccionPedido = async (payload: any) => {
     try {
       const respuesta = await fetch('/api/admin/pedidos', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       if (!respuesta.ok) {
         const errorData = await respuesta.json().catch(() => ({}))
@@ -588,66 +412,79 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
+  // ── Operaciones CRUD ──────────────────────────────────
+
+  const agregarPedido = async (pedido: Pedido) => {
+    esCambioLocalRef.current = true
+    despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
+    reproducirSonidoCampanaCocina()
+    try {
+      const payload: any = { ...pedido, archivado: false }
+      await insertarPedidoLocal(payload)
+    } catch (e) {
+      agregarNotificacion('Error al guardar el pedido en la nube', 'warning')
+    }
+  }
+
   const editarPedido = async (pedido: Pedido) => {
     esCambioLocalRef.current = true
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
-    
     try {
-      await enviarAccionPedido({
-        accion: 'editar',
-        id: pedido.id,
-        pedido
-      })
+      await enviarAccionPedido({ accion: 'editar', id: pedido.id, pedido })
     } catch (e: any) {
       console.error('[Servidor/Supabase] Error al actualizar pedido:', e)
       agregarNotificacion('Error al actualizar el pedido en el servidor.', 'warning')
     }
   }
 
-  const cambiarEstado = async (id: string, nuevoEstado: EstadoPedido, mostrarDeshacer: boolean = true) => {
+  const cambiarEstado = async (
+    id: string,
+    nuevoEstado: EstadoPedido,
+    mostrarDeshacer: boolean = true
+  ) => {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido && pedido.estado !== nuevoEstado) {
       const estadoAnterior = pedido.estado
       esCambioLocalRef.current = true
-      
+
       const updates = obtenerCamposDeTiempoParaEstado(nuevoEstado, pedido)
       despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
-      
+
       const nombresEstados: Record<EstadoPedido, string> = {
-        nuevo: 'Nuevo', en_cocina: 'En Cocina', listo: 'Listo',
-        entregado: 'Entregado', cancelado: 'Cancelado'
+        nuevo: 'Nuevo',
+        en_cocina: 'En Cocina',
+        listo: 'Listo',
+        entregado: 'Entregado',
+        cancelado: 'Cancelado',
       }
 
       agregarNotificacion(
         `Pedido de ${pedido.cliente} cambiado a "${nombresEstados[nuevoEstado]}".`,
         'info',
-        mostrarDeshacer ? {
-          etiqueta: 'Deshacer',
-          alHacerClick: async () => {
-            if (!pedido) return
-            esCambioLocalRef.current = true
-            const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
-            despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
-            
-            try {
-              await enviarAccionPedido({
-                accion: 'actualizar_estado',
-                id,
-                ...updatesAnteriores
-              })
-            } catch (err) {
-              console.error('Error al deshacer cambio de estado:', err)
+        mostrarDeshacer
+          ? {
+              etiqueta: 'Deshacer',
+              alHacerClick: async () => {
+                if (!pedido) return
+                esCambioLocalRef.current = true
+                const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
+                despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
+                try {
+                  await enviarAccionPedido({
+                    accion: 'actualizar_estado',
+                    id,
+                    ...updatesAnteriores,
+                  })
+                } catch (err) {
+                  console.error('Error al deshacer cambio de estado:', err)
+                }
+              },
             }
-          }
-        } : undefined
+          : undefined
       )
 
       try {
-        await enviarAccionPedido({
-          accion: 'actualizar_estado',
-          id,
-          ...updates
-        })
+        await enviarAccionPedido({ accion: 'actualizar_estado', id, ...updates })
       } catch (e: any) {
         console.error('[Servidor/Supabase] Error al cambiar estado:', e)
         agregarNotificacion(`Error del servidor: ${e.message}`, 'warning')
@@ -658,7 +495,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const revertirEstado = async (id: string) => {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (!pedido) return
-    
+
     let estadoAnterior: EstadoPedido = 'nuevo'
     const updates: any = {}
 
@@ -684,12 +521,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
 
     try {
-      await enviarAccionPedido({
-        accion: 'actualizar_estado',
-        id,
-        ...updates
-      })
-      agregarNotificacion(`Se ha revertido el estado del pedido.`, 'info')
+      await enviarAccionPedido({ accion: 'actualizar_estado', id, ...updates })
+      agregarNotificacion('Se ha revertido el estado del pedido.', 'info')
     } catch (e: any) {
       console.error('Error al revertir estado:', e)
       agregarNotificacion(`Error al revertir: ${e.message}`, 'warning')
@@ -702,11 +535,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     if (pedido) {
       despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, pago_confirmado: confirmado } })
       try {
-        await enviarAccionPedido({
-          accion: 'confirmar_pago',
-          id,
-          pago_confirmado: confirmado
-        })
+        await enviarAccionPedido({ accion: 'confirmar_pago', id, pago_confirmado: confirmado })
       } catch (e) {
         console.error('[Servidor/Supabase] Error al marcar pago confirmado', e)
         agregarNotificacion('Error al registrar el pago en el servidor.', 'warning')
@@ -718,28 +547,24 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     esCambioLocalRef.current = true
     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
     try {
-      await enviarAccionPedido({
-        accion: 'eliminar',
-        id
-      })
+      await enviarAccionPedido({ accion: 'eliminar', id })
     } catch (e) {
       console.error('[Servidor/Supabase] Error al eliminar', e)
       agregarNotificacion('Error al eliminar el pedido en el servidor.', 'warning')
     }
   }
 
-  const asignarCadete = async (id: string, cadete_id: string | null, cadete_nombre: string | null) => {
+  const asignarCadete = async (
+    id: string,
+    cadete_id: string | null,
+    cadete_nombre: string | null
+  ) => {
     esCambioLocalRef.current = true
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
       despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, cadete_id, cadete_nombre } })
       try {
-        await enviarAccionPedido({
-          accion: 'asignar_cadete',
-          id,
-          cadete_id,
-          cadete_nombre
-        })
+        await enviarAccionPedido({ accion: 'asignar_cadete', id, cadete_id, cadete_nombre })
       } catch (e) {
         console.error('[Servidor/Supabase] Error al asignar cadete', e)
         agregarNotificacion('Error al asignar el cadete en el servidor.', 'warning')
@@ -751,13 +576,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     esCambioLocalRef.current = true
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
-      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, metodoPago: metodoPago as any } })
+      despachar({
+        tipo: 'EDITAR_PEDIDO',
+        pedido: { ...pedido, metodoPago: metodoPago as any },
+      })
       try {
-        await enviarAccionPedido({
-          accion: 'cambiar_metodo_pago',
-          id,
-          metodoPago
-        })
+        await enviarAccionPedido({ accion: 'cambiar_metodo_pago', id, metodoPago })
       } catch (e) {
         console.error('[Servidor/Supabase] Error al cambiar método de pago', e)
         agregarNotificacion('Error al actualizar el método de pago en el servidor.', 'warning')
@@ -765,37 +589,40 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
-  // 5) Finalizar Turno (Archivar pedidos activos)
+  // ── Finalizar turno ───────────────────────────────────
+
   const finalizarTurno = async () => {
     try {
       const pedidosActivos = estado.pedidos
       const idsActivos = pedidosActivos.map((p) => p.id)
-      
+
       if (idsActivos.length > 0) {
-        // --- Calcular Snapshot para cierres_diarios ---
         const validos = pedidosActivos.filter((p) => p.estado !== 'cancelado')
         const facturacion_neta = validos.reduce((acc, p) => acc + (p.total - (p.costoEnvio || 0)), 0)
-        
-        const obtenerMontoMetodo = (p: Pedido, m: string) => p.metodoPago === m ? p.total : 0
+
+        const obtenerMontoMetodo = (p: Pedido, m: string) => (p.metodoPago === m ? p.total : 0)
         const efectivo_ventas = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'efectivo'), 0)
         const tarjeta_total = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'tarjeta'), 0)
-        const transferencia_total = validos.reduce((acc, p) => acc + obtenerMontoMetodo(p, 'transferencia'), 0)
-        
+        const transferencia_total = validos.reduce(
+          (acc, p) => acc + obtenerMontoMetodo(p, 'transferencia'),
+          0
+        )
+
         const caja_inicial = estadoTurno?.cajaInicial || 0
         const efectivo_rendir = caja_inicial + efectivo_ventas
-        
         const total_pedidos = validos.length
         const ticket_promedio = total_pedidos > 0 ? facturacion_neta / total_pedidos : 0
-        
+
         const total_envios_delivery = validos.filter((p) => p.tipoEntrega === 'delivery').length
-        const costo_envios_cadetes = validos.filter((p) => p.tipoEntrega === 'delivery').reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
+        const costo_envios_cadetes = validos
+          .filter((p) => p.tipoEntrega === 'delivery')
+          .reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
         const total_retiros = validos.filter((p) => p.tipoEntrega === 'retiro').length
         const total_consumo_local = validos.filter((p) => p.tipoEntrega === 'consumo_local').length
-        
+
         const cancelados = pedidosActivos.filter((p) => p.estado === 'cancelado')
         const pedidos_cancelados = cancelados.length
         const monto_cancelados = cancelados.reduce((acc, p) => acc + p.total, 0)
-        // ----------------------------------------------
 
         await enviarAccionPedido({
           accion: 'finalizar_turno',
@@ -814,8 +641,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             total_consumo_local,
             ticket_promedio,
             pedidos_cancelados,
-            monto_cancelados
-          }
+            monto_cancelados,
+          },
         })
       }
 
@@ -823,12 +650,11 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       prevPedidosRef.current = []
       localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify([]))
 
-      // Cerrar el turno en el backend
       const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null }
       await fetch('/api/admin/turno', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(turnoCerrado)
+        body: JSON.stringify(turnoCerrado),
       })
       setEstadoTurno(turnoCerrado)
 
@@ -839,13 +665,13 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
-  // 6) Cargar pedidos históricos de una fecha
+  // ── Pedidos históricos ────────────────────────────────
+
   const obtenerPedidosPorFecha = async (fecha: string): Promise<Pedido[]> => {
     try {
       return await obtenerPedidosHistoricos(fecha)
     } catch (err) {
       console.error('[Supabase] Error al cargar pedidos históricos:', err)
-      // Fallback: buscar en caché
       const cache = localStorage.getItem('chefsy-pedidos-cache-v1')
       if (cache) {
         try {
@@ -857,75 +683,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
-  // Alertas de inactividad de pedidos para administradores
-  const alertasEnviadasRef = useRef<Record<string, number>>({})
-
-  useEffect(() => {
-    if (usuarioActivo?.rol !== 'admin') return
-
-    const interval = setInterval(() => {
-      const ahora = Date.now()
-
-      estado.pedidos.forEach((pedido) => {
-        const estadoActual = pedido.estado
-        if (!['nuevo', 'en_cocina', 'listo'].includes(estadoActual)) return
-
-        let fechaInicio: string | null | undefined = null
-        if (estadoActual === 'nuevo') {
-          fechaInicio = pedido.created_at
-        } else if (estadoActual === 'en_cocina') {
-          fechaInicio = pedido.cocina_at || pedido.created_at
-        } else if (estadoActual === 'listo') {
-          fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
-        }
-
-        if (!fechaInicio) return
-        const startMs = new Date(fechaInicio).getTime()
-        const transcurridoMs = ahora - startMs
-
-        let limiteMs = 0
-        let repeticionMs: number | null = null
-        let msgEstado = ''
-
-        if (estadoActual === 'nuevo') {
-          limiteMs = 1 * 60 * 1000
-          repeticionMs = 1 * 60 * 1000
-          msgEstado = 'nuevo'
-        } else if (estadoActual === 'en_cocina') {
-          limiteMs = 45 * 60 * 1000
-          repeticionMs = null
-          msgEstado = 'en cocina'
-        } else if (estadoActual === 'listo') {
-          limiteMs = 10 * 60 * 1000
-          repeticionMs = null
-          msgEstado = 'listo'
-        }
-
-        if (transcurridoMs >= limiteMs) {
-          const key = `${pedido.id}_${estadoActual}`
-          const ultimaAlerta = alertasEnviadasRef.current[key]
-
-          let deberiaAlertar = false
-          if (!ultimaAlerta) {
-            deberiaAlertar = true
-          } else if (repeticionMs !== null) {
-            deberiaAlertar = (ahora - ultimaAlerta) >= repeticionMs
-          }
-
-          if (deberiaAlertar) {
-            alertasEnviadasRef.current[key] = ahora
-            const tiempoMinutos = Math.round(transcurridoMs / (60 * 1000))
-            const msg = `⚠️ El pedido de ${pedido.cliente} lleva ${tiempoMinutos} min en estado "${msgEstado}".`
-            
-            agregarNotificacion(msg, 'warning')
-            reproducirSonidoNotificacion()
-          }
-        }
-      })
-    }, 10000)
-
-    return () => clearInterval(interval)
-  }, [estado.pedidos, usuarioActivo, agregarNotificacion])
+  // ── Render ────────────────────────────────────────────
 
   return (
     <ContextoPedidosInterno.Provider
@@ -948,7 +706,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         guardarConfiguracionOperativa,
         refrescarCadetes,
         estadoTurno,
-        iniciarTurno
+        iniciarTurno,
       }}
     >
       {children}
@@ -968,7 +726,7 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   )
 }
 
-// ── Hook de Acceso Global (Fachada / Facade) ──────────
+// ── Hook de Acceso Global (Fachada / Facade) ───────────
 
 interface ValorContextoPedidos {
   pedidos: Pedido[]
