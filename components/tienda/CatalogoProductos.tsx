@@ -50,9 +50,9 @@ export default function CatalogoProductos({
           <div>
             <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
               {catDetalles.icono === '🍔' ? (
-                <img src="/burger-icon.png" alt="Burger" className="w-12 h-12 md:w-14 h-14 object-contain drop-shadow-md -translate-y-[2px]" />
+                <img src="/burger-icon.png" alt="Burger" className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
               ) : catDetalles.icono.startsWith('/') ? (
-                <img src={catDetalles.icono} alt={catDetalles.nombre} className="w-12 h-12 md:w-14 h-14 object-contain drop-shadow-md -translate-y-[2px]" />
+                <img src={catDetalles.icono} alt={catDetalles.nombre} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
               ) : (
                 <span>{catDetalles.icono}</span>
               )}
@@ -91,7 +91,8 @@ export default function CatalogoProductos({
                     </h3>
                   )}
 
-                  {productosDeCat.filter(p => !p.esCombo).map((prodOriginal, index) => {
+                  {/* Productos normales (excluye medias pizzas en la categoría pizzas) */}
+                  {productosDeCat.filter(p => !p.esCombo && !(cat.id === 'pizzas' && p.nombre.toLowerCase().includes('media'))).map((prodOriginal, index) => {
                     const meta = metadata[prodOriginal.id]
                     const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
                     const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
@@ -101,6 +102,29 @@ export default function CatalogoProductos({
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
                         index={index} onAbrirModal={onAbrirModal}
+                      />
+                    )
+                  })}
+
+                  {/* Medias Pizzas */}
+                  {cat.id === 'pizzas' && productosDeCat.some(p => p.nombre.toLowerCase().includes('media') && !p.esCombo) && (
+                    <div className="mt-4 mb-2">
+                      <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
+                        MEDIAS PIZZAS
+                      </h4>
+                    </div>
+                  )}
+
+                  {cat.id === 'pizzas' && productosDeCat.filter(p => p.nombre.toLowerCase().includes('media') && !p.esCombo).map((prodOriginal, index) => {
+                    const meta = metadata[prodOriginal.id]
+                    const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
+                    const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
+                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                    return (
+                      <ProductCard
+                        key={prod.id} prod={prod} meta={meta} detalles={detalles}
+                        agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
+                        index={index + 50} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}

@@ -150,17 +150,13 @@ export default function DevToolsPage() {
       // Si hay una imagen nueva en base64, subir a Cloudinary
       if (form.imagenes_nuevas.length > 0) {
         const subidas = await Promise.all(form.imagenes_nuevas.map(async (base64) => {
-          const uploadRes = await fetch('/api/admin/cloudinary', {
+          const uploadRes = await fetch('/api/admin/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imagen: base64 })
           })
           const uploadData = await uploadRes.json()
           if (uploadData.error) throw new Error(uploadData.error)
-          // Si Cloudinary no está configurado, bloquear: no guardar base64 crudo
-          if (uploadData.modoDemo) {
-            throw new Error('⚠️ Cloudinary no está configurado. Configurá CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en .env.local antes de subir imágenes.')
-          }
           return uploadData.urlTransformada || uploadData.urlOriginal
         }))
         finalImageUrls = subidas.join(' | ')

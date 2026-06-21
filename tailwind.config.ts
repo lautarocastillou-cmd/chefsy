@@ -13,6 +13,9 @@ const config: Config = {
     extend: {
       fontFamily: {
         bebas: ['var(--font-bebas)', 'sans-serif'],
+        montserrat: ['var(--font-montserrat)', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
+        anton: ['var(--font-anton)', 'sans-serif'],
       },
       colors: {
         chefsy: {
@@ -33,10 +36,15 @@ const config: Config = {
         'logo-bounce': {
           '0%, 100%': { transform: 'translateY(-15%) scale(1.05)' },
           '50%': { transform: 'translateY(0) scale(0.95)' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
         }
       },
       animation: {
         'logo-bounce': 'logo-bounce 1.5s ease-in-out infinite',
+        marquee: 'marquee 15s linear infinite',
       }
     },
   },

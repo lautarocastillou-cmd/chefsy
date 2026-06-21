@@ -111,7 +111,17 @@ function ContenidoTienda() {
   }, [])
   
   const categoriasActivas = useMemo(() => {
-    return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
+    return categorias.filter(c => c.activa).sort((a, b) => {
+      const isABurger = a.nombre.toLowerCase().includes('burger')
+      const isBBurger = b.nombre.toLowerCase().includes('burger')
+      const isAPatys = a.nombre.toLowerCase().trim() === 'patys'
+      const isBPatys = b.nombre.toLowerCase().trim() === 'patys'
+      
+      if (isABurger && isBPatys) return -1
+      if (isAPatys && isBBurger) return 1
+      
+      return a.orden - b.orden
+    })
   }, [categorias])
 
   const productosFiltrados = useMemo(() => {
@@ -192,8 +202,38 @@ function ContenidoTienda() {
     )
   }
 
+  const fuenteClase = {
+    bebas: 'font-bebas',
+    montserrat: 'font-montserrat',
+    inter: 'font-inter',
+    anton: 'font-anton'
+  }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
+
   return (
-    <div className="bg-tienda-premium text-slate-200 font-sans pb-16">
+    <div className={`bg-tienda-premium text-slate-200 ${fuenteClase} pb-16`}>
+      {configuracion?.banner_promocional && configuracion.banner_promocional.trim() !== '' && (
+        <div 
+          className="text-black text-sm font-bold uppercase tracking-wider sticky top-0 z-50 shadow-md overflow-hidden flex whitespace-nowrap"
+          style={{ backgroundColor: configuracion.banner_color || 'var(--color-chefsy-400)' }}
+        >
+          {configuracion.banner_animado ? (
+            <div className="flex animate-marquee py-2">
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+              <span className="mx-4">{configuracion.banner_promocional}</span>
+            </div>
+          ) : (
+            <div className="w-full text-center py-2 px-4">
+              {configuracion.banner_promocional}
+            </div>
+          )}
+        </div>
+      )}
       <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
       <div className="relative z-10">
         <HeroSection

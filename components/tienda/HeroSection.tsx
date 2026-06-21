@@ -33,6 +33,13 @@ export default function HeroSection({
 }: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
 
+  const fuenteHeroClase = {
+    bebas: 'font-bebas',
+    montserrat: 'font-montserrat',
+    inter: 'font-inter',
+    anton: 'font-anton'
+  }[configuracion?.fuente_hero || 'bebas'] || 'font-bebas'
+
   return (
     <>
       {/* --- CABECERA DE LA TIENDA --- */}
@@ -65,10 +72,10 @@ export default function HeroSection({
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
-            <h1 className="hero-title-1 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85] uppercase">
+            <h1 className={`hero-title-1 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85] uppercase`}>
               {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
             </h1>
-            <h1 className="hero-title-2 font-bebas text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85] uppercase">
+            <h1 className={`hero-title-2 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85] uppercase`}>
               {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
             </h1>
           </div>
@@ -85,7 +92,11 @@ export default function HeroSection({
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 850px"
-                className="object-contain object-top"
+                className="object-contain transition-all duration-200"
+                style={{
+                  objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
+                  transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
+                }}
               />
             </div>
           </div>

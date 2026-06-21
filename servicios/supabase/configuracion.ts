@@ -9,6 +9,14 @@ export interface ConfiguracionTienda {
   hero_image_url: string
   hero_linea_1: string
   hero_linea_2: string
+  fuente_principal?: string
+  banner_promocional?: string
+  banner_animado?: boolean
+  banner_color?: string
+  fuente_hero?: string
+  hero_pos_x?: number
+  hero_pos_y?: number
+  hero_escala?: number
 }
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
@@ -29,7 +37,15 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       logo_url: '/logo.jpg',
       hero_image_url: '/burger-loca.webp',
       hero_linea_1: 'POCAS PALABRAS.',
-      hero_linea_2: 'MUCHO CHEDDAR.'
+      hero_linea_2: 'MUCHO CHEDDAR.',
+      fuente_principal: 'bebas',
+      banner_promocional: '',
+      banner_animado: false,
+      banner_color: '#2A6348',
+      fuente_hero: 'bebas',
+      hero_pos_x: 50,
+      hero_pos_y: 50,
+      hero_escala: 100
     }
   }
 

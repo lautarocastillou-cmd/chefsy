@@ -103,7 +103,7 @@ export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
     case 'cat-1780506096615':
       return { nombre: 'Lomos', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
     case 'lomos-y-milas': 
-      return { nombre: 'Lomos y Milas', subtitulo: 'Sándwiches gigantes con papas fritas', icono: '/lomos-icon.png' }
+      return { nombre: 'Milas', subtitulo: 'Milanesas completas con papas fritas', icono: '/lomos-icon.png' }
     case 'zapping': 
       return { nombre: 'Zapping', subtitulo: 'Tostados gigantes rellenos', icono: '/zapping-icon.png' }
     case 'patys': 

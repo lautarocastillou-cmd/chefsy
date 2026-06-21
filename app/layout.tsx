@@ -3,12 +3,31 @@ import './globals.css'
 import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
-import { Playfair_Display, Bebas_Neue } from 'next/font/google'
+import { Playfair_Display, Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
 
 const bebas = Bebas_Neue({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-bebas',
+  display: 'swap',
+})
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const anton = Anton({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-anton',
   display: 'swap',
 })
 
@@ -46,7 +65,7 @@ export const metadata: Metadata = {
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased ${playfair.variable} ${bebas.variable}`}>
+      <body className={`font-sans antialiased ${playfair.variable} ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorPedidos>
