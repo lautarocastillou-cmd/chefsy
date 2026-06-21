@@ -13,7 +13,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'geolocation=(self), camera=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://bdwgglizirgyuxfwssvc.supabase.co; media-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co wss://bdwgglizirgyuxfwssvc.supabase.co https://nominatim.openstreetmap.org" }
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://bdwgglizirgyuxfwssvc.supabase.co https://unpkg.com https://mt1.google.com; media-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co wss://bdwgglizirgyuxfwssvc.supabase.co https://nominatim.openstreetmap.org" }
         ]
       },
       {

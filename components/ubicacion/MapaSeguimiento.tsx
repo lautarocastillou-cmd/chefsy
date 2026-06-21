@@ -21,8 +21,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     const L = require('leaflet')
     
     leafletMapRef.current = L.map(mapRef.current).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+      attribution: '&copy; Google Maps',
+      maxZoom: 20
     }).addTo(leafletMapRef.current)
 
     const crearIcono = (emoji: string) => L.divIcon({

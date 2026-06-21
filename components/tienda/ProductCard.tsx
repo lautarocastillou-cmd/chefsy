@@ -32,7 +32,7 @@ function ProductCard({
       }`}
     >
       {/* Imagen a la izquierda */}
-      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-black/20">
+      <div className="relative h-20 w-20 md:h-24 md:w-24 shrink-0 overflow-hidden rounded-xl bg-black/20">
         <Image
           src={(imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()}
           alt={prod.nombre}
@@ -56,17 +56,17 @@ function ProductCard({
       </div>
 
       {/* Contenido a la derecha */}
-      <div className="flex-1 flex flex-col justify-center text-left py-1">
+      <div className="flex-1 flex flex-col justify-center text-left py-0.5">
         <div className="flex justify-between items-start gap-2">
-          <h4 className="font-bebas text-3xl md:text-4xl text-white leading-none tracking-wide">
+          <h4 className="font-bebas text-xl sm:text-2xl md:text-4xl text-white leading-none tracking-wide">
             {prod.nombre}
           </h4>
-          <span className="font-sans font-bold text-sm md:text-base text-chefsy-400 shrink-0 mt-1">
+          <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400 shrink-0 mt-0.5">
             {formatearPrecio(prod.precio)}
           </span>
         </div>
         
-        <p className="text-sm md:text-base text-slate-300 font-medium leading-snug line-clamp-2 mt-1.5">
+        <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug line-clamp-2 mt-1">
           {meta?.descripcion_publica || detalles.desc}
         </p>
       </div>
