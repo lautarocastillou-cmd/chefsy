@@ -14,6 +14,7 @@ import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns } from 'lucide-react'
+import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 
 // Opciones del filtro de estado
