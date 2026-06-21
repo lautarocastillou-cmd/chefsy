@@ -24,7 +24,7 @@ export default function GeneradorQrCadete() {
       const res = await fetch('/api/admin/generar-qr-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario: cadete.usuario, nombre: cadete.nombre })
+        body: JSON.stringify({ usuario: cadete.id, nombre: cadete.nombre })
       })
       const data = await res.json()
 
@@ -72,7 +72,7 @@ export default function GeneradorQrCadete() {
           >
             <option value="">Seleccionar cadete...</option>
             {cadetes.map(c => (
-              <option key={c.id} value={c.id}>{c.nombre} (@{c.usuario})</option>
+              <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
           <button
