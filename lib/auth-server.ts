@@ -110,12 +110,12 @@ export async function firmarToken(payload: {
   usuario: string
   nombre:  string
   rol:     'admin' | 'cadete'
-}): Promise<string> {
+}, duracionHoras: number = DURACION_SESION_HORAS): Promise<string> {
   const ahora = Math.floor(Date.now() / 1000)
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(ahora)
-    .setExpirationTime(`${DURACION_SESION_HORAS}h`)
+    .setExpirationTime(`${duracionHoras}h`)
     .sign(obtenerClave())
 }
 
@@ -138,7 +138,7 @@ export async function obtenerSesion(): Promise<PayloadSesion | null> {
 }
 
 // ── Configuración de la cookie segura ─────────────────────────────────────
-export function configurarCookieSesion(token: string): object {
+export function configurarCookieSesion(token: string, duracionHoras: number = DURACION_SESION_HORAS): object {
   return {
     name:     NOMBRE_COOKIE,
     value:    token,
@@ -146,7 +146,7 @@ export function configurarCookieSesion(token: string): object {
     secure:   process.env.NODE_ENV === 'production',
     sameSite: 'strict' as const,
     path:     '/',
-    maxAge:   DURACION_SESION_HORAS * 3600,
+    maxAge:   duracionHoras * 3600,
   }
 }
 

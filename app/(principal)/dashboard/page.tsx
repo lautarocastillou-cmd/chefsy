@@ -10,6 +10,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
+import GeneradorQrCadete from '@/components/dashboard/GeneradorQrCadete'
 import Link from 'next/link'
 import { Clock, ChefHat, Bike, CheckCircle2, Users, Plus, X, MessageCircle, Music, ExternalLink, DollarSign } from 'lucide-react'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
@@ -234,6 +235,10 @@ export default function PaginaDashboard() {
               <p className="text-xs text-gray-500 dark:text-slate-400">Catálogo público online</p>
             </div>
           </a>
+
+          <div className="border-t border-slate-100 dark:border-slate-800 my-4" />
+          
+          <GeneradorQrCadete />
         </section>
       </div>
 
