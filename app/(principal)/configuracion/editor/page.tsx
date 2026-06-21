@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { ConfiguracionContext } from '@/contexto/ConfiguracionTiendaContexto'
 import { ConfiguracionTienda, obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
-import { Save, ArrowLeft, Image as ImageIcon, Type, Palette, Upload, Loader2 } from 'lucide-react'
+import { Save, ArrowLeft, Image as ImageIcon, Type, Palette, Upload, Loader2, Share2, Square } from 'lucide-react'
 import Link from 'next/link'
 import PaginaTienda from '@/app/page'
 
@@ -11,8 +11,8 @@ export default function EditorTienda() {
   const [configLive, setConfigLive] = useState<ConfiguracionTienda | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [cargando, setCargando] = useState(true)
-  const [subiendoImagen, setSubiendoImagen] = useState<'logo_url' | 'hero_image_url' | null>(null)
-  const [dragOver, setDragOver] = useState<'logo_url' | 'hero_image_url' | null>(null)
+  const [subiendoImagen, setSubiendoImagen] = useState<'logo_url' | 'hero_image_url' | 'textura_fondo_url' | null>(null)
+  const [dragOver, setDragOver] = useState<'logo_url' | 'hero_image_url' | 'textura_fondo_url' | null>(null)
 
   // Almacenamiento temporal del input de palabras animadas (separadas por coma)
   const [palabrasText, setPalabrasText] = useState('')
@@ -49,7 +49,7 @@ export default function EditorTienda() {
     }
   }
 
-  const handleDrop = async (e: React.DragEvent, tipo: 'logo_url' | 'hero_image_url') => {
+  const handleDrop = async (e: React.DragEvent, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
     e.preventDefault()
     setDragOver(null)
     const file = e.dataTransfer.files[0]
@@ -57,26 +57,28 @@ export default function EditorTienda() {
     await procesarYSubirImagen(file, tipo)
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, tipo: 'logo_url' | 'hero_image_url') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
     const file = e.target.files?.[0]
     if (!file) return
     await procesarYSubirImagen(file, tipo)
   }
 
-  const procesarYSubirImagen = async (file: File, tipo: 'logo_url' | 'hero_image_url') => {
+  const procesarYSubirImagen = async (file: File, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
     try {
       setSubiendoImagen(tipo)
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
 
-      const uploadRes = await fetch('/api/admin/upload', {
+      const oldUrl = configLive?.[tipo]
+      const oldUrlParam = oldUrl && typeof oldUrl === 'string' && oldUrl.includes('supabase.co') 
+        ? `?oldUrl=${encodeURIComponent(oldUrl)}` 
+        : ''
+
+      const uploadRes = await fetch(`/api/admin/upload${oldUrlParam}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imagen: base64Data })
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+          'X-File-Name': encodeURIComponent(file.name)
+        },
+        body: file
       })
 
       const uploadData = await uploadRes.json()
@@ -144,6 +146,60 @@ export default function EditorTienda() {
                   className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold text-slate-300">Textura de Fondo (Opcional)</label>
+              <div className="flex items-center justify-between text-[10px] text-slate-500 pb-1">
+                <span>Formatos: JPG, PNG, WEBP, MP4, WEBM</span>
+              </div>
+              <label className="block w-full cursor-pointer">
+                <div className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 px-4 rounded-lg text-xs font-bold transition-colors">
+                  <Upload size={10} /> Subir Textura o Video
+                  <input type="file" accept="image/*,video/mp4,video/webm" className="hidden" onChange={(e) => handleFileChange(e, 'textura_fondo_url')} />
+                </div>
+              </label>
+              <div 
+                className={`relative w-full rounded-lg border-2 transition-all ${dragOver === 'textura_fondo_url' ? 'border-chefsy-400 bg-chefsy-400/10 border-dashed scale-[1.02]' : 'border-transparent'}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOver('textura_fondo_url') }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => handleDrop(e, 'textura_fondo_url')}
+              >
+                <input 
+                  type="text" 
+                  value={configLive.textura_fondo_url || ''}
+                  onChange={(e) => handleChange('textura_fondo_url', e.target.value)}
+                  disabled={subiendoImagen === 'textura_fondo_url'}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400 disabled:opacity-50"
+                  placeholder="Arrastrá textura acá o pegá la URL..."
+                />
+                {subiendoImagen === 'textura_fondo_url' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                    <Loader2 size={16} className="animate-spin text-chefsy-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <hr className="border-slate-800" />
+
+          {/* SECCIÓN FORMAS Y BORDES */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
+              <Square size={14} /> Botones y Formas
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300">Estilo de Bordes</label>
+              <select 
+                value={configLive.estilo_bordes || 'suaves'}
+                onChange={(e) => handleChange('estilo_bordes', e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400"
+              >
+                <option value="cuadrados">Cuadrados y Agresivos</option>
+                <option value="suaves">Suaves y Amigables</option>
+                <option value="pildora">Modernos (Píldora)</option>
+              </select>
             </div>
           </div>
 
@@ -372,6 +428,45 @@ export default function EditorTienda() {
                   className="w-full accent-chefsy-400"
                 />
               </div>
+            </div>
+          </div>
+
+          <hr className="border-slate-800" />
+
+          {/* SECCIÓN INTEGRACIONES */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
+              <Share2 size={14} /> Contacto y Redes
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300">Mensaje predeterminado de WhatsApp</label>
+              <textarea 
+                value={configLive.whatsapp_mensaje || ''}
+                onChange={(e) => handleChange('whatsapp_mensaje', e.target.value)}
+                placeholder="Ej: ¡Hola Chefsy! Hice un pedido online:"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400 h-20 resize-none"
+              />
+              <p className="text-[10px] text-slate-500">Este texto aparecerá primero en el mensaje que te manden.</p>
+            </div>
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold text-slate-300">Link de Instagram</label>
+              <input 
+                type="text" 
+                value={configLive.link_instagram || ''}
+                onChange={(e) => handleChange('link_instagram', e.target.value)}
+                placeholder="https://instagram.com/tu_tienda"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300">Link de TikTok</label>
+              <input 
+                type="text" 
+                value={configLive.link_tiktok || ''}
+                onChange={(e) => handleChange('link_tiktok', e.target.value)}
+                placeholder="https://tiktok.com/@tu_tienda"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400"
+              />
             </div>
           </div>
 

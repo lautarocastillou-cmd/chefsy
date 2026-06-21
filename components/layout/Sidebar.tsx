@@ -77,7 +77,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   return (
     <aside 
       className={cn(
-        'bg-gradient-to-b from-chefsy to-chefsy-900 border-r border-chefsy-800 flex flex-col shrink-0 transition-all duration-300 relative',
+        'bg-gradient-to-b from-chefsy to-chefsy-900 border-r border-chefsy-800 flex flex-col shrink-0 transition-all duration-300 relative z-50',
         colapsado && !isMobile ? 'w-20' : 'w-64',
         className
       )}

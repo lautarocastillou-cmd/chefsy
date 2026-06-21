@@ -10,25 +10,74 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { imagen } = await request.json()
-    if (!imagen) {
-      return NextResponse.json({ error: 'Imagen requerida.' }, { status: 400 })
-    }
+    const contentType = request.headers.get('content-type') || ''
+    const url = new URL(request.url)
+    
+    let buffer: Buffer
+    let mimeType: string
+    let ext: string
+    let oldUrl: string | null = url.searchParams.get('oldUrl')
 
-    const matches = imagen.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/)
-    if (!matches || matches.length !== 3) {
-      return NextResponse.json({ error: 'Formato base64 inválido' }, { status: 400 })
-    }
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      if (!oldUrl) oldUrl = formData.get('oldUrl') as string | null
+      const file = formData.get('file') as File | null
+      if (!file) {
+        return NextResponse.json({ error: 'Archivo requerido.' }, { status: 400 })
+      }
+      buffer = Buffer.from(await file.arrayBuffer())
+      mimeType = file.type
+      ext = mimeType.split('/')[1] || 'png'
+    } else if (contentType.includes('application/json')) {
+      const body = await request.json()
+      const imagen = body.imagen
+      if (!oldUrl) oldUrl = body.oldUrl || null
 
-    const mimeType = matches[1]
-    const buffer = Buffer.from(matches[2], 'base64')
-    const ext = mimeType.split('/')[1] || 'png'
+      if (!imagen) {
+        return NextResponse.json({ error: 'Imagen requerida.' }, { status: 400 })
+      }
+
+      const matches = imagen.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/)
+      if (!matches || matches.length !== 3) {
+        return NextResponse.json({ error: 'Formato base64 inválido' }, { status: 400 })
+      }
+
+      mimeType = matches[1]
+      buffer = Buffer.from(matches[2], 'base64')
+      ext = mimeType.split('/')[1] || 'png'
+    } else {
+      const arrayBuffer = await request.arrayBuffer()
+      buffer = Buffer.from(arrayBuffer)
+      if (buffer.length === 0) {
+        return NextResponse.json({ error: 'Archivo requerido.' }, { status: 400 })
+      }
+      mimeType = contentType
+      ext = mimeType.split('/')[1] || 'bin'
+      const fileNameHeader = request.headers.get('x-file-name')
+      if (fileNameHeader) {
+        const nameParts = decodeURIComponent(fileNameHeader).split('.')
+        if (nameParts.length > 1) {
+          ext = nameParts.pop() || ext
+        }
+      }
+    }
     const fileName = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    if (oldUrl) {
+      try {
+        const oldFileName = oldUrl.split('/').pop()?.split('?')[0]
+        if (oldFileName && oldUrl.includes('supabase.co')) {
+          await supabaseAdmin.storage.from('images').remove([oldFileName])
+        }
+      } catch (e) {
+        console.error('[Upload API] Error al borrar archivo antiguo:', e)
+      }
+    }
 
     const { error } = await supabaseAdmin.storage
       .from('images')

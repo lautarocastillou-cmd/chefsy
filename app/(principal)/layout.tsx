@@ -80,7 +80,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
       {/* Área principal */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Cabecera Móvil (Barra superior) */}
-        <header className="md:hidden bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0">
+        <header className="md:hidden bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0 relative z-50">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMenuAbierto(true)}

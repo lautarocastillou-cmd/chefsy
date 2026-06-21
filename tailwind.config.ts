@@ -11,6 +11,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      borderRadius: {
+        'lg': 'var(--radius-lg, 0.5rem)',
+        'xl': 'var(--radius-xl, 0.75rem)',
+        '2xl': 'var(--radius-2xl, 1rem)',
+        '3xl': 'var(--radius-3xl, 1.5rem)',
+      },
       fontFamily: {
         bebas: ['var(--font-bebas)', 'sans-serif'],
         montserrat: ['var(--font-montserrat)', 'sans-serif'],

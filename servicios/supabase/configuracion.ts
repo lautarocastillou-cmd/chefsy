@@ -17,6 +17,11 @@ export interface ConfiguracionTienda {
   hero_pos_x?: number
   hero_pos_y?: number
   hero_escala?: number
+  estilo_bordes?: string
+  textura_fondo_url?: string
+  whatsapp_mensaje?: string
+  link_instagram?: string
+  link_tiktok?: string
 }
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
@@ -45,7 +50,12 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       fuente_hero: 'bebas',
       hero_pos_x: 50,
       hero_pos_y: 50,
-      hero_escala: 100
+      hero_escala: 100,
+      estilo_bordes: 'suaves',
+      textura_fondo_url: '',
+      whatsapp_mensaje: '¡Hola Chefsy! Hice un pedido online:',
+      link_instagram: '',
+      link_tiktok: ''
     }
   }
 

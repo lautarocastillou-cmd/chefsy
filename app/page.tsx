@@ -7,7 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { ProveedorCarrito, usarCarrito } from '@/contexto/CarritoContexto'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 
@@ -145,7 +145,10 @@ function ContenidoTienda() {
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
     const telefono = process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || ''
-    let mensaje = `*¡Hola Chefsy!* Hice un pedido online: \n\n`
+    let mensaje = configuracion?.whatsapp_mensaje 
+      ? `${configuracion.whatsapp_mensaje}\n\n` 
+      : `*¡Hola Chefsy!* Hice un pedido online: \n\n`
+    
     mensaje += `*Orden:* #${pedido.id}\n`
     mensaje += `*Cliente:* ${pedido.cliente}\n`
     mensaje += `*Teléfono:* ${pedido.telefono}\n`
@@ -170,7 +173,7 @@ function ContenidoTienda() {
       ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(mensaje)}`
       : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`
     return urlBase
-  }, [])
+  }, [configuracion?.whatsapp_mensaje])
 
   const handleToggleSelector = useCallback(() => setSelectorAbierto(prev => !prev), [])
   const handleSeleccionarCategoria = useCallback((id: string | null) => {
@@ -209,8 +212,51 @@ function ContenidoTienda() {
     anton: 'font-anton'
   }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
 
+  const estiloBordes = configuracion?.estilo_bordes || 'suaves'
+  const borderRadiusVars = 
+    estiloBordes === 'cuadrados' ? {
+      '--radius-lg': '0px',
+      '--radius-xl': '0px',
+      '--radius-2xl': '0px',
+      '--radius-3xl': '0px',
+    } : estiloBordes === 'pildora' ? {
+      '--radius-lg': '9999px',
+      '--radius-xl': '9999px',
+      '--radius-2xl': '9999px',
+      '--radius-3xl': '9999px',
+    } : {
+      '--radius-lg': '0.5rem',
+      '--radius-xl': '0.75rem',
+      '--radius-2xl': '1rem',
+      '--radius-3xl': '1.5rem',
+    }
+
+  const isVideoBg = configuracion?.textura_fondo_url?.match(/\.(mp4|webm)(\?.*)?$/i)
+  const bgImage = (!isVideoBg && configuracion?.textura_fondo_url) ? `url(${configuracion.textura_fondo_url})` : undefined
+
   return (
-    <div className={`bg-tienda-premium text-slate-200 ${fuenteClase} pb-16`}>
+    <div 
+      className={`bg-tienda-premium text-slate-200 ${fuenteClase} pb-16 min-h-screen relative`}
+      style={{ 
+        ...borderRadiusVars as React.CSSProperties,
+        backgroundImage: bgImage,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {isVideoBg && (
+        <video 
+          key={configuracion!.textura_fondo_url!}
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="fixed inset-0 w-full h-full object-cover z-0 opacity-100"
+        >
+          <source src={configuracion!.textura_fondo_url!} type={`video/${configuracion!.textura_fondo_url!.split('.').pop()?.split('?')[0]}`} />
+        </video>
+      )}
       {configuracion?.banner_promocional && configuracion.banner_promocional.trim() !== '' && (
         <div 
           className="text-black text-sm font-bold uppercase tracking-wider sticky top-0 z-50 shadow-md overflow-hidden flex whitespace-nowrap"
@@ -234,7 +280,6 @@ function ContenidoTienda() {
           )}
         </div>
       )}
-      <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
       <div className="relative z-10">
         <HeroSection
           categoriasActivas={categoriasActivas}
@@ -255,6 +300,25 @@ function ContenidoTienda() {
           metadata={metadata}
           onAbrirModal={abrirModalPersonalizacion}
         />
+
+        {/* --- FOOTER REDES --- */}
+        {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
+          <footer className="mt-8 mb-24 flex justify-center items-center gap-6 pb-8">
+            {configuracion?.link_instagram && (
+              <a href={configuracion.link_instagram} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                <Instagram size={24} />
+              </a>
+            )}
+            {configuracion?.link_tiktok && (
+              <a href={configuracion.link_tiktok} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.68a6.34 6.34 0 0 0 10.86 4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.54z"/>
+                </svg>
+              </a>
+            )}
+          </footer>
+        )}
+
         {totalProductosCarrito > 0 && (
           <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
             <button
