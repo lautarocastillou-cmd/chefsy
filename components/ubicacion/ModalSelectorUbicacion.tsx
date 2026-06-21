@@ -89,7 +89,7 @@ export default function ModalSelectorUbicacion({
       const ubicacion = await obtenerUbicacionActual()
       setCentroMapa(ubicacion)
       setCoordenadasSeleccionadas(ubicacion)
-      setMensaje('Ubicación GPS obtenida.')
+      setMensaje('Ubicación GPS obtenida. ¡VERIFICA QUE LA UBICACIÓN SEA CORRECTA!')
     } catch (error) {
       setMensaje(error instanceof Error ? error.message : 'Error al usar GPS.')
     } finally {

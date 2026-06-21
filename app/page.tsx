@@ -320,7 +320,7 @@ function ContenidoTienda() {
         )}
 
         {totalProductosCarrito > 0 && (
-          <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
+          <div className="fixed bottom-6 left-0 right-0 z-[9999] flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
             <button
               onClick={() => setCartAbierto(true)}
               className="w-full max-w-sm bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 px-5 rounded-full flex items-center justify-between shadow-[0_10px_40px_rgba(42,99,72,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 pointer-events-auto"

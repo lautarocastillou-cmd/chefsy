@@ -13,8 +13,7 @@ import { EstadoPedido, TipoEntrega, Pedido } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
-import { Plus, X, Calendar, LayoutGrid, List } from 'lucide-react'
-import FormularioPedido from '@/components/pedidos/FormularioPedido'
+import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns } from 'lucide-react'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 
 // Opciones del filtro de estado
@@ -33,8 +32,8 @@ export default function PaginaPedidos() {
   
   // Vistas: activos (no archivados, tiempo real) o historial (por fecha, incluye archivados)
   const [vista, setVista] = useState<'activos' | 'historial'>('activos')
-  // Modo de vista para activos: lista o tablero
-  const [modoVista, setModoVista] = useState<'lista' | 'tablero'>('lista')
+  // Modo de vista para activos: cuadricula, lista vertical o tablero
+  const [modoVista, setModoVista] = useState<'cuadricula' | 'lista_vertical' | 'tablero'>('cuadricula')
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
@@ -109,7 +108,7 @@ export default function PaginaPedidos() {
             onClick={() => {
               setVista('historial')
               setFiltroActivo('todos')
-              setModoVista('lista') // Historial siempre en lista
+              setModoVista('cuadricula') // Historial siempre en cuadricula
             }}
             className={cn(
               "pb-2.5 px-4 font-semibold text-sm transition-all border-b-2 -mb-[13px] cursor-pointer",
@@ -127,10 +126,22 @@ export default function PaginaPedidos() {
           {vista === 'activos' && (
             <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
               <button
-                onClick={() => setModoVista('lista')}
+                onClick={() => setModoVista('cuadricula')}
                 className={cn(
                   "p-1.5 rounded-md flex items-center gap-1.5 text-xs font-semibold transition-all",
-                  modoVista === 'lista'
+                  modoVista === 'cuadricula'
+                    ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                )}
+                title="Vista de Cuadrículas"
+              >
+                <Grid size={16} /> Cuadrículas
+              </button>
+              <button
+                onClick={() => setModoVista('lista_vertical')}
+                className={cn(
+                  "p-1.5 rounded-md flex items-center gap-1.5 text-xs font-semibold transition-all",
+                  modoVista === 'lista_vertical'
                     ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
@@ -148,7 +159,7 @@ export default function PaginaPedidos() {
                 )}
                 title="Vista Kanban"
               >
-                <LayoutGrid size={16} /> Tablero
+                <Columns size={16} /> Tablero
               </button>
             </div>
           )}
@@ -168,7 +179,7 @@ export default function PaginaPedidos() {
       </div>
 
       {/* En vista Kanban, no mostramos los filtros porque las columnas actúan como filtros */}
-      {modoVista === 'lista' && (
+      {modoVista !== 'tablero' && (
         <>
           {/* ── Barra superior (Filtros de Estado y Entrega) ── */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -252,10 +263,10 @@ export default function PaginaPedidos() {
           <div className="md:hidden text-center py-10 bg-slate-50 dark:bg-slate-900 rounded-xl">
             <p className="text-slate-500 font-medium">La vista de Tablero no está disponible en móviles.</p>
             <button 
-              onClick={() => setModoVista('lista')}
+              onClick={() => setModoVista('cuadricula')}
               className="mt-4 text-chefsy font-bold underline"
             >
-              Volver a la Lista
+              Volver a las Cuadrículas
             </button>
           </div>
         </div>
@@ -264,7 +275,12 @@ export default function PaginaPedidos() {
           No hay pedidos en este estado para mostrar.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 animate-in fade-in duration-200">
+        <div className={cn(
+          "animate-in fade-in duration-200",
+          modoVista === 'lista_vertical' 
+            ? "flex flex-col gap-3.5 max-w-3xl mx-auto w-full" 
+            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5"
+        )}>
           {pedidosFiltrados.map((pedido) => (
             <TarjetaPedido key={pedido.id} pedido={pedido} />
           ))}
