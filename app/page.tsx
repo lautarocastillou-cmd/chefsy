@@ -238,25 +238,32 @@ function ContenidoTienda() {
     <div 
       className={`bg-tienda-premium text-slate-200 ${fuenteClase} pb-16 min-h-screen relative`}
       style={{ 
-        ...borderRadiusVars as React.CSSProperties,
-        backgroundImage: bgImage,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
+        ...borderRadiusVars as React.CSSProperties
       }}
     >
-      {isVideoBg && (
-        <video 
-          key={configuracion!.textura_fondo_url!}
-          autoPlay 
-          loop 
-          muted 
-          playsInline 
-          className="fixed inset-0 w-full h-full object-cover z-0 opacity-100"
-        >
-          <source src={configuracion!.textura_fondo_url!} type={`video/${configuracion!.textura_fondo_url!.split('.').pop()?.split('?')[0]}`} />
-        </video>
+      {/* CAPA DE FONDO FIJA (Optimización para celulares, reemplaza background-attachment: fixed) */}
+      {(isVideoBg || bgImage) && (
+        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
+          {isVideoBg ? (
+            <video 
+              key={configuracion!.textura_fondo_url!}
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-full h-full object-cover opacity-100"
+            >
+              <source src={configuracion!.textura_fondo_url!} type={`video/${configuracion!.textura_fondo_url!.split('.').pop()?.split('?')[0]}`} />
+            </video>
+          ) : (
+            <div 
+              className="w-full h-full bg-cover bg-center"
+              style={{ backgroundImage: bgImage }}
+            />
+          )}
+        </div>
       )}
+      
       {configuracion?.banner_promocional && configuracion.banner_promocional.trim() !== '' && (
         <div 
           className="text-black text-sm font-bold uppercase tracking-wider sticky top-0 z-50 shadow-md overflow-hidden flex whitespace-nowrap"
