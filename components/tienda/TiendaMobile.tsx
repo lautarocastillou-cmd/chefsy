@@ -176,7 +176,6 @@ export default function TiendaMobile() {
               categoriaSeleccionada === cat.id ? "bg-chefsy-500 text-white" : "bg-[#1A2235] text-slate-400 border border-white/5"
             )}
           >
-            {cat.emoji && <span>{cat.emoji}</span>}
             {cat.nombre}
           </button>
         ))}
