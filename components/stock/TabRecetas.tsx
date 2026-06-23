@@ -2,24 +2,31 @@
 
 import { useState } from 'react'
 import { Insumo, RecetaProducto, RecetaInsumo } from '@/tipos/stock'
-import { ProductoCatalogo } from '@/tipos/catalogo'
+import { ProductoCatalogo, CategoriaCatalogo } from '@/tipos/catalogo'
 import toast from 'react-hot-toast'
-import { ChevronRight, Save, Trash2, Plus } from 'lucide-react'
+import { ChevronRight, ChevronDown, Save, Trash2, Plus } from 'lucide-react'
 
 export function TabRecetas({
   recetas,
   insumos,
   productos,
+  categorias,
   onUpdate
 }: {
   recetas: RecetaProducto[]
   insumos: Insumo[]
   productos: ProductoCatalogo[]
+  categorias: CategoriaCatalogo[]
   onUpdate: () => void
 }) {
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoCatalogo | null>(null)
   const [recetaEdit, setRecetaEdit] = useState<RecetaInsumo[]>([])
   const [guardando, setGuardando] = useState(false)
+  const [colapsadas, setColapsadas] = useState<Record<string, boolean>>({})
+
+  const alternarColapso = (idCat: string) => {
+    setColapsadas(prev => ({ ...prev, [idCat]: !prev[idCat] }))
+  }
 
   const seleccionarProducto = (prod: ProductoCatalogo) => {
     setProductoSeleccionado(prod)
@@ -68,29 +75,57 @@ export function TabRecetas({
     <div className="flex flex-col md:flex-row gap-6">
       {/* Columna Izquierda: Productos */}
       <div className="w-full md:w-1/3 border-r border-slate-200 dark:border-slate-800 pr-4">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Menú / Combos</h3>
-        <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2">
-          {productos.map(p => {
-            const tieneReceta = recetas.some(r => r.producto_id === p.id)
-            const seleccionado = productoSeleccionado?.id === p.id
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Menú / Combos</h3>
+          <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
+            Total: {productos.length}
+          </span>
+        </div>
+        <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2 pb-10">
+          {categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden).map(cat => {
+            const prodCat = productos.filter(p => p.categoriaId === cat.id && p.activo)
+            if (prodCat.length === 0) return null
+            
             return (
-              <button
-                key={p.id}
-                onClick={() => seleccionarProducto(p)}
-                className={`flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
-                  seleccionado 
-                    ? 'border-chefsy bg-chefsy-50 dark:bg-chefsy-900/20 shadow-sm' 
-                    : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 dark:hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  <div className="text-slate-800 dark:text-slate-100 font-bold">{p.nombre}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                    {tieneReceta ? '✅ Receta asignada' : '⚠️ Sin receta'}
+              <div key={cat.id} className="mb-2">
+                <button 
+                  onClick={() => alternarColapso(cat.id)}
+                  className="w-full text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 ml-1 flex items-center gap-2 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+                  {cat.nombre}
+                  {colapsadas[cat.id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+                </button>
+                
+                {!colapsadas[cat.id] && (
+                  <div className="flex flex-col gap-2">
+                    {prodCat.map(p => {
+                      const tieneReceta = recetas.some(r => r.producto_id === p.id)
+                      const seleccionado = productoSeleccionado?.id === p.id
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => seleccionarProducto(p)}
+                          className={`flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
+                            seleccionado 
+                              ? 'border-chefsy bg-chefsy-50 dark:bg-chefsy-900/20 shadow-sm' 
+                              : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 dark:hover:border-slate-700'
+                          }`}
+                        >
+                          <div>
+                            <div className="text-slate-800 dark:text-slate-100 font-bold">{p.nombre}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                              {tieneReceta ? '✅ Receta asignada' : '⚠️ Sin receta'}
+                            </div>
+                          </div>
+                          <ChevronRight size={18} className="text-slate-400" />
+                        </button>
+                      )
+                    })}
                   </div>
-                </div>
-                <ChevronRight size={18} className="text-slate-400" />
-              </button>
+                )}
+              </div>
             )
           })}
         </div>

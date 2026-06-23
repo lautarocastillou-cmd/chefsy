@@ -4,6 +4,7 @@ import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
 import { Playfair_Display, Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
+import GlobalEvents from '@/components/GlobalEvents'
 
 const bebas = Bebas_Neue({
   weight: '400',
@@ -70,6 +71,7 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorPedidos>
+              <GlobalEvents />
               {children}
             </ProveedorPedidos>
           </ProveedorAuth>

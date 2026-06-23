@@ -18,7 +18,7 @@ export default function PaginaStock() {
   const [recetas, setRecetas] = useState<RecetaProducto[]>([])
   const [cargando, setCargando] = useState(true)
 
-  const { productos: productosCatalogo } = usarCatalogo()
+  const { productos: productosCatalogo, categorias: categoriasCatalogo } = usarCatalogo()
 
   const cargarDatos = async () => {
     try {
@@ -90,7 +90,7 @@ export default function PaginaStock() {
           <TabInsumos insumos={insumos} categorias={categorias} onUpdate={cargarDatos} />
         )}
         {tabActivo === 'recetas' && (
-          <TabRecetas recetas={recetas} insumos={insumos} productos={productosCatalogo || []} onUpdate={cargarDatos} />
+          <TabRecetas recetas={recetas} insumos={insumos} productos={productosCatalogo || []} categorias={categoriasCatalogo || []} onUpdate={cargarDatos} />
         )}
       </div>
     </div>

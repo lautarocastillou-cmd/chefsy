@@ -109,17 +109,31 @@ export async function POST(request: Request) {
 
         // Descontar stock inteligentemente cuando pasa a "entregado" (y antes no lo era)
         if (pedidoPrevio?.estado !== 'entregado' && estado === 'entregado' && pedidoAct?.productos) {
-          // Simplificamos los productos para enviarlos al RPC
           const productosVendidos = pedidoAct.productos.map((p: any) => ({
             idCatalogo: p.idCatalogo,
             cantidad: p.cantidad
-          })).filter((p: any) => p.idCatalogo) // Solo productos válidos del catálogo
+          })).filter((p: any) => p.idCatalogo)
 
           if (productosVendidos.length > 0) {
             const { error: rpcError } = await supabaseAdmin.rpc('deducir_stock', {
               productos_vendidos: productosVendidos
             })
             if (rpcError) console.error('[Stock] Error al deducir stock:', rpcError)
+          }
+        }
+
+        // Restituir stock inteligentemente cuando deja de ser "entregado" (ej. pasa a cancelado o nuevo)
+        if (pedidoPrevio?.estado === 'entregado' && estado !== 'entregado' && pedidoAct?.productos) {
+          const productosDevueltos = pedidoAct.productos.map((p: any) => ({
+            idCatalogo: p.idCatalogo,
+            cantidad: p.cantidad
+          })).filter((p: any) => p.idCatalogo)
+
+          if (productosDevueltos.length > 0) {
+            const { error: rpcError } = await supabaseAdmin.rpc('restituir_stock', {
+              productos_devueltos: productosDevueltos
+            })
+            if (rpcError) console.error('[Stock] Error al restituir stock:', rpcError)
           }
         }
 
@@ -165,12 +179,35 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
         }
 
+        // Obtener pedido antes de eliminar para restituir stock si aplica
+        const { data: pedidoEliminar } = await supabaseAdmin
+          .from('pedidos')
+          .select('estado, productos')
+          .eq('id', id)
+          .single()
+
         const { error } = await supabaseAdmin
           .from('pedidos')
           .delete()
           .eq('id', id)
 
         if (error) throw error
+
+        // Restituir stock si el pedido eliminado estaba en estado "entregado"
+        if (pedidoEliminar?.estado === 'entregado' && pedidoEliminar?.productos) {
+          const productosDevueltos = pedidoEliminar.productos.map((p: any) => ({
+            idCatalogo: p.idCatalogo,
+            cantidad: p.cantidad
+          })).filter((p: any) => p.idCatalogo)
+
+          if (productosDevueltos.length > 0) {
+            const { error: rpcError } = await supabaseAdmin.rpc('restituir_stock', {
+              productos_devueltos: productosDevueltos
+            })
+            if (rpcError) console.error('[Stock] Error al restituir stock al eliminar pedido:', rpcError)
+          }
+        }
+
         return NextResponse.json({ ok: true })
       }
 
