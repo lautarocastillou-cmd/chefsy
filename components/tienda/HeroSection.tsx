@@ -8,6 +8,8 @@ import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
   categoriaSeleccionada: string | null
@@ -34,6 +36,7 @@ export default function HeroSection({
   onSeleccionarCategoria,
 }: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
+  const { clienteActivo, abrirModalLogin } = usarClienteAuth()
 
   const fuenteHeroClase = {
     bebas: 'font-bebas',
@@ -57,11 +60,26 @@ export default function HeroSection({
               />
             </div>
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
-              {/* Navegación eliminada por ahora para enfocar en el menú online */}
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* El botón de acceso a personal fue removido por seguridad. Se accede ingresando a /dashboard */}
+          <div className="flex items-center gap-3 md:gap-4">
+            {!clienteActivo ? (
+              <>
+                <button onClick={() => abrirModalLogin()} className="text-white hover:text-chefsy-400 font-medium text-sm md:text-base transition-colors hidden sm:block">
+                  Iniciar sesión
+                </button>
+                <button onClick={() => abrirModalLogin()} className="bg-chefsy hover:bg-chefsy-600 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base transition-colors shadow-lg active:scale-95">
+                  Registrarse
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
+                  <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {clienteActivo.nombre.split(' ')[0]}</span>
+                  <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {clienteActivo.puntos} pts</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
