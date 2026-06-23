@@ -308,6 +308,10 @@ export default function PaginaCadeteria() {
     // Si no es el cadete o no hay pedidos listos, no rastrear
     if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosListos.length === 0) {
       setErrorGps(null)
+      // Detección de App Nativa (Expo) para detener
+      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'STOP_TRACKING' }));
+      }
       // Resetear referencias al detener el rastreo
       ultimasCoordenadasRef.current = null
       ultimaActualizacionGpsRef.current = 0
@@ -360,6 +364,16 @@ export default function PaginaCadeteria() {
     let watchId: number
 
     const iniciarRastreo = async () => {
+      // Detección de App Nativa (Expo) para iniciar rastreo
+      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
+        console.log('App Nativa Detectada: Delegando el rastreo a Expo (Segundo Plano)')
+        ;(window as any).ReactNativeWebView.postMessage(JSON.stringify({ 
+          type: 'START_TRACKING', 
+          cadeteId: usuarioActivo.id 
+        }));
+        return; // La cáscara nativa se encarga
+      }
+
       if (!('geolocation' in navigator)) {
         setErrorGps('La geolocalización no está soportada en este navegador.')
         return
