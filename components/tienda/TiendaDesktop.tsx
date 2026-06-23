@@ -12,6 +12,7 @@ import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
+import Link from 'next/link'
 
 // Componentes de carga inmediata
 import HeroSection from '@/components/tienda/HeroSection'
