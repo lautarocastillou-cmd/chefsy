@@ -12,8 +12,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('[Supabase] Falta configurar NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.local')
 }
 
-// Cliente exportado para usar en toda la app
+// Cliente exportado para usar en toda la app (con persistencia de sesión)
 export const supabase = createClient(
   supabaseUrl ?? 'https://falta-configurar.supabase.co',
   supabaseAnonKey ?? 'falta-configurar'
+)
+
+// Cliente anónimo que ignora localStorage y Web Locks (evita cuelgues)
+export const supabaseAnon = createClient(
+  supabaseUrl ?? 'https://falta-configurar.supabase.co',
+  supabaseAnonKey ?? 'falta-configurar',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  }
 )

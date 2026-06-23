@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAnon } from '@/lib/supabase'
 import { Pedido } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -8,7 +8,7 @@ import { RealtimeChannel } from '@supabase/supabase-js'
  */
 export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
   try {
-    let query = supabase.from('pedidos').select('*')
+    let query = supabaseAnon.from('pedidos').select('*')
     if (fecha) {
       query = query.eq('fecha', fecha)
     }
@@ -31,7 +31,7 @@ export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]
  * Obtiene los pedidos activos de Supabase (no archivados)
  */
 export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAnon
     .from('pedidos')
     .select('*')
     .eq('archivado', false)
