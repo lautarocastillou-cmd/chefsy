@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
+import { ProveedorClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
 import { Playfair_Display, Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
 import GlobalEvents from '@/components/GlobalEvents'
@@ -70,13 +71,16 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
       <body className={`font-sans antialiased overflow-x-hidden ${playfair.variable} ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
-            <ProveedorPedidos>
-              <GlobalEvents />
-              {children}
-            </ProveedorPedidos>
+            <ProveedorClienteAuth>
+              <ProveedorPedidos>
+                <GlobalEvents />
+                {children}
+              </ProveedorPedidos>
+            </ProveedorClienteAuth>
           </ProveedorAuth>
         </ConfiguracionTiendaProvider>
       </body>
     </html>
   )
 }
+
