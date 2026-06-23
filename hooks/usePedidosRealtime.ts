@@ -33,25 +33,18 @@ export function usePedidosRealtime({
   // 1) Carga inicial: Supabase con fallback al caché de localStorage
   useEffect(() => {
     async function cargarInicial() {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      const credencialesValidas =
-        url &&
-        key &&
-        !url.includes('falta-configurar') &&
-        !key.includes('falta-configurar')
       const estaOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
       try {
-        if (!credencialesValidas) {
-          setDbEstado('desconectado')
-          setEstaListo(true)
-          return
-        }
-
         if (!estaOnline) {
           throw new Error('Navegador offline')
         }
+
+        // Solucionar race condition: Esperamos a que Supabase valide o limpie cualquier sesión expirada
+        // en el localStorage (ej. de ClienteAuthContexto) antes de hacer la primera consulta.
+        // Si no hacemos esto, la petición podría enviarse con un JWT expirado y fallar con 401.
+        const { supabase } = await import('@/lib/supabase')
+        await supabase.auth.getSession()
 
         const pedidosGuardados = await obtenerPedidosActivos(100)
         setDbEstado('conectado')
