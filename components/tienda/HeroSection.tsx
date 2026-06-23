@@ -7,8 +7,8 @@ import { Lock, Search } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
-
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -36,7 +36,8 @@ export default function HeroSection({
   onSeleccionarCategoria,
 }: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
-  const { clienteActivo, abrirModalLogin } = usarClienteAuth()
+  const { usuario, perfil } = usarClienteAuth()
+  const [mostrarLogin, setMostrarLogin] = React.useState(false)
 
   const fuenteHeroClase = {
     bebas: 'font-bebas',
@@ -63,20 +64,20 @@ export default function HeroSection({
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
-            {!clienteActivo ? (
+            {!usuario ? (
               <>
-                <button onClick={() => abrirModalLogin()} className="text-white hover:text-chefsy-400 font-medium text-sm md:text-base transition-colors hidden sm:block">
+                <button onClick={() => setMostrarLogin(true)} className="text-white hover:text-chefsy-400 font-medium text-sm md:text-base transition-colors hidden sm:block">
                   Iniciar sesión
                 </button>
-                <button onClick={() => abrirModalLogin()} className="bg-chefsy hover:bg-chefsy-600 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base transition-colors shadow-lg active:scale-95">
+                <button onClick={() => setMostrarLogin(true)} className="bg-chefsy hover:bg-chefsy-600 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base transition-colors shadow-lg active:scale-95">
                   Registrarse
                 </button>
               </>
             ) : (
               <div className="flex items-center gap-2">
                 <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
-                  <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {clienteActivo.nombre.split(' ')[0]}</span>
-                  <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {clienteActivo.puntos} pts</span>
+                  <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
+                  <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
                 </div>
               </div>
             )}
@@ -172,6 +173,12 @@ export default function HeroSection({
         </div>
 
       </div>
+
+      {mostrarLogin && (
+        <ModalLoginCliente 
+          onCerrar={() => setMostrarLogin(false)} 
+        />
+      )}
     </>
   )
 }
