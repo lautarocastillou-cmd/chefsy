@@ -192,8 +192,10 @@ export default function CartDrawer() {
                         + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
                       </p>
                     )}
-                    <p className="text-sm font-bold text-slate-400">
-                      {formatearPrecio(item.precioUnitario)}
+                    <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
+                      {item.pago_con_puntos ? (
+                         <span className="text-chefsy-400 bg-chefsy-500/10 px-2 py-0.5 rounded-md border border-chefsy-500/20">{item.producto.precio_puntos} pts</span>
+                      ) : formatearPrecio(item.precioUnitario)}
                     </p>
                   </div>
 

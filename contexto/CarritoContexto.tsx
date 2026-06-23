@@ -7,6 +7,7 @@ import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from 
 import { generarId } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { supabase } from '@/lib/supabase'
 
 interface ValorContextoCarrito {
   carrito: ItemCarrito[]
@@ -52,6 +53,7 @@ interface ValorContextoCarrito {
   totalProductosCarrito: number
   subtotalCarrito: number
   totalCarrito: number
+  totalPuntosGastados: number
 
   pedidoCompletado: Pedido | null
   setPedidoCompletado: (p: Pedido | null) => void
@@ -103,14 +105,14 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     return productoAPersonalizar.precio + extra
   }, [productoAPersonalizar, modsSeleccionados])
 
-  const agregarAlCarritoDesdeModal = useCallback(() => {
+  const agregarAlCarritoDesdeModal = useCallback((conPuntos: boolean = false) => {
     if (!productoAPersonalizar) return
     const precioUnitario = calcularPrecioUnitarioModal()
     const modsIdsStr = modsSeleccionados.map(m => m.id).sort().join('-')
-    const idCart = modsIdsStr ? `${productoAPersonalizar.id}-${modsIdsStr}` : productoAPersonalizar.id
+    const idCart = modsIdsStr ? `${productoAPersonalizar.id}-${modsIdsStr}${conPuntos ? '-pts' : ''}` : `${productoAPersonalizar.id}${conPuntos ? '-pts' : ''}`
 
     setCarrito(prev => {
-      const indexExistente = prev.findIndex(item => item.idCart === idCart)
+      const indexExistente = prev.findIndex(item => item.idCart === idCart && !!item.pago_con_puntos === conPuntos)
       if (indexExistente > -1) {
         const nuevoCarrito = [...prev]
         nuevoCarrito[indexExistente].cantidad += cantidadModal
@@ -122,7 +124,8 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           cantidad: cantidadModal,
           modificadoresSeleccionados: modsSeleccionados,
           precioUnitario,
-          notaPersonalizacion: notaPersonalizacion.trim() || undefined
+          notaPersonalizacion: notaPersonalizacion.trim() || undefined,
+          pago_con_puntos: conPuntos
         }]
       }
     })
@@ -162,7 +165,8 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   }, [coordenadasCliente, tipoEntrega])
 
   const totalProductosCarrito = carrito.reduce((acc, curr) => acc + curr.cantidad, 0)
-  const subtotalCarrito = carrito.reduce((acc, curr) => acc + (curr.precioUnitario * curr.cantidad), 0)
+  const subtotalCarrito = carrito.reduce((acc, curr) => acc + (curr.pago_con_puntos ? 0 : (curr.precioUnitario * curr.cantidad)), 0)
+  const totalPuntosGastados = carrito.reduce((acc, curr) => acc + (curr.pago_con_puntos && curr.producto.precio_puntos ? (curr.producto.precio_puntos * curr.cantidad) : 0), 0)
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
 
   useEffect(() => {
@@ -184,7 +188,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       return
     }
 
-    const nuevoPedido: Pedido = {
+    // Obtener sesión actual (cliente logueado)
+    const { data: { session } } = await supabase.auth.getSession()
+    const clienteId = session?.user?.id
+
+    const puntosGanados = Math.floor(totalCarrito * 0.05) // 5% de cashback en puntos
+
+    const nuevoPedido: Pedido & { cliente_id?: string; puntos_gastados?: number; puntos_ganados?: number } = {
       id: generarId(),
       cliente: nombreCliente.trim(),
       telefono: telefonoCliente.trim(),
@@ -199,6 +209,9 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         if (item.notaPersonalizacion) {
           anexos.push(`"${item.notaPersonalizacion}"`)
         }
+        if (item.pago_con_puntos) {
+          anexos.push(`[PAGADO CON PUNTOS]`)
+        }
         if (anexos.length > 0) {
           nombreFormateado += ` (+ ${anexos.join(' | ')})`
         }
@@ -206,7 +219,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           id: `${item.producto.id}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           nombre: nombreFormateado,
           cantidad: item.cantidad,
-          precio: item.precioUnitario,
+          precio: item.pago_con_puntos ? 0 : item.precioUnitario,
           idCatalogo: item.producto.id,
           categoriaId: item.producto.categoriaId
         }
@@ -220,7 +233,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       observaciones: observaciones.trim() || undefined,
       hora: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
       fecha: obtenerFechaNegocio(new Date()),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      cliente_id: clienteId, // Se asigna si el cliente está logueado
+      puntos_gastados: totalPuntosGastados,
+      puntos_ganados: puntosGanados
     }
 
     try {
@@ -260,7 +276,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       metodoPago, setMetodoPago,
       observaciones, setObservaciones,
       distanciaClienteKm, costoEnvio,
-      totalProductosCarrito, subtotalCarrito, totalCarrito,
+      totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
       pedidoCompletado, setPedidoCompletado,
       procesarCompra
     }}>

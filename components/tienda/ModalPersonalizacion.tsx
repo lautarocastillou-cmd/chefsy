@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Plus, Minus, X } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio } from '@/lib/utils'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -18,7 +19,7 @@ interface ModalPersonalizacionProps {
   onAlternarModificador: (mod: ModificadorCatalogo) => void
   onSetCantidad: (cantidad: number) => void
   onSetNota: (nota: string) => void
-  onAgregar: () => void
+  onAgregar: (conPuntos: boolean) => void
 }
 
 export default function ModalPersonalizacion({
@@ -36,6 +37,10 @@ export default function ModalPersonalizacion({
   onAgregar,
 }: ModalPersonalizacionProps) {
   const [mostrarFotosMobile, setMostrarFotosMobile] = useState(false)
+  const { perfil } = usarClienteAuth()
+  
+  const puntosRequeridos = producto.precio_puntos ? producto.precio_puntos * cantidadModal : 0
+  const tienePuntosSuficientes = perfil && perfil.puntos_actuales >= puntosRequeridos
 
   useEffect(() => {
     // Deshabilitar scroll del body al montar
@@ -205,12 +210,27 @@ export default function ModalPersonalizacion({
           </div>
 
           {/* Botón agregar */}
-          <button
-            onClick={onAgregar}
-            className="flex-1 bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
-          >
-            Agregar · {formatearPrecio(precioUnitarioTotal * cantidadModal)}
-          </button>
+          <div className="flex-1 flex flex-col gap-2">
+            <button
+              onClick={() => onAgregar(false)}
+              className="w-full bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
+            >
+              Agregar · {formatearPrecio(precioUnitarioTotal * cantidadModal)}
+            </button>
+            {producto.precio_puntos && producto.precio_puntos > 0 && (
+              <button
+                onClick={() => tienePuntosSuficientes ? onAgregar(true) : undefined}
+                disabled={!tienePuntosSuficientes}
+                className={`w-full font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl transition-all text-center leading-none ${
+                  tienePuntosSuficientes 
+                    ? 'bg-chefsy-600/20 text-chefsy-400 border border-chefsy-500/50 hover:bg-chefsy-500/30 active:scale-[0.98] cursor-pointer'
+                    : 'bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed'
+                }`}
+              >
+                Canjear · {puntosRequeridos} pts
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

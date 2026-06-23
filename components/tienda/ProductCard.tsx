@@ -78,9 +78,16 @@ function ProductCard({
           <h4 className="font-bebas text-xl sm:text-2xl md:text-4xl text-white leading-none tracking-wide">
             {prod.nombre}
           </h4>
-          <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400 shrink-0 mt-0.5">
-            {formatearPrecio(prod.precio)}
-          </span>
+          <div className="flex flex-col items-end shrink-0 mt-0.5">
+            <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400">
+              {formatearPrecio(prod.precio)}
+            </span>
+            {prod.precio_puntos > 0 && (
+              <span className="text-[10px] sm:text-xs font-black text-chefsy-500 bg-chefsy-500/10 px-1.5 py-0.5 rounded-md mt-1 border border-chefsy-500/20">
+                o {prod.precio_puntos} pts
+              </span>
+            )}
+          </div>
         </div>
         
         <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug line-clamp-2 mt-1">

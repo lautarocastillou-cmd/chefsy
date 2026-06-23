@@ -369,7 +369,7 @@ export default function PaginaCadeteria() {
         console.log('App Nativa Detectada: Delegando el rastreo a Expo (Segundo Plano)')
         ;(window as any).ReactNativeWebView.postMessage(JSON.stringify({ 
           type: 'START_TRACKING', 
-          cadeteId: usuarioActivo.id 
+          cadeteId: usuarioActivo.usuario 
         }));
         return; // La cáscara nativa se encarga
       }
