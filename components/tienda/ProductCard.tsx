@@ -24,6 +24,20 @@ function ProductCard({
   index,
   onAbrirModal
 }: ProductCardProps) {
+  // Optimización de imágenes Cloudinary
+  const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
+  const isCloudinary = rawSrc.includes('res.cloudinary.com')
+  
+  // Si es Cloudinary, inyectamos parámetros de optimización para la imagen principal (w_300, q_auto, f_auto)
+  let optimizedSrc = rawSrc
+  let blurSrc = ''
+  
+  if (isCloudinary && rawSrc.includes('/upload/')) {
+    const parts = rawSrc.split('/upload/')
+    optimizedSrc = `${parts[0]}/upload/w_300,q_auto,f_auto/${parts[1]}`
+    blurSrc = `${parts[0]}/upload/w_10,e_blur:1000,q_10,f_auto/${parts[1]}`
+  }
+
   return (
     <div
       onClick={() => !agotado && onAbrirModal(prod)}
@@ -34,11 +48,14 @@ function ProductCard({
       {/* Imagen a la izquierda */}
       <div className="relative h-20 w-20 md:h-24 md:w-24 shrink-0 overflow-hidden rounded-xl bg-black/20">
         <Image
-          src={(imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()}
+          src={optimizedSrc}
           alt={prod.nombre}
           fill
           unoptimized={true}
-          priority={true}
+          priority={index < 4} // Solo cargamos de inmediato las primeras 4 (esto repara el error de rendimiento)
+          placeholder={blurSrc ? 'blur' : 'empty'}
+          blurDataURL={blurSrc || undefined}
+          sizes="(max-width: 768px) 80px, 96px"
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {prod.esCombo && (

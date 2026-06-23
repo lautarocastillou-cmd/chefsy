@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { Pedido } from '@/tipos'
-import { UBICACION_LOCAL } from '@/lib/ubicacion'
+import { useEffect, useRef, useState } from 'react'
+import { Pedido, Coordenadas } from '@/tipos'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
@@ -13,6 +13,19 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
   const markersRef = useRef<{ local?: any, cliente?: any, cadete?: any }>({})
+  const [etaText, setEtaText] = useState<string | null>(null)
+
+  // Calcular ETA basado en distancia en cada render
+  useEffect(() => {
+    if (pedido.cadete_coordenadas && pedido.coordenadas && pedido.estado === 'listo') {
+      const dist = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
+      // Asumimos velocidad promedio en ciudad de ~25 km/h -> 2.4 min por km + 2 min extra
+      const minEstimados = Math.ceil((dist * 2.4) + 2)
+      setEtaText(`Llegando en ~${minEstimados} min (${dist.toFixed(1)} km)`)
+    } else {
+      setEtaText(null)
+    }
+  }, [pedido.cadete_coordenadas, pedido.coordenadas, pedido.estado])
 
   // 1. Inicializar el mapa (Solo 1 vez)
   useEffect(() => {
@@ -28,7 +41,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     const crearIcono = (emoji: string) => L.divIcon({
       html: `<div style="font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${emoji}</div>`,
-      className: 'custom-emoji-icon',
+      className: 'custom-emoji-icon animated-marker',
       iconSize: [40, 40],
       iconAnchor: [20, 20]
     })
@@ -68,7 +81,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     } else {
        const crearIcono = (emoji: string) => L.divIcon({
         html: `<div style="font-size: 24px; background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${emoji}</div>`,
-        className: 'custom-emoji-icon',
+        className: 'custom-emoji-icon animated-marker',
         iconSize: [40, 40],
         iconAnchor: [20, 20]
       })
@@ -92,7 +105,23 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
   return (
     <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner relative z-0">
+      <style dangerouslySetInnerHTML={{__html: `
+        .animated-marker {
+          transition: transform 3s linear;
+        }
+      `}} />
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
+      
+      {/* HUD Superior con ETA */}
+      {etaText && !esperandoGps && (
+        <div className="absolute top-4 left-0 right-0 z-[400] flex justify-center pointer-events-none">
+           <div className="bg-emerald-500 text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-4">
+             <span className="text-xl">🛵</span>
+             <span className="text-sm font-extrabold tracking-wide">{etaText}</span>
+           </div>
+        </div>
+      )}
+
       {esperandoGps && (
         <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center pointer-events-none">
           <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-2.5 animate-bounce">
