@@ -141,7 +141,7 @@ export default function CartDrawer() {
   if (!cartAbierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[100] flex justify-end">
       <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
         onClick={onCerrar}
