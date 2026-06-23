@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 export interface ConfiguracionTienda {
   id: number
