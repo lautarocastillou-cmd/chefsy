@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAnon } from '@/lib/supabase'
 import { CategoriaCatalogo, ModificadorCatalogo, ProductoCatalogo } from '@/tipos/catalogo'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -13,7 +13,7 @@ export interface CatalogoGuardado {
  * Obtiene el catálogo principal de la base de datos
  */
 export async function obtenerCatalogoPrincipal(): Promise<CatalogoGuardado | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAnon
     .from('catalogo')
     .select('*')
     .eq('id', 'principal')
