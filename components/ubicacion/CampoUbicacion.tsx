@@ -155,6 +155,7 @@ export default function CampoUbicacion({
 
     let activo = true
     const reverseGeocode = async () => {
+      setBuscando(true)
       try {
         const dir = await buscarDireccionPorCoordenadas(coordenadas)
         if (dir && activo) {
@@ -162,6 +163,8 @@ export default function CampoUbicacion({
         }
       } catch (e) {
         console.error('Error al resolver dirección por coordenadas:', e)
+      } finally {
+        if (activo) setBuscando(false)
       }
     }
     reverseGeocode()
@@ -280,7 +283,7 @@ export default function CampoUbicacion({
                 // Intentar extraer de inmediato si es un link largo o si contiene coordenadas
                 const coordsLocales = extraerCoordenadasDeTexto(urlExtraida || valor)
                 if (coordsLocales) {
-                  onDireccionChange('Resolviendo dirección...')
+                  // No sobreescribir con "Resolviendo..." para no perder el texto ingresado
                   onCoordenadasChange(coordsLocales)
                 } else if (urlExtraida && (urlExtraida.includes('maps.app.goo.gl') || urlExtraida.includes('goo.gl/maps'))) {
                   // Es un link acortado, requiere resolución en servidor

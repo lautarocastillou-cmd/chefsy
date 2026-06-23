@@ -11,6 +11,8 @@ import { Search, ChevronRight } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 import Image from 'next/image'
+import Fuse from 'fuse.js'
+import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
@@ -74,17 +76,32 @@ export default function TiendaMobile() {
     return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
   }, [categorias])
 
+  const sugerenciaBusqueda = useSugerenciaBusqueda(busqueda)
+
   const productosFiltrados = useMemo(() => {
-    return productos.filter(p => {
-      const hayBusqueda = busqueda.trim() !== ''
-      const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+    const hayBusqueda = busqueda.trim() !== ''
+
+    // 1. Filtrar primero por categoría y estado activo
+    const productosPorCategoria = productos.filter(p => {
+      if (!p.activo) return false
       
+      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro
       const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
       
-      return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
+      return catFiltro === 'promos' ? esPromoValida : perteneceACategoria
     })
+
+    // 2. Si hay búsqueda, aplicar Fuse.js
+    if (!hayBusqueda) return productosPorCategoria
+
+    const fuse = new Fuse(productosPorCategoria, {
+      keys: ['nombre', 'descripcion', 'categoriaId'],
+      threshold: 0.4,
+      ignoreLocation: true
+    })
+
+    return fuse.search(busqueda).map(res => res.item)
   }, [productos, categoriaSeleccionada, busqueda])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
@@ -141,16 +158,30 @@ export default function TiendaMobile() {
         </div>
         
         {/* Barra de búsqueda integrada */}
-        <div className="mt-4 relative">
+        <div className="mt-4 relative mb-2">
           <input
             ref={searchInputRef}
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors"
+            className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-20" size={18} />
+          
+          {/* Sugerencia: ¿Quisiste decir? */}
+          {sugerenciaBusqueda && (
+            <div className="absolute -bottom-9 left-1 animate-in fade-in slide-in-from-top-2 duration-300 z-10">
+              <button
+                onClick={() => setBusqueda(sugerenciaBusqueda)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-chefsy-500/20 border border-chefsy-500/40 rounded-b-xl rounded-tr-xl text-[11px] font-medium text-white shadow-lg active:bg-chefsy-500/40 transition-colors pt-2"
+              >
+                <span className="text-slate-300">¿Quisiste decir</span>
+                <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
+                <span className="text-slate-300">?</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

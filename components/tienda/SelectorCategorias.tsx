@@ -75,7 +75,7 @@ export default function SelectorCategorias({
           <div className={`fixed inset-0 z-[101] flex items-end sm:items-center justify-center pointer-events-none transition-all duration-300 ${selectorAbierto ? 'opacity-100' : 'opacity-0 delay-300'}`}>
             {/* Panel modal — CSS transition translateY */}
             <div
-              className={`selector-panel w-full sm:w-96 bg-[#111827] border border-white/10 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden transition-all duration-300 ease-out ${
+              className={`selector-panel w-full sm:w-96 bg-[#0a0a0a] border border-chefsy-500/20 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden transition-all duration-300 ease-out ${
                 selectorAbierto
                   ? 'translate-y-0 opacity-100 pointer-events-auto'
                   : 'translate-y-10 opacity-0 pointer-events-none'
@@ -85,8 +85,8 @@ export default function SelectorCategorias({
                 <div className="w-12 h-1.5 bg-white/20 rounded-full" />
               </div>
               <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center">
-                <h3 className="text-white font-bebas tracking-wide text-2xl">¿QUÉ PINTA HOY?</h3>
-                <button onClick={onToggleSelector} className="text-white/50 hover:text-white p-2 bg-white/5 rounded-full transition-colors">
+                <h3 className="text-chefsy font-bebas tracking-wide text-2xl drop-shadow-[0_0_8px_rgba(54,101,74,0.5)]">¿QUÉ PINTA HOY?</h3>
+                <button onClick={onToggleSelector} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-chefsy-500/20 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>

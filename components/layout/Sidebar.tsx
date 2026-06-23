@@ -14,7 +14,7 @@ import { usarAuth } from '@/contexto/AuthContexto'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   Sun, Moon, LogOut, Settings, 
-  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
+  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush, Package,
   ChevronLeft, ChevronRight, Target
 } from 'lucide-react'
 
@@ -25,6 +25,7 @@ const elementosNavegacion = [
   { href: '/cadeteria',     etiqueta: 'Cadetería',     icono: Bike },
   { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
+  { href: '/configuracion/stock', etiqueta: 'Stock', icono: Package },
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
   { href: '/caceria',       etiqueta: 'Cacería',       icono: Target },
   { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },

@@ -10,6 +10,9 @@ import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import Fuse from 'fuse.js'
+import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
+import Link from 'next/link'
 
 // Componentes de carga inmediata
 import HeroSection from '@/components/tienda/HeroSection'
@@ -122,23 +125,38 @@ export default function TiendaDesktop() {
     })
   }, [categorias])
 
+  const sugerenciaBusqueda = useSugerenciaBusqueda(busqueda)
+
   const productosFiltrados = useMemo(() => {
     const idPatys = categorias.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
     const idBurgers = categorias.find(c => c.nombre.toLowerCase().includes('burger'))?.id
     
-    return productos.filter(p => {
-      const hayBusqueda = busqueda.trim() !== ''
+    const hayBusqueda = busqueda.trim() !== ''
+
+    // 1. Filtrar por categoría y estado activo
+    const productosPorCategoria = productos.filter(p => {
+      if (!p.activo) return false
       if (!categoriaSeleccionada && !hayBusqueda) return false
 
-      const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
       const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
       
       const esFiltroCombinado = catFiltro === idPatys || catFiltro === idBurgers
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroCombinado && (p.categoriaId === idPatys || p.categoriaId === idBurgers))
       const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
       
-      return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
+      return catFiltro === 'promos' ? esPromoValida : perteneceACategoria
     })
+
+    // 2. Si hay búsqueda, aplicar Fuse.js para tolerancia a errores tipográficos
+    if (!hayBusqueda) return productosPorCategoria
+
+    const fuse = new Fuse(productosPorCategoria, {
+      keys: ['nombre', 'descripcion', 'categoriaId'],
+      threshold: 0.4, // Tolerancia a errores de tipeo
+      ignoreLocation: true
+    })
+
+    return fuse.search(busqueda).map(res => res.item)
   }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
@@ -288,6 +306,7 @@ export default function TiendaDesktop() {
           categoriasActivas={categoriasActivas}
           categoriaSeleccionada={categoriaSeleccionada}
           busqueda={busqueda}
+          sugerenciaBusqueda={sugerenciaBusqueda}
           selectorAbierto={selectorAbierto}
           animatedWordIndex={animatedWordIndex}
           animatedWords={animatedWords}
@@ -304,45 +323,46 @@ export default function TiendaDesktop() {
           onAbrirModal={abrirModalPersonalizacion}
         />
 
-        {/* --- FOOTER REDES --- */}
-        {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
-          <footer className="mt-8 mb-24 flex justify-center items-center gap-6 pb-8">
-            {configuracion?.link_instagram && (
-              <a href={configuracion.link_instagram} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
-                <Instagram size={24} />
-              </a>
-            )}
-            {configuracion?.link_tiktok && (
-              <a href={configuracion.link_tiktok} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.68a6.34 6.34 0 0 0 10.86 4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.54z"/>
-                </svg>
-              </a>
-            )}
-          </footer>
-        )}
+        {/* --- FOOTER --- */}
+        <footer className="mt-12 mb-24 flex flex-col items-center gap-6 pb-8 border-t border-white/10 pt-8">
+          {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
+            <div className="flex justify-center items-center gap-6">
+              {configuracion?.link_instagram && (
+                <a href={configuracion.link_instagram} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                  <Instagram size={24} />
+                </a>
+              )}
+              {configuracion?.link_tiktok && (
+                <a href={configuracion.link_tiktok} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.68a6.34 6.34 0 0 0 10.86 4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.54z"/>
+                  </svg>
+                </a>
+              )}
+            </div>
+          )}
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-sm font-medium text-slate-500">
+            <Link href="/privacidad" className="hover:text-chefsy-400 transition-colors">Política de Privacidad</Link>
+            <span className="hidden md:inline-block text-slate-700">•</span>
+            <Link href="/terminos" className="hover:text-chefsy-400 transition-colors">Términos y Condiciones</Link>
+          </div>
+          <p className="text-xs text-slate-600 mt-2">&copy; {new Date().getFullYear()} Chefsy. Todos los derechos reservados.</p>
+        </footer>
 
         {totalProductosCarrito > 0 && !cartAbierto && (
-          <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-slate-950/95 backdrop-blur-md border-t border-white/10 p-4 animate-in slide-in-from-bottom-full fade-in duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-            <div className="max-w-6xl mx-auto flex justify-center">
-              <button
-                onClick={() => setCartAbierto(true)}
-                className="w-full max-w-sm bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 px-5 rounded-xl flex items-center justify-between shadow-lg active:scale-95 transition-all cursor-pointer border border-chefsy-400/30"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg">
-                    <ShoppingCart size={20} className="text-white" />
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm leading-tight">Ver Carrito</span>
-                    <span className="text-[10px] text-chefsy-100 font-semibold">{totalProductosCarrito} {totalProductosCarrito === 1 ? 'producto' : 'productos'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black">{formatearPrecio(subtotalCarrito)}</span>
-                </div>
-              </button>
-            </div>
+          <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 fade-in duration-300">
+            <button
+              onClick={() => setCartAbierto(true)}
+              className="bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 md:py-4 px-6 md:px-8 rounded-full flex items-center shadow-[0_10px_40px_rgba(54,101,74,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 gap-3 md:gap-4 group"
+            >
+              <div className="relative flex items-center">
+                <ShoppingCart size={24} className="text-white group-hover:scale-110 transition-transform" />
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm">
+                  {totalProductosCarrito}
+                </span>
+              </div>
+              <span className="text-sm md:text-lg font-black bg-black/20 px-3 py-1 rounded-full">{formatearPrecio(subtotalCarrito)}</span>
+            </button>
           </div>
         )}
         {cartAbierto && (

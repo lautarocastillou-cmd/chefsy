@@ -53,6 +53,22 @@ export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
  */
 export async function insertarPedidoLocal(payload: any): Promise<void> {
   const payloadCompleto = { ...payload, archivado: false }
+  
+  // 1. Ejecutar transacción de puntos si aplica
+  if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
+    const { error: rpcError } = await supabase.rpc('procesar_compra_puntos', {
+      p_cliente_id: payload.cliente_id,
+      p_puntos_a_gastar: payload.puntos_gastados || 0,
+      p_puntos_a_ganar: payload.puntos_ganados || 0
+    })
+    
+    if (rpcError) {
+      console.error('[Servicio Pedidos] Error en RPC de puntos:', rpcError.message)
+      throw new Error(`No se pudo procesar los puntos: ${rpcError.message}`)
+    }
+  }
+
+  // 2. Insertar el pedido en sí
   const { error } = await supabase.from('pedidos').insert(payloadCompleto)
 
   if (error) {

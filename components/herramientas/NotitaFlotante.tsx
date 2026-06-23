@@ -105,7 +105,20 @@ export default function NotitaFlotante() {
       if (!dragStart.current) return
       const dx = e.clientX - dragStart.current.mouseX
       const dy = e.clientY - dragStart.current.mouseY
-      const newPos = { x: dragStart.current.posX + dx, y: dragStart.current.posY + dy }
+      
+      let nextX = dragStart.current.posX + dx
+      let nextY = dragStart.current.posY + dy
+
+      // Límites para que no se salga de la pantalla (ni se meta abajo del header)
+      const minX = 24 - window.innerWidth + 300 // Límite izquierdo
+      const maxX = 24 // Límite derecho
+      const minY = 96 - window.innerHeight + 150 // Límite superior (deja 150px libres para el header)
+      const maxY = 96 // Límite inferior
+
+      nextX = Math.max(minX, Math.min(nextX, maxX))
+      nextY = Math.max(minY, Math.min(nextY, maxY))
+
+      const newPos = { x: nextX, y: nextY }
       setPos(newPos)
       guardarPos(newPos)
     }
@@ -128,7 +141,13 @@ export default function NotitaFlotante() {
   }
 
   const eliminarNotita = (id: string) => {
-    // Simplemente filtra — permite tener 0 notitas
+    // Buscar la nota para ver si tiene contenido
+    const nota = notitas.find(n => n.id === id)
+    if (nota && nota.contenido.trim().length > 0) {
+      if (!confirm('¿Estás seguro que querés borrar esta nota permanentemente?')) {
+        return
+      }
+    }
     setNotitas(prev => prev.filter(n => n.id !== id))
   }
 
@@ -192,7 +211,15 @@ export default function NotitaFlotante() {
                     <Plus size={10} /> Nueva
                   </button>
                 )}
-                <GripHorizontal size={13} className="text-[#686868]" />
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={() => setAbierto(false)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-white bg-emerald-900/40 hover:bg-emerald-600/60 px-2 py-0.5 rounded-full transition-all"
+                  title="Guardar y minimizar"
+                >
+                  💾 Guardar
+                </button>
+                <GripHorizontal size={13} className="text-[#686868] ml-1" />
               </div>
             </div>
 

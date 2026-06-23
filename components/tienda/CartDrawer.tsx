@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
-import { User, Phone, MapPin, CreditCard } from 'lucide-react'
+import { User, Phone, MapPin, CreditCard, Gift } from 'lucide-react'
 import { SlideButton } from '@/components/ui/slide-button'
 import { ItemCarrito } from '@/tipos/tienda'
 import { formatearPrecio } from '@/lib/utils'
@@ -11,8 +11,13 @@ import { formatearPrecio } from '@/lib/utils'
 const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector'), { ssr: false })
 
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 
 export default function CartDrawer() {
+  const { usuario, perfil } = usarClienteAuth()
+  const [mostrarLogin, setMostrarLogin] = useState(false)
+
   const {
     carrito,
     cartAbierto,
@@ -141,7 +146,7 @@ export default function CartDrawer() {
   if (!cartAbierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[100] flex justify-end">
       <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
         onClick={onCerrar}
@@ -187,8 +192,10 @@ export default function CartDrawer() {
                         + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
                       </p>
                     )}
-                    <p className="text-sm font-bold text-slate-400">
-                      {formatearPrecio(item.precioUnitario)}
+                    <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
+                      {item.pago_con_puntos ? (
+                         <span className="text-chefsy-400 bg-chefsy-500/10 px-2 py-0.5 rounded-md border border-chefsy-500/20">{item.producto.precio_puntos} pts</span>
+                      ) : formatearPrecio(item.precioUnitario)}
                     </p>
                   </div>
 
@@ -478,6 +485,39 @@ export default function CartDrawer() {
         {/* Footer de Drawer */}
         {carrito.length > 0 && (
           <div className="p-5 border-t border-[#3d3d3d] bg-[#1a1a1a] space-y-4">
+            
+            {/* --- REWARDS BANNER --- */}
+            {!usuario ? (
+              <div 
+                onClick={() => setMostrarLogin(true)}
+                className="bg-gradient-to-r from-chefsy-600/20 to-chefsy-500/10 border border-chefsy-500/30 rounded-xl p-3 flex items-center justify-between cursor-pointer hover:bg-chefsy-500/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-chefsy-500/20 p-2 rounded-full">
+                    <Gift size={18} className="text-chefsy-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-white">Sumá puntos con este pedido</span>
+                    <span className="text-[10px] text-chefsy-200">Ingresá para canjear comida gratis</span>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-chefsy-400" />
+              </div>
+            ) : (
+              <div className="bg-[#222] border border-[#3d3d3d] rounded-xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-chefsy-500 p-2 rounded-full shadow-[0_0_10px_rgba(54,101,74,0.5)]">
+                    <Gift size={18} className="text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-white">ChefsyCoins disponibles</span>
+                    <span className="text-[10px] text-slate-400">Canjealos desde el menú</span>
+                  </div>
+                </div>
+                <span className="font-black text-chefsy-400">{perfil?.puntos_actuales || 0} pts</span>
+              </div>
+            )}
+
             <div className="space-y-1.5 text-xs text-slate-400 text-left">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -507,6 +547,13 @@ export default function CartDrawer() {
           </div>
         )}
       </div>
+
+      {/* Renderizar Modal de Login encima del Drawer */}
+      {mostrarLogin && (
+        <ModalLoginCliente 
+          onCerrar={() => setMostrarLogin(false)} 
+        />
+      )}
     </div>
   )
 }

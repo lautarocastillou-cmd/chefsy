@@ -250,12 +250,68 @@ export default function PaginaCadeteria() {
 
   const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo')
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
+  const [simulando, setSimulando] = useState(false)
+  const [alertaVisibility, setAlertaVisibility] = useState(false)
+
+  const pedidosListosRef = useRef<Pedido[]>([])
+
+  useEffect(() => {
+    pedidosListosRef.current = pedidosListos
+  }, [pedidosListos])
+
+  // Mantener la pantalla encendida (WakeLock) durante el reparto
+  useEffect(() => {
+    let wakeLock: any = null
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && pedidosListos.length > 0) {
+          wakeLock = await (navigator as any).wakeLock.request('screen')
+        }
+      } catch (err) {
+        console.error('Error al pedir WakeLock:', err)
+      }
+    }
+
+    if (pedidosListos.length > 0 && usuarioActivo && usuarioActivo.rol !== 'admin') {
+      requestWakeLock()
+    } else if (wakeLock) {
+      wakeLock.release().catch(console.error)
+      wakeLock = null
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && pedidosListos.length > 0) {
+        requestWakeLock()
+        setAlertaVisibility(false)
+      } else if (document.visibilityState === 'hidden' && pedidosListos.length > 0) {
+        // Mostrar alerta si minimiza la app en pleno reparto
+        setAlertaVisibility(true)
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 500])
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (wakeLock !== null) {
+        wakeLock.release().catch(console.error)
+      }
+    }
+  }, [pedidosListos.length, usuarioActivo])
 
   // Seguimiento GPS en tiempo real
   useEffect(() => {
     // Si no es el cadete o no hay pedidos listos, no rastrear
     if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosListos.length === 0) {
       setErrorGps(null)
+      // Detección de App Nativa (Expo) para detener
+      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'STOP_TRACKING' }));
+      }
       // Resetear referencias al detener el rastreo
       ultimasCoordenadasRef.current = null
       ultimaActualizacionGpsRef.current = 0
@@ -266,9 +322,58 @@ export default function PaginaCadeteria() {
     ultimasCoordenadasRef.current = null
     ultimaActualizacionGpsRef.current = 0
 
+    // SIMULADOR DEV
+    if (simulando && pedidosListos.length > 0) {
+      const pedidoObjetivo = pedidosListos[0]
+      const origen = { latitud: -28.473522, longitud: -65.787723 } // Centro de ejemplo o UBICACION_LOCAL
+      const destino = pedidoObjetivo.coordenadas || { latitud: -28.48, longitud: -65.79 }
+      let paso = 0
+      
+      const interval = setInterval(async () => {
+        paso += 0.05 // Avanza 5% cada vez
+        if (paso > 1) paso = 1
+        
+        const coords = {
+          latitud: origen.latitud + (destino.latitud - origen.latitud) * paso,
+          longitud: origen.longitud + (destino.longitud - origen.longitud) * paso
+        }
+
+        const pedidosIds = pedidosListosRef.current.map(p => p.id)
+        if (pedidosIds.length === 0) return
+
+        try {
+          await fetch('/api/admin/pedidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accion: 'actualizar_gps',
+              ids: pedidosIds,
+              cadete_coordenadas: coords
+            })
+          })
+        } catch (e) {
+          console.error('Error enviando coords simuladas', e)
+        }
+        
+        if (paso >= 1) clearInterval(interval)
+      }, 3000) // cada 3 seg en simulación
+      
+      return () => clearInterval(interval)
+    }
+
     let watchId: number
 
     const iniciarRastreo = async () => {
+      // Detección de App Nativa (Expo) para iniciar rastreo
+      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
+        console.log('App Nativa Detectada: Delegando el rastreo a Expo (Segundo Plano)')
+        ;(window as any).ReactNativeWebView.postMessage(JSON.stringify({ 
+          type: 'START_TRACKING', 
+          cadeteId: usuarioActivo.usuario 
+        }));
+        return; // La cáscara nativa se encarga
+      }
+
       if (!('geolocation' in navigator)) {
         setErrorGps('La geolocalización no está soportada en este navegador.')
         return
@@ -276,6 +381,12 @@ export default function PaginaCadeteria() {
 
       watchId = navigator.geolocation.watchPosition(
         async (position) => {
+          // Filtro Anti-Saltos: Ignorar lecturas con precisión peor a 40 metros
+          if (position.coords.accuracy > 40) {
+            console.log('Lectura GPS ignorada por baja precisión:', position.coords.accuracy)
+            return
+          }
+
           setErrorGps(null)
           const coords = {
             latitud: position.coords.latitude,
@@ -302,8 +413,10 @@ export default function PaginaCadeteria() {
           ultimasCoordenadasRef.current = coords
           ultimaActualizacionGpsRef.current = ahora
 
-          // Actualizar las coordenadas en supabase para todos los pedidos activos listos
-          const pedidosIds = pedidosListos.map(p => p.id)
+          // Usar la referencia más reciente de pedidos listos para evitar el cierre de estado (stale closure)
+          const pedidosIds = pedidosListosRef.current.map(p => p.id)
+          if (pedidosIds.length === 0) return
+
           try {
             const respuesta = await fetch('/api/admin/pedidos', {
               method: 'POST',
@@ -334,7 +447,7 @@ export default function PaginaCadeteria() {
           }
           setErrorGps(mensajes[error.code] || 'Error al obtener la ubicación.')
         },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
       )
     }
 
@@ -435,6 +548,17 @@ export default function PaginaCadeteria() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-2">
+            <button
+              onClick={() => setSimulando(!simulando)}
+              className={cn(
+                "text-[10px] font-bold py-1.5 px-3 rounded-lg transition-colors border shadow-sm",
+                simulando 
+                  ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-800 animate-pulse"
+                  : "bg-white/10 hover:bg-white/20 text-white border-white/20"
+              )}
+            >
+              {simulando ? '🛑 Detener Simulación' : '🕹️ Simular Viaje DEV'}
+            </button>
             {usuarioActivo?.rol !== 'admin' && <BotonNotificaciones />}
             <button
               onClick={cerrarSesion}
@@ -447,7 +571,17 @@ export default function PaginaCadeteria() {
       )}
 
       <main className={esAdmin ? "max-w-xl mx-auto space-y-4" : "max-w-md mx-auto p-4 space-y-4"}>
-        {errorGps && (
+        {alertaVisibility && (
+          <div className="bg-red-600 text-white p-4 rounded-2xl text-sm font-bold flex items-start gap-2.5 shadow-xl animate-bounce">
+            <span className="text-xl shrink-0">🚨</span>
+            <div>
+              <p className="text-lg">¡CUIDADO!</p>
+              <p className="mt-1 font-medium text-red-100">Minimizaste la app. El GPS del cliente se detuvo. Por favor, mantené esta pantalla abierta mientras estés en camino para no fallarle al cliente.</p>
+            </div>
+          </div>
+        )}
+        
+        {errorGps && !simulando && (
           <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
             <span className="text-base shrink-0">⚠️</span>
             <div>
@@ -467,6 +601,12 @@ export default function PaginaCadeteria() {
                   {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
                 </h2>
                 <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
+                {pedidosListos.length > 0 && (
+                  <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 px-2 py-1 rounded text-[10px] font-bold tracking-wide">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    MANTENIENDO PANTALLA ACTIVA PARA GPS
+                  </div>
+                )}
               </div>
             </div>
 

@@ -12,4 +12,5 @@ export interface ItemCarrito {
   modificadoresSeleccionados: ModificadorCatalogo[]
   precioUnitario: number
   notaPersonalizacion?: string
+  pago_con_puntos?: boolean
 }

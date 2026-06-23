@@ -15,6 +15,7 @@ export interface ProductoCatalogo {
   categoriaId: string
   nombre: string
   precio: number
+  precio_puntos?: number
   activo: boolean
   stock?: number | null
   esCombo?: boolean

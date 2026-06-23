@@ -7,11 +7,14 @@ import { Lock, Search } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
   categoriaSeleccionada: string | null
   busqueda: string
+  sugerenciaBusqueda?: string | null
   selectorAbierto: boolean
   animatedWordIndex: number
   animatedWords: string[]
@@ -24,6 +27,7 @@ export default function HeroSection({
   categoriasActivas,
   categoriaSeleccionada,
   busqueda,
+  sugerenciaBusqueda,
   selectorAbierto,
   animatedWordIndex,
   animatedWords,
@@ -32,6 +36,8 @@ export default function HeroSection({
   onSeleccionarCategoria,
 }: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
+  const { usuario, perfil } = usarClienteAuth()
+  const [mostrarLogin, setMostrarLogin] = React.useState(false)
 
   const fuenteHeroClase = {
     bebas: 'font-bebas',
@@ -55,11 +61,26 @@ export default function HeroSection({
               />
             </div>
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
-              {/* Navegación eliminada por ahora para enfocar en el menú online */}
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* El botón de acceso a personal fue removido por seguridad. Se accede ingresando a /dashboard */}
+          <div className="flex items-center gap-3 md:gap-4">
+            {!usuario ? (
+              <>
+                <button onClick={() => setMostrarLogin(true)} className="text-white hover:text-chefsy-400 font-medium text-sm md:text-base transition-colors hidden sm:block">
+                  Iniciar sesión
+                </button>
+                <button onClick={() => setMostrarLogin(true)} className="bg-chefsy hover:bg-chefsy-600 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base transition-colors shadow-lg active:scale-95">
+                  Registrarse
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
+                  <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
+                  <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -115,6 +136,20 @@ export default function HeroSection({
                 className="w-full bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              
+              {/* Sugerencia: ¿Quisiste decir? */}
+              {sugerenciaBusqueda && (
+                <div className="absolute -bottom-8 left-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <button
+                    onClick={() => onBusquedaChange(sugerenciaBusqueda)}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-chefsy-500/20 hover:bg-chefsy-500/30 border border-chefsy-500/40 rounded-full text-xs font-medium text-white transition-all shadow-lg"
+                  >
+                    <span className="text-slate-300">¿Quisiste decir</span>
+                    <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
+                    <span className="text-slate-300">?</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4 w-full">
               <SelectorCategorias
@@ -138,6 +173,12 @@ export default function HeroSection({
         </div>
 
       </div>
+
+      {mostrarLogin && (
+        <ModalLoginCliente 
+          onCerrar={() => setMostrarLogin(false)} 
+        />
+      )}
     </>
   )
 }
