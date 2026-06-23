@@ -10,6 +10,8 @@ import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import Fuse from 'fuse.js'
+import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 
 // Componentes de carga inmediata
 import HeroSection from '@/components/tienda/HeroSection'
@@ -122,23 +124,38 @@ export default function TiendaDesktop() {
     })
   }, [categorias])
 
+  const sugerenciaBusqueda = useSugerenciaBusqueda(busqueda)
+
   const productosFiltrados = useMemo(() => {
     const idPatys = categorias.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
     const idBurgers = categorias.find(c => c.nombre.toLowerCase().includes('burger'))?.id
     
-    return productos.filter(p => {
-      const hayBusqueda = busqueda.trim() !== ''
+    const hayBusqueda = busqueda.trim() !== ''
+
+    // 1. Filtrar por categoría y estado activo
+    const productosPorCategoria = productos.filter(p => {
+      if (!p.activo) return false
       if (!categoriaSeleccionada && !hayBusqueda) return false
 
-      const matchBusqueda = !hayBusqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase())
       const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
       
       const esFiltroCombinado = catFiltro === idPatys || catFiltro === idBurgers
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroCombinado && (p.categoriaId === idPatys || p.categoriaId === idBurgers))
       const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
       
-      return p.activo && (catFiltro === 'promos' ? esPromoValida : perteneceACategoria) && matchBusqueda
+      return catFiltro === 'promos' ? esPromoValida : perteneceACategoria
     })
+
+    // 2. Si hay búsqueda, aplicar Fuse.js para tolerancia a errores tipográficos
+    if (!hayBusqueda) return productosPorCategoria
+
+    const fuse = new Fuse(productosPorCategoria, {
+      keys: ['nombre', 'descripcion', 'categoriaId'],
+      threshold: 0.4, // Tolerancia a errores de tipeo
+      ignoreLocation: true
+    })
+
+    return fuse.search(busqueda).map(res => res.item)
   }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
@@ -282,6 +299,7 @@ export default function TiendaDesktop() {
           categoriasActivas={categoriasActivas}
           categoriaSeleccionada={categoriaSeleccionada}
           busqueda={busqueda}
+          sugerenciaBusqueda={sugerenciaBusqueda}
           selectorAbierto={selectorAbierto}
           animatedWordIndex={animatedWordIndex}
           animatedWords={animatedWords}

@@ -85,15 +85,38 @@ export async function POST(request: Request) {
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
 
+        // Obtener estado anterior para evitar doble descuento
+        const { data: pedidoPrevio } = await supabaseAdmin
+          .from('pedidos')
+          .select('estado')
+          .eq('id', id)
+          .single()
+
         // C4: Una sola query — update + select en la misma operación
         const { data: pedidoAct, error } = await supabaseAdmin
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
-          .select('cadete_id, tipoEntrega, cliente')
+          .select('cadete_id, tipoEntrega, cliente, productos')
           .single()
 
         if (error) throw error
+
+        // Descontar stock inteligentemente cuando pasa a "entregado" (y antes no lo era)
+        if (pedidoPrevio?.estado !== 'entregado' && estado === 'entregado' && pedidoAct?.productos) {
+          // Simplificamos los productos para enviarlos al RPC
+          const productosVendidos = pedidoAct.productos.map((p: any) => ({
+            idCatalogo: p.idCatalogo,
+            cantidad: p.cantidad
+          })).filter((p: any) => p.idCatalogo) // Solo productos válidos del catálogo
+
+          if (productosVendidos.length > 0) {
+            const { error: rpcError } = await supabaseAdmin.rpc('deducir_stock', {
+              productos_vendidos: productosVendidos
+            })
+            if (rpcError) console.error('[Stock] Error al deducir stock:', rpcError)
+          }
+        }
 
         // Notificar al cadete si el pedido es delivery y está listo
         // Usamos pedidoAct directamente — sin segunda query a la base de datos

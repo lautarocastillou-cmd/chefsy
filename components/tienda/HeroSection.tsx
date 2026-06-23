@@ -12,6 +12,7 @@ interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
   categoriaSeleccionada: string | null
   busqueda: string
+  sugerenciaBusqueda?: string | null
   selectorAbierto: boolean
   animatedWordIndex: number
   animatedWords: string[]
@@ -24,6 +25,7 @@ export default function HeroSection({
   categoriasActivas,
   categoriaSeleccionada,
   busqueda,
+  sugerenciaBusqueda,
   selectorAbierto,
   animatedWordIndex,
   animatedWords,
@@ -115,6 +117,20 @@ export default function HeroSection({
                 className="w-full bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              
+              {/* Sugerencia: ¿Quisiste decir? */}
+              {sugerenciaBusqueda && (
+                <div className="absolute -bottom-8 left-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <button
+                    onClick={() => onBusquedaChange(sugerenciaBusqueda)}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-chefsy-500/20 hover:bg-chefsy-500/30 border border-chefsy-500/40 rounded-full text-xs font-medium text-white transition-all shadow-lg"
+                  >
+                    <span className="text-slate-300">¿Quisiste decir</span>
+                    <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
+                    <span className="text-slate-300">?</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4 w-full">
               <SelectorCategorias

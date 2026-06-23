@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Plus, Minus, X } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -35,6 +35,8 @@ export default function ModalPersonalizacion({
   onSetNota,
   onAgregar,
 }: ModalPersonalizacionProps) {
+  const [mostrarFotosMobile, setMostrarFotosMobile] = useState(false)
+
   useEffect(() => {
     // Deshabilitar scroll del body al montar
     document.body.style.overflow = 'hidden'
@@ -45,7 +47,7 @@ export default function ModalPersonalizacion({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out"
@@ -53,7 +55,7 @@ export default function ModalPersonalizacion({
       />
 
       {/* Modal Panel */}
-      <div className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-[#3d3d3d] z-10 flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out">
+      <div className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-[#3d3d3d] z-10 flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out pb-16 sm:pb-0">
         
         {/* Barra decorativa superior (solo mobile) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
@@ -62,7 +64,7 @@ export default function ModalPersonalizacion({
 
         {/* Galería de Imágenes */}
         {imagenFinal && (
-          <div className="relative w-full h-40 sm:h-56 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
+          <div className={`relative w-full h-40 sm:h-56 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide ${mostrarFotosMobile ? 'flex' : 'hidden sm:flex'}`}>
             {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
               <div key={i} className="relative w-full h-full shrink-0 snap-center">
                 <Image 
@@ -76,13 +78,6 @@ export default function ModalPersonalizacion({
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
               </div>
             ))}
-            {/* Botón de cerrar superpuesto a la imagen */}
-            <button
-              onClick={onCerrar}
-              className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shrink-0 focus:outline-none"
-            >
-              <X size={16} />
-            </button>
             {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).length > 1 && (
               <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
@@ -93,15 +88,34 @@ export default function ModalPersonalizacion({
         )}
 
         {/* Cabecera */}
-        <div className="px-5 pt-3 pb-3 border-b border-[#3d3d3d] flex items-start justify-between gap-3 text-left relative overflow-hidden shrink-0">
+        <div className="px-5 pt-5 sm:pt-3 pb-3 border-b border-[#3d3d3d] flex items-start justify-between gap-3 text-left relative overflow-hidden shrink-0 mt-4 sm:mt-0">
           {/* Fondo decorativo */}
           <div className="absolute inset-0 bg-gradient-to-br from-chefsy-500/5 via-transparent to-transparent pointer-events-none" />
           
-          <div className="relative z-10">
+          <div className="relative z-10 flex-1">
             <p className="text-[9px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-0.5">Estás pidiendo</p>
-            <h3 className="font-bebas text-2xl sm:text-3xl text-white leading-none tracking-wide">
-              {producto.nombre}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bebas text-2xl sm:text-3xl text-white leading-none tracking-wide">
+                {producto.nombre}
+              </h3>
+              
+              <div className="flex items-center gap-2">
+                {imagenFinal && (
+                  <button
+                    onClick={() => setMostrarFotosMobile(!mostrarFotosMobile)}
+                    className="sm:hidden px-3 py-1.5 bg-[#252525] border border-[#3d3d3d] rounded-lg text-[10px] font-bold text-slate-300 hover:text-white transition-colors"
+                  >
+                    {mostrarFotosMobile ? 'Ocultar fotos' : 'Ver fotos'}
+                  </button>
+                )}
+                <button
+                  onClick={onCerrar}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
