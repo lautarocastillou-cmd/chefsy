@@ -49,40 +49,40 @@ export default function PaginaStock() {
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto pb-24">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Control de Stock Inteligente</h1>
-        <p className="text-gray-400">
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">Control de Stock Inteligente</h1>
+        <p className="text-slate-500 dark:text-slate-400">
           Gestioná tus insumos y asigná recetas a tus productos para que se descuenten automáticamente.
         </p>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
         <button
           onClick={() => setTabActivo('categorias')}
-          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-            tabActivo === 'categorias' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+            tabActivo === 'categorias' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
           }`}
         >
           Categorías
         </button>
         <button
           onClick={() => setTabActivo('insumos')}
-          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-            tabActivo === 'insumos' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+            tabActivo === 'insumos' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
           }`}
         >
           Insumos y Stock
         </button>
         <button
           onClick={() => setTabActivo('recetas')}
-          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-            tabActivo === 'recetas' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+            tabActivo === 'recetas' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
           }`}
         >
           Asignar Recetas
         </button>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 min-h-[500px]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 min-h-[500px] shadow-sm">
         {tabActivo === 'categorias' && (
           <TabCategorias categorias={categorias} onUpdate={cargarDatos} />
         )}

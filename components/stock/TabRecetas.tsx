@@ -67,8 +67,8 @@ export function TabRecetas({
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Columna Izquierda: Productos */}
-      <div className="w-full md:w-1/3 border-r border-gray-800 pr-4">
-        <h3 className="text-lg font-bold text-white mb-4">Menú / Combos</h3>
+      <div className="w-full md:w-1/3 border-r border-slate-200 dark:border-slate-800 pr-4">
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Menú / Combos</h3>
         <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2">
           {productos.map(p => {
             const tieneReceta = recetas.some(r => r.producto_id === p.id)
@@ -79,17 +79,17 @@ export function TabRecetas({
                 onClick={() => seleccionarProducto(p)}
                 className={`flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
                   seleccionado 
-                    ? 'border-orange-500 bg-orange-500/10' 
-                    : 'border-gray-800 bg-gray-900 hover:bg-gray-800 hover:border-gray-700'
+                    ? 'border-chefsy bg-chefsy-50 dark:bg-chefsy-900/20 shadow-sm' 
+                    : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 dark:hover:border-slate-700'
                 }`}
               >
                 <div>
-                  <div className="text-white font-medium">{p.nombre}</div>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-slate-800 dark:text-slate-100 font-bold">{p.nombre}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                     {tieneReceta ? '✅ Receta asignada' : '⚠️ Sin receta'}
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-gray-500" />
+                <ChevronRight size={18} className="text-slate-400" />
               </button>
             )
           })}
@@ -99,29 +99,29 @@ export function TabRecetas({
       {/* Columna Derecha: Editor de Receta */}
       <div className="w-full md:w-2/3">
         {!productoSeleccionado ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-center min-h-[300px]">
+          <div className="flex items-center justify-center h-full text-slate-500 text-center min-h-[300px] bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8">
             Seleccioná un producto del catálogo para configurar qué insumos debe descontar al venderse.
           </div>
         ) : (
-          <div>
+          <div className="animate-[slideIn_0.2s_ease-out]">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-white">{productoSeleccionado.nombre}</h2>
-                <p className="text-gray-400 text-sm mt-1">Receta / Composición de Insumos</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{productoSeleccionado.nombre}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">Receta / Composición de Insumos</p>
               </div>
               <button
                 onClick={guardar}
                 disabled={guardando}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"
+                className="bg-chefsy hover:bg-chefsy-600 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
               >
                 <Save size={18} />
                 {guardando ? 'Guardando...' : 'Guardar Receta'}
               </button>
             </div>
 
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6">
+            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-6 shadow-sm">
               <div className="flex gap-2 mb-2">
-                <select id="insumo-select" className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-white">
+                <select id="insumo-select" className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-chefsy-400 focus:ring-1 focus:ring-chefsy-400 transition-colors">
                   <option value="">Seleccionar Insumo a agregar...</option>
                   {insumos.map(i => <option key={i.id} value={i.id}>{i.nombre} ({i.unidad_medida})</option>)}
                 </select>
@@ -131,44 +131,47 @@ export function TabRecetas({
                     agregarInsumo(select.value)
                     select.value = ''
                   }}
-                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                  className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors"
                 >
                   <Plus size={20} />
                 </button>
               </div>
             </div>
 
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-2 min-h-[300px]">
+            <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 min-h-[300px] shadow-inner">
               {recetaEdit.length === 0 ? (
-                <div className="text-center text-gray-500 py-12">
-                  No hay insumos asignados a este producto. <br/>
-                  (Si se vende, no descontará nada de stock)
+                <div className="text-center text-slate-500 py-16 flex flex-col items-center justify-center">
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-full shadow-sm mb-4">
+                    <Plus size={32} className="text-slate-400" />
+                  </div>
+                  <span className="font-medium text-base text-slate-700 dark:text-slate-300">No hay insumos asignados a este producto.</span>
+                  <span className="text-sm mt-1 opacity-80">(Si se vende, no descontará nada de stock)</span>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {recetaEdit.map(item => {
                     const insumo = insumos.find(i => i.id === item.insumo_id)
                     return (
-                      <div key={item.insumo_id} className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
-                        <div className="text-white font-medium">{insumo?.nombre || 'Insumo Eliminado'}</div>
-                        <div className="flex items-center gap-4">
+                      <div key={item.insumo_id} className="flex items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-xl shadow-sm">
+                        <div className="text-slate-800 dark:text-slate-100 font-bold text-lg">{insumo?.nombre || 'Insumo Eliminado'}</div>
+                        <div className="flex items-center gap-6">
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-sm">Resta:</span>
+                            <span className="text-slate-400 dark:text-slate-500 text-sm font-semibold uppercase tracking-wide">Resta:</span>
                             <input
                               type="number"
                               min="0"
                               step="0.1"
-                              className="w-20 bg-gray-900 border border-gray-700 rounded p-1 text-white text-center"
+                              className="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-slate-900 dark:text-slate-100 text-center font-bold focus:outline-none focus:border-chefsy-400 focus:ring-1 focus:ring-chefsy-400 transition-all text-lg"
                               value={item.cantidad}
                               onChange={(e) => cambiarCantidad(item.insumo_id, Number(e.target.value))}
                             />
-                            <span className="text-gray-500 text-sm w-16">{insumo?.unidad_medida}</span>
+                            <span className="text-slate-500 dark:text-slate-400 text-sm font-medium w-16">{insumo?.unidad_medida}</span>
                           </div>
                           <button
                             onClick={() => removerInsumo(item.insumo_id)}
-                            className="text-red-400 hover:text-red-300 p-2"
+                            className="text-red-500 hover:text-red-600 p-2.5 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 rounded-lg transition-colors"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={20} />
                           </button>
                         </div>
                       </div>

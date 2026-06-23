@@ -55,10 +55,10 @@ export function TabCategorias({ categorias, onUpdate }: { categorias: CategoriaI
     <div>
       <div className="flex gap-2 items-end mb-6">
         <div className="flex-1">
-          <label className="text-sm text-gray-400 mb-1 block">Nombre de Categoría</label>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Nombre de Categoría</label>
           <input
             type="text"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-chefsy-400 focus:ring-1 focus:ring-chefsy-400 transition-colors"
             placeholder="Ej: Panificados, Bebidas, Envases..."
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
@@ -67,7 +67,7 @@ export function TabCategorias({ categorias, onUpdate }: { categorias: CategoriaI
         <button
           onClick={guardar}
           disabled={guardando || !nombre.trim()}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 disabled:opacity-50"
+          className="bg-chefsy hover:bg-chefsy-600 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm"
         >
           {editando ? <Edit2 size={18} /> : <Plus size={18} />}
           {editando ? 'Actualizar' : 'Agregar'}
@@ -75,7 +75,7 @@ export function TabCategorias({ categorias, onUpdate }: { categorias: CategoriaI
         {editando && (
           <button
             onClick={() => { setEditando(null); setNombre(''); }}
-            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+            className="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-lg font-semibold transition-colors"
           >
             Cancelar
           </button>
@@ -84,18 +84,18 @@ export function TabCategorias({ categorias, onUpdate }: { categorias: CategoriaI
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categorias.map(cat => (
-          <div key={cat.id} className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex justify-between items-center">
-            <span className="text-white font-medium">{cat.nombre}</span>
+          <div key={cat.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex justify-between items-center shadow-sm">
+            <span className="text-slate-800 dark:text-slate-100 font-bold">{cat.nombre}</span>
             <div className="flex gap-2">
               <button
                 onClick={() => { setEditando(cat.id); setNombre(cat.nombre); }}
-                className="text-blue-400 hover:text-blue-300 p-2"
+                className="text-blue-500 hover:text-blue-600 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-md transition-colors"
               >
                 <Edit2 size={16} />
               </button>
               <button
                 onClick={() => eliminar(cat.id)}
-                className="text-red-400 hover:text-red-300 p-2"
+                className="text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/30 p-2 rounded-md transition-colors"
               >
                 <Trash2 size={16} />
               </button>
@@ -103,7 +103,7 @@ export function TabCategorias({ categorias, onUpdate }: { categorias: CategoriaI
           </div>
         ))}
         {categorias.length === 0 && (
-          <div className="col-span-full text-center text-gray-500 py-8">
+          <div className="col-span-full text-center text-slate-500 py-10 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
             No hay categorías de insumos creadas.
           </div>
         )}
