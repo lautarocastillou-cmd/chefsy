@@ -88,9 +88,22 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
   }, [pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud])
 
+  const esperandoGps = !pedido.cadete_coordenadas
+
   return (
     <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner relative z-0">
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
+      {esperandoGps && (
+        <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center pointer-events-none">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-2.5 animate-bounce">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chefsy-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-chefsy-500"></span>
+            </div>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Esperando señal en vivo...</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

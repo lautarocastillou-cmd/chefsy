@@ -85,6 +85,11 @@ export async function POST(request: Request) {
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
 
+        // Limpiar coordenadas del cadete automáticamente al finalizar la entrega
+        if (estado === 'entregado') {
+          updatePayload.cadete_coordenadas = null
+        }
+
         // Obtener estado anterior para evitar doble descuento
         const { data: pedidoPrevio } = await supabaseAdmin
           .from('pedidos')
@@ -227,10 +232,17 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Datos incompletos para actualizar_gps.' }, { status: 400 })
         }
 
-        const { error } = await supabaseAdmin
+        let query = supabaseAdmin
           .from('pedidos')
           .update({ cadete_coordenadas })
           .in('id', ids)
+
+        // Seguridad estricta: si es cadete, solo puede inyectar GPS en sus propios pedidos
+        if (rol === 'cadete') {
+          query = query.eq('cadete_id', sesion.usuario)
+        }
+
+        const { error } = await query
 
         if (error) throw error
         return NextResponse.json({ ok: true })

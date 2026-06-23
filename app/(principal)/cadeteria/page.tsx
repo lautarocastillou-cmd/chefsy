@@ -251,6 +251,12 @@ export default function PaginaCadeteria() {
   const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo')
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
 
+  const pedidosListosRef = useRef<Pedido[]>([])
+
+  useEffect(() => {
+    pedidosListosRef.current = pedidosListos
+  }, [pedidosListos])
+
   // Seguimiento GPS en tiempo real
   useEffect(() => {
     // Si no es el cadete o no hay pedidos listos, no rastrear
@@ -302,8 +308,10 @@ export default function PaginaCadeteria() {
           ultimasCoordenadasRef.current = coords
           ultimaActualizacionGpsRef.current = ahora
 
-          // Actualizar las coordenadas en supabase para todos los pedidos activos listos
-          const pedidosIds = pedidosListos.map(p => p.id)
+          // Usar la referencia más reciente de pedidos listos para evitar el cierre de estado (stale closure)
+          const pedidosIds = pedidosListosRef.current.map(p => p.id)
+          if (pedidosIds.length === 0) return
+
           try {
             const respuesta = await fetch('/api/admin/pedidos', {
               method: 'POST',
@@ -334,7 +342,7 @@ export default function PaginaCadeteria() {
           }
           setErrorGps(mensajes[error.code] || 'Error al obtener la ubicación.')
         },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
       )
     }
 
