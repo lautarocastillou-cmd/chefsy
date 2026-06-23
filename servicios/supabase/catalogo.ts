@@ -1,4 +1,4 @@
-import { supabaseAnon } from '@/lib/supabase'
+import { supabase, supabaseAnon } from '@/lib/supabase'
 import { CategoriaCatalogo, ModificadorCatalogo, ProductoCatalogo } from '@/tipos/catalogo'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
