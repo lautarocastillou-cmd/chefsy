@@ -316,23 +316,31 @@ export default function TiendaDesktop() {
           onAbrirModal={abrirModalPersonalizacion}
         />
 
-        {/* --- FOOTER REDES --- */}
-        {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
-          <footer className="mt-8 mb-24 flex justify-center items-center gap-6 pb-8">
-            {configuracion?.link_instagram && (
-              <a href={configuracion.link_instagram} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
-                <Instagram size={24} />
-              </a>
-            )}
-            {configuracion?.link_tiktok && (
-              <a href={configuracion.link_tiktok} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.68a6.34 6.34 0 0 0 10.86 4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.54z"/>
-                </svg>
-              </a>
-            )}
-          </footer>
-        )}
+        {/* --- FOOTER --- */}
+        <footer className="mt-12 mb-24 flex flex-col items-center gap-6 pb-8 border-t border-white/10 pt-8">
+          {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
+            <div className="flex justify-center items-center gap-6">
+              {configuracion?.link_instagram && (
+                <a href={configuracion.link_instagram} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                  <Instagram size={24} />
+                </a>
+              )}
+              {configuracion?.link_tiktok && (
+                <a href={configuracion.link_tiktok} target="_blank" rel="noreferrer" className="bg-white/5 hover:bg-chefsy-500 hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md shadow-lg border border-white/10 hover:scale-110">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.68a6.34 6.34 0 0 0 10.86 4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.54z"/>
+                  </svg>
+                </a>
+              )}
+            </div>
+          )}
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-sm font-medium text-slate-500">
+            <Link href="/privacidad" className="hover:text-chefsy-400 transition-colors">Política de Privacidad</Link>
+            <span className="hidden md:inline-block text-slate-700">•</span>
+            <Link href="/terminos" className="hover:text-chefsy-400 transition-colors">Términos y Condiciones</Link>
+          </div>
+          <p className="text-xs text-slate-600 mt-2">&copy; {new Date().getFullYear()} Chefsy. Todos los derechos reservados.</p>
+        </footer>
 
         {totalProductosCarrito > 0 && !cartAbierto && (
           <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 fade-in duration-300">
