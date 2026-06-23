@@ -58,7 +58,8 @@ export function calcularCostoEnvio(distanciaKm: number): number {
   if (distanciaKm <= 2) return 2000
   if (distanciaKm <= 3) return 2500
   if (distanciaKm <= 4) return 3000
-  return 4500 // Todo lo mayor a 4km (4-5, 5-6) sale $4500
+  if (distanciaKm <= 5) return 4000
+  return 4500 // Todo lo mayor a 5km sale $4500
 }
 
 export function formatearCoordenadas(coordenadas: Coordenadas): string {

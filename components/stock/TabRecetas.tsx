@@ -22,10 +22,10 @@ export function TabRecetas({
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoCatalogo | null>(null)
   const [recetaEdit, setRecetaEdit] = useState<RecetaInsumo[]>([])
   const [guardando, setGuardando] = useState(false)
-  const [colapsadas, setColapsadas] = useState<Record<string, boolean>>({})
+  const [expandidas, setExpandidas] = useState<Record<string, boolean>>({})
 
   const alternarColapso = (idCat: string) => {
-    setColapsadas(prev => ({ ...prev, [idCat]: !prev[idCat] }))
+    setExpandidas(prev => ({ ...prev, [idCat]: !prev[idCat] }))
   }
 
   const seleccionarProducto = (prod: ProductoCatalogo) => {
@@ -94,11 +94,11 @@ export function TabRecetas({
                 >
                   <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
                   {cat.nombre}
-                  {colapsadas[cat.id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  {expandidas[cat.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
                 </button>
                 
-                {!colapsadas[cat.id] && (
+                {expandidas[cat.id] && (
                   <div className="flex flex-col gap-2">
                     {prodCat.map(p => {
                       const tieneReceta = recetas.some(r => r.producto_id === p.id)
