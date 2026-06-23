@@ -40,11 +40,8 @@ export function usePedidosRealtime({
           throw new Error('Navegador offline')
         }
 
-        // Solucionar race condition: Esperamos a que Supabase valide o limpie cualquier sesión expirada
-        // en el localStorage (ej. de ClienteAuthContexto) antes de hacer la primera consulta.
-        // Si no hacemos esto, la petición podría enviarse con un JWT expirado y fallar con 401.
-        const { supabase } = await import('@/lib/supabase')
-        await supabase.auth.getSession()
+        // Se eliminó la validación de sesión (race condition) porque ahora se usa supabaseAnon 
+        // para la obtención de pedidos, evitando el bug de Web Lock.
 
         const pedidosGuardados = await obtenerPedidosActivos(100)
         setDbEstado('conectado')
