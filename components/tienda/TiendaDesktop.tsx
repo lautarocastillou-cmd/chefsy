@@ -335,26 +335,19 @@ export default function TiendaDesktop() {
         )}
 
         {totalProductosCarrito > 0 && !cartAbierto && (
-          <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-slate-950/95 backdrop-blur-md border-t border-white/10 p-4 animate-in slide-in-from-bottom-full fade-in duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-            <div className="max-w-6xl mx-auto flex justify-center">
-              <button
-                onClick={() => setCartAbierto(true)}
-                className="w-full max-w-sm bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 px-5 rounded-xl flex items-center justify-between shadow-lg active:scale-95 transition-all cursor-pointer border border-chefsy-400/30"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg">
-                    <ShoppingCart size={20} className="text-white" />
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm leading-tight">Ver Carrito</span>
-                    <span className="text-[10px] text-chefsy-100 font-semibold">{totalProductosCarrito} {totalProductosCarrito === 1 ? 'producto' : 'productos'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black">{formatearPrecio(subtotalCarrito)}</span>
-                </div>
-              </button>
-            </div>
+          <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 fade-in duration-300">
+            <button
+              onClick={() => setCartAbierto(true)}
+              className="bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 md:py-4 px-6 md:px-8 rounded-full flex items-center shadow-[0_10px_40px_rgba(54,101,74,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 gap-3 md:gap-4 group"
+            >
+              <div className="relative flex items-center">
+                <ShoppingCart size={24} className="text-white group-hover:scale-110 transition-transform" />
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm">
+                  {totalProductosCarrito}
+                </span>
+              </div>
+              <span className="text-sm md:text-lg font-black bg-black/20 px-3 py-1 rounded-full">{formatearPrecio(subtotalCarrito)}</span>
+            </button>
           </div>
         )}
         {cartAbierto && (
