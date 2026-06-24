@@ -14,11 +14,7 @@ export default function NotificadorAccesos() {
   const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    const channel = supabase.channel('canal_autorizaciones', {
-      config: {
-        broadcast: { ack: true },
-      },
-    })
+    const channel = supabase.channel('canal_autorizaciones')
     
     channelRef.current = channel
 

@@ -17,12 +17,7 @@ export default function VerificadorLogin() {
     // Si usó el link secreto o ya está aprobado o rechazado, no hacer nada
     if (accesoSecreto === 'coquisan' || estado === 'aprobado' || estado === 'rechazado') return
 
-    // Canal dedicado a autorizaciones
-    const channel = supabase.channel('canal_autorizaciones', {
-      config: {
-        broadcast: { ack: true },
-      },
-    })
+    const channel = supabase.channel('canal_autorizaciones')
     let interval: NodeJS.Timeout
 
     channel
