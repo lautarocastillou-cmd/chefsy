@@ -35,7 +35,9 @@ interface PropsTarjetaPedido {
   soloLectura?: boolean
 }
 
-export default function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
+import React, { useState, useEffect } from 'react'
+
+const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
@@ -239,7 +241,6 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
         <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#686868] tracking-wider flex items-center gap-1.5">
           {esAtrasado && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
           )}
@@ -279,7 +280,7 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             className={cn(
               "px-1.5 py-0.5 rounded text-[10px] uppercase font-bold border-none outline-none cursor-pointer transition-colors",
               pedido.metodoPago === 'sin_especificar' 
-                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 animate-pulse ring-1 ring-red-500 shadow-sm" 
+                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 ring-1 ring-red-500 shadow-sm" 
                 : "bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6]"
             )}
           >
@@ -508,4 +509,6 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
     </div>
   )
-}
+})
+
+export default TarjetaPedido

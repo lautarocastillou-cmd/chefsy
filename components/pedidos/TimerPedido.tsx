@@ -14,7 +14,7 @@ interface PropsTimerPedido {
  * Muestra múltiples temporizadores (Nuevo, Cocina, Listo) secuencialmente que se frenan
  * a medida que el pedido cambia de estado.
  */
-export default function TimerPedido({ pedido }: PropsTimerPedido) {
+const TimerPedido = React.memo(function TimerPedido({ pedido }: PropsTimerPedido) {
   const [ahora, setAhora] = useState<Date>(() => new Date())
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
         className={cn(
           "inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold tracking-wide transition-all duration-300 border",
           estaNuevoTicking
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30 animate-pulse"
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
             : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
         )}
         title={`Tiempo de espera en nuevo. Creado a las ${pedido.hora}`}
@@ -130,7 +130,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
           className={cn(
             "inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold tracking-wide transition-all duration-300 border",
             estaCocinaTicking
-              ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30 animate-pulse"
+              ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30"
               : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
           )}
           title="Tiempo transcurrido en Cocina"
@@ -145,7 +145,7 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
           className={cn(
             "inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold tracking-wide transition-all duration-300 border",
             estaListoTicking
-              ? "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30 animate-pulse"
+              ? "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30"
               : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800/30 font-medium"
           )}
           title="Tiempo transcurrido en Listo"
@@ -157,4 +157,6 @@ export default function TimerPedido({ pedido }: PropsTimerPedido) {
 
     </div>
   )
-}
+})
+
+export default TimerPedido

@@ -21,7 +21,9 @@ interface PropsTarjetaCompacta {
   onClickDetalle?: () => void
 }
 
-export default function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsTarjetaCompacta) {
+import React, { useState, useEffect } from 'react'
+
+const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsTarjetaCompacta) {
   const { cambiarEstado } = usarPedidos()
   const [esAtrasado, setEsAtrasado] = useState(false)
   const [minutos, setMinutos] = useState<string>('0m')
@@ -102,7 +104,6 @@ export default function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsT
         <div className="flex items-center gap-1.5 shrink-0">
           {esAtrasado && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
           )}
@@ -118,7 +119,7 @@ export default function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsT
           <span className="text-slate-300 dark:text-[#686868]">•</span>
           <span className="font-bold text-slate-700 dark:text-[#e6e6e6]">{formatearPrecio(pedido.total)}</span>
           {pedido.metodoPago === 'sin_especificar' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" title="Falta método de pago" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 ml-1" title="Falta método de pago" />
           )}
         </div>
 
@@ -134,4 +135,6 @@ export default function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsT
       </div>
     </div>
   )
-}
+})
+
+export default TarjetaPedidoCompacta
