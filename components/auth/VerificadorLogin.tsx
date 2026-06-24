@@ -18,7 +18,11 @@ export default function VerificadorLogin() {
     if (accesoSecreto === 'coquisan' || estado === 'aprobado' || estado === 'rechazado') return
 
     // Canal dedicado a autorizaciones
-    const channel = supabase.channel('canal_autorizaciones')
+    const channel = supabase.channel('canal_autorizaciones', {
+      config: {
+        broadcast: { ack: true },
+      },
+    })
     let interval: NodeJS.Timeout
 
     channel

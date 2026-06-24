@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ShieldAlert, Check, X } from 'lucide-react'
 
@@ -11,9 +11,16 @@ interface Peticion {
 
 export default function NotificadorAccesos() {
   const [peticiones, setPeticiones] = useState<Peticion[]>([])
+  const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    const channel = supabase.channel('canal_autorizaciones')
+    const channel = supabase.channel('canal_autorizaciones', {
+      config: {
+        broadcast: { ack: true },
+      },
+    })
+    
+    channelRef.current = channel
 
     channel
       .on('broadcast', { event: 'peticion_acceso' }, (payload) => {
@@ -43,12 +50,13 @@ export default function NotificadorAccesos() {
   }, [])
 
   const responder = async (clientId: string, estado: 'aprobado' | 'rechazado') => {
-    const channel = supabase.channel('canal_autorizaciones')
-    await channel.send({
-      type: 'broadcast',
-      event: `respuesta_${clientId}`,
-      payload: { estado }
-    })
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: `respuesta_${clientId}`,
+        payload: { estado }
+      })
+    }
     
     // Remover de la lista local
     setPeticiones(prev => prev.filter(p => p.clientId !== clientId))
