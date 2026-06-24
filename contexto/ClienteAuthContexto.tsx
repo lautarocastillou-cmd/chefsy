@@ -28,18 +28,35 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilCliente | null>(null)
   const [estaListo, setEstaListo] = useState(false)
 
-  const cargarPerfil = async (userId: string) => {
+  const cargarPerfil = async (user: User) => {
     try {
-      const { data, error } = await supabase
+      let { data: perfilCliente, error } = await supabase
         .from('clientes')
         .select('*')
-        .eq('id', userId)
+        .eq('id', user.id)
         .single()
-      
-      if (data && !error) {
-        setPerfil(data as PerfilCliente)
+
+      // Si no existe, lo creamos
+      if (!perfilCliente || (error && error.code === 'PGRST116')) {
+        const nuevoPerfil = {
+          id: user.id,
+          nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
+          telefono: user.phone || null,
+          puntos_actuales: 0
+        }
+        
+        const { error: insertError } = await supabase
+          .from('clientes')
+          .insert(nuevoPerfil)
+          
+        if (!insertError) {
+          setPerfil(nuevoPerfil as PerfilCliente)
+        } else {
+          setPerfil(null)
+        }
+      } else if (perfilCliente) {
+        setPerfil(perfilCliente as PerfilCliente)
       } else {
-        // Si no existe, seteamos null. El trigger de la DB debería crearlo automáticamente.
         setPerfil(null)
       }
     } catch (e) {
@@ -53,7 +70,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUsuario(session?.user ?? null)
       if (session?.user) {
-        cargarPerfil(session.user.id).finally(() => setEstaListo(true))
+        cargarPerfil(session.user).finally(() => setEstaListo(true))
       } else {
         setEstaListo(true)
       }
@@ -64,7 +81,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
       async (_event, session) => {
         setUsuario(session?.user ?? null)
         if (session?.user) {
-          await cargarPerfil(session.user.id)
+          await cargarPerfil(session.user)
         } else {
           setPerfil(null)
         }
