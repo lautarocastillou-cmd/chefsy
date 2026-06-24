@@ -38,6 +38,43 @@ export async function POST(request: Request) {
 
     // 3. Procesar acciones con validación de roles
     switch (accion) {
+      case 'crear': {
+        if (rol !== 'admin') {
+          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        }
+
+        const { pedido } = body
+        if (!pedido || !pedido.id) {
+          return NextResponse.json({ error: 'Datos incompletos para crear.' }, { status: 400 })
+        }
+
+        const payload = { ...pedido, archivado: false }
+        delete payload.created_at
+        delete payload.updated_at
+
+        // 1. Ejecutar transacción de puntos si aplica
+        if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
+          const { error: rpcError } = await supabaseAdmin.rpc('procesar_compra_puntos', {
+            p_cliente_id: payload.cliente_id,
+            p_puntos_a_gastar: payload.puntos_gastados || 0,
+            p_puntos_a_ganar: payload.puntos_ganados || 0
+          })
+          
+          if (rpcError) {
+            console.error('[API Pedidos] Error en RPC de puntos:', rpcError.message)
+            return NextResponse.json({ error: `Error procesando puntos: ${rpcError.message}` }, { status: 500 })
+          }
+        }
+
+        const { error } = await supabaseAdmin
+          .from('pedidos')
+          .insert(payload)
+
+        if (error) throw error
+
+        return NextResponse.json({ ok: true })
+      }
+
       case 'editar': {
         if (rol !== 'admin') {
           return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })

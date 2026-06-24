@@ -419,10 +419,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
     reproducirSonidoCampanaCocina()
     try {
-      const payload: any = { ...pedido, archivado: false }
-      await insertarPedidoLocal(payload)
-    } catch (e) {
-      agregarNotificacion('Error al guardar el pedido en la nube', 'warning')
+      await enviarAccionPedido({ accion: 'crear', pedido })
+    } catch (e: any) {
+      console.error('[Servidor/Supabase] Error al crear pedido:', e)
+      agregarNotificacion(`Error al guardar el pedido en la nube: ${e.message || 'Error interno'}`, 'warning')
     }
   }
 
