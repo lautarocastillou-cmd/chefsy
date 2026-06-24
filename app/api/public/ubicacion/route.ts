@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 // Este token debe coincidir con el que envíe la app de Expo
 const EXPO_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
@@ -19,7 +19,10 @@ export async function POST(request: Request) {
     }
 
     // Actualizamos usando supabaseAdmin para bypassear cualquier política RLS
-    const { error } = await supabaseAdmin
+    const adminClient = obtenerSupabaseAdmin()
+
+
+    const { error } = await adminClient
       .from('cadetes')
       .update({
         lat,
