@@ -343,7 +343,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error(`[API Pedidos] Error al procesar acción '${body?.accion}':`, error)
     return NextResponse.json(
-      { error: 'Error interno al procesar la operación en el servidor.' },
+      { error: `Error interno: ${error?.message || 'Error desconocido'}` },
       { status: 500 }
     )
   }

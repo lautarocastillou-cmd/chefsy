@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
@@ -20,11 +21,16 @@ export async function GET() {
     const { data, error } = await supabase.from('turnos').select('*').eq('id', 1).single()
     
     if (error || !data) {
+      console.error('[API Turno] Error de base de datos:', error)
       // Si falla, devolvemos un estado inactivo por defecto
       return NextResponse.json({
         activo: false,
         cajaInicial: 0,
         fechaInicio: null
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+        }
       })
     }
     
@@ -32,6 +38,10 @@ export async function GET() {
       activo: data.activo,
       cajaInicial: data.caja_inicial,
       fechaInicio: data.fecha_inicio
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
     })
   } catch (error: any) {
     console.error('[API Turno] Error al leer estado del turno:', error)

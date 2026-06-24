@@ -25,7 +25,7 @@ export function useTurno({ agregarNotificacion }: UseTurnoProps) {
   useEffect(() => {
     async function cargarTurno() {
       try {
-        const res = await fetch('/api/admin/turno')
+        const res = await fetch('/api/admin/turno', { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setEstadoTurno(data)
