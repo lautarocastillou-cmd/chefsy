@@ -33,7 +33,17 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
         </button>
 
         <button 
-          onClick={() => onNavClick('profile')}
+          onClick={() => {
+            const toast = require('react-hot-toast').default
+            toast('¡Próximamente! 🚀', {
+              icon: '🚧',
+              style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+              },
+            })
+          }}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-chefsy-400' : 'text-slate-500 hover:text-slate-300'}`}
         >
           <User size={24} />
