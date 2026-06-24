@@ -21,7 +21,7 @@ interface PropsTarjetaCompacta {
   onClickDetalle?: () => void
 }
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 
 const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsTarjetaCompacta) {
   const { cambiarEstado } = usarPedidos()

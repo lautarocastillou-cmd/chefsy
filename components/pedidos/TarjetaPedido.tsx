@@ -35,7 +35,7 @@ interface PropsTarjetaPedido {
   soloLectura?: boolean
 }
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 
 const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
