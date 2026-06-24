@@ -98,14 +98,23 @@ export async function POST(request: Request) {
           .single()
 
         // C4: Una sola query — update + select en la misma operación
-        const { data: pedidoAct, error } = await supabaseAdmin
+        const { data: updateData, error } = await supabaseAdmin
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
           .select('cadete_id, tipoEntrega, cliente, productos')
-          .single()
 
         if (error) throw error
+        
+        const pedidoAct = updateData && updateData.length > 0 ? updateData[0] : null
+        
+        if (!pedidoAct) {
+          console.warn(`[API Pedidos] El update no devolvió filas para el pedido ${id}. Fila inexistente.`)
+          return NextResponse.json(
+            { error: 'El pedido no existe en la base de datos (quizás fue eliminado o nunca se sincronizó).' },
+            { status: 404 }
+          )
+        }
 
         // Descontar stock inteligentemente cuando pasa a "entregado" (y antes no lo era)
         if (pedidoPrevio?.estado !== 'entregado' && estado === 'entregado' && pedidoAct?.productos) {

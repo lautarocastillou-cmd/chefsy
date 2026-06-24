@@ -475,8 +475,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
                     id,
                     ...updatesAnteriores,
                   })
-                } catch (err) {
-                  console.error('Error al deshacer cambio de estado:', err)
+                } catch (e: any) {
+                  // Si falla, volvemos atrás silenciosamente y mostramos error
+                  if (e.message && e.message.includes('no existe en la base de datos')) {
+                    despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+                    agregarNotificacion('Se eliminó un pedido "fantasma" que no existía en la base de datos.', 'info')
+                  } else {
+                    despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
+                    agregarNotificacion(`Error: ${e.message || 'No se pudo cambiar el estado'}`, 'warning')
+                  }
                 }
               },
             }
