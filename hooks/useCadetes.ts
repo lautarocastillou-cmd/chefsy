@@ -7,10 +7,15 @@
 import { useState, useEffect } from 'react'
 import { Cadete } from '@/lib/entrega'
 
-export function useCadetes() {
+interface UseCadetesProps {
+  isAdmin?: boolean
+}
+
+export function useCadetes({ isAdmin = false }: UseCadetesProps = {}) {
   const [cadetes, setCadetes] = useState<Cadete[]>([])
 
   const refrescarCadetes = async () => {
+    if (!isAdmin) return
     try {
       const res = await fetch('/api/admin/cadetes')
       if (res.ok) {
@@ -23,8 +28,10 @@ export function useCadetes() {
   }
 
   useEffect(() => {
-    refrescarCadetes()
-  }, [])
+    if (isAdmin) {
+      refrescarCadetes()
+    }
+  }, [isAdmin])
 
   return { cadetes, refrescarCadetes }
 }

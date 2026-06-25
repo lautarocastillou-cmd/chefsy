@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAnon } from '@/lib/supabase'
 
 export interface ConfiguracionTienda {
   id: number
@@ -24,19 +23,6 @@ export interface ConfiguracionTienda {
   link_instagram?: string
   link_tiktok?: string
 }
-
-// Creamos un cliente limpio que no lee la sesión del LocalStorage
-// Esto evita el problema donde RLS bloquea la lectura a usuarios autenticados
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://falta-configurar.supabase.co'
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'falta-configurar'
-
-const supabaseAnon = createClient(url, key, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  }
-})
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
   const { data, error } = await supabaseAnon

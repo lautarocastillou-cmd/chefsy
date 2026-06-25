@@ -132,6 +132,8 @@ export default function ModalLoginCliente({
                   <div className="relative">
                     <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <input
+                      id="telefono_login"
+                      name="telefono_login"
                       type="tel"
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value.replace(/\D/g, ''))}

@@ -26,7 +26,8 @@ export const supabaseAnon = createClient(
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false
+      detectSessionInUrl: false,
+      storageKey: 'supabase.anon.auth.token'
     }
   }
 )

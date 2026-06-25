@@ -12,9 +12,10 @@ import { EstadoTurno } from '@/contexto/PedidosContexto'
 
 interface UseTurnoProps {
   agregarNotificacion: (mensaje: string, tipo: 'info' | 'success' | 'warning') => void
+  isAdmin?: boolean
 }
 
-export function useTurno({ agregarNotificacion }: UseTurnoProps) {
+export function useTurno({ agregarNotificacion, isAdmin = false }: UseTurnoProps) {
   const [estadoTurno, setEstadoTurno] = useState<EstadoTurno>({
     activo: false,
     cajaInicial: 0,
@@ -23,6 +24,8 @@ export function useTurno({ agregarNotificacion }: UseTurnoProps) {
 
   // Carga inicial del estado del turno desde el servidor
   useEffect(() => {
+    if (!isAdmin) return;
+    
     async function cargarTurno() {
       try {
         const res = await fetch('/api/admin/turno', { cache: 'no-store' })
@@ -35,7 +38,7 @@ export function useTurno({ agregarNotificacion }: UseTurnoProps) {
       }
     }
     cargarTurno()
-  }, [])
+  }, [isAdmin])
 
   const iniciarTurno = async (cajaInicial: number): Promise<boolean> => {
     try {

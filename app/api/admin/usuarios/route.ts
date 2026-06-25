@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { obtenerSesion, hashearClave } from '@/lib/auth-server'
-
-// ── Cliente Supabase de Solo Servidor ──────────────────────────────────────
-function obtenerSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Variables de entorno Supabase no configuradas')
-  return createClient(url, key, { auth: { persistSession: false } })
-}
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 // ── GET: Obtener lista de usuarios ─────────────────────────────────────────
 export async function GET() {

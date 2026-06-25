@@ -216,6 +216,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   const { usuarioActivo } = usarAuth()
   const { agregarNotificacion } = usarTemaNotificacion()
+  const isAdmin = usuarioActivo?.rol === 'admin'
 
   // ── Hooks especializados ──────────────────────────────
 
@@ -225,11 +226,11 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     esCambioLocalRef,
   })
 
-  useSincronizacionOffline({ setDbEstado, agregarNotificacion })
+  useSincronizacionOffline({ setDbEstado, agregarNotificacion, isAdmin })
 
-  const { cadetes, refrescarCadetes } = useCadetes()
+  const { cadetes, refrescarCadetes } = useCadetes({ isAdmin })
 
-  const { estadoTurno, setEstadoTurno, iniciarTurno } = useTurno({ agregarNotificacion })
+  const { estadoTurno, setEstadoTurno, iniciarTurno } = useTurno({ agregarNotificacion, isAdmin })
 
   useAlertasInactividad({
     pedidos: estado.pedidos,
@@ -243,6 +244,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   >(configuracionOperativaInicial)
 
   useEffect(() => {
+    if (!isAdmin) return;
+    
     async function cargarConfig() {
       try {
         const res = await fetch('/api/admin/configuracion')
@@ -256,7 +259,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       }
     }
     cargarConfig()
-  }, [])
+  }, [isAdmin])
 
   const guardarConfiguracionOperativa = async (
     nuevaConfig: typeof configuracionOperativaInicial

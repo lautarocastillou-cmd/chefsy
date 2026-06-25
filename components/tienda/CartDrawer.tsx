@@ -281,6 +281,7 @@ export default function CartDrawer() {
                         <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-chefsy-400 transition-colors z-10" />
                         <input
                           id="telefono_cliente"
+                          name="telefono_cliente"
                           type="tel"
                           required={checkoutStep === 1}
                           value={telefonoCliente}

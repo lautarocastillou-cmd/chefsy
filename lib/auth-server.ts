@@ -7,21 +7,13 @@
 
 import { SignJWT, jwtVerify, JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
-import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { createHash } from 'crypto'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 const NOMBRE_COOKIE = 'chefsy-token'
 const DURACION_SESION_HORAS = 8 // 1 jornada laboral
 const BCRYPT_COST = 12 // ~250ms por hash — buen balance seguridad/performance
-
-// ── Cliente Supabase de Solo Servidor ──────────────────────────────────────
-function obtenerSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Variables de entorno Supabase no configuradas para Admin')
-  return createClient(url, key, { auth: { persistSession: false } })
-}
 
 // ── Derivar la clave secreta de la variable de entorno ─────────────────────
 function obtenerClave(): Uint8Array {

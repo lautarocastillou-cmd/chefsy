@@ -12,14 +12,16 @@ import { useEffect } from 'react'
 interface UseSincronizacionOfflineProps {
   setDbEstado: (estado: 'conectado' | 'desconectado' | 'cargando') => void
   agregarNotificacion: (mensaje: string, tipo: 'info' | 'success' | 'warning') => void
+  isAdmin?: boolean
 }
 
 export function useSincronizacionOffline({
   setDbEstado,
   agregarNotificacion,
+  isAdmin = false,
 }: UseSincronizacionOfflineProps) {
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !isAdmin) return
 
     const syncOfflineQueue = async () => {
       const queueStr = localStorage.getItem('chefsy-offline-queue')
@@ -84,5 +86,5 @@ export function useSincronizacionOffline({
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [agregarNotificacion, setDbEstado])
+  }, [agregarNotificacion, setDbEstado, isAdmin])
 }

@@ -7,7 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { Search, ChevronRight } from 'lucide-react'
+import { Search, ChevronRight, LogOut } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 import Image from 'next/image'
@@ -26,7 +26,7 @@ const PantallaExito = lazy(() => import('@/components/tienda/PantallaExito'))
 export default function TiendaMobile() {
   const { productos, categorias, modificadores } = usarCatalogo()
   const { estaListoAuth } = usarAuth()
-  const { usuario, perfil } = usarClienteAuth()
+  const { usuario, perfil, cerrarSesion } = usarClienteAuth()
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
@@ -34,6 +34,7 @@ export default function TiendaMobile() {
   const [metadata, setMetadata] = useState<Record<string, any>>({})
   const [imgError, setImgError] = useState(false)
   const [mostrarLogin, setMostrarLogin] = useState(false)
+  const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
   
   const { configuracion } = usarConfiguracionTienda()
   
@@ -126,11 +127,10 @@ export default function TiendaMobile() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }, 100)
     } else if (tab === 'profile') {
+      setActiveTab('profile')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       if (!usuario) {
         setMostrarLogin(true)
-      } else {
-        setActiveTab('profile')
-        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
     } else {
       setActiveTab(tab)
@@ -163,22 +163,40 @@ export default function TiendaMobile() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden relative">
-              <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill className="object-cover" />
+              <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
           </div>
 
-          {usuario && (
-            <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
-              <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
-              <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+          {usuario ? (
+            <div className="flex items-center gap-2">
+              <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
+                <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
+                <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+              </div>
+              <button
+                onClick={() => setMostrarConfirmLogout(true)}
+                className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-2 rounded-full border border-white/20 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                title="Cerrar sesión"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
+          ) : (
+            <button
+              onClick={() => setMostrarLogin(true)}
+              className="bg-white/10 hover:bg-white/25 text-white py-1.5 px-3 rounded-full border border-white/15 hover:border-white/30 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+            >
+              Iniciar sesión
+            </button>
           )}
         </div>
         
         {/* Barra de búsqueda integrada */}
         <div className="mt-4 relative mb-2">
           <input
+            id="busqueda_mobile"
+            name="busqueda_mobile"
             ref={searchInputRef}
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
@@ -205,21 +223,39 @@ export default function TiendaMobile() {
       </div>
 
       {activeTab === 'profile' ? (
-        <div className="flex flex-col items-center justify-center pt-20 px-4 text-center">
-          <div className="w-24 h-24 bg-chefsy/20 rounded-full flex items-center justify-center mb-6">
-            <span className="text-4xl text-chefsy-400 font-bebas">
-              {perfil?.nombre?.charAt(0)?.toUpperCase() || 'C'}
-            </span>
+        !usuario ? (
+          <div className="flex flex-col items-center justify-center pt-20 px-4 text-center animate-in fade-in duration-300">
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-inner">
+              <span className="text-3xl">🪙</span>
+            </div>
+            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">Iniciá sesión para ver tus puntos</h2>
+            <p className="text-slate-400 max-w-xs mb-8 text-sm leading-relaxed">
+              Tus compras suman ChefsyCoins que podés canjear por comida gratis.
+            </p>
+            <button
+              onClick={() => setMostrarLogin(true)}
+              className="bg-chefsy hover:bg-chefsy-600 text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all cursor-pointer text-sm"
+            >
+              Iniciar sesión / Registrarse
+            </button>
           </div>
-          <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Hola, {perfil?.nombre || 'Cliente'}!</h2>
-          <p className="text-slate-400 mb-8">Acá podés ver tus puntos acumulados.</p>
-          
-          <div className="bg-[#141414] border border-white/5 rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-            <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">Tus Puntos</span>
-            <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
+        ) : (
+          <div className="flex flex-col items-center justify-center pt-20 px-4 text-center">
+            <div className="w-24 h-24 bg-chefsy/20 rounded-full flex items-center justify-center mb-6">
+              <span className="text-4xl text-chefsy-400 font-bebas">
+                {perfil?.nombre?.charAt(0)?.toUpperCase() || 'C'}
+              </span>
+            </div>
+            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Hola, {perfil?.nombre || 'Cliente'}!</h2>
+            <p className="text-slate-400 mb-8">Acá podés ver tus puntos acumulados.</p>
+            
+            <div className="bg-[#141414] border border-white/5 rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+              <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">Tus Puntos</span>
+              <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <>
           {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
@@ -236,6 +272,7 @@ export default function TiendaMobile() {
                     alt="Hero Image"
                     fill
                     priority
+                    sizes="(max-width: 768px) 100vw, 300px"
                     onError={() => setImgError(true)}
                     className="object-contain"
                     style={{
@@ -254,47 +291,37 @@ export default function TiendaMobile() {
                   </h2>
                 </div>
                 
-                <div className="flex w-full items-center justify-between relative">
-                  <div className="flex flex-col items-start justify-center pl-4 w-[45%] relative z-20 gap-0">
-                    {(configuracion?.titulo_principal || '¿QUÉ PINTA HOY?').split(' ').map((word, idx, arr) => (
-                      <span key={idx} className={cn(
-                        "font-bebas tracking-wider drop-shadow-xl leading-[0.8] uppercase",
-                        idx === arr.length - 1 ? "text-[4.5rem] text-chefsy-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" : "text-[4.5rem] text-white"
-                      )}>
-                        {word}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  <div className="flex flex-col items-center justify-center w-[55%] relative pr-2">
+                {/* Secondary Image Centered */}
+                <div className="relative w-[160px] aspect-square drop-shadow-2xl mx-auto mt-2 mb-6 rotate-12 transition-transform duration-500 z-10">
+                  {(() => {
+                    const url = configuracion?.hero_image_url?.split('|')[1]?.trim() || "/burger-hero.png";
+                    let px = 50, py = 50, scale = 100;
+                    try {
+                      const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+                      px = parseInt(p.searchParams.get('px') || '50');
+                      py = parseInt(p.searchParams.get('py') || '50');
+                      scale = parseInt(p.searchParams.get('scale') || '100');
+                    } catch(e) {}
                     
-                    <div className="relative w-[140px] aspect-square drop-shadow-2xl shrink-0 rotate-12 transition-transform duration-500 z-10">
-                      {(() => {
-                        const url = configuracion?.hero_image_url?.split('|')[1]?.trim() || "/burger-hero.png";
-                        let px = 50, py = 50, scale = 100;
-                        try {
-                          const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
-                          px = parseInt(p.searchParams.get('px') || '50');
-                          py = parseInt(p.searchParams.get('py') || '50');
-                          scale = parseInt(p.searchParams.get('scale') || '100');
-                        } catch(e) {}
-                        
-                        return (
-                          <Image
-                            src={url}
-                            alt="Hero Side Image"
-                            fill
-                            className="object-contain drop-shadow-2xl"
-                            style={{
-                              objectPosition: `${px}% ${py}%`,
-                              transform: `scale(${scale / 100})`
-                            }}
-                          />
-                        )
-                      })()}
-                    </div>
+                    return (
+                      <Image
+                        src={url}
+                        alt="Hero Side Image"
+                        fill
+                        className="object-contain drop-shadow-2xl"
+                        style={{
+                          objectPosition: `${px}% ${py}%`,
+                          transform: `scale(${scale / 100})`
+                        }}
+                      />
+                    )
+                  })()}
+                </div>
 
-                  </div>
+                <div className="text-center w-full z-20 relative">
+                  <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
+                    {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
+                  </h3>
                 </div>
               </div>
             </div>
@@ -372,6 +399,37 @@ export default function TiendaMobile() {
             onAgregar={agregarAlCarritoDesdeModal}
           />
         </Suspense>
+      )}
+      {mostrarConfirmLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in scale-in duration-200 text-left">
+            <h3 className="text-xl font-bold text-white mb-2 font-bebas tracking-wide">Cerrar Sesión</h3>
+            <p className="text-sm text-slate-400 mb-6">¿Estás seguro de que querés cerrar sesión?</p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setMostrarConfirmLogout(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await cerrarSesion()
+                  setMostrarConfirmLogout(false)
+                }}
+                className="px-4 py-2 bg-red-650 hover:bg-red-755 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all cursor-pointer"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarLogin && (
+        <ModalLoginCliente 
+          onCerrar={() => setMostrarLogin(false)} 
+        />
       )}
     </div>
   )

@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Lock, Search } from 'lucide-react'
+import { Lock, Search, LogOut } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -36,8 +36,9 @@ export default function HeroSection({
   onSeleccionarCategoria,
 }: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
-  const { usuario, perfil } = usarClienteAuth()
+  const { usuario, perfil, cerrarSesion } = usarClienteAuth()
   const [mostrarLogin, setMostrarLogin] = React.useState(false)
+  const [mostrarConfirmLogout, setMostrarConfirmLogout] = React.useState(false)
 
   const fuenteHeroClase = {
     bebas: 'font-bebas',
@@ -57,6 +58,8 @@ export default function HeroSection({
                 src={configuracion?.logo_url || "/logo.jpg"} 
                 alt="Chefsy" 
                 fill
+                priority
+                sizes="(max-width: 768px) 40px, 48px"
                 className="object-cover"
               />
             </div>
@@ -79,6 +82,13 @@ export default function HeroSection({
                   <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
                   <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
                 </div>
+                <button
+                  onClick={() => setMostrarConfirmLogout(true)}
+                  className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-2 rounded-full border border-white/20 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                  title="Cerrar sesión"
+                >
+                  <LogOut size={16} />
+                </button>
               </div>
             )}
           </div>
@@ -129,6 +139,8 @@ export default function HeroSection({
             </p>
             <div className="relative w-full">
               <input
+                id="busqueda_hero"
+                name="busqueda_hero"
                 type="text"
                 placeholder="Ej. Cheddar, Papas, Mila especial..."
                 value={busqueda}
@@ -178,6 +190,32 @@ export default function HeroSection({
         <ModalLoginCliente 
           onCerrar={() => setMostrarLogin(false)} 
         />
+      )}
+
+      {mostrarConfirmLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in scale-in duration-200 text-left">
+            <h3 className="text-xl font-bold text-white mb-2 font-bebas tracking-wide">Cerrar Sesión</h3>
+            <p className="text-sm text-slate-400 mb-6">¿Estás seguro de que querés cerrar sesión?</p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setMostrarConfirmLogout(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await cerrarSesion()
+                  setMostrarConfirmLogout(false)
+                }}
+                className="px-4 py-2 bg-red-650 hover:bg-red-755 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all cursor-pointer"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
