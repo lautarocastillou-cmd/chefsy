@@ -60,35 +60,41 @@ export default function ModalPersonalizacion({
       />
 
       {/* Modal Panel */}
-      <div className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-[#3d3d3d] z-10 flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out pb-16 sm:pb-0">
+      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out pb-6 sm:pb-0">
         
         {/* Barra decorativa superior (solo mobile) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
           <div className="w-10 h-1 rounded-full bg-slate-600/80 backdrop-blur-md shadow-sm" />
         </div>
 
-        {/* Galería de Imágenes */}
+        {/* Galería de Imágenes con Animación Fluida */}
         {imagenFinal && (
-          <div className={`relative w-full h-40 sm:h-56 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide ${mostrarFotosMobile ? 'flex' : 'hidden sm:flex'}`}>
-            {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
-              <div key={i} className="relative w-full h-full shrink-0 snap-center">
-                <Image 
-                  src={imgUrl.trim()} 
-                  alt={`${producto.nombre} - Foto ${i+1}`} 
-                  fill
-                  unoptimized={true}
-                  priority={true}
-                  className="object-cover" 
-                />
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
-              </div>
-            ))}
-            {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).length > 1 && (
-              <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
-                Deslizá para ver más
-              </div>
-            )}
+          <div 
+            className={`w-full shrink-0 overflow-hidden transition-[max-height,opacity] duration-700 ease-in-out ${
+              mostrarFotosMobile ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0 sm:max-h-[300px] sm:opacity-100'
+            }`}
+          >
+            <div className="relative w-full h-40 sm:h-56 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex">
+              {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
+                <div key={i} className="relative w-full h-full shrink-0 snap-center group">
+                  <Image 
+                    src={imgUrl.trim()} 
+                    alt={`${producto.nombre} - Foto ${i+1}`} 
+                    fill
+                    unoptimized={true}
+                    priority={true}
+                    className="object-cover" 
+                  />
+                  <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none transition-opacity duration-700 ease-in-out sm:group-hover:opacity-0 ${mostrarFotosMobile ? 'opacity-0' : 'opacity-100'}`} />
+                </div>
+              ))}
+              {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).length > 1 && (
+                <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
+                  Deslizá para ver más
+                </div>
+              )}
+            </div>
           </div>
         )}
 

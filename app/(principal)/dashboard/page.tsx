@@ -191,52 +191,6 @@ export default function PaginaDashboard() {
 
           <div className="border-t border-slate-100 dark:border-slate-800 my-4" />
 
-          <a
-            href="https://web.whatsapp.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-green-300 hover:bg-green-50/30 dark:border-slate-800 dark:hover:bg-slate-900 transition-all shadow-sm"
-          >
-            <div className="bg-green-100 dark:bg-green-950/20 p-3 rounded-xl text-green-600 group-hover:scale-110 transition-transform">
-              <MessageCircle size={24} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-850 dark:text-slate-100">WhatsApp Web</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Chat y atención externa</p>
-            </div>
-          </a>
-
-          <a
-            href="https://music.youtube.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-red-300 hover:bg-red-50/30 dark:border-slate-800 dark:hover:bg-slate-900 transition-all shadow-sm"
-          >
-            <div className="bg-red-100 dark:bg-red-950/20 p-3 rounded-xl text-red-600 group-hover:scale-110 transition-transform">
-              <Music size={24} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-850 dark:text-slate-100">YouTube Music</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Música para el local</p>
-            </div>
-          </a>
-
-          <a
-            href="https://pedix.app/chefsy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50/30 dark:border-slate-800 dark:hover:bg-slate-900 transition-all shadow-sm"
-          >
-            <div className="bg-amber-100 dark:bg-amber-950/20 p-3 rounded-xl text-amber-600 group-hover:scale-110 transition-transform">
-              <ExternalLink size={24} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-850 dark:text-slate-100">Pedix App</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Catálogo público online</p>
-            </div>
-          </a>
-
-          <div className="border-t border-slate-100 dark:border-slate-800 my-4" />
           
           <GeneradorQrCadete />
         </section>
