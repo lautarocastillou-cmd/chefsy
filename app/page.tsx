@@ -6,9 +6,10 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import TiendaDesktop from '@/components/tienda/TiendaDesktop'
 import TiendaMobile from '@/components/tienda/TiendaMobile'
 
-export default function PaginaTienda() {
+export default function PaginaTienda({ isMobileOverride }: { isMobileOverride?: boolean }) {
   const [montado, setMontado] = useState(false)
   const esCelular = useMediaQuery('(max-width: 768px)')
+  const vistaMovil = isMobileOverride !== undefined ? isMobileOverride : esCelular
 
   useEffect(() => {
     setMontado(true)
@@ -26,7 +27,7 @@ export default function PaginaTienda() {
 
   return (
     <ProveedorCarrito>
-      {esCelular ? <TiendaMobile /> : <TiendaDesktop />}
+      {vistaMovil ? <TiendaMobile /> : <TiendaDesktop />}
     </ProveedorCarrito>
   )
 }

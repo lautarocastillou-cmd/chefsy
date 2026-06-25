@@ -16,6 +16,8 @@ import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
 const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
@@ -24,11 +26,14 @@ const PantallaExito = lazy(() => import('@/components/tienda/PantallaExito'))
 export default function TiendaMobile() {
   const { productos, categorias, modificadores } = usarCatalogo()
   const { estaListoAuth } = usarAuth()
+  const { usuario, perfil } = usarClienteAuth()
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'profile' | 'cart'>('home')
   const [metadata, setMetadata] = useState<Record<string, any>>({})
+  const [imgError, setImgError] = useState(false)
+  const [mostrarLogin, setMostrarLogin] = useState(false)
   
   const { configuracion } = usarConfiguracionTienda()
   
@@ -121,7 +126,12 @@ export default function TiendaMobile() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }, 100)
     } else if (tab === 'profile') {
-      window.location.href = '/login' // O donde sea tu perfil
+      if (!usuario) {
+        setMostrarLogin(true)
+      } else {
+        setActiveTab('profile')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     } else {
       setActiveTab(tab)
       setBusqueda('')
@@ -150,11 +160,20 @@ export default function TiendaMobile() {
     <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24`}>
       {/* Header App-like minimalista */}
       <div className="bg-[#141414] sticky top-0 z-40 px-4 py-3 shadow-md border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full overflow-hidden relative">
-            <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill className="object-cover" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden relative">
+              <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill className="object-cover" />
+            </div>
+            <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
           </div>
-          <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
+
+          {usuario && (
+            <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
+              <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
+              <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+            </div>
+          )}
         </div>
         
         {/* Barra de búsqueda integrada */}
@@ -185,40 +204,101 @@ export default function TiendaMobile() {
         </div>
       </div>
 
-      {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
-      {!categoriaSeleccionada && !busqueda && (
-        <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-6 border-b border-white/5 flex flex-col items-center text-center">
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            {configuracion?.textura_fondo_url && (
-              <img src={configuracion.textura_fondo_url} alt="" className="w-full h-full object-cover" />
-            )}
+      {activeTab === 'profile' ? (
+        <div className="flex flex-col items-center justify-center pt-20 px-4 text-center">
+          <div className="w-24 h-24 bg-chefsy/20 rounded-full flex items-center justify-center mb-6">
+            <span className="text-4xl text-chefsy-400 font-bebas">
+              {perfil?.nombre?.charAt(0)?.toUpperCase() || 'C'}
+            </span>
           </div>
-
-          <div className="relative w-full max-w-[200px] aspect-square my-2 drop-shadow-2xl">
-            <Image
-              src={configuracion?.hero_image_url || "/burger-loca.webp"}
-              alt="Hero Image"
-              fill
-              priority
-              className="object-contain"
-              style={{
-                objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
-                transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
-              }}
-            />
+          <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Hola, {perfil?.nombre || 'Cliente'}!</h2>
+          <p className="text-slate-400 mb-8">Acá podés ver tus puntos acumulados.</p>
+          
+          <div className="bg-[#141414] border border-white/5 rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+            <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">Tus Puntos</span>
+            <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
           </div>
-
-          <h1 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none mt-2">
-            {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
-          </h1>
-          <h2 className="font-bebas text-4xl sm:text-5xl text-chefsy tracking-wide uppercase leading-none">
-            {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
-          </h2>
-          <p className="font-bebas text-xl sm:text-2xl text-slate-300 tracking-wider uppercase mt-2">
-            {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
-          </p>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
+          {!categoriaSeleccionada && !busqueda && (
+            <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-10 border-b border-white/5 shadow-2xl h-[calc(100vh-140px)] flex items-center">
+              {/* Círculo de fondo animado */}
+              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-chefsy/5 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+              
+              <div className="relative z-10 w-full flex flex-col pt-2 pb-20">
+                
+                <div className="relative w-full max-w-[220px] md:max-w-[250px] aspect-square drop-shadow-2xl mx-auto mb-2 z-30">
+                  <Image
+                    src={imgError ? "/burger-loca.webp" : (configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp")}
+                    alt="Hero Image"
+                    fill
+                    priority
+                    onError={() => setImgError(true)}
+                    className="object-contain"
+                    style={{
+                      objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
+                      transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
+                    }}
+                  />
+                </div>
+
+                <div className="text-center w-full z-20 relative mb-6 mt-2">
+                  <h1 className="font-bebas text-5xl sm:text-6xl text-white tracking-wide uppercase leading-none drop-shadow-md">
+                    {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
+                  </h1>
+                  <h2 className="font-bebas text-5xl sm:text-6xl text-chefsy-400 tracking-wide uppercase leading-none drop-shadow-md mt-1">
+                    {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
+                  </h2>
+                </div>
+                
+                <div className="flex w-full items-center justify-between relative">
+                  <div className="flex flex-col items-start justify-center pl-4 w-[45%] relative z-20 gap-0">
+                    {(configuracion?.titulo_principal || '¿QUÉ PINTA HOY?').split(' ').map((word, idx, arr) => (
+                      <span key={idx} className={cn(
+                        "font-bebas tracking-wider drop-shadow-xl leading-[0.8] uppercase",
+                        idx === arr.length - 1 ? "text-[4.5rem] text-chefsy-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" : "text-[4.5rem] text-white"
+                      )}>
+                        {word}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  <div className="flex flex-col items-center justify-center w-[55%] relative pr-2">
+                    
+                    <div className="relative w-[140px] aspect-square drop-shadow-2xl shrink-0 rotate-12 transition-transform duration-500 z-10">
+                      {(() => {
+                        const url = configuracion?.hero_image_url?.split('|')[1]?.trim() || "/burger-hero.png";
+                        let px = 50, py = 50, scale = 100;
+                        try {
+                          const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+                          px = parseInt(p.searchParams.get('px') || '50');
+                          py = parseInt(p.searchParams.get('py') || '50');
+                          scale = parseInt(p.searchParams.get('scale') || '100');
+                        } catch(e) {}
+                        
+                        return (
+                          <Image
+                            src={url}
+                            alt="Hero Side Image"
+                            fill
+                            className="object-contain drop-shadow-2xl"
+                            style={{
+                              objectPosition: `${px}% ${py}%`,
+                              transform: `scale(${scale / 100})`
+                            }}
+                          />
+                        )
+                      })()}
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
       {/* Categorías Swipeables horizontales */}
       <div className="mt-2 py-3 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
@@ -256,6 +336,8 @@ export default function TiendaMobile() {
           onAbrirModal={abrirModalPersonalizacion}
         />
       </div>
+      </>
+      )}
 
       <BottomNav activeTab={activeTab} onNavClick={handleNavClick} />
 

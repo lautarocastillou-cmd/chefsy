@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { ConfiguracionContext } from '@/contexto/ConfiguracionTiendaContexto'
 import { ConfiguracionTienda, obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
-import { Save, ArrowLeft, Image as ImageIcon, Type, Palette, Upload, Loader2, Share2, Square } from 'lucide-react'
+import { Save, ArrowLeft, Image as ImageIcon, Type, Palette, Upload, Loader2, Share2, Square, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 import PaginaTienda from '@/app/page'
 
@@ -11,8 +11,9 @@ export default function EditorTienda() {
   const [configLive, setConfigLive] = useState<ConfiguracionTienda | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [cargando, setCargando] = useState(true)
-  const [subiendoImagen, setSubiendoImagen] = useState<'logo_url' | 'hero_image_url' | 'textura_fondo_url' | null>(null)
-  const [dragOver, setDragOver] = useState<'logo_url' | 'hero_image_url' | 'textura_fondo_url' | null>(null)
+  const [subiendoImagen, setSubiendoImagen] = useState<'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url' | null>(null)
+  const [dragOver, setDragOver] = useState<'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url' | null>(null)
+  const [isMobilePreview, setIsMobilePreview] = useState(false)
 
   // Almacenamiento temporal del input de palabras animadas (separadas por coma)
   const [palabrasText, setPalabrasText] = useState('')
@@ -49,7 +50,7 @@ export default function EditorTienda() {
     }
   }
 
-  const handleDrop = async (e: React.DragEvent, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
+  const handleDrop = async (e: React.DragEvent, tipo: 'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url') => {
     e.preventDefault()
     setDragOver(null)
     const file = e.dataTransfer.files[0]
@@ -57,17 +58,25 @@ export default function EditorTienda() {
     await procesarYSubirImagen(file, tipo)
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, tipo: 'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url') => {
     const file = e.target.files?.[0]
     if (!file) return
     await procesarYSubirImagen(file, tipo)
   }
 
-  const procesarYSubirImagen = async (file: File, tipo: 'logo_url' | 'hero_image_url' | 'textura_fondo_url') => {
+  const procesarYSubirImagen = async (file: File, tipo: 'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url') => {
     try {
       setSubiendoImagen(tipo)
 
-      const oldUrl = configLive?.[tipo]
+      let oldUrl = ''
+      if (tipo === 'hero_image_secundaria') {
+        oldUrl = configLive?.hero_image_url?.split('|')[1]?.trim() || ''
+      } else if (tipo === 'hero_image_url') {
+        oldUrl = configLive?.hero_image_url?.split('|')[0]?.trim() || ''
+      } else {
+        oldUrl = configLive?.[tipo as keyof ConfiguracionTienda] as string
+      }
+
       const oldUrlParam = oldUrl && typeof oldUrl === 'string' && oldUrl.includes('supabase.co') 
         ? `?oldUrl=${encodeURIComponent(oldUrl)}` 
         : ''
@@ -85,7 +94,16 @@ export default function EditorTienda() {
       if (uploadData.error) throw new Error(uploadData.error)
       
       const nuevaUrl = uploadData.urlOriginal || uploadData.urlTransformada
-      handleChange(tipo, nuevaUrl)
+      
+      if (tipo === 'hero_image_secundaria') {
+         const img1 = configLive?.hero_image_url?.split('|')[0]?.trim() || ''
+         handleChange('hero_image_url', `${img1}|${nuevaUrl}`)
+      } else if (tipo === 'hero_image_url') {
+         const img2 = configLive?.hero_image_url?.split('|')[1]?.trim() || ''
+         handleChange('hero_image_url', `${nuevaUrl}${img2 ? '|' + img2 : ''}`)
+      } else {
+         handleChange(tipo as keyof ConfiguracionTienda, nuevaUrl)
+      }
     } catch (err: any) {
       console.error(err)
       alert(err.message || 'Error al subir la imagen.')
@@ -127,8 +145,21 @@ export default function EditorTienda() {
           
           {/* SECCIÓN COLORES */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
-              <Palette size={14} /> Colores
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2">
+                <Palette size={14} /> Colores
+              </div>
+              <button 
+                onClick={() => setIsMobilePreview(!isMobilePreview)}
+                title={isMobilePreview ? 'Volver a Escritorio' : 'Emular Celular'}
+                className={`p-1.5 rounded-md transition-all shadow-sm ${
+                  isMobilePreview 
+                    ? 'bg-chefsy text-white' 
+                    : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                <Smartphone size={14} />
+              </button>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-300">Color Principal de la Marca</label>
@@ -351,7 +382,7 @@ export default function EditorTienda() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                URL de la Portada
+                URL de la Portada Principal
                 <label className="cursor-pointer text-chefsy-400 hover:text-chefsy-300 flex items-center gap-1 bg-chefsy-400/10 px-2 py-1 rounded text-[10px] transition-colors">
                   <Upload size={10} /> Subir
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'hero_image_url')} />
@@ -365,13 +396,49 @@ export default function EditorTienda() {
               >
                 <input 
                   type="text" 
-                  value={configLive.hero_image_url}
-                  onChange={(e) => handleChange('hero_image_url', e.target.value)}
+                  value={configLive.hero_image_url?.split('|')[0]?.trim() || ''}
+                  onChange={(e) => {
+                     const img2 = configLive.hero_image_url?.split('|')[1]?.trim() || ''
+                     handleChange('hero_image_url', `${e.target.value}${img2 ? '|' + img2 : ''}`)
+                  }}
                   disabled={subiendoImagen === 'hero_image_url'}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400 disabled:opacity-50"
                   placeholder="Arrastrá una imagen acá o pegá la URL..."
                 />
                 {subiendoImagen === 'hero_image_url' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                    <Loader2 size={16} className="animate-spin text-chefsy-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                URL de la Portada Secundaria
+                <label className="cursor-pointer text-chefsy-400 hover:text-chefsy-300 flex items-center gap-1 bg-chefsy-400/10 px-2 py-1 rounded text-[10px] transition-colors">
+                  <Upload size={10} /> Subir
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'hero_image_secundaria')} />
+                </label>
+              </label>
+              <div 
+                className={`relative w-full rounded-lg border-2 transition-all ${dragOver === 'hero_image_secundaria' ? 'border-chefsy-400 bg-chefsy-400/10 border-dashed scale-[1.02]' : 'border-transparent'}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOver('hero_image_secundaria') }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => handleDrop(e, 'hero_image_secundaria')}
+              >
+                <input 
+                  type="text" 
+                  value={configLive.hero_image_url?.split('|')[1]?.trim() || ''}
+                  onChange={(e) => {
+                     const img1 = configLive.hero_image_url?.split('|')[0]?.trim() || ''
+                     handleChange('hero_image_url', `${img1}|${e.target.value}`)
+                  }}
+                  disabled={subiendoImagen === 'hero_image_secundaria'}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400 disabled:opacity-50"
+                  placeholder="Arrastrá una imagen acá o pegá la URL..."
+                />
+                {subiendoImagen === 'hero_image_secundaria' && (
                   <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
                     <Loader2 size={16} className="animate-spin text-chefsy-400" />
                   </div>
@@ -429,6 +496,99 @@ export default function EditorTienda() {
                 />
               </div>
             </div>
+
+            <div className="space-y-4 pt-2 border border-slate-800 rounded-xl p-3 bg-slate-900/50">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                Posicionamiento de Portada Secundaria
+              </label>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Izquierda</span>
+                  <span>Horizontal (X)</span>
+                  <span>Derecha</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" max="100" 
+                  value={(() => {
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return 50;
+                    try { const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`); return parseInt(p.searchParams.get('px') || '50'); } catch(e) { return 50; }
+                  })()} 
+                  onChange={(e) => {
+                    const img1 = configLive.hero_image_url?.split('|')[0]?.trim() || '';
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return;
+                    try {
+                      const isRelative = !url.startsWith('http');
+                      const p = new URL(isRelative ? `http://localhost${url}` : url);
+                      p.searchParams.set('px', e.target.value);
+                      handleChange('hero_image_url', `${img1}|${isRelative ? p.pathname + p.search : p.toString()}`);
+                    } catch(e) {}
+                  }}
+                  className="w-full accent-chefsy-400"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Arriba</span>
+                  <span>Vertical (Y)</span>
+                  <span>Abajo</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" max="100" 
+                  value={(() => {
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return 50;
+                    try { const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`); return parseInt(p.searchParams.get('py') || '50'); } catch(e) { return 50; }
+                  })()} 
+                  onChange={(e) => {
+                    const img1 = configLive.hero_image_url?.split('|')[0]?.trim() || '';
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return;
+                    try {
+                      const isRelative = !url.startsWith('http');
+                      const p = new URL(isRelative ? `http://localhost${url}` : url);
+                      p.searchParams.set('py', e.target.value);
+                      handleChange('hero_image_url', `${img1}|${isRelative ? p.pathname + p.search : p.toString()}`);
+                    } catch(e) {}
+                  }}
+                  className="w-full accent-chefsy-400"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Alejar</span>
+                  <span>Zoom / Escala</span>
+                  <span>Acercar</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" max="150" 
+                  value={(() => {
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return 100;
+                    try { const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`); return parseInt(p.searchParams.get('scale') || '100'); } catch(e) { return 100; }
+                  })()} 
+                  onChange={(e) => {
+                    const img1 = configLive.hero_image_url?.split('|')[0]?.trim() || '';
+                    const url = configLive.hero_image_url?.split('|')[1]?.trim() || '';
+                    if (!url) return;
+                    try {
+                      const isRelative = !url.startsWith('http');
+                      const p = new URL(isRelative ? `http://localhost${url}` : url);
+                      p.searchParams.set('scale', e.target.value);
+                      handleChange('hero_image_url', `${img1}|${isRelative ? p.pathname + p.search : p.toString()}`);
+                    } catch(e) {}
+                  }}
+                  className="w-full accent-chefsy-400"
+                />
+              </div>
+            </div>
           </div>
 
           <hr className="border-slate-800" />
@@ -474,8 +634,7 @@ export default function EditorTienda() {
       </div>
 
       {/* ÁREA DE PREVISUALIZACIÓN EN VIVO */}
-      <div className="flex-1 relative overflow-y-auto bg-black">
-        {/* Usamos el Provider pero con nuestro estado 'en vivo' inyectado artificialmente */}
+      <div className={`flex-1 relative overflow-y-auto ${isMobilePreview ? 'bg-[#0B0F19] flex items-center justify-center p-8' : 'bg-black'}`}>
         <ConfiguracionContext.Provider value={{
           configuracion: {
             ...configLive,
@@ -484,16 +643,27 @@ export default function EditorTienda() {
           setConfiguracion: setConfigLive,
           cargando: false
         }}>
-          {/* Desactivamos interacciones molestas en el editor para enfocarnos en visuales */}
-          <div className="pointer-events-none-if-needed">
-            <PaginaTienda />
-          </div>
+          {isMobilePreview ? (
+            <div className="w-[375px] h-[812px] max-h-full rounded-[40px] border-[14px] border-zinc-900 shadow-2xl relative overflow-hidden bg-black shrink-0 transition-all duration-500">
+               {/* "Notch" */}
+               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-900 rounded-b-2xl z-50 pointer-events-none"></div>
+               <div className="w-full h-full overflow-y-auto no-scrollbar pointer-events-none-if-needed">
+                 <PaginaTienda isMobileOverride={true} />
+               </div>
+            </div>
+          ) : (
+            <div className="pointer-events-none-if-needed w-full h-full">
+              <PaginaTienda />
+            </div>
+          )}
         </ConfiguracionContext.Provider>
         
         {/* Etiqueta flotante */}
-        <div className="absolute bottom-6 right-6 bg-slate-900/80 backdrop-blur border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 pointer-events-none">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Previsualización en vivo
+        <div className="absolute bottom-6 right-6 flex items-center gap-3">
+          <div className="bg-slate-900/90 backdrop-blur border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 pointer-events-none shadow-xl">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            Previsualización en vivo
+          </div>
         </div>
       </div>
 

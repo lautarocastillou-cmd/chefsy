@@ -24,7 +24,14 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
   }, [productosFiltrados])
 
   return (
-    <div className="relative z-30 bg-[#0d0d0d] py-3 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 mb-8">
+    <div className="relative z-30 bg-[#0d0d0d] mb-8">
+      {/* Indicador de scroll */}
+      <div className="flex justify-end px-4 pt-2 pb-1">
+        <span className="text-[10px] font-black text-slate-500/70 uppercase tracking-widest flex items-center gap-1">
+          &lt; DESLIZA PARA LA IZQUIERDA
+        </span>
+      </div>
+      <div className="py-2 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 px-2">
       {(() => {
         const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
         const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
@@ -57,6 +64,7 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
             )
           })
       })()}
+      </div>
     </div>
   )
 }

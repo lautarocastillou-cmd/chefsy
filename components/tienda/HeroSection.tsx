@@ -108,7 +108,7 @@ export default function HeroSection({
               <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/60 blur-3xl rounded-full scale-y-50 -z-10 mix-blend-multiply opacity-70"></div>
               
               <Image 
-                src={configuracion?.hero_image_url || "/burger-loca.webp"} 
+                src={configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp"} 
                 alt="Chefsy Hero" 
                 fill
                 priority

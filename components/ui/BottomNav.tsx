@@ -20,7 +20,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
           onClick={() => onNavClick('home')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-chefsy-400' : 'text-slate-500 hover:text-slate-300'}`}
         >
-          <Home size={24} className={activeTab === 'home' ? 'fill-chefsy-400/20' : ''} />
+          <Home size={24} />
           <span className="text-[10px] font-bold">Inicio</span>
         </button>
 
@@ -33,17 +33,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
         </button>
 
         <button 
-          onClick={() => {
-            const toast = require('react-hot-toast').default
-            toast('¡Próximamente! 🚀', {
-              icon: '🚧',
-              style: {
-                borderRadius: '10px',
-                background: '#333',
-                color: '#fff',
-              },
-            })
-          }}
+          onClick={() => onNavClick('profile')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-chefsy-400' : 'text-slate-500 hover:text-slate-300'}`}
         >
           <User size={24} />
@@ -55,7 +45,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
           className={`relative flex flex-col items-center gap-1 transition-colors ${activeTab === 'cart' ? 'text-chefsy-400' : 'text-slate-500 hover:text-slate-300'}`}
         >
           <div className="relative">
-            <ShoppingCart size={24} className={activeTab === 'cart' ? 'fill-chefsy-400/20' : ''} />
+            <ShoppingCart size={24} />
             {totalProductosCarrito > 0 && (
               <span className="absolute -top-2 -right-2 bg-chefsy-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#141414]">
                 {totalProductosCarrito}
