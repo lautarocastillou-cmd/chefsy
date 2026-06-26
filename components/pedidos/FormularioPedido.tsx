@@ -9,7 +9,6 @@ import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { Settings } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { AnimatePresence, motion } from 'framer-motion'
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -50,22 +49,14 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
 
-      <AnimatePresence>
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: 50, x: "-50%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-8 left-1/2 z-[100]"
-          >
-            <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950/90 border border-red-900/50 backdrop-blur-md rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
-              <span className="text-lg">⚠️</span>
-              <span>{error}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950/90 border border-red-900/50 backdrop-blur-md rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
+            <span className="text-lg">⚠️</span>
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
 
       {/* DISEÑO DE 2 COLUMNAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
