@@ -12,6 +12,7 @@ interface ProductCardProps {
   agotado: boolean
   imagenFinal: string
   index: number
+  modoTienda?: 'normal' | 'chefsitos'
   onAbrirModal: (prod: any) => void
 }
 
@@ -22,8 +23,13 @@ function ProductCard({
   agotado,
   imagenFinal,
   index,
+  modoTienda = 'normal',
   onAbrirModal
 }: ProductCardProps) {
+  if (modoTienda === 'chefsitos' && (!prod.precio_puntos || prod.precio_puntos <= 0)) {
+    return null
+  }
+
   // Optimización de imágenes Cloudinary
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
   const isCloudinary = rawSrc.includes('res.cloudinary.com')
@@ -79,13 +85,21 @@ function ProductCard({
             {prod.nombre}
           </h4>
           <div className="flex flex-col items-end shrink-0 mt-0.5">
-            <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400">
-              {formatearPrecio(prod.precio)}
-            </span>
-            {prod.precio_puntos > 0 && (
-              <span className="text-[10px] sm:text-xs font-black text-chefsy-500 bg-chefsy-500/10 px-1.5 py-0.5 rounded-md mt-1 border border-chefsy-500/20">
-                o {prod.precio_puntos} pts
+            {modoTienda === 'chefsitos' ? (
+              <span className="font-bebas text-lg sm:text-xl md:text-2xl text-chefsy-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]">
+                🪙 {prod.precio_puntos} Chefsitos
               </span>
+            ) : (
+              <>
+                <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400">
+                  {formatearPrecio(prod.precio)}
+                </span>
+                {prod.precio_puntos > 0 && (
+                  <span className="text-[10px] sm:text-xs font-black text-chefsy-500 bg-chefsy-500/10 px-1.5 py-0.5 rounded-md mt-1 border border-chefsy-500/20">
+                    o {prod.precio_puntos} pts
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -102,8 +116,10 @@ export default React.memo(ProductCard, (prevProps, nextProps) => {
   return (
     prevProps.prod.id === nextProps.prod.id &&
     prevProps.prod.nombre === nextProps.prod.nombre &&
+    prevProps.prod.precio_puntos === nextProps.prod.precio_puntos &&
     prevProps.agotado === nextProps.agotado &&
     prevProps.imagenFinal === nextProps.imagenFinal &&
+    prevProps.modoTienda === nextProps.modoTienda &&
     prevProps.meta?.descripcion_publica === nextProps.meta?.descripcion_publica &&
     prevProps.meta?.nombre_publico === nextProps.meta?.nombre_publico
   )

@@ -21,6 +21,10 @@ export default function DevToolsPage() {
   const [metadata, setMetadata] = useState<Record<string, TiendaMetadata>>({})
   const [cargandoMetadata, setCargandoMetadata] = useState(true)
   
+  const [tabActive, setTabActive] = useState<'visual' | 'chefsitos'>('visual')
+  const [preciosPuntos, setPreciosPuntos] = useState<Record<string, number>>({})
+  const [guardandoPuntosId, setGuardandoPuntosId] = useState<string | null>(null)
+
   const [busqueda, setBusqueda] = useState('')
   const [productoEditando, setProductoEditando] = useState<string | null>(null)
   const [form, setForm] = useState<{
@@ -30,6 +34,31 @@ export default function DevToolsPage() {
     preview_urls: string[];
   }>({ nombre_publico: '', descripcion_publica: '', imagenes_nuevas: [], preview_urls: [] })
   const [guardando, setGuardando] = useState(false)
+
+  useEffect(() => {
+    const mapa: Record<string, number> = {}
+    productos.forEach(p => mapa[p.id] = (p as any).precio_puntos || 0)
+    setPreciosPuntos(mapa)
+  }, [productos])
+
+  const guardarPrecioChefsitos = async (id: string) => {
+    setGuardandoPuntosId(id)
+    try {
+      const pts = Number(preciosPuntos[id]) || 0
+      const res = await fetch('/api/admin/tienda-chefsitos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ producto_id: id, precio_puntos: pts })
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al guardar')
+      alert('¡Precio en Chefsitos actualizado con éxito!')
+    } catch (err: any) {
+      alert('Error: ' + err.message)
+    } finally {
+      setGuardandoPuntosId(null)
+    }
+  }
 
   // Redirigir si no es admin
   useEffect(() => {
@@ -217,6 +246,28 @@ export default function DevToolsPage() {
           </button>
         </div>
 
+        {/* Selector de Pestañas */}
+        <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 gap-2">
+          <button
+            onClick={() => setTabActive('visual')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              tabActive === 'visual' ? 'bg-chefsy text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <span>🎨</span>
+            <span>Diseño Visual (Fotos y Textos)</span>
+          </button>
+          <button
+            onClick={() => setTabActive('chefsitos')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              tabActive === 'chefsitos' ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <span>🪙</span>
+            <span>Tienda Chefsitos (Precios en Puntos)</span>
+          </button>
+        </div>
+
         {/* Buscador */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -229,43 +280,94 @@ export default function DevToolsPage() {
           />
         </div>
 
-        {/* Listado */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          {productosFiltrados.map(prod => {
-            const meta = metadata[prod.id]
-            const tieneMeta = meta && (meta.nombre_publico || meta.imagen_url)
-            
-            return (
-              <div key={prod.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 flex items-center justify-center">
-                    {meta?.imagen_url ? (
-                      <img src={meta.imagen_url.includes(' | ') ? meta.imagen_url.split(' | ')[0] : meta.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon className="text-slate-400" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 leading-tight mb-0.5">{meta?.nombre_publico || prod.nombre}</h3>
-                    <div className="flex flex-col gap-0.5 mb-1.5">
-                      <p className="text-xs text-slate-500 line-clamp-1">{prod.nombre} <span className="text-[10px] opacity-70">(Interno)</span></p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        {categorias.find(c => c.id === prod.categoriaId)?.nombre || 'Categoría general'}
-                      </p>
+        {/* Listado Diseño Visual */}
+        {tabActive === 'visual' && (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {productosFiltrados.map(prod => {
+              const meta = metadata[prod.id]
+              const tieneMeta = meta && (meta.nombre_publico || meta.imagen_url)
+              
+              return (
+                <div key={prod.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 flex items-center justify-center">
+                      {meta?.imagen_url ? (
+                        <img src={meta.imagen_url.includes(' | ') ? meta.imagen_url.split(' | ')[0] : meta.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="text-slate-400" />
+                      )}
                     </div>
-                    {tieneMeta && <span className="inline-block bg-chefsy-100 text-chefsy text-[10px] font-bold px-2 py-0.5 rounded-md">Modificado</span>}
+                    <div>
+                      <h3 className="font-bold text-slate-900 leading-tight mb-0.5">{meta?.nombre_publico || prod.nombre}</h3>
+                      <div className="flex flex-col gap-0.5 mb-1.5">
+                        <p className="text-xs text-slate-500 line-clamp-1">{prod.nombre} <span className="text-[10px] opacity-70">(Interno)</span></p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          {categorias.find(c => c.id === prod.categoriaId)?.nombre || 'Categoría general'}
+                        </p>
+                      </div>
+                      {tieneMeta && <span className="inline-block bg-chefsy-100 text-chefsy text-[10px] font-bold px-2 py-0.5 rounded-md">Modificado</span>}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleEdit(prod)}
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    Editar Metadatos
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleEdit(prod)}
-                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-colors"
-                >
-                  Editar Metadatos
-                </button>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Listado Tienda Chefsitos */}
+        {tabActive === 'chefsitos' && (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {productosFiltrados.map(prod => {
+              const meta = metadata[prod.id]
+              const pts = preciosPuntos[prod.id] ?? 0
+              return (
+                <div key={prod.id} className="bg-white border border-yellow-500/30 p-4 rounded-2xl shadow-sm flex flex-col justify-between gap-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/10 blur-2xl rounded-full pointer-events-none"></div>
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 flex items-center justify-center">
+                      {meta?.imagen_url ? (
+                        <img src={meta.imagen_url.includes(' | ') ? meta.imagen_url.split(' | ')[0] : meta.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-900 leading-tight mb-0.5 truncate">{meta?.nombre_publico || prod.nombre}</h3>
+                      <p className="text-xs text-slate-500 truncate mb-2">Precio normal: ${prod.precio}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🪙</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="10"
+                          value={pts}
+                          onChange={e => setPreciosPuntos({...preciosPuntos, [prod.id]: parseInt(e.target.value) || 0})}
+                          placeholder="0 = Oculto"
+                          className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none font-bold text-slate-800 text-sm"
+                        />
+                        <span className="text-xs font-bold text-slate-400">pts</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => guardarPrecioChefsitos(prod.id)}
+                    disabled={guardandoPuntosId === prod.id}
+                    className="w-full py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 text-sm font-black rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 relative z-10"
+                  >
+                    {guardandoPuntosId === prod.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {guardandoPuntosId === prod.id ? 'Guardando...' : 'Guardar Precio Chefsitos'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
       </div>
 

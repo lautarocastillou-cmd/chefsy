@@ -119,7 +119,9 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   }
 
   const cerrarSesion = async () => {
-    await supabase.auth.signOut()
+    setUsuario(null)
+    setPerfil(null)
+    await supabase.auth.signOut().catch(() => {})
   }
 
   return (

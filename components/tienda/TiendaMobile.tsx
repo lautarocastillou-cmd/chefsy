@@ -35,6 +35,7 @@ export default function TiendaMobile() {
   const [imgError, setImgError] = useState(false)
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
+  const [modoTienda, setModoTienda] = useState<'normal' | 'chefsitos'>('normal')
   
   const { configuracion } = usarConfiguracionTienda()
   
@@ -118,6 +119,9 @@ export default function TiendaMobile() {
   }, [configuracion?.whatsapp_mensaje])
 
   const handleNavClick = (tab: 'home' | 'search' | 'profile' | 'cart') => {
+    if (tab !== 'cart') {
+      setCartAbierto(false)
+    }
     if (tab === 'cart') {
       setCartAbierto(true)
     } else if (tab === 'search') {
@@ -254,6 +258,18 @@ export default function TiendaMobile() {
               <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">TUS CHEFSITOS</span>
               <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
             </div>
+
+            <button
+              onClick={() => {
+                setModoTienda('chefsitos')
+                setActiveTab('home')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="mt-6 w-full max-w-sm bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-4 px-6 rounded-2xl shadow-xl shadow-yellow-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg font-bebas tracking-wide cursor-pointer animate-pulse"
+            >
+              <span className="text-2xl">🪙</span>
+              <span>Canjear Chefsitos en Tienda</span>
+            </button>
           </div>
         )
       ) : (
@@ -300,19 +316,36 @@ export default function TiendaMobile() {
             </div>
           )}
 
+          {modoTienda === 'chefsitos' && (
+            <div className="mx-3 mt-4 p-4 bg-gradient-to-r from-yellow-500/15 via-amber-500/15 to-yellow-500/15 border border-yellow-500/30 rounded-2xl backdrop-blur-md shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🪙</span>
+                <div>
+                  <h3 className="font-bebas text-2xl text-yellow-400 tracking-wide leading-none">TIENDA CHEFSITOS</h3>
+                  <p className="text-xs text-slate-300 mt-0.5 font-sans">Canjeá tus productos gratis usando tus Chefsitos</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModoTienda('normal')}
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-4 rounded-xl border border-white/20 text-xs tracking-wider uppercase transition-all shrink-0 cursor-pointer"
+              >
+                Volver a Tienda Normal
+              </button>
+            </div>
+          )}
 
-
-      {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}
-      <div className="px-2 mt-4">
-        <CatalogoProductos
-          categoriasActivas={categoriasActivas}
-          productosFiltrados={productosFiltrados}
-          categoriaSeleccionada={categoriaSeleccionada || 'todos'}
-          busqueda={busqueda}
-          metadata={metadata}
-          onAbrirModal={abrirModalPersonalizacion}
-        />
-      </div>
+          {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}
+          <div className="px-2 mt-4">
+            <CatalogoProductos
+              categoriasActivas={categoriasActivas}
+              productosFiltrados={productosFiltrados}
+              categoriaSeleccionada={categoriaSeleccionada || 'todos'}
+              busqueda={busqueda}
+              metadata={metadata}
+              modoTienda={modoTienda}
+              onAbrirModal={abrirModalPersonalizacion}
+            />
+          </div>
       </>
       )}
 
@@ -342,6 +375,7 @@ export default function TiendaMobile() {
             cantidadModal={cantidadModal}
             notaPersonalizacion={notaPersonalizacion}
             precioUnitarioTotal={calcularPrecioUnitarioModal()}
+            modoTienda={modoTienda}
             onCerrar={() => setProductoAPersonalizar(null)}
             onAlternarModificador={alternarModificador}
             onSetCantidad={setCantidadModal}
