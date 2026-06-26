@@ -50,12 +50,12 @@ export default function TerminosPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bebas text-chefsy-400 tracking-wide mb-3">3. Sistema de Recompensas (ChefsyCoins)</h2>
+            <h2 className="text-2xl font-bebas text-chefsy-400 tracking-wide mb-3">3. Sistema de Recompensas (Chefsitos)</h2>
             <p>
-              El programa de puntos (ChefsyCoins) es un beneficio exclusivo para clientes registrados.
+              El programa de puntos (Chefsitos) es un beneficio exclusivo para clientes registrados.
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-2">
-              <li>Los ChefsyCoins no tienen valor monetario real y no pueden ser canjeados por dinero en efectivo, transferidos ni vendidos.</li>
+              <li>Los Chefsitos no tienen valor monetario real y no pueden ser canjeados por dinero en efectivo, transferidos ni vendidos.</li>
               <li>Chefsy se reserva el derecho de modificar el porcentaje de cashback, los precios en puntos de los productos o de suspender el programa de recompensas en cualquier momento y sin previo aviso.</li>
               <li>En caso de detectar abuso, fraude o explotación de errores del sistema, Chefsy podrá anular los puntos acumulados y suspender la cuenta del usuario.</li>
             </ul>
@@ -66,7 +66,7 @@ export default function TerminosPage() {
             <p>
               Si tenés algún inconveniente con tu pedido (plato incorrecto, en mal estado o demora excesiva), 
               deberás comunicarte con nuestro soporte a través de WhatsApp dentro de los 30 minutos posteriores a la entrega.
-              Evaluaremos el caso y, si corresponde, procederemos al reemplazo del producto o a la devolución del importe abonado o compensación en ChefsyCoins.
+              Evaluaremos el caso y, si corresponde, procederemos al reemplazo del producto o a la devolución del importe abonado o compensación en Chefsitos.
             </p>
           </section>
 

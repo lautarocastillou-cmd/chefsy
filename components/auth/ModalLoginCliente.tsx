@@ -13,7 +13,7 @@ interface ModalLoginClienteProps {
 export default function ModalLoginCliente({ 
   onCerrar, 
   titulo = "Ingresá para sumar puntos", 
-  subtitulo = "Tus compras suman ChefsyCoins canjeables por comida gratis." 
+  subtitulo = "Tus compras suman Chefsitos canjeables por comida gratis." 
 }: ModalLoginClienteProps) {
   const { iniciarSesionGoogle, enviarOtpTelefono, verificarOtpTelefono } = usarClienteAuth()
   

@@ -230,7 +230,7 @@ export default function TiendaMobile() {
             </div>
             <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">Iniciá sesión para ver tus puntos</h2>
             <p className="text-slate-400 max-w-xs mb-8 text-sm leading-relaxed">
-              Tus compras suman ChefsyCoins que podés canjear por comida gratis.
+              Tus compras suman Chefsitos que podés canjear por comida gratis.
             </p>
             <button
               onClick={() => setMostrarLogin(true)}
@@ -300,30 +300,7 @@ export default function TiendaMobile() {
             </div>
           )}
 
-      {/* Categorías Swipeables horizontales */}
-      <div className="mt-2 py-3 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-        <button
-          onClick={() => setCategoriaSeleccionada(null)}
-          className={cn(
-            "snap-start shrink-0 px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-colors",
-            categoriaSeleccionada === null && !busqueda ? "bg-chefsy-500 text-white" : "bg-[#222222] text-slate-400 border border-white/5"
-          )}
-        >
-          Destacados
-        </button>
-        {categoriasActivas.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setCategoriaSeleccionada(cat.id)}
-            className={cn(
-              "snap-start shrink-0 px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-colors flex items-center gap-2",
-              categoriaSeleccionada === cat.id ? "bg-chefsy-500 text-white" : "bg-[#222222] text-slate-400 border border-white/5"
-            )}
-          >
-            {cat.nombre}
-          </button>
-        ))}
-      </div>
+
 
       {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}
       <div className="px-2 mt-4">

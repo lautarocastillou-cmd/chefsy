@@ -511,7 +511,7 @@ export default function CartDrawer() {
                     <Gift size={18} className="text-white" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white">ChefsyCoins disponibles</span>
+                    <span className="text-xs font-bold text-white">Chefsitos disponibles</span>
                     <span className="text-[10px] text-slate-400">Canjealos desde el menú</span>
                   </div>
                 </div>

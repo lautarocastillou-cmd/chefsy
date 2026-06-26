@@ -36,7 +36,7 @@ export default function PrivacidadPage() {
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Datos de Cuenta:</strong> Nombre, dirección de correo electrónico y número de teléfono proporcionados al iniciar sesión mediante Google o SMS.</li>
               <li><strong>Datos de Entrega:</strong> Tu dirección física, ubicación geográfica (coordenadas GPS si autorizás) y referencias para concretar las entregas.</li>
-              <li><strong>Historial de Compras:</strong> Platos solicitados, montos abonados, y tu saldo de fidelización (ChefsyCoins).</li>
+              <li><strong>Historial de Compras:</strong> Platos solicitados, montos abonados, y tu saldo de fidelización (Chefsitos).</li>
               <li><strong>Datos de Navegación:</strong> Uso de cookies técnicas estrictamente necesarias para mantener tu sesión activa y guardar el carrito de compras.</li>
             </ul>
           </section>
@@ -47,7 +47,7 @@ export default function PrivacidadPage() {
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li>Procesar y entregar tus pedidos de comida de manera eficiente.</li>
               <li>Enviarte notificaciones y confirmaciones sobre el estado de tu pedido (vía WhatsApp o email).</li>
-              <li>Gestionar tu billetera de recompensas (ChefsyCoins) y aplicar tus beneficios.</li>
+              <li>Gestionar tu billetera de recompensas (Chefsitos) y aplicar tus beneficios.</li>
               <li>Mejorar nuestra plataforma y atención al cliente.</li>
             </ul>
           </section>
@@ -66,7 +66,7 @@ export default function PrivacidadPage() {
             <p>
               Toda tu información está alojada en servidores seguros (mediante nuestro proveedor Supabase) 
               y las transmisiones de datos se realizan bajo protocolos encriptados (HTTPS). 
-              Aseguramos tus tokens de autenticación para que nadie, excepto vos, pueda acceder a tus ChefsyCoins.
+              Aseguramos tus tokens de autenticación para que nadie, excepto vos, pueda acceder a tus Chefsitos.
             </p>
           </section>
 
