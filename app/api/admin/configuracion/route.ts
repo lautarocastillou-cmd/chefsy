@@ -1,23 +1,37 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import fs from 'fs'
-import path from 'path'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import configuracionFallback from '@/config/operacion.json'
 
-// Obtener la ruta del archivo config/operacion.json
-const obtenerRutaArchivo = () => path.join(process.cwd(), 'config', 'operacion.json')
+// ─────────────────────────────────────────────────────
+// app/api/admin/configuracion/route.ts
+// Lee y escribe la configuración operativa desde Supabase.
+// Fallback a config/operacion.json si la tabla no responde.
+// ─────────────────────────────────────────────────────
 
 export async function GET() {
   try {
-    const ruta = obtenerRutaArchivo()
-    if (!fs.existsSync(ruta)) {
-      return NextResponse.json({ error: 'Archivo de configuración no encontrado.' }, { status: 404 })
+    const supabase = obtenerSupabaseAdmin()
+
+    const { data, error } = await supabase
+      .from('configuracion_operativa')
+      .select('limites, prioridades')
+      .eq('id', 1)
+      .single()
+
+    if (error || !data) {
+      console.warn('[API Config] Supabase no disponible, usando fallback local:', error?.message)
+      return NextResponse.json(configuracionFallback)
     }
-    const contenido = fs.readFileSync(ruta, 'utf-8')
-    const config = JSON.parse(contenido)
-    return NextResponse.json(config)
+
+    return NextResponse.json({
+      limites: data.limites,
+      prioridades: data.prioridades,
+    })
   } catch (error: any) {
     console.error('[API Config] Error al leer la configuración:', error)
-    return NextResponse.json({ error: 'Error al leer la configuración.' }, { status: 500 })
+    // Fallback al JSON estático en caso de error inesperado
+    return NextResponse.json(configuracionFallback)
   }
 }
 
@@ -37,20 +51,33 @@ export async function POST(request: Request) {
 
     if (!limites || !prioridades) {
       return NextResponse.json(
-        { error: 'Datos incompletos.' },
+        { error: 'Datos incompletos. Se requieren limites y prioridades.' },
         { status: 400 }
       )
     }
 
-    const ruta = obtenerRutaArchivo()
-    const contenido = JSON.stringify(body, null, 2)
-    fs.writeFileSync(ruta, contenido, 'utf-8')
+    const supabase = obtenerSupabaseAdmin()
+
+    const { error } = await supabase
+      .from('configuracion_operativa')
+      .upsert(
+        { id: 1, limites, prioridades, updated_at: new Date().toISOString() },
+        { onConflict: 'id' }
+      )
+
+    if (error) {
+      console.error('[API Config] Error al guardar en Supabase:', error)
+      return NextResponse.json(
+        { error: 'Error al guardar la configuración en la base de datos.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error: any) {
-    console.error('[API Config] Error al escribir la configuración:', error)
+    console.error('[API Config] Error al procesar la solicitud:', error)
     return NextResponse.json(
-      { error: 'Error al escribir la configuración en el servidor.' },
+      { error: 'Error interno al procesar la configuración.' },
       { status: 500 }
     )
   }
