@@ -30,7 +30,7 @@ import React, {
 import { Pedido, EstadoPedido } from '@/tipos'
 import { Cadete } from '@/lib/entrega'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { insertarPedidoLocal, obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
+import { obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
 import { usarAuth } from '@/contexto/AuthContexto'
 import {
   usarTemaNotificacion,

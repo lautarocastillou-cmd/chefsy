@@ -264,9 +264,9 @@ export default function TiendaMobile() {
               {/* Círculo de fondo animado */}
               <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-chefsy/5 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
               
-              <div className="relative z-10 w-full flex flex-col pt-2 pb-20">
+              <div className="relative z-10 w-full flex flex-col pt-6 pb-20 justify-center">
                 
-                <div className="relative w-full max-w-[220px] md:max-w-[250px] aspect-square drop-shadow-2xl mx-auto mb-2 z-30">
+                <div className="relative w-full max-w-[240px] md:max-w-[260px] aspect-square drop-shadow-2xl mx-auto mt-8 mb-6 z-30">
                   <Image
                     src={imgError ? "/burger-loca.webp" : (configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp")}
                     alt="Hero Image"
@@ -282,7 +282,7 @@ export default function TiendaMobile() {
                   />
                 </div>
 
-                <div className="text-center w-full z-20 relative mb-6 mt-2">
+                <div className="text-center w-full z-20 relative mb-8 mt-2">
                   <h1 className="font-bebas text-5xl sm:text-6xl text-white tracking-wide uppercase leading-none drop-shadow-md">
                     {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
                   </h1>
@@ -290,35 +290,8 @@ export default function TiendaMobile() {
                     {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
                   </h2>
                 </div>
-                
-                {/* Secondary Image Centered */}
-                <div className="relative w-[160px] aspect-square drop-shadow-2xl mx-auto mt-2 mb-6 rotate-12 transition-transform duration-500 z-10">
-                  {(() => {
-                    const url = configuracion?.hero_image_url?.split('|')[1]?.trim() || "/burger-hero.png";
-                    let px = 50, py = 50, scale = 100;
-                    try {
-                      const p = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
-                      px = parseInt(p.searchParams.get('px') || '50');
-                      py = parseInt(p.searchParams.get('py') || '50');
-                      scale = parseInt(p.searchParams.get('scale') || '100');
-                    } catch(e) {}
-                    
-                    return (
-                      <Image
-                        src={url}
-                        alt="Hero Side Image"
-                        fill
-                        className="object-contain drop-shadow-2xl"
-                        style={{
-                          objectPosition: `${px}% ${py}%`,
-                          transform: `scale(${scale / 100})`
-                        }}
-                      />
-                    )
-                  })()}
-                </div>
 
-                <div className="text-center w-full z-20 relative">
+                <div className="text-center w-full z-20 relative mt-4">
                   <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
                     {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
                   </h3>

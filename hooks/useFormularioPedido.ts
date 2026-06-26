@@ -167,7 +167,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       {
         cliente: 'Mesa 4',
         tel: 'Sin especificar',
-        tipo: 'salon' as TipoEntrega,
+        tipo: 'consumo_local' as TipoEntrega,
         dir: '',
         coords: null,
         pago: 'efectivo' as MetodoPago,
