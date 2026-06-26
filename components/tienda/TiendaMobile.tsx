@@ -228,7 +228,7 @@ export default function TiendaMobile() {
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-inner">
               <span className="text-3xl">🪙</span>
             </div>
-            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">Iniciá sesión para ver tus puntos</h2>
+            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">Iniciá sesión para ver tus Chefsitos</h2>
             <p className="text-slate-400 max-w-xs mb-8 text-sm leading-relaxed">
               Tus compras suman Chefsitos que podés canjear por comida gratis.
             </p>
@@ -247,11 +247,11 @@ export default function TiendaMobile() {
               </span>
             </div>
             <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Hola, {perfil?.nombre || 'Cliente'}!</h2>
-            <p className="text-slate-400 mb-8">Acá podés ver tus puntos acumulados.</p>
+            <p className="text-slate-400 mb-8">Acá podés ver tus Chefsitos acumulados.</p>
             
             <div className="bg-[#141414] border border-white/5 rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-              <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">Tus Puntos</span>
+              <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">TUS CHEFSITOS</span>
               <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
             </div>
           </div>
