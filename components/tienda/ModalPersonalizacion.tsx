@@ -54,7 +54,7 @@ export default function ModalPersonalizacion({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out"
