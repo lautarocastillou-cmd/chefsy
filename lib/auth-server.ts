@@ -12,7 +12,7 @@ import { createHash } from 'crypto'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 const NOMBRE_COOKIE = 'chefsy-token'
-const DURACION_SESION_HORAS = 8 // 1 jornada laboral
+const DURACION_SESION_HORAS = 720 // 30 días para evitar cierres en móviles
 const BCRYPT_COST = 12 // ~250ms por hash — buen balance seguridad/performance
 
 // ── Derivar la clave secreta de la variable de entorno ─────────────────────
@@ -136,7 +136,7 @@ export function configurarCookieSesion(token: string, duracionHoras: number = DU
     value:    token,
     httpOnly: true,
     secure:   process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    sameSite: 'lax' as const,
     path:     '/',
     maxAge:   duracionHoras * 3600,
   }

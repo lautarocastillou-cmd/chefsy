@@ -18,14 +18,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Token inválido o expirado' }, { status: 401 })
     }
 
-    // El token del QR es válido. Generamos sesión real por 72 horas.
+    // El token del QR es válido. Generamos sesión real por 720 horas (30 días).
     const sessionToken = await firmarToken(
       { usuario: payload.usuario, nombre: payload.nombre, rol: payload.rol }, 
-      72 // 72 horas
+      720 // 720 horas (30 días)
     )
 
     // Configurar la cookie
-    const cookieOpts = configurarCookieSesion(sessionToken, 72) as any
+    const cookieOpts = configurarCookieSesion(sessionToken, 720) as any
     const cookieStore = await cookies()
     cookieStore.set(cookieOpts.name, cookieOpts.value, {
       httpOnly: cookieOpts.httpOnly,
