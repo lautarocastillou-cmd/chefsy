@@ -12,7 +12,7 @@ export default function PrivacidadPage() {
     <div className="min-h-screen bg-[#121212] py-20 px-4">
       <div className="max-w-3xl mx-auto bg-[#1a1a1a] rounded-3xl p-8 md:p-12 border border-[#2a2a2a] shadow-2xl relative">
         <Link 
-          href="/" 
+          href="https://chefsy.xyz" 
           className="inline-flex items-center gap-2 text-chefsy-500 hover:text-chefsy-400 transition-colors font-bold text-sm mb-8"
         >
           <ArrowLeft size={16} />

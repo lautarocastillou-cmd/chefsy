@@ -26,7 +26,7 @@ export default function VerificadorLogin() {
           setEstado('aprobado')
         } else {
           setEstado('rechazado')
-          router.push('/')
+          window.location.href = 'https://chefsy.xyz'
         }
       })
       .subscribe((status) => {
@@ -61,7 +61,7 @@ export default function VerificadorLogin() {
         Not Found
       </p>
       <button 
-        onClick={() => router.push('/')}
+        onClick={() => window.location.href = 'https://chefsy.xyz'}
         className="px-6 py-3 border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all font-semibold tracking-wide text-sm"
       >
         VOLVER A LA TIENDA
