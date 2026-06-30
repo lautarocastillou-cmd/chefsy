@@ -29,6 +29,12 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   const [estaListo, setEstaListo] = useState(false)
 
   const cargarPerfil = async (user: User) => {
+    const fallbackPerfil: PerfilCliente = {
+      id: user.id,
+      nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
+      telefono: user.phone || null,
+      puntos_actuales: 0
+    }
     try {
       let { data: perfilCliente, error } = await supabase
         .from('clientes')
@@ -38,39 +44,43 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
 
       // Si no existe, lo creamos
       if (!perfilCliente || (error && error.code === 'PGRST116')) {
-        const nuevoPerfil = {
-          id: user.id,
-          nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
-          telefono: user.phone || null,
-          puntos_actuales: 0
-        }
-        
         const { error: insertError } = await supabase
           .from('clientes')
-          .insert(nuevoPerfil)
+          .insert(fallbackPerfil)
           
         if (!insertError) {
-          setPerfil(nuevoPerfil as PerfilCliente)
+          setPerfil(fallbackPerfil)
         } else {
-          setPerfil(null)
+          console.error('Error insertando cliente (posible RLS):', insertError)
+          setPerfil(fallbackPerfil)
         }
       } else if (perfilCliente) {
         setPerfil(perfilCliente as PerfilCliente)
       } else {
-        setPerfil(null)
+        setPerfil(fallbackPerfil)
       }
     } catch (e) {
       console.error('Error cargando perfil del cliente:', e)
-      setPerfil(null)
+      setPerfil(fallbackPerfil)
     }
   }
 
   useEffect(() => {
+    // Limpiar hash si queda colgado en la URL
+    const limpiarHashOAuth = () => {
+      if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
+    }
+
     // Restaurar sesión activa
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUsuario(session?.user ?? null)
       if (session?.user) {
-        cargarPerfil(session.user).finally(() => setEstaListo(true))
+        setUsuario(session.user)
+        cargarPerfil(session.user).finally(() => {
+          limpiarHashOAuth()
+          setEstaListo(true)
+        })
       } else {
         setEstaListo(true)
       }
@@ -79,11 +89,15 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setUsuario(session?.user ?? null)
         if (session?.user) {
+          setUsuario(session.user)
           await cargarPerfil(session.user)
+          limpiarHashOAuth()
+          setEstaListo(true)
         } else {
+          setUsuario(null)
           setPerfil(null)
+          setEstaListo(true)
         }
       }
     )

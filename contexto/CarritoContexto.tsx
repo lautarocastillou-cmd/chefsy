@@ -58,11 +58,31 @@ interface ValorContextoCarrito {
   pedidoCompletado: Pedido | null
   setPedidoCompletado: (p: Pedido | null) => void
   procesarCompra: () => Promise<void>
+  turnoActivo: boolean
 }
 
 const ContextoCarrito = createContext<ValorContextoCarrito | undefined>(undefined)
 
 export function ProveedorCarrito({ children }: { children: ReactNode }) {
+  const [turnoActivo, setTurnoActivo] = useState(true)
+
+  useEffect(() => {
+    const verificarTurno = async () => {
+      try {
+        const res = await fetch('/api/tienda/turno', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          setTurnoActivo(data.activo)
+        }
+      } catch (err) {
+        console.error('Error verificando turno de tienda:', err)
+      }
+    }
+    verificarTurno()
+    const intv = setInterval(verificarTurno, 30000)
+    return () => clearInterval(intv)
+  }, [])
+
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
   
@@ -240,6 +260,20 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
 
     try {
+      const resTurno = await fetch('/api/tienda/turno', { cache: 'no-store' })
+      if (resTurno.ok) {
+        const dataTurno = await resTurno.json()
+        if (!dataTurno.activo) {
+          setTurnoActivo(false)
+          alert('Nuestro horario de atención es de 20:30 a 01:00hs.')
+          return
+        }
+      }
+    } catch (e) {
+      console.error('Error verificando turno en compra:', e)
+    }
+
+    try {
       await insertarPedidoLocal({ ...nuevoPedido, archivado: false })
     } catch (err) {
       console.error('Error enviando pedido', err)
@@ -278,7 +312,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       distanciaClienteKm, costoEnvio,
       totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
       pedidoCompletado, setPedidoCompletado,
-      procesarCompra
+      procesarCompra, turnoActivo
     }}>
       {children}
     </ContextoCarrito.Provider>

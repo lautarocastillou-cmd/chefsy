@@ -44,6 +44,7 @@ export default function CartDrawer() {
     setObservaciones: onSetObservaciones,
     procesarCompra: onProcesarCompra,
     setCoordenadasCliente: onSetCoordenadasCliente,
+    turnoActivo
   } = usarCarrito()
 
   const onCerrar = () => setCartAbierto(false)
@@ -470,11 +471,22 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-[#3d3d3d]">
-                      <SlideButton 
-                        onAction={onProcesarCompra}
-                        texto={`DESLIZA PARA CONFIRMAR (${formatearPrecio(totalCarrito)})`}
-                        className="w-full"
-                      />
+                      {!turnoActivo ? (
+                        <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in">
+                          <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
+                            <span>🔒</span> Local Cerrado
+                          </p>
+                          <p className="text-slate-200 text-xs font-semibold leading-relaxed">
+                            Nuestro horario de atención es de 20:30 a 01:00hs.
+                          </p>
+                        </div>
+                      ) : (
+                        <SlideButton 
+                          onAction={onProcesarCompra}
+                          texto={`DESLIZA PARA CONFIRMAR (${formatearPrecio(totalCarrito)})`}
+                          className="w-full"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -536,7 +548,16 @@ export default function CartDrawer() {
               </div>
             </div>
 
-            {!mostrarCheckout && (
+            {!turnoActivo ? (
+              <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in">
+                <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
+                  <span>🔒</span> Local Cerrado
+                </p>
+                <p className="text-slate-200 text-xs font-semibold leading-relaxed">
+                  Nuestro horario de atención es de 20:30 a 01:00hs.
+                </p>
+              </div>
+            ) : !mostrarCheckout ? (
               <button
                 onClick={() => onSetMostrarCheckout(true)}
                 className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
@@ -544,7 +565,7 @@ export default function CartDrawer() {
                 Iniciar Checkout
                 <ChevronRight size={14} />
               </button>
-            )}
+            ) : null}
           </div>
         )}
       </div>
