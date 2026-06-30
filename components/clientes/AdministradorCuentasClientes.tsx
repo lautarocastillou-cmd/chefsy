@@ -365,8 +365,8 @@ export default function AdministradorCuentasClientes() {
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chefsitos Iniciales</label>
                 <input
                   type="number"
-                  value={formPuntos}
-                  onChange={(e) => setFormPuntos(Number(e.target.value))}
+                  value={formPuntos === 0 ? '' : formPuntos}
+                  onChange={(e) => setFormPuntos(e.target.value === '' ? 0 : Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-chefsy"
                 />
               </div>
@@ -487,8 +487,8 @@ export default function AdministradorCuentasClientes() {
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chefsitos (Puntos)</label>
                 <input
                   type="number"
-                  value={formPuntos}
-                  onChange={(e) => setFormPuntos(Number(e.target.value))}
+                  value={formPuntos === 0 ? '' : formPuntos}
+                  onChange={(e) => setFormPuntos(e.target.value === '' ? 0 : Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-chefsy"
                 />
               </div>

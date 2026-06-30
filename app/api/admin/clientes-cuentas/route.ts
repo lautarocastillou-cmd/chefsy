@@ -63,7 +63,16 @@ export async function POST(request: Request) {
       }
 
       const claveHash = await hashearClaveCliente(clave)
-      const nuevoId = randomUUID()
+      
+      const dummyEmail = `${telLimpio}_${randomUUID().slice(0, 8)}@clientes.chefsy.internal`
+      const { data: authUser } = await supabase.auth.admin.createUser({
+        email: dummyEmail,
+        password: randomUUID(),
+        email_confirm: true,
+      })
+
+      const nuevoId = authUser?.user?.id || randomUUID()
+
       const { error: insertErr } = await supabase
         .from('clientes')
         .insert({
