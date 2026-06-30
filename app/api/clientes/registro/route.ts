@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     const { data: nuevoCliente, error: insertError } = await supabase
       .from('clientes')
-      .insert({
+      .upsert({
         id: nuevoId,
         nombre: nombre.trim(),
         telefono: telLimpio,

@@ -126,7 +126,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         // Crear registro en tabla clientes para este usuario de Google
         const { error: insertErr } = await supabase
           .from('clientes')
-          .insert({ id: uid, nombre: fallback.nombre, telefono: fallback.telefono, puntos_actuales: 0 })
+          .upsert({ id: uid, nombre: fallback.nombre, telefono: fallback.telefono, puntos_actuales: 0 })
         setPerfil(fallback)
         if (insertErr) console.warn('[ClienteAuth] No se pudo insertar perfil Google:', insertErr.message)
       }
