@@ -301,6 +301,26 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }, 0)
 
     if (prevPedidosRef.current.length > 0) {
+      // BAJO NINGÚN CONTEXTO mostrar notificaciones internas del sistema de pedidos al cliente en la tienda.
+      // Solo notificar si hay un empleado/admin logueado y está en páginas internas de gestión.
+      const esPaginaGestion = pathname && (
+        pathname.startsWith('/dashboard') ||
+        pathname.startsWith('/pedidos') ||
+        pathname.startsWith('/cadeteria') ||
+        pathname.startsWith('/caja') ||
+        pathname.startsWith('/historial') ||
+        pathname.startsWith('/stock') ||
+        pathname.startsWith('/configuracion') ||
+        pathname.startsWith('/imprimir') ||
+        pathname.startsWith('/dev-tools') ||
+        pathname.startsWith('/malu')
+      )
+
+      if (!usuarioActivo || !esPaginaGestion) {
+        prevPedidosRef.current = estado.pedidos
+        return () => clearTimeout(timeoutCache)
+      }
+
       const esCadete = usuarioActivo?.rol === 'cadete'
       const esVistaCadeteria = pathname?.includes('/cadeteria')
 

@@ -38,7 +38,7 @@ function hashearClaveLegacy(claveLimpia: string): string {
 export interface PayloadSesion extends JWTPayload {
   usuario: string
   nombre:  string
-  rol:     'admin' | 'cadete'
+  rol:     'admin' | 'cadete' | 'cajero'
 }
 
 // ── Validar credenciales y retornar datos del usuario ──────────────────────
@@ -47,7 +47,7 @@ export interface PayloadSesion extends JWTPayload {
 export async function validarCredenciales(
   usuario: string,
   clave: string
-): Promise<{ usuario: string; nombre: string; rol: 'admin' | 'cadete' } | null> {
+): Promise<{ usuario: string; nombre: string; rol: 'admin' | 'cadete' | 'cajero' } | null> {
   const uLimpio = usuario.trim().toLowerCase()
 
   try {
@@ -63,7 +63,7 @@ export async function validarCredenciales(
     const datosUsuario = {
       usuario: usuarioBd.usuario,
       nombre:  usuarioBd.nombre,
-      rol:     usuarioBd.rol as 'admin' | 'cadete',
+      rol:     usuarioBd.rol as 'admin' | 'cadete' | 'cajero',
     }
 
     // ── 1. Intentar bcrypt (formato moderno) ──────────────────────────────
@@ -101,7 +101,7 @@ export async function validarCredenciales(
 export async function firmarToken(payload: {
   usuario: string
   nombre:  string
-  rol:     'admin' | 'cadete'
+  rol:     'admin' | 'cadete' | 'cajero'
 }, duracionHoras: number = DURACION_SESION_HORAS): Promise<string> {
   const ahora = Math.floor(Date.now() / 1000)
   return new SignJWT({ ...payload })

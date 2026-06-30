@@ -2,8 +2,7 @@
 
 // app/auth/callback/page.tsx
 // Destino del redirect de Google OAuth.
-// Lee el hash #access_token=... que deja Supabase,
-// establece la sesión y redirige al inicio.
+// Maneja tanto PKCE (?code=xxx) como Implicit (#access_token=xxx).
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,47 +15,58 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const procesarCallback = async () => {
       try {
-        // El hash contiene #access_token=xxx&refresh_token=yyy&...
-        const hash = window.location.hash.substring(1) // quitar el '#'
-        const params = new URLSearchParams(hash)
+        // ── 1. PKCE: ?code=xxx en la query string (más seguro, default en Supabase v2) ──
+        const searchParams = new URLSearchParams(window.location.search)
+        const code = searchParams.get('code')
 
-        const accessToken  = params.get('access_token')
-        const refreshToken = params.get('refresh_token')
-
-        if (accessToken && refreshToken) {
-          // Establecer la sesión manualmente con los tokens del hash
-          const { data, error } = await supabase.auth.setSession({
-            access_token:  accessToken,
-            refresh_token: refreshToken,
-          })
-
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
           if (error) {
-            console.error('[Auth Callback] Error al establecer sesión:', error.message)
+            console.error('[Auth Callback] Error PKCE:', error.message)
             setEstado('error')
             setTimeout(() => router.replace('/'), 2000)
             return
           }
-
           if (data.session) {
             setEstado('ok')
-            // Limpiar el hash de la URL antes de redirigir
-            window.history.replaceState(null, '', '/auth/callback')
-            // Pequeño delay para que el estado se propague
-            setTimeout(() => router.replace('/'), 300)
+            setTimeout(() => router.replace('/'), 400)
             return
           }
         }
 
-        // Si no hay tokens en el hash, tal vez vino de PKCE con ?code=
-        // Supabase lo maneja automáticamente con exchangeCodeForSession
+        // ── 2. Implicit: #access_token=xxx en el hash ──
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken  = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token:  accessToken,
+            refresh_token: refreshToken,
+          })
+          if (error) {
+            console.error('[Auth Callback] Error implicit:', error.message)
+            setEstado('error')
+            setTimeout(() => router.replace('/'), 2000)
+            return
+          }
+          if (data.session) {
+            setEstado('ok')
+            setTimeout(() => router.replace('/'), 400)
+            return
+          }
+        }
+
+        // ── 3. Fallback: verificar si Supabase ya procesó la sesión ──
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
           setEstado('ok')
-          setTimeout(() => router.replace('/'), 300)
+          setTimeout(() => router.replace('/'), 400)
           return
         }
 
         // Sin sesión — redirigir igual
+        console.warn('[Auth Callback] No se encontró sesión. Redirigiendo...')
         router.replace('/')
       } catch (err) {
         console.error('[Auth Callback] Error inesperado:', err)
@@ -69,7 +79,6 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="min-h-screen bg-[#0c0c0c] flex flex-col items-center justify-center gap-6 text-white font-sans">
-      {/* Logo animado */}
       <div className="relative">
         <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-2xl shadow-chefsy/20">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -81,7 +90,7 @@ export default function AuthCallbackPage() {
       {estado === 'procesando' && (
         <>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-3 border-chefsy-500/30 border-t-chefsy-500 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-chefsy-500/30 border-t-chefsy-500 rounded-full animate-spin" />
             <p className="text-slate-300 font-medium text-sm">Iniciando sesión con Google...</p>
           </div>
           <p className="text-slate-600 text-xs">Serás redirigido en un momento</p>
@@ -92,7 +101,7 @@ export default function AuthCallbackPage() {
         <div className="flex flex-col items-center gap-2 animate-in fade-in duration-300">
           <div className="text-3xl">✅</div>
           <p className="text-emerald-400 font-bold">¡Sesión iniciada!</p>
-          <p className="text-slate-500 text-xs">Redirigiendo...</p>
+          <p className="text-slate-500 text-xs">Redirigiendo a la tienda...</p>
         </div>
       )}
 

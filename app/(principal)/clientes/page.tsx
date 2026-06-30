@@ -1,6 +1,8 @@
 'use client'
 
+import React, { useState } from 'react'
 import { formatearPrecio } from '@/lib/utils'
+import AdministradorCuentasClientes from '@/components/clientes/AdministradorCuentasClientes'
 import {
   Search,
   MapPin,
@@ -34,23 +36,7 @@ export default function PaginaAgendaClientes() {
     window.open(`https://wa.me/${cliente.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(saludo)}`, '_blank')
   }
 
-  if (cargando) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-8 h-8 border-4 border-chefsy-300 border-t-chefsy rounded-full animate-spin" />
-        <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Cargando agenda de clientes...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <p className="text-red-500 font-bold text-lg">⚠️ Ocurrió un error</p>
-        <p className="text-sm text-gray-500">{error}</p>
-      </div>
-    )
-  }
+  const [pestaña, setPestaña] = useState<'agenda' | 'cuentas'>('agenda')
 
   return (
     <div className="space-y-6 max-w-6xl pb-10">
@@ -58,31 +44,71 @@ export default function PaginaAgendaClientes() {
       {/* Cabecera Principal */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">👥 Agenda de Clientes</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">👥 Gestión de Clientes</h1>
           <p className="text-xs text-gray-400 dark:text-slate-400">
-            Fidelizá y analizá el comportamiento de consumo de tus clientes frecuentes
+            Administrá cuentas de soporte y analizá métricas de consumo de tus clientes
           </p>
         </div>
 
-        {/* Buscador */}
-        <div className="w-full sm:w-72 flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-800 focus-within:ring-2 focus-within:ring-chefsy/50 transition-all">
-          <Search size={16} className="text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o celular…"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="bg-transparent border-none text-base md:text-sm outline-none text-slate-700 dark:text-slate-200 w-full placeholder:text-gray-400 dark:placeholder:text-slate-500"
-          />
-          {busqueda && (
-            <button onClick={() => setBusqueda('')} className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-350">
-              <X size={14} />
-            </button>
-          )}
+        {/* Pestañas de navegación */}
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl self-start sm:self-center">
+          <button
+            onClick={() => setPestaña('agenda')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              pestaña === 'agenda'
+                ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            📊 Agenda y Métricas
+          </button>
+          <button
+            onClick={() => setPestaña('cuentas')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              pestaña === 'cuentas'
+                ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            🛠️ Administrar Cuentas
+          </button>
         </div>
       </div>
 
-      {/* KPIs Macro */}
+      {pestaña === 'cuentas' ? (
+        <AdministradorCuentasClientes />
+      ) : cargando ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <div className="w-8 h-8 border-4 border-chefsy-300 border-t-chefsy rounded-full animate-spin" />
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Cargando agenda de clientes...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <p className="text-red-500 font-bold text-lg">⚠️ Ocurrió un error</p>
+          <p className="text-sm text-gray-500">{error}</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Buscador de la Agenda */}
+          <div className="flex justify-end">
+            <div className="w-full sm:w-72 flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 shadow-sm focus-within:ring-2 focus-within:ring-chefsy/50 transition-all">
+              <Search size={16} className="text-slate-400 dark:text-slate-500" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o celular…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="bg-transparent border-none text-base md:text-sm outline-none text-slate-700 dark:text-slate-200 w-full placeholder:text-gray-400 dark:placeholder:text-slate-500"
+              />
+              {busqueda && (
+                <button onClick={() => setBusqueda('')} className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-350">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* KPIs Macro */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* KPI 1 */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl p-4 flex items-center gap-4 transition-colors">
@@ -363,6 +389,8 @@ export default function PaginaAgendaClientes() {
               </div>
             </div>
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>

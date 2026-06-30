@@ -5,6 +5,7 @@ import { CheckCircle2, MessageCircle, BellRing } from 'lucide-react'
 import Image from 'next/image'
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 
 interface PantallaExitoProps {
   pedido: Pedido
@@ -30,6 +31,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPedido }: PantallaExitoProps) {
   const [suscribiendo, setSuscribiendo] = useState(false)
   const [suscrito, setSuscrito] = useState(false)
+  const { usuario } = usarClienteAuth()
 
   const habilitarNotificaciones = async () => {
     try {
@@ -164,7 +166,8 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
         </div>
 
         <div className="flex flex-col gap-3 pt-2">
-          {!suscrito ? (
+          {/* Botón de notificaciones: solo para usuarios sin sesión iniciada */}
+          {!usuario && !suscrito && (
             <button
               onClick={habilitarNotificaciones}
               disabled={suscribiendo}
@@ -181,7 +184,8 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
                 </>
               )}
             </button>
-          ) : (
+          )}
+          {!usuario && suscrito && (
             <div className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900/50">
               <CheckCircle2 size={18} />
               ¡Suscrito! Te avisaremos al celular.

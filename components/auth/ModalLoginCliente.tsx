@@ -35,7 +35,7 @@ function InputField({
           placeholder={placeholder}
           disabled={disabled}
           autoComplete={type === 'password' ? 'current-password' : undefined}
-          className="w-full bg-[#1a1a1a] border border-white/8 text-white rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-chefsy-500/60 focus:ring-1 focus:ring-chefsy-500/30 transition-all placeholder:text-slate-600 disabled:opacity-50"
+          className="w-full bg-[#1a1a1a] border border-white/8 text-white rounded-xl py-3 pl-10 pr-10 text-base md:text-sm focus:outline-none focus:border-chefsy-500/60 focus:ring-1 focus:ring-chefsy-500/30 transition-all placeholder:text-slate-600 disabled:opacity-50"
         />
         {rightElement && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
