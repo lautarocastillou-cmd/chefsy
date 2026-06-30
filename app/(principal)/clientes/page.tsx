@@ -32,8 +32,9 @@ export default function PaginaAgendaClientes() {
 
   // Enviar mensaje de WhatsApp
   const enviarWhatsApp = (cliente: ClienteAgrupado) => {
-    const saludo = `Hola ${cliente.nombre}, te saludamos de Chefsy! 🍔`
-    window.open(`https://wa.me/${cliente.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(saludo)}`, '_blank')
+    if (!cliente) return
+    const saludo = `Hola ${cliente.nombre || ''}, te saludamos de Chefsy! 🍔`
+    window.open(`https://wa.me/${(cliente.telefono || '').toString().replace(/\D/g, '')}?text=${encodeURIComponent(saludo)}`, '_blank')
   }
 
   const [pestaña, setPestaña] = useState<'agenda' | 'cuentas'>('agenda')
@@ -180,7 +181,7 @@ export default function PaginaAgendaClientes() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">
-                          {cliente.nombre.substring(0, 2).toUpperCase()}
+                          {(cliente.nombre || 'C').toString().substring(0, 2).toUpperCase()}
                         </div>
                         <span className="font-bold text-slate-800 dark:text-slate-100">{cliente.nombre}</span>
                       </div>
@@ -234,7 +235,7 @@ export default function PaginaAgendaClientes() {
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">
-                    {cliente.nombre.substring(0, 2).toUpperCase()}
+                    {(cliente.nombre || 'C').toString().substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{cliente.nombre}</h4>
@@ -271,7 +272,7 @@ export default function PaginaAgendaClientes() {
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-chefsy text-white flex items-center justify-center font-bold">
-                  {clienteSeleccionado.nombre.substring(0, 2).toUpperCase()}
+                  {(clienteSeleccionado.nombre || 'C').toString().substring(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-gray-800 dark:text-slate-100 leading-tight">

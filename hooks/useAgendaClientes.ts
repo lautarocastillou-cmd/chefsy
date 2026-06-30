@@ -39,11 +39,13 @@ export function useAgendaClientes() {
 
   // Agrupar pedidos por cliente (teléfono único)
   const clientesAgrupados = useMemo(() => {
+    if (!Array.isArray(pedidosHistoricos)) return []
     const grupos: Record<string, Pedido[]> = {}
 
     // Agrupar pedidos por teléfono
     pedidosHistoricos.forEach((p) => {
-      const tel = p.telefono.trim()
+      if (!p) return
+      const tel = (p.telefono || '').toString().trim()
       const telNormalizado = tel.toLowerCase().replace(/[^a-z0-9]/g, '')
       
       // Ignorar teléfonos no válidos o "sin especificar"
@@ -67,28 +69,31 @@ export function useAgendaClientes() {
     const listaClientes: ClienteAgrupado[] = Object.entries(grupos).map(([telefono, pedidosCliente]) => {
       // Ordenar pedidos del más nuevo al más viejo
       const ordenados = [...pedidosCliente].sort((a, b) => {
-        const fechaA = new Date(`${a.fecha}T${a.hora || '00:00'}`)
-        const fechaB = new Date(`${b.fecha}T${b.hora || '00:00'}`)
-        return fechaB.getTime() - fechaA.getTime()
+        const fechaA = new Date(`${a?.fecha || ''}T${a?.hora || '00:00'}`)
+        const fechaB = new Date(`${b?.fecha || ''}T${b?.hora || '00:00'}`)
+        return (isNaN(fechaB.getTime()) ? 0 : fechaB.getTime()) - (isNaN(fechaA.getTime()) ? 0 : fechaA.getTime())
       })
 
-      const ultimoPedido = ordenados[0]
-      const nombre = ultimoPedido.cliente
+      const ultimoPedido = ordenados[0] || {}
+      const nombre = (ultimoPedido.cliente || 'Cliente Anónimo').toString()
 
       // Buscar la dirección más reciente
-      const ultimoDelivery = ordenados.find((p) => p.tipoEntrega === 'delivery')
-      const direccionMasReciente = ultimoDelivery?.direccion || 'Retiro / Consumo Local'
+      const ultimoDelivery = ordenados.find((p) => p?.tipoEntrega === 'delivery')
+      const direccionMasReciente = (ultimoDelivery?.direccion || 'Retiro / Consumo Local').toString()
 
       // Contar pedidos válidos para gasto total
-      const pedidosValidos = pedidosCliente.filter((p) => p.estado !== 'cancelado')
-      const totalGastado = pedidosValidos.reduce((sum, p) => sum + p.total, 0)
+      const pedidosValidos = pedidosCliente.filter((p) => p && p.estado !== 'cancelado')
+      const totalGastado = pedidosValidos.reduce((sum, p) => sum + (Number(p?.total) || 0), 0)
 
       // Encontrar plato preferido
       const contadorPlatos: Record<string, number> = {}
       pedidosCliente.forEach((p) => {
-        p.productos.forEach((prod) => {
-          const nombreBase = prod.nombre.split(' (+')[0]
-          contadorPlatos[nombreBase] = (contadorPlatos[nombreBase] || 0) + prod.cantidad
+        const prods = Array.isArray(p?.productos) ? p.productos : []
+        prods.forEach((prod) => {
+          if (!prod) return
+          const nom = (prod.nombre || 'Plato').toString()
+          const nombreBase = nom.split(' (+')[0] || 'Plato'
+          contadorPlatos[nombreBase] = (contadorPlatos[nombreBase] || 0) + (Number(prod.cantidad) || 1)
         })
       })
 
@@ -108,7 +113,7 @@ export function useAgendaClientes() {
         totalPedidos: pedidosCliente.length,
         totalGastado,
         platoFavorito,
-        fechaUltimoPedido: ultimoPedido.fecha,
+        fechaUltimoPedido: (ultimoPedido.fecha || '').toString(),
         pedidosHistoricos: ordenados,
       }
     })
@@ -118,9 +123,13 @@ export function useAgendaClientes() {
 
   // Filtrar clientes por búsqueda
   const clientesFiltrados = useMemo(() => {
+    if (!Array.isArray(clientesAgrupados)) return []
+    const query = (busqueda || '').toLowerCase()
     return clientesAgrupados.filter((c) => {
-      const query = busqueda.toLowerCase()
-      return c.nombre.toLowerCase().includes(query) || c.telefono.includes(query)
+      if (!c) return false
+      const nom = (c.nombre || '').toLowerCase()
+      const tel = (c.telefono || '').toLowerCase()
+      return nom.includes(query) || tel.includes(query)
     })
   }, [clientesAgrupados, busqueda])
 
@@ -134,13 +143,14 @@ export function useAgendaClientes() {
     let maxGasto = 0
 
     clientesAgrupados.forEach((c) => {
-      if (c.totalPedidos > maxPedidos) {
+      if (!c) return
+      if ((c.totalPedidos || 0) > maxPedidos) {
         maxPedidos = c.totalPedidos
-        clienteEstrella = c.nombre
+        clienteEstrella = c.nombre || 'N/A'
       }
-      if (c.totalGastado > maxGasto) {
+      if ((c.totalGastado || 0) > maxGasto) {
         maxGasto = c.totalGastado
-        clienteTopSpender = c.nombre
+        clienteTopSpender = c.nombre || 'N/A'
       }
     })
 

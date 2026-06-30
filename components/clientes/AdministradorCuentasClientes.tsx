@@ -264,11 +264,11 @@ export default function AdministradorCuentasClientes() {
                   <tr key={c.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-chefsy/10 text-chefsy flex items-center justify-center font-extrabold text-sm shrink-0">
-                        {c.nombre.charAt(0).toUpperCase()}
+                        {(c.nombre || 'U').toString().charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p>{c.nombre}</p>
-                        <p className="text-xs font-normal text-slate-400">ID: {c.id.slice(0, 8)}...</p>
+                        <p>{c.nombre || 'Sin Nombre'}</p>
+                        <p className="text-xs font-normal text-slate-400">ID: {(c.id || '').toString().slice(0, 8)}...</p>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">
