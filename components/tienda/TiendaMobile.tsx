@@ -112,11 +112,35 @@ export default function TiendaMobile() {
   }, [productos, categoriaSeleccionada, busqueda])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
-    const telefono = process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || ''
-    let mensaje = configuracion?.whatsapp_mensaje || `*¡Hola Chefsy!* Hice un pedido online: \n\n`
-    mensaje += `*Orden:* #${pedido.id}\n*Total:* ${formatearPrecio(pedido.total)}\n`
-    return `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(mensaje)}`
-  }, [configuracion?.whatsapp_mensaje])
+    const rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834554453'
+    const telLimpio = rawTel.replace(/\D/g, '') || '5493834554453'
+    
+    let mensaje = configuracion?.whatsapp_mensaje 
+      ? `${configuracion.whatsapp_mensaje}\n\n` 
+      : `*¡Hola Chefsy!* Hice un pedido online: \n\n`
+    
+    mensaje += `*Orden:* #${pedido.id}\n`
+    mensaje += `*Cliente:* ${pedido.cliente}\n`
+    mensaje += `*Teléfono:* ${pedido.telefono}\n`
+    mensaje += `*Entrega:* ${pedido.tipoEntrega === 'delivery' ? `Delivery a "${pedido.direccion}"` : 'Retiro por el local'}\n`
+    mensaje += `*Método de Pago:* ${pedido.metodoPago?.toUpperCase() || 'NO ESPECIFICADO'}\n`
+    if (pedido.observaciones) {
+      mensaje += `*Notas:* _${pedido.observaciones}_\n`
+    }
+    mensaje += `\n*Detalle del pedido:* \n`
+    
+    pedido.productos.forEach(p => {
+      mensaje += `• ${p.cantidad}x ${p.nombre} - ${formatearPrecio(p.precio * p.cantidad)}\n`
+    })
+
+    if (pedido.costoEnvio && pedido.costoEnvio > 0) {
+      mensaje += `• Costo de Envío - ${formatearPrecio(pedido.costoEnvio)}\n`
+    }
+
+    mensaje += `\n*Total a pagar: ${formatearPrecio(pedido.total)}*\n`
+
+    return `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
+  }, [configuracion])
 
   const handleNavClick = (tab: 'home' | 'search' | 'profile' | 'cart') => {
     if (tab !== 'cart') {

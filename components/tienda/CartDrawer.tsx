@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard, Gift } from 'lucide-react'
-import { SlideButton } from '@/components/ui/slide-button'
 import { ItemCarrito } from '@/tipos/tienda'
 import { formatearPrecio } from '@/lib/utils'
 
@@ -444,8 +443,13 @@ export default function CartDrawer() {
                             id="metodo_pago"
                             value={metodoPago}
                             onChange={(e) => onSetMetodoPago(e.target.value as any)}
-                            className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-[#1a1a1a] text-white appearance-none cursor-pointer"
+                            className={`w-full border rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-chefsy-500 bg-[#1a1a1a] appearance-none cursor-pointer ${
+                              metodoPago === 'sin_especificar'
+                                ? 'border-amber-500/80 text-amber-400'
+                                : 'border-[#3d3d3d] text-white'
+                            }`}
                           >
+                            <option value="sin_especificar" disabled>⚠️ FALTA MÉTODO DE PAGO</option>
                             <option value="efectivo">💵 Efectivo al recibir</option>
                             <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
                             <option value="transferencia">📲 Transferencia Bancaria</option>
@@ -481,11 +485,13 @@ export default function CartDrawer() {
                           </p>
                         </div>
                       ) : (
-                        <SlideButton 
-                          onAction={onProcesarCompra}
-                          texto={`DESLIZA PARA CONFIRMAR (${formatearPrecio(totalCarrito)})`}
-                          className="w-full"
-                        />
+                        <button
+                          type="button"
+                          onClick={onProcesarCompra}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                        >
+                          CONFIRMAR PEDIDO ({formatearPrecio(totalCarrito)})
+                        </button>
                       )}
                     </div>
                   </div>

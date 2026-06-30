@@ -207,6 +207,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       alert('Por favor ingresa la dirección para la entrega del delivery.')
       return
     }
+    if (metodoPago === 'sin_especificar') {
+      alert('Por favor selecciona un método de pago antes de confirmar el pedido.')
+      return
+    }
 
     // Obtener sesión actual (cliente logueado)
     const { data: { session } } = await supabase.auth.getSession()

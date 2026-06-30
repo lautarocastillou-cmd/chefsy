@@ -13,24 +13,29 @@ export default function AuthCallbackPage() {
   const [estado, setEstado] = useState<'procesando' | 'ok' | 'error'>('procesando')
 
   useEffect(() => {
+    let cancelado = false
+
+    const redirigirAlHome = () => {
+      setEstado('ok')
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 300)
+    }
+
     const procesarCallback = async () => {
       try {
-        // ── 1. PKCE: ?code=xxx en la query string (más seguro, default en Supabase v2) ──
+        // ── 1. PKCE: ?code=xxx en la query string ──
         const searchParams = new URLSearchParams(window.location.search)
         const code = searchParams.get('code')
 
         if (code) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) {
-            console.error('[Auth Callback] Error PKCE:', error.message)
-            setEstado('error')
-            setTimeout(() => router.replace('/'), 2000)
+          if (!error && data?.session) {
+            redirigirAlHome()
             return
           }
-          if (data.session) {
-            setEstado('ok')
-            setTimeout(() => router.replace('/'), 400)
-            return
+          if (error) {
+            console.warn('[Auth Callback] Advertencia canjeando code (posible auto-detect previo):', error.message)
           }
         }
 
@@ -44,37 +49,37 @@ export default function AuthCallbackPage() {
             access_token:  accessToken,
             refresh_token: refreshToken,
           })
-          if (error) {
-            console.error('[Auth Callback] Error implicit:', error.message)
-            setEstado('error')
-            setTimeout(() => router.replace('/'), 2000)
-            return
-          }
-          if (data.session) {
-            setEstado('ok')
-            setTimeout(() => router.replace('/'), 400)
+          if (!error && data?.session) {
+            redirigirAlHome()
             return
           }
         }
 
-        // ── 3. Fallback: verificar si Supabase ya procesó la sesión ──
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          setEstado('ok')
-          setTimeout(() => router.replace('/'), 400)
-          return
+        // ── 3. Fallback inteligente: esperar a que Supabase termine de procesar la sesión en segundo plano ──
+        for (let i = 0; i < 12; i++) {
+          if (cancelado) return
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            redirigirAlHome()
+            return
+          }
+          await new Promise(r => setTimeout(r, 200))
         }
 
-        // Sin sesión — redirigir igual
-        console.warn('[Auth Callback] No se encontró sesión. Redirigiendo...')
-        router.replace('/')
+        // Si no se detectó sesión después de 2.4 segundos, redirigir recargando igual
+        console.warn('[Auth Callback] No se detectó sesión tras callback. Redirigiendo...')
+        window.location.href = '/'
       } catch (err) {
         console.error('[Auth Callback] Error inesperado:', err)
-        router.replace('/')
+        window.location.href = '/'
       }
     }
 
     procesarCallback()
+
+    return () => {
+      cancelado = true
+    }
   }, [router])
 
   return (

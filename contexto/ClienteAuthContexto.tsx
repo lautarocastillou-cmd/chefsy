@@ -90,9 +90,9 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !cancelado) {
           await cargarPerfilGoogle(session.user.id, session.user)
-          setEstaListo(true)
         }
       } catch { /* continuar */ }
+      if (!cancelado) setEstaListo(true)
     }
 
     restaurar()

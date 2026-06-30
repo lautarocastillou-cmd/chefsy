@@ -160,7 +160,9 @@ export default function TiendaDesktop() {
   }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
-    const telefono = process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || ''
+    const rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834554453'
+    const telLimpio = rawTel.replace(/\D/g, '') || '5493834554453'
+    
     let mensaje = configuracion?.whatsapp_mensaje 
       ? `${configuracion.whatsapp_mensaje}\n\n` 
       : `*¡Hola Chefsy!* Hice un pedido online: \n\n`
@@ -169,7 +171,7 @@ export default function TiendaDesktop() {
     mensaje += `*Cliente:* ${pedido.cliente}\n`
     mensaje += `*Teléfono:* ${pedido.telefono}\n`
     mensaje += `*Entrega:* ${pedido.tipoEntrega === 'delivery' ? `Delivery a "${pedido.direccion}"` : 'Retiro por el local'}\n`
-    mensaje += `*Método de Pago:* ${pedido.metodoPago.toUpperCase()}\n`
+    mensaje += `*Método de Pago:* ${pedido.metodoPago?.toUpperCase() || 'NO ESPECIFICADO'}\n`
     if (pedido.observaciones) {
       mensaje += `*Notas:* _${pedido.observaciones}_\n`
     }
@@ -185,11 +187,8 @@ export default function TiendaDesktop() {
 
     mensaje += `\n*Total a pagar: ${formatearPrecio(pedido.total)}*\n`
 
-    const urlBase = telefono
-      ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(mensaje)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`
-    return urlBase
-  }, [configuracion?.whatsapp_mensaje])
+    return `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
+  }, [configuracion])
 
   const handleToggleSelector = useCallback(() => setSelectorAbierto(prev => !prev), [])
   const handleSeleccionarCategoria = useCallback((id: string | null) => {
