@@ -9,6 +9,7 @@ import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
+import ModalLogout from '@/components/auth/ModalLogout'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -193,29 +194,13 @@ export default function HeroSection({
       )}
 
       {mostrarConfirmLogout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in scale-in duration-200 text-left">
-            <h3 className="text-xl font-bold text-white mb-2 font-bebas tracking-wide">Cerrar Sesión</h3>
-            <p className="text-sm text-slate-400 mb-6">¿Estás seguro de que querés cerrar sesión?</p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setMostrarConfirmLogout(false)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  await cerrarSesion()
-                  setMostrarConfirmLogout(false)
-                }}
-                className="px-4 py-2 bg-red-650 hover:bg-red-755 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all cursor-pointer"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalLogout
+          onCancel={() => setMostrarConfirmLogout(false)}
+          onConfirm={async () => {
+            await cerrarSesion()
+            setMostrarConfirmLogout(false)
+          }}
+        />
       )}
     </>
   )

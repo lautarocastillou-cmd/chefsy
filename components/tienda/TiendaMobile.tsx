@@ -18,6 +18,8 @@ import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
+import ModalLogout from '@/components/auth/ModalLogout'
+import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
 const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
@@ -36,6 +38,7 @@ export default function TiendaMobile() {
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
   const [modoTienda, setModoTienda] = useState<'normal' | 'chefsitos'>('normal')
+  const [selectorAbierto, setSelectorAbierto] = useState(false)
   
   const { configuracion } = usarConfiguracionTienda()
   
@@ -335,10 +338,22 @@ export default function TiendaMobile() {
                   </h2>
                 </div>
 
-                <div className="text-center w-full z-20 relative mt-4">
+                <div className="text-center w-full z-20 relative mt-4 flex flex-col items-center gap-3 px-4">
                   <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
                     {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
                   </h3>
+                  <div className="w-full max-w-sm mt-1">
+                    <SelectorCategorias
+                      categoriasActivas={categoriasActivas}
+                      categoriaSeleccionada={categoriaSeleccionada}
+                      selectorAbierto={selectorAbierto}
+                      onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
+                      onSeleccionarCategoria={(id) => {
+                        setCategoriaSeleccionada(id === 'todos' ? null : id)
+                        setSelectorAbierto(false)
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -413,29 +428,13 @@ export default function TiendaMobile() {
         </Suspense>
       )}
       {mostrarConfirmLogout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in scale-in duration-200 text-left">
-            <h3 className="text-xl font-bold text-white mb-2 font-bebas tracking-wide">Cerrar Sesión</h3>
-            <p className="text-sm text-slate-400 mb-6">¿Estás seguro de que querés cerrar sesión?</p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setMostrarConfirmLogout(false)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  await cerrarSesion()
-                  setMostrarConfirmLogout(false)
-                }}
-                className="px-4 py-2 bg-red-650 hover:bg-red-755 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all cursor-pointer"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalLogout
+          onCancel={() => setMostrarConfirmLogout(false)}
+          onConfirm={async () => {
+            await cerrarSesion()
+            setMostrarConfirmLogout(false)
+          }}
+        />
       )}
 
       {mostrarLogin && (
