@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { randomUUID } from 'crypto'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import {
   hashearClaveCliente,
@@ -51,9 +52,11 @@ export async function POST(request: Request) {
     const claveHash = await hashearClaveCliente(clave)
 
     // ── Insertar en BD ─────────────────────────────────────────────────────
+    const nuevoId = randomUUID()
     const { data: nuevoCliente, error: insertError } = await supabase
       .from('clientes')
       .insert({
+        id: nuevoId,
         nombre: nombre.trim(),
         telefono: telLimpio,
         clave_hash: claveHash,
