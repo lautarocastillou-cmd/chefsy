@@ -160,8 +160,11 @@ export default function TiendaDesktop() {
   }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
-    const rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834554453'
-    const telLimpio = rawTel.replace(/\D/g, '') || '5493834554453'
+    let rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834225445'
+    let telLimpio = rawTel.toString().replace(/\D/g, '')
+    if (!telLimpio || telLimpio === '5493834554453' || telLimpio === '3834554453') {
+      telLimpio = '5493834225445'
+    }
     
     let mensaje = configuracion?.whatsapp_mensaje 
       ? `${configuracion.whatsapp_mensaje}\n\n` 

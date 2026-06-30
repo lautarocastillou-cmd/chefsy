@@ -76,7 +76,7 @@ export const metadata: Metadata = {
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased overflow-x-hidden ${playfair.variable} ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
+      <body className={`font-sans antialiased overflow-x-clip ${playfair.variable} ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorClienteAuth>

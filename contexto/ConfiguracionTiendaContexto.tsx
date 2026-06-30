@@ -18,7 +18,15 @@ export const ConfiguracionContext = createContext<ConfiguracionContextType>({
 export const usarConfiguracionTienda = () => useContext(ConfiguracionContext)
 
 export const ConfiguracionTiendaProvider = ({ children }: { children: React.ReactNode }) => {
-  const [configuracion, setConfiguracion] = useState<ConfiguracionTienda | null>(null)
+  const [configuracion, setConfiguracion] = useState<ConfiguracionTienda | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cache = localStorage.getItem('chefsy_configuracion_cache')
+        if (cache) return JSON.parse(cache)
+      } catch (e) {}
+    }
+    return null
+  })
   const [cargando, setCargando] = useState(true)
 
   // Cargar desde DB al iniciar
@@ -27,6 +35,11 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
       try {
         const configDB = await obtenerConfiguracionTienda()
         setConfiguracion(configDB)
+        if (typeof window !== 'undefined' && configDB) {
+          try {
+            localStorage.setItem('chefsy_configuracion_cache', JSON.stringify(configDB))
+          } catch (e) {}
+        }
       } catch (error) {
         console.error('Error cargando configuracion:', error)
       } finally {
@@ -36,12 +49,19 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
     cargarConfiguracion()
   }, [])
 
-  // Inyectar el color primario dinámicamente en el documento cuando cambia la configuración
+  // Inyectar el color y guardar en caché local dinámicamente cuando cambia la configuración
   useEffect(() => {
-    if (configuracion?.color_principal) {
-      document.documentElement.style.setProperty('--chefsy-main', configuracion.color_principal)
+    if (configuracion) {
+      if (configuracion.color_principal) {
+        document.documentElement.style.setProperty('--chefsy-main', configuracion.color_principal)
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('chefsy_configuracion_cache', JSON.stringify(configuracion))
+        } catch (e) {}
+      }
     }
-  }, [configuracion?.color_principal])
+  }, [configuracion])
 
   return (
     <ConfiguracionContext.Provider value={{ configuracion, setConfiguracion, cargando }}>

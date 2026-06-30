@@ -112,8 +112,11 @@ export default function TiendaMobile() {
   }, [productos, categoriaSeleccionada, busqueda])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
-    const rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834554453'
-    const telLimpio = rawTel.replace(/\D/g, '') || '5493834554453'
+    let rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834225445'
+    let telLimpio = rawTel.toString().replace(/\D/g, '')
+    if (!telLimpio || telLimpio === '5493834554453' || telLimpio === '3834554453') {
+      telLimpio = '5493834225445'
+    }
     
     let mensaje = configuracion?.whatsapp_mensaje 
       ? `${configuracion.whatsapp_mensaje}\n\n` 
@@ -182,7 +185,13 @@ export default function TiendaMobile() {
     )
   }
 
-  const fuenteClase = configuracion?.fuente_principal === 'inter' ? 'font-inter' : 'font-bebas'
+  const fuenteClase = {
+    bebas: 'font-bebas',
+    montserrat: 'font-montserrat',
+    inter: 'font-inter',
+    playfair: 'font-playfair',
+    anton: 'font-anton',
+  }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
 
   return (
     <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24`}>

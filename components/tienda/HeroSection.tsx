@@ -44,6 +44,7 @@ export default function HeroSection({
     bebas: 'font-bebas',
     montserrat: 'font-montserrat',
     inter: 'font-inter',
+    playfair: 'font-playfair',
     anton: 'font-anton'
   }[configuracion?.fuente_hero || 'bebas'] || 'font-bebas'
 
