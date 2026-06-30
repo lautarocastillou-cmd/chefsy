@@ -45,6 +45,29 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   // ── Restaurar sesión al montar ─────────────────────────────────────────
   useEffect(() => {
     let cancelado = false
+    let sesionPropiaActiva = false
+
+    // IMPORTANTE: registrar onAuthStateChange ANTES de getSession,
+    // así no perdemos el evento INITIAL_SESSION que Supabase emite al procesar el hash.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelado) return
+      // Si el sistema propio ya estableció sesión, ignorar eventos de Google
+      if (sesionPropiaActiva) return
+
+      if (session?.user) {
+        await cargarPerfilGoogle(session.user.id, session.user)
+        setEstaListo(true)
+      } else if (event === 'SIGNED_OUT') {
+        if (!sesionPropiaActiva) {
+          setPerfil(null)
+          setFuenteSesion(null)
+        }
+        setEstaListo(true)
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        // No hay sesión de Google — el sistema propio la manejará
+        setEstaListo(true)
+      }
+    })
 
     const restaurar = async () => {
       // 1. Intentar sesión del sistema propio (cookie HttpOnly)
@@ -53,6 +76,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json()
           if (data.perfil && !cancelado) {
+            sesionPropiaActiva = true
             setPerfil(data.perfil)
             setFuenteSesion('propio')
             setEstaListo(true)
@@ -61,40 +85,17 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         }
       } catch { /* sin conexión — continuar */ }
 
-      // 2. Intentar sesión de Google (Supabase Auth)
+      // 2. Verificar sesión de Google directamente (por si INITIAL_SESSION ya se emitió)
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !cancelado) {
           await cargarPerfilGoogle(session.user.id, session.user)
           setEstaListo(true)
-          return
         }
       } catch { /* continuar */ }
-
-      if (!cancelado) setEstaListo(true)
     }
 
     restaurar()
-
-    // Escuchar cambios de Supabase Auth (solo para Google)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (cancelado) return
-      // Si ya tenemos sesión propia, ignorar eventos de Supabase
-      if (fuenteSesion === 'propio') return
-      
-      if (session?.user) {
-        await cargarPerfilGoogle(session.user.id, session.user)
-        // Limpiar hash de URL si viene de OAuth redirect
-        if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
-          window.history.replaceState(null, '', window.location.pathname + window.location.search)
-        }
-        setEstaListo(true)
-      } else if (fuenteSesion === 'google') {
-        setPerfil(null)
-        setFuenteSesion(null)
-        setEstaListo(true)
-      }
-    })
 
     return () => {
       cancelado = true
@@ -182,10 +183,14 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
 
   // ── Google OAuth ───────────────────────────────────────────────────────
   const iniciarSesionGoogle = useCallback(async () => {
+    // Redirigir a /auth/callback para que procese el hash correctamente
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : 'https://chefsy.xyz/auth/callback'
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+        redirectTo,
         queryParams: { access_type: 'offline', prompt: 'select_account' },
       },
     })

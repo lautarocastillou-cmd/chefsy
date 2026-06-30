@@ -173,17 +173,21 @@ export default function TiendaMobile() {
           </div>
 
           {usuario ? (
-            <div className="flex items-center gap-2">
-              <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
-                <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
-                <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="bg-white/10 px-2.5 py-1 rounded-full border border-white/15 shadow-sm flex items-center gap-1.5 min-w-0">
+                <span className="text-white text-xs font-medium truncate max-w-[80px]">
+                  {perfil?.nombre?.split(' ')[0] || 'Cliente'}
+                </span>
+                <span className="text-chefsy-400 font-bold text-xs whitespace-nowrap shrink-0">
+                  🪙 {perfil?.puntos_actuales || 0}
+                </span>
               </div>
               <button
                 onClick={() => setMostrarConfirmLogout(true)}
-                className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-2 rounded-full border border-white/20 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-1.5 rounded-full border border-white/15 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
                 title="Cerrar sesión"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
