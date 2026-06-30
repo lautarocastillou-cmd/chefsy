@@ -39,9 +39,9 @@ export default function AdministradorCuentasClientes() {
     setError('')
     try {
       const res = await fetch('/api/admin/clientes-cuentas')
-      if (!res.ok) throw new Error('No se pudieron cargar las cuentas')
       const data = await res.json()
-      setClientes(data)
+      if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las cuentas')
+      setClientes(Array.isArray(data) ? data : [])
     } catch (err: any) {
       setError(err.message || 'Error de conexión')
     } finally {
@@ -72,10 +72,11 @@ export default function AdministradorCuentasClientes() {
   }
 
   const abrirEditar = (c: CuentaCliente) => {
+    if (!c) return
     limpiarForm()
-    setFormNombre(c.nombre)
-    setFormTel(c.telefono)
-    setFormPuntos(c.puntos_actuales || 0)
+    setFormNombre((c.nombre || '').toString())
+    setFormTel((c.telefono || '').toString())
+    setFormPuntos(Number(c.puntos_actuales) || 0)
     setModalEditar(c)
   }
 
@@ -192,10 +193,13 @@ export default function AdministradorCuentasClientes() {
     }
   }
 
-  const filtrados = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    c.telefono.includes(busqueda)
-  )
+  const filtrados = (Array.isArray(clientes) ? clientes : []).filter(c => {
+    if (!c) return false
+    const q = (busqueda || '').toLowerCase()
+    const nom = (c.nombre || '').toString().toLowerCase()
+    const tel = (c.telefono || '').toString().toLowerCase()
+    return nom.includes(q) || tel.includes(q)
+  })
 
   return (
     <div className="space-y-6">
