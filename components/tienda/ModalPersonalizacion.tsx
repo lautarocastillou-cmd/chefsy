@@ -41,6 +41,11 @@ export default function ModalPersonalizacion({
   const [mostrarFotosMobile, setMostrarFotosMobile] = useState(false)
   const { perfil } = usarClienteAuth()
   const cerradoPorAtrasRef = useRef(false)
+  const onCerrarRef = useRef(onCerrar)
+
+  useEffect(() => {
+    onCerrarRef.current = onCerrar
+  }, [onCerrar])
   
   const puntosRequeridos = producto.precio_puntos ? producto.precio_puntos * cantidadModal : 0
   const tienePuntosSuficientes = perfil && perfil.puntos_actuales >= puntosRequeridos
@@ -51,7 +56,7 @@ export default function ModalPersonalizacion({
 
     const handlePopState = () => {
       cerradoPorAtrasRef.current = true
-      onCerrar()
+      onCerrarRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -69,23 +74,29 @@ export default function ModalPersonalizacion({
         window.history.back()
       }
     }
-  }, [onCerrar])
+  }, [])
 
   return (
     <div 
       className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCerrar()
+      }}
       onWheel={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
       data-lenis-prevent="true"
     >
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out pointer-events-auto"
         onClick={onCerrar}
       />
 
       {/* Modal Panel */}
-      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out pb-6 sm:pb-0">
+      <div 
+        className="relative w-full h-[100dvh] sm:h-auto sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-12 sm:zoom-in-90 fade-in duration-500 ease-out pb-6 sm:pb-0 pointer-events-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Barra decorativa superior (solo mobile) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
