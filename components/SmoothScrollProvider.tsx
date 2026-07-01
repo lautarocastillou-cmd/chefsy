@@ -8,18 +8,13 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
   const pathname = usePathname()
 
   useEffect(() => {
-    const esPaginaAdmin = pathname?.startsWith('/dashboard') || 
-                          pathname?.startsWith('/pedidos') || 
-                          pathname?.startsWith('/cadeteria') || 
-                          pathname?.startsWith('/cierre') || 
-                          pathname?.startsWith('/productos') || 
-                          pathname?.startsWith('/stock') || 
-                          pathname?.startsWith('/clientes') || 
-                          pathname?.startsWith('/caceria') || 
-                          pathname?.startsWith('/configuracion') || 
-                          pathname?.startsWith('/dev-tools')
+    const esPaginaPublica = pathname === '/' || 
+                            pathname?.startsWith('/malu') || 
+                            pathname?.startsWith('/sobre-nosotros') || 
+                            pathname?.startsWith('/privacidad') || 
+                            pathname?.startsWith('/terminos')
 
-    if (esPaginaAdmin) return
+    if (!esPaginaPublica) return
 
     const lenis = new Lenis({
       duration: 1.2,
