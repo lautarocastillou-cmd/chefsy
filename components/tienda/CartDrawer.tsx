@@ -134,11 +134,14 @@ export default function CartDrawer() {
 
   useEffect(() => {
     if (cartAbierto) {
+      document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
     } else {
+      document.documentElement.style.overflow = ''
       document.body.style.overflow = ''
     }
     return () => {
+      document.documentElement.style.overflow = ''
       document.body.style.overflow = ''
     }
   }, [cartAbierto])
@@ -146,7 +149,12 @@ export default function CartDrawer() {
   if (!cartAbierto) return null
 
   return (
-    <div className="fixed inset-0 z-[99999] flex justify-end">
+    <div 
+      className="fixed inset-0 z-[99999] flex justify-end"
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-lenis-prevent="true"
+    >
       <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
         onClick={onCerrar}

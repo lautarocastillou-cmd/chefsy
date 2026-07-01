@@ -45,16 +45,24 @@ export default function ModalPersonalizacion({
   const tienePuntosSuficientes = perfil && perfil.puntos_actuales >= puntosRequeridos
 
   useEffect(() => {
-    // Deshabilitar scroll del body al montar
+    // Deshabilitar scroll de html y body al montar para evitar que el fondo se mueva
+    const origHtmlOverflow = document.documentElement.style.overflow
+    const origBodyOverflow = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     return () => {
-      // Restaurar scroll al desmontar
-      document.body.style.overflow = ''
+      document.documentElement.style.overflow = origHtmlOverflow
+      document.body.style.overflow = origBodyOverflow
     }
   }, [])
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div 
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-lenis-prevent="true"
+    >
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in duration-500 ease-out"
