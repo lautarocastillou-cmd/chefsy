@@ -7,7 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { ModificadorCatalogo } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { Search, ChevronRight, LogOut } from 'lucide-react'
+import { Search, ChevronRight, LogOut, User } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
@@ -222,6 +222,16 @@ export default function TiendaMobile() {
                 </span>
               </div>
               <button
+                onClick={() => {
+                  setActiveTab('profile')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white hover:text-chefsy-400 p-1.5 rounded-full border border-white/15 hover:border-chefsy-400/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
+                title="Ver perfil"
+              >
+                <User size={14} />
+              </button>
+              <button
                 onClick={() => setMostrarConfirmLogout(true)}
                 className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-1.5 rounded-full border border-white/15 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
                 title="Cerrar sesión"
@@ -294,39 +304,41 @@ export default function TiendaMobile() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center pt-20 px-4 text-center">
-            <div className="w-24 h-24 bg-chefsy/20 rounded-full flex items-center justify-center mb-6">
-              <span className="text-4xl text-chefsy-400 font-bebas">
+          <div className="flex flex-col items-center justify-center pt-8 px-4 text-center pb-12">
+            <div className="w-20 h-20 bg-chefsy/20 rounded-full flex items-center justify-center mb-4 border border-chefsy/30 shadow-lg">
+              <span className="text-3xl text-chefsy-400 font-bebas">
                 {perfil?.nombre?.charAt(0)?.toUpperCase() || 'C'}
               </span>
             </div>
-            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Hola, {perfil?.nombre || 'Cliente'}!</h2>
-            <p className="text-slate-400 mb-8">Acá podés ver tus Chefsitos acumulados.</p>
+            <h2 className="text-2xl font-bebas text-white tracking-wider mb-1">¡HOLA, {perfil?.nombre?.toUpperCase() || 'CLIENTE'}!</h2>
+            <p className="text-slate-400 text-sm mb-5">Acá podés ver tus Chefsitos acumulados.</p>
             
-            <div className="bg-[#141414] border border-white/5 rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden">
+            <div className="bg-[#141414] border border-white/5 rounded-2xl p-5 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden mb-5">
               <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-              <span className="text-sm text-slate-400 font-bold tracking-widest uppercase mb-2 relative z-10">TUS CHEFSITOS</span>
+              <span className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1 relative z-10">TUS CHEFSITOS</span>
               <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
             </div>
 
-            <button
-              onClick={() => {
-                setModoTienda('chefsitos')
-                setActiveTab('home')
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-              className="mt-6 w-full max-w-sm bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-4 px-6 rounded-2xl shadow-xl shadow-yellow-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg font-bebas tracking-wide cursor-pointer animate-pulse"
-            >
-              <span className="text-2xl">🪙</span>
-              <span>Canjear Chefsitos en Tienda</span>
-            </button>
-            <button
-              onClick={() => setMostrarHistorial(true)}
-              className="mt-3 w-full max-w-sm bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
-            >
-              <span className="text-xl">📜</span>
-              <span>Historial de pedidos</span>
-            </button>
+            <div className="w-full max-w-sm space-y-3">
+              <button
+                onClick={() => {
+                  setModoTienda('chefsitos')
+                  setActiveTab('home')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-3.5 px-6 rounded-2xl shadow-xl shadow-yellow-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg font-bebas tracking-wide cursor-pointer animate-pulse"
+              >
+                <span className="text-2xl">🪙</span>
+                <span>Canjear Chefsitos en Tienda</span>
+              </button>
+              <button
+                onClick={() => setMostrarHistorial(true)}
+                className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
+              >
+                <span className="text-xl">📜</span>
+                <span>Historial de pedidos</span>
+              </button>
+            </div>
           </div>
         )
       ) : (
