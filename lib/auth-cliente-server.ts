@@ -55,13 +55,14 @@ export async function firmarTokenCliente(payload: {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(ahora)
     .setExpirationTime(`${DURACION_HORAS}h`)
+    .setAudience('chefsy:cliente') // Audience claim — impide que tokens de cliente sean usados como admin
     .sign(obtenerClave())
 }
 
 // ── Verificar JWT ──────────────────────────────────────────────────────────
 export async function verificarTokenCliente(token: string): Promise<PayloadCliente | null> {
   try {
-    const { payload } = await jwtVerify(token, obtenerClave())
+    const { payload } = await jwtVerify(token, obtenerClave(), { audience: 'chefsy:cliente' })
     return payload as PayloadCliente
   } catch {
     return null

@@ -45,29 +45,8 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   // ── Restaurar sesión al montar ─────────────────────────────────────────
   useEffect(() => {
     let cancelado = false
-    let sesionPropiaActiva = false
-
-    // IMPORTANTE: registrar onAuthStateChange ANTES de getSession,
-    // así no perdemos el evento INITIAL_SESSION que Supabase emite al procesar el hash.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelado) return
-      // Si el sistema propio ya estableció sesión, ignorar eventos de Google
-      if (sesionPropiaActiva) return
-
-      if (session?.user) {
-        await cargarPerfilGoogle(session.user.id, session.user)
-        setEstaListo(true)
-      } else if (event === 'SIGNED_OUT') {
-        if (!sesionPropiaActiva) {
-          setPerfil(null)
-          setFuenteSesion(null)
-        }
-        setEstaListo(true)
-      } else if (event === 'INITIAL_SESSION' && !session) {
-        // No hay sesión de Google — el sistema propio la manejará
-        setEstaListo(true)
-      }
-    })
+    // Flag que indica si el sistema propio ya determinó el estado (con o sin sesión)
+    let resolucionPropiaCompletada = false
 
     const restaurar = async () => {
       // 1. Intentar sesión del sistema propio (cookie HttpOnly)
@@ -76,24 +55,48 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json()
           if (data.perfil && !cancelado) {
-            sesionPropiaActiva = true
             setPerfil(data.perfil)
             setFuenteSesion('propio')
             setEstaListo(true)
+            resolucionPropiaCompletada = true
             return
           }
         }
       } catch { /* sin conexión — continuar */ }
 
-      // 2. Verificar sesión de Google directamente (por si INITIAL_SESSION ya se emitió)
+      // 2. No hay sesión propia. Ahora sí delegamos a Supabase/Google.
+      resolucionPropiaCompletada = true
+
+      // Verificar sesión de Google directamente
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !cancelado) {
           await cargarPerfilGoogle(session.user.id, session.user)
         }
       } catch { /* continuar */ }
+
       if (!cancelado) setEstaListo(true)
     }
+
+    // Registrar onAuthStateChange. Solo actúa sobre eventos DESPUÉS de que la
+    // sesión propia fue descartada, para evitar conflictos entre sistemas.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelado) return
+      // Si la sesión propia aún está siendo verificada, ignorar todos los eventos
+      if (!resolucionPropiaCompletada) return
+
+      if (session?.user) {
+        await cargarPerfilGoogle(session.user.id, session.user)
+        setEstaListo(true)
+      } else if (event === 'SIGNED_OUT') {
+        setPerfil(null)
+        setFuenteSesion(null)
+        setEstaListo(true)
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        // No hay sesión de Google ni propia
+        setEstaListo(true)
+      }
+    })
 
     restaurar()
 
