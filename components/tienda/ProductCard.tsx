@@ -103,10 +103,11 @@ function ProductCard({
             )}
           </div>
         </div>
-        
-        <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug mt-1.5">
-          {meta?.descripcion_publica || detalles.desc}
-        </p>
+        {(meta?.descripcion_publica || detalles.desc) ? (
+          <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug mt-1.5">
+            {meta?.descripcion_publica || detalles.desc}
+          </p>
+        ) : null}
       </div>
     </div>
   )
