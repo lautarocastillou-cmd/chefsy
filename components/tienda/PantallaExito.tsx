@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CheckCircle2, MessageCircle, BellRing } from 'lucide-react'
 import Image from 'next/image'
 import { Pedido } from '@/tipos'
@@ -32,6 +32,22 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
   const [suscribiendo, setSuscribiendo] = useState(false)
   const [suscrito, setSuscrito] = useState(false)
   const { usuario } = usarClienteAuth()
+
+  useEffect(() => {
+    // Al mostrar la pantalla de éxito, agregamos un estado al historial del navegador.
+    // Si el usuario presiona "Atrás" en su móvil o PC, capturamos el evento y volvemos al menú del catálogo (onNuevoPedido)
+    // en lugar de navegar hacia atrás en el historial hacia URLs externas o antiguas.
+    window.history.pushState({ pantallaExito: true }, '', window.location.href)
+
+    const handlePopState = () => {
+      onNuevoPedido()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [onNuevoPedido])
 
   const habilitarNotificaciones = async () => {
     try {
