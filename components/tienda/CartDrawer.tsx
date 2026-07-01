@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard, Gift } from 'lucide-react'
@@ -47,6 +47,7 @@ export default function CartDrawer() {
   } = usarCarrito()
 
   const onCerrar = () => setCartAbierto(false)
+  const cerradoPorAtrasRef = useRef(false)
 
   const [checkoutStep, setCheckoutStep] = useState(1)
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
@@ -73,51 +74,32 @@ export default function CartDrawer() {
         // Usar Nominatim OpenStreetMap
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`)
         const data = await res.json()
-        if (data && data.address) {
-          const calle = data.address.road || data.address.pedestrian || ''
-          const nro = data.address.house_number || ''
-          const barrio = data.address.suburb || data.address.neighbourhood || ''
-          
-          const direccionFinal = `${calle} ${nro}, ${barrio}`.trim().replace(/,$/, '')
-          if (direccionFinal.length > 3) {
-            onSetDireccionCliente(direccionFinal)
-            if (onSetCoordenadasCliente) {
-              onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
-            }
-          } else {
-            alert('No pudimos encontrar la calle exacta, por favor ingresala manualmente.')
-          }
-        } else {
-          alert('No pudimos encontrar la calle exacta, por favor ingresala manualmente.')
-        }
-      } catch (error) {
-        console.error('Error obteniendo ubicación:', error)
-        alert('Error al obtener la dirección. Ingresala manualmente.')
+        const calle = data.address?.road || ''
+        const num = data.address?.house_number || ''
+        const dir = [calle, num].filter(Boolean).join(' ') || data.display_name?.split(',')[0] || 'Ubicación seleccionada en mapa'
+        onSetDireccionCliente(dir)
+        onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
+      } catch {
+        alert('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Por favor agrégalo manualmente.')
+        onSetCoordenadasCliente({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
       } finally {
         setBuscandoUbicacion(false)
       }
-    }, (err) => {
+    }, () => {
+      alert('No se pudo obtener tu ubicación. Por favor verifica que tengas activado el GPS y permisos en el navegador.')
       setBuscandoUbicacion(false)
-      alert('No pudimos acceder a tu ubicación. Verificá los permisos del navegador.')
     }, { enableHighAccuracy: true, timeout: 10000 })
   }
 
-  const confirmarUbicacionMapa = async () => {
+  const handleSeleccionarEnMapa = async (lat: number, lng: number) => {
+    setCoordsMapa({ latitud: lat, longitud: lng })
     setCargandoMapaDir(true)
     try {
-      const { latitud, longitud } = coordsMapa
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitud}&lon=${longitud}`)
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
       const data = await response.json()
-      
       if (data && data.address) {
         const calle = data.address.road || ''
         const numero = data.address.house_number || ''
-        const barrio = data.address.suburb || data.address.neighbourhood || ''
-        const ciudad = data.address.city || data.address.town || data.address.village || ''
-        
-        let direccionFormateada = `${calle} ${numero}`.trim()
-        if (barrio) direccionFormateada += `, Barrio ${barrio}`
-        if (ciudad) direccionFormateada += `, ${ciudad}`
         
         onSetDireccionCliente(direccionFormateada.trim())
         if (onSetCoordenadasCliente) {
@@ -136,11 +118,23 @@ export default function CartDrawer() {
     if (cartAbierto) {
       document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
+
+      window.history.pushState({ drawerCarrito: true }, '', window.location.href)
+      const handlePopState = () => {
+        cerradoPorAtrasRef.current = true
+        onCerrar()
+      }
+      window.addEventListener('popstate', handlePopState)
+
+      return () => {
+        window.removeEventListener('popstate', handlePopState)
+        document.documentElement.style.overflow = ''
+        document.body.style.overflow = ''
+        if (!cerradoPorAtrasRef.current && window.history.state?.drawerCarrito) {
+          window.history.back()
+        }
+      }
     } else {
-      document.documentElement.style.overflow = ''
-      document.body.style.overflow = ''
-    }
-    return () => {
       document.documentElement.style.overflow = ''
       document.body.style.overflow = ''
     }

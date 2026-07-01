@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { Plus, Minus, X } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -40,21 +40,36 @@ export default function ModalPersonalizacion({
 }: ModalPersonalizacionProps) {
   const [mostrarFotosMobile, setMostrarFotosMobile] = useState(false)
   const { perfil } = usarClienteAuth()
+  const cerradoPorAtrasRef = useRef(false)
   
   const puntosRequeridos = producto.precio_puntos ? producto.precio_puntos * cantidadModal : 0
   const tienePuntosSuficientes = perfil && perfil.puntos_actuales >= puntosRequeridos
 
   useEffect(() => {
+    // Interceptar gesto o botón Atrás (iPhone/Android)
+    window.history.pushState({ modalProducto: true }, '', window.location.href)
+
+    const handlePopState = () => {
+      cerradoPorAtrasRef.current = true
+      onCerrar()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
     // Deshabilitar scroll de html y body al montar para evitar que el fondo se mueva
     const origHtmlOverflow = document.documentElement.style.overflow
     const origBodyOverflow = document.body.style.overflow
     document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     return () => {
+      window.removeEventListener('popstate', handlePopState)
       document.documentElement.style.overflow = origHtmlOverflow
       document.body.style.overflow = origBodyOverflow
+      if (!cerradoPorAtrasRef.current && window.history.state?.modalProducto) {
+        window.history.back()
+      }
     }
-  }, [])
+  }, [onCerrar])
 
   return (
     <div 
