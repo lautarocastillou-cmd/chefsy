@@ -42,6 +42,7 @@ export default function CartDrawer() {
     setMetodoPago: onSetMetodoPago,
     setObservaciones: onSetObservaciones,
     procesarCompra: onProcesarCompra,
+    coordenadasCliente,
     setCoordenadasCliente: onSetCoordenadasCliente,
     turnoActivo
   } = usarCarrito()
@@ -79,9 +80,11 @@ export default function CartDrawer() {
         const dir = [calle, num].filter(Boolean).join(' ') || data.display_name?.split(',')[0] || 'Ubicación seleccionada en mapa'
         onSetDireccionCliente(dir)
         onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
+        setCoordsMapa({ latitud: latitude, longitud: longitude })
       } catch {
         alert('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Por favor agrégalo manualmente.')
         onSetCoordenadasCliente({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
+        setCoordsMapa({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
       } finally {
         setBuscandoUbicacion(false)
       }
@@ -91,23 +94,25 @@ export default function CartDrawer() {
     }, { enableHighAccuracy: true, timeout: 10000 })
   }
 
-  const handleSeleccionarEnMapa = async (lat: number, lng: number) => {
-    setCoordsMapa({ latitud: lat, longitud: lng })
+  const confirmarUbicacionMapa = async () => {
+    const { latitud, longitud } = coordsMapa
     setCargandoMapaDir(true)
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitud}&lon=${longitud}`)
       const data = await response.json()
       if (data && data.address) {
         const calle = data.address.road || ''
         const numero = data.address.house_number || ''
-        
-        onSetDireccionCliente(direccionFormateada.trim())
-        if (onSetCoordenadasCliente) {
-          onSetCoordenadasCliente({ latitud, longitud })
-        }
+        const dir = [calle, numero].filter(Boolean).join(' ') || data.display_name?.split(',')[0] || 'Ubicación seleccionada en mapa'
+        onSetDireccionCliente(dir)
+      } else {
+        onSetDireccionCliente('Ubicación seleccionada en mapa')
       }
+      onSetCoordenadasCliente({ latitud, longitud })
     } catch (error) {
       console.error('Error en geocoding inverso del mapa:', error)
+      onSetDireccionCliente('Ubicación seleccionada en mapa')
+      onSetCoordenadasCliente({ latitud, longitud })
     } finally {
       setCargandoMapaDir(false)
       setMostrarMapa(false)
@@ -379,7 +384,12 @@ export default function CartDrawer() {
                           <div className="flex justify-end pt-1">
                             <button
                               type="button"
-                              onClick={() => setMostrarMapa(!mostrarMapa)}
+                              onClick={() => {
+                                if (!mostrarMapa && coordenadasCliente) {
+                                  setCoordsMapa(coordenadasCliente)
+                                }
+                                setMostrarMapa(!mostrarMapa)
+                              }}
                               className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
                             >
                               <Map size={12} />
@@ -395,7 +405,7 @@ export default function CartDrawer() {
                               </p>
                               <div className="rounded-xl overflow-hidden shadow-inner relative border border-[#3d3d3d]">
                                 <MapaSelector
-                                  centro={{ latitud: -28.4695, longitud: -65.7852 }}
+                                  centro={coordenadasCliente || { latitud: -28.4695, longitud: -65.7852 }}
                                   coordenadas={coordsMapa}
                                   onCoordenadasChange={(c) => setCoordsMapa(c)}
                                   className="h-48 w-full z-0 relative"
