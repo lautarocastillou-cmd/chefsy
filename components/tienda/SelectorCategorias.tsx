@@ -62,24 +62,31 @@ export default function SelectorCategorias({
       <button
         type="button"
         onClick={onToggleSelector}
-        className="w-full flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 text-white py-4 px-4 sm:px-6 rounded-2xl outline-none focus:border-white/60 transition-all cursor-pointer font-medium tracking-wide shadow-2xl"
+        className="w-full flex items-center justify-between bg-[#121814]/90 backdrop-blur-xl border border-chefsy-500/40 hover:border-chefsy-400 text-white py-3.5 px-5 sm:px-6 rounded-2xl outline-none focus:border-chefsy-400 transition-all cursor-pointer shadow-2xl group-hover:bg-[#18211b]"
       >
-        <span className={`truncate mr-2 ${categoriaSeleccionada ? 'text-white' : 'text-slate-300'}`}>
-          {categoriaSeleccionada === 'todos' 
-            ? 'Ver todo el menú' 
-            : (() => {
-                const cat = categoriasActivas.find(c => c.id === categoriaSeleccionada)
-                if (!cat) return 'APRETÁ ACÁ'
-                const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
-                const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
-                if (cat.id === idBurgers || cat.id === idPatys) return 'Burgers / Patys'
-                return cat.nombre
-              })()}
-        </span>
-        <ChevronDown 
-          size={20} 
-          className={`text-chefsy-300 shrink-0 transition-transform duration-300 ${selectorAbierto ? 'rotate-180' : ''}`} 
-        />
+        <div className="flex flex-col text-left mr-2 truncate">
+          <span className="text-xs sm:text-sm font-bold tracking-wider text-chefsy-400 uppercase flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(54,101,74,0.8)]">
+            <span className="inline-block w-2 h-2 rounded-full bg-chefsy-400 animate-pulse"></span>
+            APRETÁ ACÁ
+          </span>
+          <span className="font-bebas text-2xl sm:text-3xl text-white tracking-wide truncate leading-none mt-1">
+            {(() => {
+              if (!categoriaSeleccionada || categoriaSeleccionada === 'todos') return 'MENÚ COMPLETO'
+              const cat = categoriasActivas.find(c => c.id === categoriaSeleccionada)
+              if (!cat) return 'MENÚ COMPLETO'
+              const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
+              const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
+              if (cat.id === idBurgers || cat.id === idPatys) return 'BURGERS / PATYS'
+              return cat.nombre.toUpperCase()
+            })()}
+          </span>
+        </div>
+        <div className="w-10 h-10 rounded-xl bg-chefsy-500/20 flex items-center justify-center border border-chefsy-500/30 shrink-0">
+          <ChevronDown 
+            size={22} 
+            className={`text-chefsy-300 transition-transform duration-300 ${selectorAbierto ? 'rotate-180' : ''}`} 
+          />
+        </div>
       </button>
 
       {/* Renderizar el modal en un Portal para escapar del transform CSS del contenedor padre que rompía el fixed */}
@@ -127,7 +134,7 @@ export default function SelectorCategorias({
                   }}
                   className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
                 >
-                  Ver todo el menú
+                  ⬅ Ver todo el menú (Menú Completo)
                 </button>
                 {(() => {
                   const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
