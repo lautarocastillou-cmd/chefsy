@@ -345,13 +345,13 @@ export default function TiendaMobile() {
         <>
           {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
           {!categoriaSeleccionada && !busqueda && (
-            <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-10 border-b border-white/5 shadow-2xl h-[calc(100vh-140px)] flex items-center">
+            <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-8 border-b border-white/5 shadow-2xl flex items-center justify-center">
               {/* Círculo de fondo animado */}
               <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-chefsy/5 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
               
-              <div className="relative z-10 w-full flex flex-col pt-6 pb-20 justify-center">
+              <div className="relative z-10 w-full flex flex-col py-4 justify-center">
                 
-                <div className="relative w-full max-w-[240px] md:max-w-[260px] aspect-square drop-shadow-2xl mx-auto mt-8 mb-6 z-30">
+                <div className="relative w-full max-w-[220px] md:max-w-[240px] aspect-square drop-shadow-2xl mx-auto mt-4 mb-4 z-30">
                   <Image
                     src={imgError ? "/burger-loca.webp" : (configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp")}
                     alt="Hero Image"
@@ -367,31 +367,13 @@ export default function TiendaMobile() {
                   />
                 </div>
 
-                <div className="text-center w-full z-20 relative mb-8 mt-2">
+                <div className="text-center w-full z-20 relative mb-4 mt-1">
                   <h1 className="font-bebas text-5xl sm:text-6xl text-white tracking-wide uppercase leading-none drop-shadow-md">
                     {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
                   </h1>
                   <h2 className="font-bebas text-5xl sm:text-6xl text-chefsy-400 tracking-wide uppercase leading-none drop-shadow-md mt-1">
                     {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
                   </h2>
-                </div>
-
-                <div className="text-center w-full z-20 relative mt-4 flex flex-col items-center gap-3 px-4">
-                  <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
-                    {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
-                  </h3>
-                  <div className="w-full max-w-sm mt-1">
-                    <SelectorCategorias
-                      categoriasActivas={categoriasActivas}
-                      categoriaSeleccionada={categoriaSeleccionada}
-                      selectorAbierto={selectorAbierto}
-                      onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
-                      onSeleccionarCategoria={(id) => {
-                        setCategoriaSeleccionada(id === 'todos' ? null : id)
-                        setSelectorAbierto(false)
-                      }}
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -414,6 +396,25 @@ export default function TiendaMobile() {
               </button>
             </div>
           )}
+
+          {/* Menú y Selección de Categorías - Más abajo, junto al catálogo */}
+          <div className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
+            <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
+              {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
+            </h3>
+            <div className="w-full max-w-sm mt-1">
+              <SelectorCategorias
+                categoriasActivas={categoriasActivas}
+                categoriaSeleccionada={categoriaSeleccionada}
+                selectorAbierto={selectorAbierto}
+                onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
+                onSeleccionarCategoria={(id) => {
+                  setCategoriaSeleccionada(id === 'todos' ? null : id)
+                  setSelectorAbierto(false)
+                }}
+              />
+            </div>
+          </div>
 
           {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}
           <div className="px-2 mt-4">

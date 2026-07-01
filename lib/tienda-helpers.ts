@@ -28,86 +28,70 @@ export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: st
   const nombreLimpio = nombre.toLowerCase()
   
   if (categoriaId === 'lomos-y-milas') {
-    const desc = nombreLimpio.includes('común') ? 'Pan de lomo casero · medallón de carne · lechuga fresca · tomate seleccionado · mayonesa casera.' :
-                 nombreLimpio.includes('especial') ? 'Pan de lomo casero · bife premium · jamón cocido · queso derretido · huevo frito · lechuga · tomate · aderezos.' :
-                 nombreLimpio.includes('chefsy') ? 'Bife de lomo premium · queso cheddar fundido · panceta crujiente · cebolla caramelizada · aderezo especial de la casa.' :
-                 nombreLimpio.includes('american') ? 'Bife de lomo tierno · cheddar premium · panceta ahumada · cebolla crujiente · aderezo barbacoa artesanal.' :
-                 'Bife de lomo premium fundido con una fina y cremosa combinación de 4 quesos seleccionados.';
     return {
-      desc,
+      desc: '',
       img: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'patys') {
-    const desc = nombreLimpio.includes('común') ? 'Medallón artesanal a la parrilla · lechuga crujiente · rodajas de tomate fresco · mayonesa casera.' :
-                 nombreLimpio.includes('especial') ? 'Medallón artesanal · jamón cocido · queso fundido · huevo frito · lechuga · tomate.' :
-                 nombreLimpio.includes('chefsy') ? 'Doble medallón de carne · doble queso cheddar · panceta ahumada · cebolla caramelizada suave.' :
-                 nombreLimpio.includes('american') ? 'Medallón artesanal · queso cheddar · panceta crujiente · aros de cebolla fritos · salsa barbacoa.' :
-                 'Medallón de carne premium fundido con queso azul, provolone, muzzarella y parmesano.';
     return {
-      desc,
+      desc: '',
       img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'pizzas') {
-    const desc = nombreLimpio.includes('muzzarella') ? 'Masa de piedra artesanal · salsa de tomate natural · abundante muzzarella fundida · orégano · aceitunas verdes.' :
-                 nombreLimpio.includes('especial') ? 'Salsa de tomate casera · muzzarella premium · jamón cocido · morrones asados al horno · aceitunas seleccionadas.' :
-                 nombreLimpio.includes('napolitana') ? 'Masa a la piedra · muzzarella · rodajas de tomate natural · ajo fresco · perejil picado · aceite de oliva.' :
-                 nombreLimpio.includes('fugazzeta') ? 'Abundante cebolla dulce caramelizada · queso muzzarella premium · orégano · aceite de oliva extra virgen.' :
-                 nombreLimpio.includes('calabresa') ? 'Muzzarella fundida · rodajas de longaniza calabresa picante · morrones dulces · orégano.' :
-                 'Combinación cremosa de muzzarella, roquefort premium, provolone rallado y parmesano gratinado al horno.';
     return {
-      desc,
+      desc: '',
       img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'zapping') {
     return {
-      desc: 'Sándwich tostado gigante en pan lactal especial · jamón cocido · queso fundido · manteca · aderezos clásicos de Chefsy.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'choripan') {
     return {
-      desc: 'Chorizo parrillero premium abierto al libro · pan de campo crujiente · salsa chimichurri artesanal o salsa criolla fresca.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'mila-al-plato') {
     return {
-      desc: 'Milanesa de ternera gigante frita al momento · acompañado con una porción abundante de papas fritas bastón crujientes.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'tartas-xl') {
     return {
-      desc: 'Tarta casera XL hojaldrada recién horneada · rellena generosamente con ingredientes frescos de la mejor calidad.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'bebidas') {
     return {
-      desc: 'Bebida helada de tu elección para acompañar tu menú de Chefsy de la mejor manera.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   if (categoriaId === 'promos') {
     return {
-      desc: 'El combo ideal pensado para compartir en familia o con amigos al mejor precio del mercado.',
+      desc: '',
       img: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=600&q=80'
     }
   }
   
   return {
-    desc: 'Exquisito plato elaborado al instante con ingredientes seleccionados y frescos de la cocina de Chefsy.',
+    desc: '',
     img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
   }
 }

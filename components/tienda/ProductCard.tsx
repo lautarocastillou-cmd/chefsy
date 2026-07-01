@@ -47,8 +47,8 @@ function ProductCard({
   return (
     <div
       onClick={() => !agotado && onAbrirModal(prod)}
-      className={`bg-transparent group flex items-start gap-4 cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 touch-pan-y ${
-        agotado ? 'opacity-50 grayscale' : 'hover:bg-white/5 p-2 -m-2 rounded-2xl'
+      className={`bg-transparent group flex items-start gap-4 cursor-pointer transition-all duration-150 animate-in fade-in slide-in-from-bottom-4 touch-pan-y ${
+        agotado ? 'opacity-50 grayscale' : 'md:hover:bg-white/5 active:bg-white/10 active:scale-[0.99] p-2 -m-2 rounded-2xl'
       }`}
     >
       {/* Imagen a la izquierda */}
@@ -104,9 +104,11 @@ function ProductCard({
           </div>
         </div>
         
-        <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug mt-1.5">
-          {meta?.descripcion_publica || detalles.desc}
-        </p>
+        {(meta?.descripcion_publica || detalles?.desc) && (
+          <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug mt-1.5">
+            {meta?.descripcion_publica || detalles?.desc}
+          </p>
+        )}
       </div>
     </div>
   )
