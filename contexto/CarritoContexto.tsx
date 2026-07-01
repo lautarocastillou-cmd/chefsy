@@ -1,5 +1,6 @@
 'use client'
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -83,8 +84,48 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     return () => clearInterval(intv)
   }, [])
 
+  const { usuario, estaListo: authListo } = usarClienteAuth()
   const [carrito, setCarrito] = useState<ItemCarrito[]>([])
   const [cartAbierto, setCartAbierto] = useState(false)
+  const carritoInicialCargadoRef = useRef<string | null>(null)
+
+  // Cargar carrito de localStorage cuando se monta o cambia el usuario logueado
+  useEffect(() => {
+    if (!authListo) return
+    const userId = usuario?.id || 'guest'
+
+    if (carritoInicialCargadoRef.current !== userId) {
+      carritoInicialCargadoRef.current = userId
+      try {
+        const guardado = localStorage.getItem(`chefsy_carrito_${userId}`)
+        if (guardado) {
+          const items = JSON.parse(guardado)
+          if (Array.isArray(items) && items.length > 0) {
+            setCarrito(prev => prev.length === 0 ? items : prev)
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando carrito guardado:', e)
+      }
+    }
+  }, [authListo, usuario?.id])
+
+  // Guardar carrito en localStorage en cada cambio
+  useEffect(() => {
+    if (!authListo) return
+    const userId = usuario?.id || 'guest'
+    if (carritoInicialCargadoRef.current === userId) {
+      try {
+        if (carrito.length > 0) {
+          localStorage.setItem(`chefsy_carrito_${userId}`, JSON.stringify(carrito))
+        } else {
+          localStorage.removeItem(`chefsy_carrito_${userId}`)
+        }
+      } catch (e) {
+        console.error('Error guardando carrito:', e)
+      }
+    }
+  }, [carrito, authListo, usuario?.id])
   
   const [productoAPersonalizar, setProductoAPersonalizar] = useState<ProductoCatalogo | null>(null)
   const [modsSeleccionados, setModsSeleccionados] = useState<ModificadorCatalogo[]>([])
