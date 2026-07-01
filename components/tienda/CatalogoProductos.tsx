@@ -98,7 +98,7 @@ export default function CatalogoProductos({
                     const meta = metadata[prodOriginal.id]
                     const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
                     const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
-                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre, prodOriginal.id)
                     return (
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
@@ -121,7 +121,7 @@ export default function CatalogoProductos({
                     const meta = metadata[prodOriginal.id]
                     const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
                     const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
-                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre, prodOriginal.id)
                     return (
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
@@ -143,7 +143,7 @@ export default function CatalogoProductos({
                     const meta = metadata[prodOriginal.id]
                     const prod = meta ? { ...prodOriginal, nombre: meta.nombre_publico || prodOriginal.nombre } : prodOriginal
                     const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock || 0) <= 0
-                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre)
+                    const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre, prodOriginal.id)
                     return (
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}

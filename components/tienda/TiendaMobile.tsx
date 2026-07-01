@@ -10,6 +10,7 @@ import { Pedido } from '@/tipos'
 import { Search, ChevronRight, LogOut } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
@@ -33,7 +34,7 @@ export default function TiendaMobile() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'profile' | 'cart'>('home')
-  const [metadata, setMetadata] = useState<Record<string, any>>({})
+  const [metadata, setMetadata] = useState<Record<string, any>>(metadataRespaldo)
   const [imgError, setImgError] = useState(false)
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
@@ -415,7 +416,7 @@ export default function TiendaMobile() {
             producto={productoAPersonalizar}
             imagenFinal={(() => {
               const url = metadata[productoAPersonalizar.id]?.imagen_url
-              if (!url || url.startsWith('data:')) return OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
+              if (!url || url.startsWith('data:')) return OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
               return url
             })()}
             modificadoresDisponibles={

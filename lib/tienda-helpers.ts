@@ -4,8 +4,27 @@
 // Extraídas de page.tsx para reutilizarse en múltiples componentes.
 // ─────────────────────────────────────────────────────
 
+import { metadataRespaldo } from '@/datos/productos'
+
 // --- DESCRIPCIONES E IMÁGENES COMPLEMENTARIAS DE PRODUCTOS ---
-export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: string) => {
+export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: string, idProducto?: string) => {
+  if (idProducto && metadataRespaldo[idProducto]) {
+    const meta = metadataRespaldo[idProducto]
+    if (meta.descripcion_publica || meta.imagen_url) {
+      return {
+        desc: meta.descripcion_publica || 'Exquisito plato elaborado al instante con ingredientes frescos.',
+        img: meta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+      }
+    }
+  }
+  const foundMeta = Object.entries(metadataRespaldo).find(([k, v]) => k.startsWith(categoriaId) && v.nombre_publico?.toLowerCase().trim() === nombre.toLowerCase().trim())?.[1]
+  if (foundMeta && (foundMeta.descripcion_publica || foundMeta.imagen_url)) {
+    return {
+      desc: foundMeta.descripcion_publica || 'Exquisito plato elaborado al instante con ingredientes frescos.',
+      img: foundMeta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+    }
+  }
+
   const nombreLimpio = nombre.toLowerCase()
   
   if (categoriaId === 'lomos-y-milas') {

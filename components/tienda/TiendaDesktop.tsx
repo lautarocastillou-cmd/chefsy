@@ -10,6 +10,7 @@ import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { metadataRespaldo } from '@/datos/productos'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 import Link from 'next/link'
@@ -31,7 +32,7 @@ export default function TiendaDesktop() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [selectorAbierto, setSelectorAbierto] = useState(false)
-  const [metadata, setMetadata] = useState<Record<string, any>>({})
+  const [metadata, setMetadata] = useState<Record<string, any>>(metadataRespaldo)
   
   const { configuracion } = usarConfiguracionTienda()
   const animatedWords = configuracion?.palabras_animadas || ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
@@ -378,7 +379,7 @@ export default function TiendaDesktop() {
               producto={productoAPersonalizar}
               imagenFinal={(() => {
                 const url = metadata[productoAPersonalizar.id]?.imagen_url
-                const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre).img
+                const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
                 if (!url || url.startsWith('data:')) return fallback
                 return url
               })()}
