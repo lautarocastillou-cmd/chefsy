@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, X } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
@@ -19,6 +19,28 @@ export default function SelectorCategorias({
   onSeleccionarCategoria,
 }: SelectorCategoriasProps) {
   const [montado, setMontado] = useState(false)
+  const [translateY, setTranslateY] = useState(0)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return
+    const diff = e.touches[0].clientY - touchStartY.current
+    if (diff > 0) {
+      setTranslateY(diff)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (translateY > 75) {
+      onToggleSelector()
+    }
+    setTranslateY(0)
+    touchStartY.current = null
+  }
 
   useEffect(() => {
     setMontado(true)
@@ -36,7 +58,7 @@ export default function SelectorCategorias({
   }, [selectorAbierto])
 
   return (
-    <div className="relative group w-[50%] z-50">
+    <div className="relative group w-full sm:w-[50%] z-50">
       <button
         type="button"
         onClick={onToggleSelector}
@@ -75,9 +97,15 @@ export default function SelectorCategorias({
           <div className={`fixed inset-0 z-[101] flex items-end sm:items-center justify-center pointer-events-none transition-all duration-300 ${selectorAbierto ? 'opacity-100' : 'opacity-0 delay-300'}`}>
             {/* Panel modal — CSS transition translateY */}
             <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{ transform: translateY > 0 ? `translateY(${translateY}px)` : undefined }}
               className={`selector-panel w-full sm:w-96 bg-[#0a0a0a] border border-chefsy-500/20 sm:rounded-3xl rounded-t-[2rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden transition-all duration-300 ease-out ${
-                selectorAbierto
+                selectorAbierto && translateY === 0
                   ? 'translate-y-0 opacity-100 pointer-events-auto'
+                  : selectorAbierto && translateY > 0
+                  ? 'opacity-100 pointer-events-auto'
                   : 'translate-y-10 opacity-0 pointer-events-none'
               }`}
             >
@@ -90,7 +118,7 @@ export default function SelectorCategorias({
                   <X size={20} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 overscroll-y-contain" data-lenis-prevent="true">
                 <button
                   type="button"
                   onClick={() => {

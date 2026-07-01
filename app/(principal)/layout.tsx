@@ -46,9 +46,9 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
   const tienePermiso = !esCadete || pathname === '/cadeteria'
 
   return (
-    <div className="flex min-h-screen bg-chefsy-50 dark:bg-zinc-950 transition-colors">
+    <div className="flex h-screen overflow-hidden bg-chefsy-50 dark:bg-zinc-950 transition-colors">
       {/* Sidebar Desktop */}
-      <div className="hidden md:flex shrink-0 sticky top-0 h-screen z-40">
+      <div className="hidden md:flex shrink-0 h-full z-40">
         <Sidebar className="h-full" />
       </div>
 
@@ -78,7 +78,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
       )}
 
       {/* Área principal */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 h-full overflow-y-auto">
         {/* Cabecera Móvil (Barra superior) */}
         <header className="md:hidden sticky top-0 bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0 z-50">
           <div className="flex items-center gap-3">

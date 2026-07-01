@@ -93,28 +93,44 @@ export default function AuthCallbackPage() {
       </div>
 
       {estado === 'procesando' && (
-        <>
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-chefsy-500/30 border-t-chefsy-500 rounded-full animate-spin" />
-            <p className="text-slate-300 font-medium text-sm">Iniciando sesión con Google...</p>
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+          <div className="w-12 h-12 rounded-2xl bg-chefsy-500/15 border border-chefsy-500/30 flex items-center justify-center text-chefsy-400 shadow-lg shadow-chefsy-500/10 animate-pulse">
+            <div className="w-6 h-6 border-2 border-chefsy-400/30 border-t-chefsy-400 rounded-full animate-spin" />
           </div>
-          <p className="text-slate-600 text-xs">Serás redirigido en un momento</p>
-        </>
+          <div className="text-center space-y-1">
+            <p className="text-white font-bold text-base tracking-wide">Verificando cuenta...</p>
+            <p className="text-slate-500 text-xs font-medium">Serás redirigido en un instante</p>
+          </div>
+        </div>
       )}
 
       {estado === 'ok' && (
-        <div className="flex flex-col items-center gap-2 animate-in fade-in duration-300">
-          <div className="text-3xl">✅</div>
-          <p className="text-emerald-400 font-bold">¡Sesión iniciada!</p>
-          <p className="text-slate-500 text-xs">Redirigiendo a la tienda...</p>
+        <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 fade-in duration-300">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-emerald-400 font-extrabold text-lg tracking-wide">¡Sesión iniciada!</p>
+            <p className="text-slate-400 text-xs font-medium">Redirigiendo a tu cuenta...</p>
+          </div>
         </div>
       )}
 
       {estado === 'error' && (
-        <div className="flex flex-col items-center gap-2 animate-in fade-in duration-300">
-          <div className="text-3xl">⚠️</div>
-          <p className="text-red-400 font-bold">Hubo un problema al iniciar sesión</p>
-          <p className="text-slate-500 text-xs">Redirigiendo a la tienda...</p>
+        <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 fade-in duration-300">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/30 flex items-center justify-center text-red-400 shadow-xl shadow-red-500/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-red-400 font-extrabold text-lg tracking-wide">Hubo un problema al iniciar</p>
+            <p className="text-slate-400 text-xs font-medium">Volviendo a la tienda...</p>
+          </div>
         </div>
       )}
     </div>
