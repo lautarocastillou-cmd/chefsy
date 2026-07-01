@@ -21,6 +21,7 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 import ModalLogout from '@/components/auth/ModalLogout'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
+import ModalHistorialPedidos from '@/components/tienda/ModalHistorialPedidos'
 
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
 const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
@@ -38,6 +39,7 @@ export default function TiendaMobile() {
   const [imgError, setImgError] = useState(false)
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
+  const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [modoTienda, setModoTienda] = useState<'normal' | 'chefsitos'>('normal')
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   
@@ -283,6 +285,13 @@ export default function TiendaMobile() {
             >
               Iniciar sesión / Registrarse
             </button>
+            <button
+              onClick={() => setMostrarLogin(true)}
+              className="mt-3 bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all cursor-pointer text-sm flex items-center gap-2"
+            >
+              <span>📜</span>
+              <span>Historial de pedidos</span>
+            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center pt-20 px-4 text-center">
@@ -310,6 +319,13 @@ export default function TiendaMobile() {
             >
               <span className="text-2xl">🪙</span>
               <span>Canjear Chefsitos en Tienda</span>
+            </button>
+            <button
+              onClick={() => setMostrarHistorial(true)}
+              className="mt-3 w-full max-w-sm bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
+            >
+              <span className="text-xl">📜</span>
+              <span>Historial de pedidos</span>
             </button>
           </div>
         )
@@ -452,6 +468,11 @@ export default function TiendaMobile() {
           onCerrar={() => setMostrarLogin(false)} 
         />
       )}
+
+      <ModalHistorialPedidos
+        abierto={mostrarHistorial}
+        onCerrar={() => setMostrarHistorial(false)}
+      />
     </div>
   )
 }

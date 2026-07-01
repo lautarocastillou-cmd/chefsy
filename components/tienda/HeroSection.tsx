@@ -10,6 +10,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 import ModalLogout from '@/components/auth/ModalLogout'
+import ModalHistorialPedidos from '@/components/tienda/ModalHistorialPedidos'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -40,6 +41,7 @@ export default function HeroSection({
   const { usuario, perfil, cerrarSesion } = usarClienteAuth()
   const [mostrarLogin, setMostrarLogin] = React.useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = React.useState(false)
+  const [mostrarHistorial, setMostrarHistorial] = React.useState(false)
 
   const fuenteHeroClase = {
     bebas: 'font-bebas',
@@ -80,6 +82,14 @@ export default function HeroSection({
               </>
             ) : (
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMostrarHistorial(true)}
+                  className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-full border border-white/20 hover:border-chefsy-400 transition-all active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm font-medium shadow-sm cursor-pointer"
+                  title="Ver historial de pedidos"
+                >
+                  <span>📜</span>
+                  <span className="hidden md:inline">Historial de pedidos</span>
+                </button>
                 <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
                   <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
                   <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
@@ -203,6 +213,11 @@ export default function HeroSection({
           }}
         />
       )}
+
+      <ModalHistorialPedidos
+        abierto={mostrarHistorial}
+        onCerrar={() => setMostrarHistorial(false)}
+      />
     </>
   )
 }
