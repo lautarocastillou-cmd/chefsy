@@ -262,7 +262,7 @@ export default function CartDrawer() {
 
                 <div className="relative flex-1 min-h-[350px]">
                   {/* PASO 1: DATOS PERSONALES */}
-                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 1 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
+                  <div className={`absolute inset-0 overflow-y-auto scrollbar-hide transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 1 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-black text-white mb-6 text-left">Tus Datos</h3>
                     
                     <div className="space-y-5">
@@ -317,39 +317,39 @@ export default function CartDrawer() {
                   </div>
 
                   {/* PASO 2: ENTREGA */}
-                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 2 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : checkoutStep < 2 ? 'opacity-0 translate-x-8 pointer-events-none z-0' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
-                    <h3 className="text-xl font-black text-white mb-6 text-left">¿Cómo te lo entregamos?</h3>
+                  <div className={`absolute inset-0 overflow-y-auto scrollbar-hide transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 2 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : checkoutStep < 2 ? 'opacity-0 translate-x-8 pointer-events-none z-0' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
+                    <h3 className="text-xl font-black text-white mb-3 text-left">¿Cómo te lo entregamos?</h3>
                     
-                    <div className="space-y-5">
+                    <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('delivery')}
-                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-2 ${
+                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-1 ${
                             tipoEntrega === 'delivery'
                               ? 'bg-chefsy-500/20 text-white border-chefsy-500'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
-                          <span className="text-3xl mb-1">🛵</span>
+                          <span className="text-2xl mb-0.5">🛵</span>
                           Delivery
                         </button>
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('retiro')}
-                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-2 ${
+                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-1 ${
                             tipoEntrega === 'retiro'
                               ? 'bg-chefsy-500/20 text-white border-chefsy-500'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
-                          <span className="text-3xl mb-1">🏪</span>
+                          <span className="text-2xl mb-0.5">🏪</span>
                           Retiro por local
                         </button>
                       </div>
 
                       {tipoEntrega === 'delivery' && (
-                        <div className="animate-in fade-in duration-200 pt-2 space-y-3">
+                        <div className="animate-in fade-in duration-200 pt-1 space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                               Dirección de envío
@@ -358,7 +358,7 @@ export default function CartDrawer() {
                               type="button"
                               onClick={obtenerUbicacion}
                               disabled={buscandoUbicacion}
-                              className="text-xs text-chefsy-400 font-bold bg-chefsy-500/10 hover:bg-chefsy-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                              className="text-xs text-chefsy-400 font-bold bg-chefsy-500/10 hover:bg-chefsy-500/20 px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
                             >
                               {buscandoUbicacion ? (
                                 <><div className="w-3 h-3 border-2 border-chefsy-400 border-t-transparent rounded-full animate-spin" /> Buscando...</>
@@ -375,13 +375,13 @@ export default function CartDrawer() {
                               required={checkoutStep === 2 && tipoEntrega === 'delivery'}
                               value={direccionCliente}
                               onChange={(e) => onSetDireccionCliente(e.target.value)}
-                              className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
+                              className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
                               placeholder="Calle, Altura, Barrio..."
                             />
                           </div>
 
                           {/* Botón para abrir/cerrar mapa */}
-                          <div className="flex justify-end pt-1">
+                          <div className="flex justify-end pt-0.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -399,7 +399,7 @@ export default function CartDrawer() {
 
                           {/* Renderizado del Mapa */}
                           {mostrarMapa && (
-                            <div className="mt-3 bg-[#1a1a1a] border border-[#3d3d3d] rounded-2xl p-3 animate-in fade-in duration-200">
+                            <div className="mt-2 bg-[#1a1a1a] border border-[#3d3d3d] rounded-2xl p-3 animate-in fade-in duration-200">
                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 text-center">
                                 Arrastrá el marcador a tu ubicación exacta
                               </p>
@@ -408,14 +408,14 @@ export default function CartDrawer() {
                                   centro={coordenadasCliente || { latitud: -28.4695, longitud: -65.7852 }}
                                   coordenadas={coordsMapa}
                                   onCoordenadasChange={(c) => setCoordsMapa(c)}
-                                  className="h-48 w-full z-0 relative"
+                                  className="h-44 w-full z-0 relative"
                                 />
                               </div>
                               <button
                                 type="button"
                                 onClick={confirmarUbicacionMapa}
                                 disabled={cargandoMapaDir}
-                                className="w-full mt-3 bg-[#252525] hover:bg-[#3d3d3d] text-white text-xs font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full mt-2.5 bg-[#252525] hover:bg-[#3d3d3d] text-white text-xs font-bold py-2 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                               >
                                 {cargandoMapaDir ? 'Cargando dirección...' : 'Confirmar esta ubicación'}
                               </button>
@@ -425,14 +425,14 @@ export default function CartDrawer() {
                       )}
                     </div>
 
-                    <div className="mt-8">
+                    <div className="mt-3 pb-4">
                       <button
                         type="button"
                         onClick={() => {
                           if (tipoEntrega === 'delivery' && !direccionCliente.trim()) alert('Ingresá tu dirección o usá el botón de ubicación.')
                           else setCheckoutStep(3)
                         }}
-                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
+                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
                         Siguiente Paso <ChevronRight size={18} />
                       </button>
@@ -440,7 +440,7 @@ export default function CartDrawer() {
                   </div>
 
                   {/* PASO 3: PAGO */}
-                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 3 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none z-0'}`}>
+                  <div className={`absolute inset-0 overflow-y-auto scrollbar-hide transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 3 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-black text-white mb-6 text-left">Pago y Detalles</h3>
                     
                     <div className="space-y-5">
