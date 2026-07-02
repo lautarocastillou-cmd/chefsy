@@ -132,7 +132,7 @@ export default function SelectorCategorias({
                     onToggleSelector()
                     setTimeout(() => onSeleccionarCategoria('todos'), 200)
                   }}
-                  className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                  className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 md:hover:bg-white/10 active:bg-white/15'}`}
                 >
                   ⬅ Ver todo el menú (Menú Completo)
                 </button>
@@ -157,7 +157,7 @@ export default function SelectorCategorias({
                             onToggleSelector()
                             setTimeout(() => onSeleccionarCategoria(cat.id), 200)
                           }}
-                          className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id || (esNavBurgers && categoriaSeleccionada === idPatys) ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                          className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === cat.id || (esNavBurgers && categoriaSeleccionada === idPatys) ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 md:hover:bg-white/10 active:bg-white/15'}`}
                         >
                           {nombreMostrar}
                         </button>

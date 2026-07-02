@@ -108,13 +108,14 @@ export async function firmarToken(payload: {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(ahora)
     .setExpirationTime(`${duracionHoras}h`)
+    .setAudience('chefsy:admin') // Audience claim — impide que tokens de clientes sean usados aquí
     .sign(obtenerClave())
 }
 
 // ── Verificar un JWT y retornar su payload ─────────────────────────────────
 export async function verificarToken(token: string): Promise<PayloadSesion | null> {
   try {
-    const { payload } = await jwtVerify(token, obtenerClave())
+    const { payload } = await jwtVerify(token, obtenerClave(), { audience: 'chefsy:admin' })
     return payload as PayloadSesion
   } catch {
     return null
