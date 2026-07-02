@@ -155,11 +155,11 @@ export default function CartDrawer() {
       data-lenis-prevent="true"
     >
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+        className="fixed inset-0 bg-black/75 transition-opacity duration-200 ease-out" 
         onClick={onCerrar}
       />
       
-      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-250 border-l border-[#3d3d3d]">
+      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-200 ease-out border-l border-[#3d3d3d] will-change-transform">
         {/* Cabecera del Drawer */}
         <div className="px-5 py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export default function CartDrawer() {
               {carrito.map(item => (
                 <div 
                   key={item.idCart}
-                  className="flex justify-between gap-3 p-3 bg-[#252525] border border-[#3d3d3d] rounded-2xl transition-all hover:bg-[#2a2a2a]"
+                  className="flex justify-between gap-3 p-3 bg-[#252525] border border-[#3d3d3d] rounded-2xl transition-colors hover:bg-[#2a2a2a]"
                 >
                   <div className="flex-1 space-y-1 text-left">
                     <h4 className="font-bold text-base text-white leading-tight">
@@ -255,14 +255,14 @@ export default function CartDrawer() {
                   </button>
                   <div className="flex gap-1.5">
                     {[1, 2, 3].map(s => (
-                      <div key={s} className={`h-1.5 w-6 rounded-full transition-all duration-300 ${s === checkoutStep ? 'bg-chefsy-500' : s < checkoutStep ? 'bg-chefsy-500/50' : 'bg-[#3d3d3d]'}`} />
+                      <div key={s} className={`h-1.5 w-6 rounded-full transition-colors duration-250 ${s === checkoutStep ? 'bg-chefsy-500' : s < checkoutStep ? 'bg-chefsy-500/50' : 'bg-[#3d3d3d]'}`} />
                     ))}
                   </div>
                 </div>
 
                 <div className="relative flex-1 min-h-[350px]">
                   {/* PASO 1: DATOS PERSONALES */}
-                  <div className={`absolute inset-0 transition-all duration-300 ${checkoutStep === 1 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-full pointer-events-none z-0'}`}>
+                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 1 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-black text-white mb-6 text-left">Tus Datos</h3>
                     
                     <div className="space-y-5">
@@ -275,7 +275,7 @@ export default function CartDrawer() {
                           required={checkoutStep === 1}
                           value={nombreCliente}
                           onChange={(e) => onSetNombreCliente(e.target.value)}
-                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-all"
+                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-colors"
                           placeholder="Nombre Completo"
                         />
                         <label htmlFor="nombre_cliente" className="absolute left-12 top-4 -translate-y-1/2 text-[10px] font-bold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-focus:top-4 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-chefsy-400 transition-all pointer-events-none uppercase tracking-wider">
@@ -293,7 +293,7 @@ export default function CartDrawer() {
                           required={checkoutStep === 1}
                           value={telefonoCliente}
                           onChange={(e) => onSetTelefonoCliente(e.target.value)}
-                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-all"
+                          className="peer w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 pt-6 pb-2 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder-transparent transition-colors"
                           placeholder="Teléfono"
                         />
                         <label htmlFor="telefono_cliente" className="absolute left-12 top-4 -translate-y-1/2 text-[10px] font-bold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-focus:top-4 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-chefsy-400 transition-all pointer-events-none uppercase tracking-wider">
@@ -309,7 +309,7 @@ export default function CartDrawer() {
                           if (nombreCliente.trim() && telefonoCliente.trim()) setCheckoutStep(2)
                           else alert('Completá tus datos para continuar')
                         }}
-                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
                         Siguiente Paso <ChevronRight size={18} />
                       </button>
@@ -317,7 +317,7 @@ export default function CartDrawer() {
                   </div>
 
                   {/* PASO 2: ENTREGA */}
-                  <div className={`absolute inset-0 transition-all duration-300 ${checkoutStep === 2 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : checkoutStep < 2 ? 'opacity-0 translate-x-12 pointer-events-none z-0' : 'opacity-0 -translate-x-full pointer-events-none z-0'}`}>
+                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 2 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : checkoutStep < 2 ? 'opacity-0 translate-x-8 pointer-events-none z-0' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-black text-white mb-6 text-left">¿Cómo te lo entregamos?</h3>
                     
                     <div className="space-y-5">
@@ -325,9 +325,9 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('delivery')}
-                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${
+                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-2 ${
                             tipoEntrega === 'delivery'
-                              ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(42,99,72,0.3)]'
+                              ? 'bg-chefsy-500/20 text-white border-chefsy-500'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
@@ -337,9 +337,9 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('retiro')}
-                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${
+                          className={`py-5 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-2 ${
                             tipoEntrega === 'retiro'
-                              ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(42,99,72,0.3)]'
+                              ? 'bg-chefsy-500/20 text-white border-chefsy-500'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
@@ -349,7 +349,7 @@ export default function CartDrawer() {
                       </div>
 
                       {tipoEntrega === 'delivery' && (
-                        <div className="animate-in fade-in slide-in-from-top-4 duration-300 pt-2 space-y-3">
+                        <div className="animate-in fade-in duration-200 pt-2 space-y-3">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                               Dirección de envío
@@ -375,7 +375,7 @@ export default function CartDrawer() {
                               required={checkoutStep === 2 && tipoEntrega === 'delivery'}
                               value={direccionCliente}
                               onChange={(e) => onSetDireccionCliente(e.target.value)}
-                              className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-all"
+                              className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
                               placeholder="Calle, Altura, Barrio..."
                             />
                           </div>
@@ -399,7 +399,7 @@ export default function CartDrawer() {
 
                           {/* Renderizado del Mapa */}
                           {mostrarMapa && (
-                            <div className="mt-3 bg-[#1a1a1a] border border-[#3d3d3d] rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="mt-3 bg-[#1a1a1a] border border-[#3d3d3d] rounded-2xl p-3 animate-in fade-in duration-200">
                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 text-center">
                                 Arrastrá el marcador a tu ubicación exacta
                               </p>
@@ -432,7 +432,7 @@ export default function CartDrawer() {
                           if (tipoEntrega === 'delivery' && !direccionCliente.trim()) alert('Ingresá tu dirección o usá el botón de ubicación.')
                           else setCheckoutStep(3)
                         }}
-                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
                         Siguiente Paso <ChevronRight size={18} />
                       </button>
@@ -440,7 +440,7 @@ export default function CartDrawer() {
                   </div>
 
                   {/* PASO 3: PAGO */}
-                  <div className={`absolute inset-0 transition-all duration-300 ${checkoutStep === 3 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-12 pointer-events-none z-0'}`}>
+                  <div className={`absolute inset-0 transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 3 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-black text-white mb-6 text-left">Pago y Detalles</h3>
                     
                     <div className="space-y-5">
@@ -500,7 +500,7 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={onProcesarCompra}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-[background-color,transform] duration-150 cursor-pointer"
                         >
                           CONFIRMAR PEDIDO ({formatearPrecio(totalCarrito)})
                         </button>
@@ -578,7 +578,7 @@ export default function CartDrawer() {
             ) : !mostrarCheckout ? (
               <button
                 onClick={() => onSetMostrarCheckout(true)}
-                className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
               >
                 Iniciar Checkout
                 <ChevronRight size={14} />
