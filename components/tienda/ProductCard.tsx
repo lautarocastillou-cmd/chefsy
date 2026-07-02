@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { Plus } from 'lucide-react'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
 
 interface ProductCardProps {
   prod: any
@@ -30,19 +30,12 @@ function ProductCard({
     return null
   }
 
-  // Optimización de imágenes Cloudinary
+  // Optimización de imágenes inteligente (CDN Cloudinary o Next.js Image Optimization)
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
   const isCloudinary = rawSrc.includes('res.cloudinary.com')
   
-  // Si es Cloudinary, inyectamos parámetros de optimización para la imagen principal (w_300, q_auto, f_auto)
-  let optimizedSrc = rawSrc
-  let blurSrc = ''
-  
-  if (isCloudinary && rawSrc.includes('/upload/')) {
-    const parts = rawSrc.split('/upload/')
-    optimizedSrc = `${parts[0]}/upload/w_300,q_auto,f_auto/${parts[1]}`
-    blurSrc = `${parts[0]}/upload/w_10,e_blur:1000,q_10,f_auto/${parts[1]}`
-  }
+  const optimizedSrc = optimizarUrlImagen(rawSrc, 250)
+  const blurSrc = generarBlurUrl(rawSrc)
 
   return (
     <div
@@ -57,10 +50,10 @@ function ProductCard({
           src={optimizedSrc}
           alt={prod.nombre}
           fill
-          unoptimized={true}
-          priority={index < 4} // Solo cargamos de inmediato las primeras 4 (esto repara el error de rendimiento)
-          placeholder={blurSrc ? 'blur' : 'empty'}
-          blurDataURL={blurSrc || undefined}
+          unoptimized={isCloudinary}
+          priority={index < 6}
+          placeholder="blur"
+          blurDataURL={blurSrc}
           sizes="(max-width: 768px) 80px, 96px"
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />

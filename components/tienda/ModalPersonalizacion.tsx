@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 
 interface ModalPersonalizacionProps {
@@ -117,19 +117,25 @@ export default function ModalPersonalizacion({
                 ref={galeriaRef}
                 className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex scroll-smooth"
               >
-                {listaFotos.map((imgUrl, i) => (
-                  <div key={i} className="relative w-full h-full shrink-0 snap-center">
-                    <Image 
-                      src={imgUrl} 
-                      alt={`${producto.nombre} - Foto ${i+1}`} 
-                      fill
-                      unoptimized={true}
-                      priority={true}
-                      className="object-cover" 
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
-                  </div>
-                ))}
+                {listaFotos.map((imgUrl, i) => {
+                  const optimized = optimizarUrlImagen(imgUrl, 600)
+                  const isCloud = imgUrl.includes('res.cloudinary.com')
+                  return (
+                    <div key={i} className="relative w-full h-full shrink-0 snap-center">
+                      <Image 
+                        src={optimized} 
+                        alt={`${producto.nombre} - Foto ${i+1}`} 
+                        fill
+                        unoptimized={isCloud}
+                        priority={i === 0}
+                        placeholder="blur"
+                        blurDataURL={generarBlurUrl(imgUrl)}
+                        className="object-cover" 
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
+                    </div>
+                  )
+                })}
               </div>
 
               {listaFotos.length > 1 && (

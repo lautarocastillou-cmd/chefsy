@@ -39,3 +39,44 @@ export function generarId(): string {
 export function generarIdProducto(): string {
   return `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 }
+
+export const BLUR_DATA_URL_DEFAULT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyMjIyMjIiLz48L3N2Zz4="
+
+/**
+ * Optimiza URLs de imágenes (Cloudinary y generales) reduciendo peso y formato
+ */
+export function optimizarUrlImagen(url: string, ancho: number = 300): string {
+  if (!url) return ''
+  const limpia = url.trim()
+
+  if (limpia.includes('res.cloudinary.com') && limpia.includes('/upload/')) {
+    const partes = limpia.split('/upload/')
+    let resto = partes[1]
+    // Limpiamos transformaciones previas (ej. f_auto,q_auto,w_800/ o w_500,h_500/) para que no se encadenen o contradigan
+    resto = resto.replace(/^([^/]+\/)*(v\d+\/)/, '$2')
+    if (/^(?:[a-z]_[^/]+,)*[a-z]_[^/]+\//i.test(resto)) {
+      resto = resto.replace(/^[^/]+\//, '')
+    }
+    return `${partes[0]}/upload/f_auto,q_auto,w_${ancho},c_limit/${resto}`
+  }
+
+  return limpia
+}
+
+/**
+ * Genera una URL de blur ultraliviana (o base64 por defecto) para placeholder de carga
+ */
+export function generarBlurUrl(url: string): string {
+  if (!url) return BLUR_DATA_URL_DEFAULT
+  const limpia = url.trim()
+  if (limpia.includes('res.cloudinary.com') && limpia.includes('/upload/')) {
+    const partes = limpia.split('/upload/')
+    let resto = partes[1]
+    resto = resto.replace(/^([^/]+\/)*(v\d+\/)/, '$2')
+    if (/^(?:[a-z]_[^/]+,)*[a-z]_[^/]+\//i.test(resto)) {
+      resto = resto.replace(/^[^/]+\//, '')
+    }
+    return `${partes[0]}/upload/w_20,e_blur:1000,q_10,f_auto/${resto}`
+  }
+  return BLUR_DATA_URL_DEFAULT
+}
