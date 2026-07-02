@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, Minus, X } from 'lucide-react'
+import { Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
@@ -38,7 +38,9 @@ export default function ModalPersonalizacion({
   onSetNota,
   onAgregar,
 }: ModalPersonalizacionProps) {
-  const [mostrarFotosMobile, setMostrarFotosMobile] = useState(false)
+  const [mostrarFotos, setMostrarFotos] = useState(false)
+  const galeriaRef = useRef<HTMLDivElement>(null)
+  const listaFotos = imagenFinal ? (imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map(url => url.trim()).filter(Boolean) : []
   const { perfil } = usarClienteAuth()
   const cerradoPorAtrasRef = useRef(false)
   const onCerrarRef = useRef(onCerrar)
@@ -104,31 +106,53 @@ export default function ModalPersonalizacion({
         </div>
 
         {/* Galería de Imágenes con Animación Fluida */}
-        {imagenFinal && (
+        {listaFotos.length > 0 && (
           <div 
             className={`w-full shrink-0 overflow-hidden transition-[max-height,opacity] duration-700 ease-in-out ${
-              mostrarFotosMobile ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0 sm:max-h-[300px] sm:opacity-100'
+              mostrarFotos ? 'max-h-[350px] opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="relative w-full h-40 sm:h-56 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex">
-              {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map((imgUrl, i) => (
-                <div key={i} className="relative w-full h-full shrink-0 snap-center group">
-                  <Image 
-                    src={imgUrl.trim()} 
-                    alt={`${producto.nombre} - Foto ${i+1}`} 
-                    fill
-                    unoptimized={true}
-                    priority={true}
-                    className="object-cover" 
-                  />
-                  <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none transition-opacity duration-700 ease-in-out sm:group-hover:opacity-0 ${mostrarFotosMobile ? 'opacity-0' : 'opacity-100'}`} />
-                </div>
-              ))}
-              {(imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).length > 1 && (
-                <div className="absolute bottom-4 right-4 z-20 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse" />
-                  Deslizá para ver más
-                </div>
+            <div className="relative w-full h-48 sm:h-64 group/gallery">
+              <div 
+                ref={galeriaRef}
+                className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex scroll-smooth"
+              >
+                {listaFotos.map((imgUrl, i) => (
+                  <div key={i} className="relative w-full h-full shrink-0 snap-center">
+                    <Image 
+                      src={imgUrl} 
+                      alt={`${producto.nombre} - Foto ${i+1}`} 
+                      fill
+                      unoptimized={true}
+                      priority={true}
+                      className="object-cover" 
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
+                  </div>
+                ))}
+              </div>
+
+              {listaFotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => galeriaRef.current?.scrollBy({ left: -galeriaRef.current.clientWidth, behavior: 'smooth' })}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => galeriaRef.current?.scrollBy({ left: galeriaRef.current.clientWidth, behavior: 'smooth' })}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                  <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
+                    <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
+                    {listaFotos.length} fotos
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -147,12 +171,13 @@ export default function ModalPersonalizacion({
               </h3>
               
               <div className="flex items-center gap-2">
-                {imagenFinal && (
+                {listaFotos.length > 0 && (
                   <button
-                    onClick={() => setMostrarFotosMobile(!mostrarFotosMobile)}
-                    className="sm:hidden px-3 py-1.5 bg-[#252525] border border-[#3d3d3d] rounded-lg text-[10px] font-bold text-slate-300 hover:text-white transition-colors"
+                    type="button"
+                    onClick={() => setMostrarFotos(!mostrarFotos)}
+                    className="px-3 py-1.5 bg-[#252525] border border-[#3d3d3d] rounded-lg text-[10px] font-bold text-slate-300 hover:text-white transition-colors cursor-pointer"
                   >
-                    {mostrarFotosMobile ? 'Ocultar fotos' : 'Ver fotos'}
+                    {mostrarFotos ? 'Ocultar fotos' : 'Ver fotos'}
                   </button>
                 )}
                 <button
