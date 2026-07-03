@@ -141,7 +141,7 @@ function FuerzaClave({ clave }: { clave: string }) {
 export default function ModalLoginCliente({
   onCerrar,
   titulo    = 'Bienvenido a Chefsy',
-  subtitulo = 'Tus compras suman Chefsitos canjeables por comida gratis.',
+  subtitulo = 'Iniciá sesión para gestionar tus pedidos.',
 }: ModalLoginClienteProps) {
   const { iniciarSesion, registrar, iniciarSesionGoogle } = usarClienteAuth()
   const [pantalla, setPantalla] = useState<Pantalla>('menu')
@@ -304,10 +304,10 @@ export default function ModalLoginCliente({
           {pantalla === 'menu' && (
             <div className="space-y-2.5 animate-in fade-in duration-200">
 
-              {/* Badge puntos */}
+              {/* Acceso rápido */}
               <div className="flex items-center justify-center gap-1.5 py-2">
                 <Sparkles size={12} className="text-chefsy-400" />
-                <span className="text-[11px] text-slate-500 font-medium tracking-wide uppercase">Acumulá Chefsitos en cada pedido</span>
+                <span className="text-[11px] text-slate-500 font-medium tracking-wide uppercase">Pedís rápido, sin colas</span>
                 <Sparkles size={12} className="text-chefsy-400" />
               </div>
 
@@ -474,7 +474,7 @@ export default function ModalLoginCliente({
               </p>
 
               <p className="text-center text-[10px] text-slate-700 leading-relaxed px-2 pt-1">
-                Al registrarte aceptás que tus datos se usen para gestionar tu cuenta y puntos Chefsitos.
+                Al registrarte aceptás que tus datos se usen para gestionar tu cuenta y pedidos.
               </p>
             </form>
           )}

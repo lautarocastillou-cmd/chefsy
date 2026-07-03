@@ -134,7 +134,7 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
                 HISTORIAL DE PEDIDOS
               </h3>
               <p className="text-xs sm:text-sm text-slate-400">
-                Revisá tus compras, consumos y Chefsitos obtenidos
+                Revisá tus compras y consumos
               </p>
             </div>
           </div>
@@ -257,18 +257,7 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
                     </div>
                   </div>
 
-                  {/* Banner de Chefsitos Obtenidos */}
-                  <div className="bg-gradient-to-r from-yellow-500/15 via-amber-500/15 to-yellow-500/15 border border-yellow-500/30 rounded-xl p-3 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🪙</span>
-                      <span className="text-xs sm:text-sm font-bold text-yellow-400 uppercase tracking-wide">
-                        Chefsitos obtenidos:
-                      </span>
-                    </div>
-                    <span className="font-bebas text-2xl text-yellow-400 tracking-wide drop-shadow-sm">
-                      +{puntosGanados} PTS
-                    </span>
-                  </div>
+
                 </div>
               )
             })

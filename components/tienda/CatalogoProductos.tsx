@@ -20,7 +20,6 @@ interface CatalogoProductosProps {
   categoriaSeleccionada: string | null
   busqueda: string
   metadata: Record<string, any>
-  modoTienda?: 'normal' | 'chefsitos'
   onAbrirModal: (prod: ProductoCatalogo) => void
 }
 
@@ -30,7 +29,6 @@ export default function CatalogoProductos({
   categoriaSeleccionada,
   busqueda,
   metadata,
-  modoTienda = 'normal',
   onAbrirModal,
 }: CatalogoProductosProps) {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
@@ -103,7 +101,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
@@ -126,7 +124,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index + 50} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index + 50} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
@@ -148,7 +146,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index + 100} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index + 100} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
