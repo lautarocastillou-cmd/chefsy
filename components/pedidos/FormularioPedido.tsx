@@ -51,7 +51,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
 
       {error && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950/90 border border-red-900/50 backdrop-blur-md rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
+          <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
             <span className="text-lg">⚠️</span>
             <span>{error}</span>
           </div>
