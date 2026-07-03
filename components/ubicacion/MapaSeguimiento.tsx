@@ -40,10 +40,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }).addTo(leafletMapRef.current)
 
     const crearIcono = (emoji: string) => L.divIcon({
-      html: `<div style="font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${emoji}</div>`,
-      className: 'custom-emoji-icon animated-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
+      html: `<div style="font-size: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${emoji}</div>`,
+      className: 'custom-emoji-icon',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
     })
 
     // Local
@@ -80,15 +80,15 @@ export default function MapaSeguimiento({ pedido }: Props) {
       markersRef.current.cadete.setLatLng([latitud, longitud])
     } else {
        const crearIcono = (emoji: string) => L.divIcon({
-        html: `<div style="font-size: 24px; background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${emoji}</div>`,
-        className: 'custom-emoji-icon animated-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
+        html: `<div style="font-size: 22px; background: #E11D48; color: white; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 4px 10px rgba(225,29,72,0.4);">${emoji}</div>`,
+        className: 'cadete-marker animated-marker',
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
       })
       markersRef.current.cadete = L.marker([latitud, longitud], {
         icon: crearIcono('🛵'),
         zIndexOffset: 300
-      }).addTo(leafletMapRef.current).bindPopup('Cadete')
+      }).addTo(leafletMapRef.current).bindPopup('Cadete en camino')
 
       // Ajustar zoom para mostrar todo solo la primera vez
       const bounds = L.latLngBounds([
@@ -107,7 +107,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner relative z-0">
       <style dangerouslySetInnerHTML={{__html: `
         .animated-marker {
-          transition: transform 3s linear;
+          transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}} />
       <div ref={mapRef} className="w-full h-full absolute inset-0" />

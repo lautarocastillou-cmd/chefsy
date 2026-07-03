@@ -29,7 +29,6 @@ export async function GET(request: Request) {
       .select('*')
       .eq('cadete_id', cadeteId)
       .in('estado', ['en_cocina', 'listo', 'en_camino'])
-      .eq('fecha', fechaHoy)
       .eq('archivado', false)
       .order('hora', { ascending: true })
 
