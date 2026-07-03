@@ -373,8 +373,8 @@ export default function DevToolsPage() {
 
       {/* Modal de Edición */}
       {productoEditando && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 will-change-transform">
             <div className="p-6 border-b border-slate-100">
               <h2 className="text-xl font-black">Editar Visualización</h2>
               <p className="text-sm text-slate-500">Esto solo afectará a la tienda pública, no al panel de empleados.</p>

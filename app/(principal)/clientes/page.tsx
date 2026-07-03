@@ -262,12 +262,12 @@ export default function PaginaAgendaClientes() {
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-slate-950/80 transition-opacity will-change-opacity"
             onClick={() => setClienteSeleccionado(null)}
           />
 
           {/* Panel */}
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 border-l border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-100">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 border-l border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-100 will-change-transform">
             {/* Cabecera del Panel */}
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">

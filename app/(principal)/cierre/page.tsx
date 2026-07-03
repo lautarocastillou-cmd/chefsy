@@ -476,8 +476,8 @@ _Generado automáticamente desde Chefsy_`.trim()
 
       {/* Modal Iniciar Turno */}
       {modalInicioAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200 overflow-hidden will-change-transform">
             <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-5">
               <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                 ▶️ Iniciar Turno

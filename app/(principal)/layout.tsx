@@ -57,7 +57,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
         <div className="md:hidden fixed inset-0 z-50 flex">
           {/* Backdrop/Overlay */}
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-slate-950/80 transition-opacity will-change-opacity"
             onClick={() => setMenuAbierto(false)}
           />
           {/* Drawer Content */}

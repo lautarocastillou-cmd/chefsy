@@ -208,7 +208,7 @@ export default function CaceriaPage() {
         <div className="absolute w-3 h-3 bg-green-500 rounded-full bottom-20 left-1/4 animate-[ping_1.5s_infinite]" />
         <div className="absolute w-3 h-3 bg-yellow-400 rounded-sm bottom-10 right-1/3 animate-[bounce_1.2s_infinite]" />
 
-        <div className="z-10 bg-slate-800/80 p-8 rounded-3xl border border-green-500/30 backdrop-blur-xl shadow-[0_0_50px_rgba(34,197,94,0.3)] text-center max-w-md w-full animate-in zoom-in duration-500">
+        <div className="z-10 bg-slate-900/95 p-8 rounded-3xl border border-green-500/30 shadow-[0_0_50px_rgba(34,197,94,0.3)] text-center max-w-md w-full animate-in zoom-in duration-500 will-change-transform">
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(34,197,94,0.5)] border border-green-500/50">
             <Trophy size={48} className="text-green-400 drop-shadow-md" />
           </div>
@@ -263,7 +263,7 @@ export default function CaceriaPage() {
 
       {/* Panel de Debug / Herramientas de Testeo */}
       {debugMode && (
-        <div className="w-full max-w-sm bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-xl p-5 mb-6 z-20 animate-in slide-in-from-top-2 shadow-2xl">
+        <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-5 mb-6 z-20 animate-in slide-in-from-top-2 shadow-2xl">
           <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
             <Settings size={16} className="text-emerald-400"/> Panel de Herramientas
           </h3>
@@ -370,7 +370,7 @@ export default function CaceriaPage() {
       </div>
 
       {/* Tarjeta de Estado */}
-      <div className="w-full max-w-sm bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-700 shadow-2xl text-center z-10 mb-8 transition-all duration-300">
+      <div className="w-full max-w-sm bg-slate-900/95 rounded-2xl p-6 border border-slate-700 shadow-2xl text-center z-10 mb-8 transition-all duration-300">
         <h2 className={cn("text-2xl sm:text-3xl font-black uppercase tracking-widest transition-colors", status.textColor)}>
           {status.text}
         </h2>

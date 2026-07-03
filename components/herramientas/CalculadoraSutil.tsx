@@ -147,11 +147,11 @@ export default function CalculadoraSutil() {
       {/* Modal/Overlay de calculadora */}
       {abierta && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 transition-opacity will-change-opacity animate-[fadeIn_0.15s_ease-out]"
           onClick={() => setAbierta(false)}
         >
           <div
-            className="w-60 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden scale-100 active:scale-100"
+            className="w-60 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden scale-100 active:scale-100 will-change-transform"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
