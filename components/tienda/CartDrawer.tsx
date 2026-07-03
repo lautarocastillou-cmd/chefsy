@@ -44,7 +44,8 @@ export default function CartDrawer() {
     procesarCompra: onProcesarCompra,
     coordenadasCliente,
     setCoordenadasCliente: onSetCoordenadasCliente,
-    turnoActivo
+    turnoActivo,
+    procesandoCompra
   } = usarCarrito()
 
   const onCerrar = () => setCartAbierto(false)
@@ -306,8 +307,15 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (nombreCliente.trim() && telefonoCliente.trim()) setCheckoutStep(2)
-                          else alert('Completá tus datos para continuar')
+                          if (!nombreCliente.trim()) {
+                            alert('Por favor ingresá tu nombre completo')
+                            return
+                          }
+                          if (telefonoCliente.replace(/\D/g, '').length < 8) {
+                            alert('Por favor ingresá un número de teléfono válido (al menos 8 dígitos)')
+                            return
+                          }
+                          setCheckoutStep(2)
                         }}
                         className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
@@ -374,7 +382,10 @@ export default function CartDrawer() {
                               type="text"
                               required={checkoutStep === 2 && tipoEntrega === 'delivery'}
                               value={direccionCliente}
-                              onChange={(e) => onSetDireccionCliente(e.target.value)}
+                              onChange={(e) => {
+                                onSetDireccionCliente(e.target.value)
+                                if (coordenadasCliente) onSetCoordenadasCliente(null)
+                              }}
                               className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
                               placeholder="Calle, Altura, Barrio..."
                             />
@@ -487,7 +498,7 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-[#3d3d3d]">
-                      {!turnoActivo ? (
+                      {turnoActivo === false ? (
                         <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in">
                           <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
                             <span>🔒</span> Local Cerrado
@@ -496,13 +507,26 @@ export default function CartDrawer() {
                             Nuestro horario de atención es de 20:30 a 01:00hs.
                           </p>
                         </div>
+                      ) : turnoActivo === null ? (
+                        <div className="w-full bg-[#252525] text-slate-400 font-bold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Verificando horario...
+                        </div>
                       ) : (
                         <button
                           type="button"
                           onClick={onProcesarCompra}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-[background-color,transform] duration-150 cursor-pointer"
+                          disabled={procesandoCompra}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-50"
                         >
-                          CONFIRMAR PEDIDO ({formatearPrecio(totalCarrito)})
+                          {procesandoCompra ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              PROCESANDO...
+                            </>
+                          ) : (
+                            `CONFIRMAR PEDIDO (${formatearPrecio(totalCarrito)})`
+                          )}
                         </button>
                       )}
                     </div>
@@ -535,7 +559,7 @@ export default function CartDrawer() {
               </div>
             </div>
 
-            {!turnoActivo ? (
+            {turnoActivo === false ? (
               <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in">
                 <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
                   <span>🔒</span> Local Cerrado
@@ -547,10 +571,11 @@ export default function CartDrawer() {
             ) : !mostrarCheckout ? (
               <button
                 onClick={() => onSetMostrarCheckout(true)}
-                className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+                disabled={turnoActivo === null}
+                className="w-full bg-chefsy-500 hover:bg-chefsy-600 text-white font-extrabold py-3.5 px-4 rounded-xl text-xs shadow-md transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                Iniciar Checkout
-                <ChevronRight size={14} />
+                {turnoActivo === null ? 'Verificando horario...' : 'Iniciar Checkout'}
+                {turnoActivo !== null && <ChevronRight size={14} />}
               </button>
             ) : null}
           </div>

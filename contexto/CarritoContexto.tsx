@@ -59,13 +59,15 @@ interface ValorContextoCarrito {
   pedidoCompletado: Pedido | null
   setPedidoCompletado: (p: Pedido | null) => void
   procesarCompra: () => Promise<void>
-  turnoActivo: boolean
+  turnoActivo: boolean | null
+  procesandoCompra: boolean
 }
 
 const ContextoCarrito = createContext<ValorContextoCarrito | undefined>(undefined)
 
 export function ProveedorCarrito({ children }: { children: ReactNode }) {
-  const [turnoActivo, setTurnoActivo] = useState(true)
+  const [turnoActivo, setTurnoActivo] = useState<boolean | null>(null)
+  const [procesandoCompra, setProcesandoCompra] = useState(false)
 
   useEffect(() => {
     const verificarTurno = async () => {
@@ -240,8 +242,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   }, [])
 
   const procesarCompra = useCallback(async () => {
-    if (!nombreCliente.trim() || !telefonoCliente.trim()) {
-      alert('Por favor completa tu nombre y número de teléfono de contacto.')
+    if (procesandoCompra) return
+    if (carrito.length === 0) {
+      alert('Tu carrito está vacío.')
+      return
+    }
+    if (!nombreCliente.trim() || telefonoCliente.replace(/\D/g, '').length < 8) {
+      alert('Por favor completa tu nombre y un número de teléfono válido (al menos 8 dígitos).')
       return
     }
     if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
@@ -252,6 +259,9 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       alert('Por favor selecciona un método de pago antes de confirmar el pedido.')
       return
     }
+
+    setProcesandoCompra(true)
+    try {
 
     // Obtener sesión actual (cliente logueado)
     const { data: { session } } = await supabase.auth.getSession()
@@ -337,7 +347,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setCarrito([])
     setMostrarCheckout(false)
     setCartAbierto(false)
-  }, [nombreCliente, telefonoCliente, tipoEntrega, direccionCliente, carrito, totalCarrito, costoEnvio, metodoPago, observaciones, distanciaClienteKm, coordenadasCliente])
+    } finally {
+      setProcesandoCompra(false)
+    }
+  }, [procesandoCompra, nombreCliente, telefonoCliente, tipoEntrega, direccionCliente, carrito, totalCarrito, costoEnvio, metodoPago, observaciones, distanciaClienteKm, coordenadasCliente])
 
   return (
     <ContextoCarrito.Provider value={{
@@ -357,7 +370,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       distanciaClienteKm, costoEnvio,
       totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
       pedidoCompletado, setPedidoCompletado,
-      procesarCompra, turnoActivo
+      procesarCompra, turnoActivo, procesandoCompra
     }}>
       {children}
     </ContextoCarrito.Provider>
