@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       .from('pedidos')
       .select('id, cliente, telefono, direccion, estado, metodoPago, total, hora, cadete_id, cadete_nombre')
       .eq('cadete_id', cadeteId)
-      .in('estado', ['listo', 'en_camino'])
+      .in('estado', ['en_cocina', 'listo', 'en_camino'])
       .eq('fecha', fechaHoy)
       .eq('archivado', false)
       .order('hora', { ascending: true })

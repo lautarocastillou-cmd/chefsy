@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const adminClient = obtenerSupabaseAdmin()
 
 
-    const { error } = await adminClient
+    await adminClient
       .from('cadetes')
       .update({
         lat,
@@ -34,10 +34,14 @@ export async function POST(request: Request) {
       })
       .eq('id', cadeteId)
 
-    if (error) {
-      console.error('Error actualizando ubicación en DB:', error)
-      return NextResponse.json({ error: 'Error interno en BD' }, { status: 500 })
-    }
+    // Actualizamos también cadete_coordenadas en los pedidos activos de este cadete para que el mapa en vivo de Chefsy los muestre al instante
+    const coords = { latitud: lat, longitud: lng }
+    await adminClient
+      .from('pedidos')
+      .update({ cadete_coordenadas: coords })
+      .eq('cadete_id', cadeteId)
+      .in('estado', ['en_cocina', 'listo', 'en_camino'])
+      .eq('archivado', false)
 
     return NextResponse.json({ success: true })
   } catch (err) {
