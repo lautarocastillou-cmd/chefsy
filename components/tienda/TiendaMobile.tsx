@@ -98,7 +98,7 @@ export default function TiendaMobile() {
     const productosPorCategoria = productos.filter(p => {
       if (!p.activo) return false
       
-      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+      const catFiltro = hayBusqueda ? 'todos' : (categoriaSeleccionada || 'todos')
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro
       const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
       
@@ -255,7 +255,13 @@ export default function TiendaMobile() {
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value
+              setBusqueda(val)
+              if (val.trim() !== '' && categoriaSeleccionada) {
+                setCategoriaSeleccionada(null)
+              }
+            }}
             className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-20" size={18} />
@@ -264,7 +270,10 @@ export default function TiendaMobile() {
           {sugerenciaBusqueda && (
             <div className="absolute -bottom-9 left-1 animate-in fade-in slide-in-from-top-2 duration-300 z-10">
               <button
-                onClick={() => setBusqueda(sugerenciaBusqueda)}
+                onClick={() => {
+                  setBusqueda(sugerenciaBusqueda)
+                  if (categoriaSeleccionada) setCategoriaSeleccionada(null)
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-chefsy-500/20 border border-chefsy-500/40 rounded-b-xl rounded-tr-xl text-[11px] font-medium text-white shadow-lg active:bg-chefsy-500/40 transition-colors pt-2"
               >
                 <span className="text-slate-300">¿Quisiste decir</span>
