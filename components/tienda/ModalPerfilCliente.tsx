@@ -17,9 +17,9 @@ export default function ModalPerfilCliente({ abierto, onCerrar, onAbrirHistorial
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in" onClick={onCerrar}>
       <div 
-        className="bg-[#141414] border border-white/10 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative overflow-hidden text-center text-white font-sans flex flex-col items-center animate-scale-up"
+        className="bg-[#141414] border border-white/10 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative overflow-hidden text-center text-white font-sans flex flex-col items-center animate-in zoom-in-95 duration-200 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Botón cerrar */}

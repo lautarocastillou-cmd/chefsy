@@ -222,7 +222,7 @@ export default function ModalLoginCliente({
     <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in"
         onClick={onCerrar}
       />
 
@@ -232,7 +232,7 @@ export default function ModalLoginCliente({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ transform: translateY > 0 ? `translateY(${translateY}px)` : undefined }}
-        className="bg-[#0e0e0e] border border-white/6 w-full sm:max-w-[400px] rounded-t-3xl sm:rounded-3xl shadow-2xl relative z-10 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-250 overflow-hidden max-h-[95dvh] overflow-y-auto transition-transform"
+        className="bg-[#0e0e0e] border border-white/6 w-full sm:max-w-[400px] rounded-t-3xl sm:rounded-3xl shadow-2xl relative z-10 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-250 overflow-hidden max-h-[95dvh] overflow-y-auto transition-transform will-change-transform"
       >
         {/* Drag pill para mobile (gesto iPhone) */}
         <div className="flex justify-center pt-3.5 pb-1 sm:hidden cursor-grab active:cursor-grabbing">

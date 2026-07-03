@@ -27,7 +27,15 @@ interface ValorContextoAuth {
 const ContextoAuth = createContext<ValorContextoAuth | undefined>(undefined)
 
 export function ProveedorAuth({ children }: { children: ReactNode }) {
-  const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(null)
+  const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cache = localStorage.getItem('chefsy_admin_sesion_cache')
+        if (cache) return JSON.parse(cache)
+      } catch {}
+    }
+    return null
+  })
   const [estaListoAuth, setEstaListoAuth] = useState(false)
 
   // Al montar: intentar recuperar la sesión activa consultando el servidor
@@ -38,11 +46,21 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json()
           if (data.usuario) {
-            setUsuarioActivo(data)
+            const sesionData = {
+              usuario: data.usuario,
+              nombre:  data.nombre,
+              rol:     data.rol,
+            }
+            setUsuarioActivo(sesionData)
+            try { localStorage.setItem('chefsy_admin_sesion_cache', JSON.stringify(sesionData)) } catch {}
+          } else {
+            // El servidor confirma que no hay sesión activa -> limpiar caché
+            setUsuarioActivo(null)
+            try { localStorage.removeItem('chefsy_admin_sesion_cache') } catch {}
           }
         }
       } catch {
-        // Sin conectividad o sin sesión — continuar sin usuario
+        // Sin conectividad o timeout — mantener la sesión que se haya cargado de caché offline
       } finally {
         setEstaListoAuth(true)
       }
@@ -67,11 +85,13 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
 
       const data = await res.json()
       if (data.ok && data.usuario) {
-        setUsuarioActivo({
+        const sesionData = {
           usuario: data.usuario,
           nombre:  data.nombre,
           rol:     data.rol,
-        })
+        }
+        setUsuarioActivo(sesionData)
+        try { localStorage.setItem('chefsy_admin_sesion_cache', JSON.stringify(sesionData)) } catch {}
         return data.rol
       }
 
@@ -95,6 +115,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       // Continuar aunque falle la llamada
     } finally {
       setUsuarioActivo(null)
+      try { localStorage.removeItem('chefsy_admin_sesion_cache') } catch {}
     }
   }
 
