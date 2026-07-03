@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const payload = JSON.stringify({
       title: 'Aviso de tu pedido 🍔',
       body: mensaje,
-      url: '/'
+      url: 'https://chefsy.xyz/pedidos'
     })
 
     await webpush.sendNotification(pedido.push_subscription, payload)

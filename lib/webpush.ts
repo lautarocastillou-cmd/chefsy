@@ -49,10 +49,14 @@ export async function enviarNotificacionCadete(usuarioId: string, titulo: string
       return false
     }
 
+    const absoluteUrl = url.startsWith('http')
+      ? (url.includes('chefsy.xyz') ? url : `https://chefsy.xyz${new URL(url).pathname}`)
+      : `https://chefsy.xyz${url.startsWith('/') ? url : '/' + url}`
+
     const payload = JSON.stringify({
       title: titulo,
       body: cuerpo,
-      url: url
+      url: absoluteUrl
     })
 
     await webpush.sendNotification(sub.subscription_json, payload)
