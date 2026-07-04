@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
-import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -15,7 +15,7 @@ interface ModalPersonalizacionProps {
   cantidadModal: number
   notaPersonalizacion: string
   precioUnitarioTotal: number
-  modoTienda?: 'normal' | 'chefsitos'
+
   onCerrar: () => void
   onAlternarModificador: (mod: ModificadorCatalogo) => void
   onSetCantidad: (cantidad: number) => void
@@ -31,7 +31,6 @@ export default function ModalPersonalizacion({
   cantidadModal,
   notaPersonalizacion,
   precioUnitarioTotal,
-  modoTienda = 'normal',
   onCerrar,
   onAlternarModificador,
   onSetCantidad,
@@ -41,16 +40,12 @@ export default function ModalPersonalizacion({
   const [mostrarFotos, setMostrarFotos] = useState(false)
   const galeriaRef = useRef<HTMLDivElement>(null)
   const listaFotos = imagenFinal ? (imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map(url => url.trim()).filter(Boolean) : []
-  const { perfil } = usarClienteAuth()
   const cerradoPorAtrasRef = useRef(false)
   const onCerrarRef = useRef(onCerrar)
 
   useEffect(() => {
     onCerrarRef.current = onCerrar
   }, [onCerrar])
-  
-  const puntosRequeridos = producto.precio_puntos ? producto.precio_puntos * cantidadModal : 0
-  const tienePuntosSuficientes = perfil && perfil.puntos_actuales >= puntosRequeridos
 
   useEffect(() => {
     // Interceptar gesto o botón Atrás (iPhone/Android)
@@ -284,41 +279,12 @@ export default function ModalPersonalizacion({
 
           {/* Botón agregar */}
           <div className="flex-1 flex flex-col gap-2">
-            {modoTienda === 'chefsitos' ? (
-              <button
-                onClick={() => tienePuntosSuficientes ? onAgregar(true) : undefined}
-                disabled={!tienePuntosSuficientes}
-                className={`w-full font-bebas text-lg tracking-wider py-3 px-3 rounded-xl transition-all text-center leading-none shadow-lg ${
-                  tienePuntosSuficientes 
-                    ? 'bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-extrabold shadow-yellow-500/20 active:scale-[0.98] cursor-pointer'
-                    : 'bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed'
-                }`}
-              >
-                {tienePuntosSuficientes ? `🪙 Canjear · ${puntosRequeridos} Chefsitos` : `Te faltan ${puntosRequeridos - (perfil?.puntos_actuales || 0)} Chefsitos`}
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => onAgregar(false)}
-                  className="w-full bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
-                >
-                  Agregar · {formatearPrecio(precioUnitarioTotal * cantidadModal)}
-                </button>
-                {producto.precio_puntos && producto.precio_puntos > 0 && (
-                  <button
-                    onClick={() => tienePuntosSuficientes ? onAgregar(true) : undefined}
-                    disabled={!tienePuntosSuficientes}
-                    className={`w-full font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl transition-all text-center leading-none ${
-                      tienePuntosSuficientes 
-                        ? 'bg-chefsy-600/20 text-chefsy-400 border border-chefsy-500/50 hover:bg-chefsy-500/30 active:scale-[0.98] cursor-pointer'
-                        : 'bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed'
-                    }`}
-                  >
-                    Canjear · {puntosRequeridos} pts
-                  </button>
-                )}
-              </>
-            )}
+            <button
+              onClick={() => onAgregar(false)}
+              className="w-full bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
+            >
+              Agregar · {formatearPrecio(precioUnitarioTotal * cantidadModal)}
+            </button>
           </div>
         </div>
       </div>

@@ -40,7 +40,7 @@ export default function TiendaMobile() {
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
-  const [modoTienda, setModoTienda] = useState<'normal' | 'chefsitos'>('normal')
+
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   
   const { configuracion } = usarConfiguracionTienda()
@@ -98,7 +98,7 @@ export default function TiendaMobile() {
     const productosPorCategoria = productos.filter(p => {
       if (!p.activo) return false
       
-      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+      const catFiltro = hayBusqueda ? 'todos' : (categoriaSeleccionada || 'todos')
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro
       const esPromoValida = catFiltro === 'promos' ? (p.categoriaId === 'promos' || p.esCombo) : true
       
@@ -217,9 +217,6 @@ export default function TiendaMobile() {
                 <span className="text-white text-xs font-medium truncate max-w-[80px]">
                   {perfil?.nombre?.split(' ')[0] || 'Cliente'}
                 </span>
-                <span className="text-chefsy-400 font-bold text-xs whitespace-nowrap shrink-0">
-                  🪙 {perfil?.puntos_actuales || 0}
-                </span>
               </div>
               <button
                 onClick={() => {
@@ -258,7 +255,13 @@ export default function TiendaMobile() {
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value
+              setBusqueda(val)
+              if (val.trim() !== '' && categoriaSeleccionada) {
+                setCategoriaSeleccionada(null)
+              }
+            }}
             className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-20" size={18} />
@@ -267,7 +270,10 @@ export default function TiendaMobile() {
           {sugerenciaBusqueda && (
             <div className="absolute -bottom-9 left-1 animate-in fade-in slide-in-from-top-2 duration-300 z-10">
               <button
-                onClick={() => setBusqueda(sugerenciaBusqueda)}
+                onClick={() => {
+                  setBusqueda(sugerenciaBusqueda)
+                  if (categoriaSeleccionada) setCategoriaSeleccionada(null)
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-chefsy-500/20 border border-chefsy-500/40 rounded-b-xl rounded-tr-xl text-[11px] font-medium text-white shadow-lg active:bg-chefsy-500/40 transition-colors pt-2"
               >
                 <span className="text-slate-300">¿Quisiste decir</span>
@@ -283,11 +289,11 @@ export default function TiendaMobile() {
         !usuario ? (
           <div className="flex flex-col items-center justify-center pt-20 px-4 text-center animate-in fade-in duration-300">
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-inner">
-              <span className="text-3xl">🪙</span>
+              <span className="text-3xl">👤</span>
             </div>
-            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">Iniciá sesión para ver tus Chefsitos</h2>
+            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Iniciá sesión para ver tu perfil!</h2>
             <p className="text-slate-400 max-w-xs mb-8 text-sm leading-relaxed">
-              Tus compras suman Chefsitos que podés canjear por comida gratis.
+              Accedé a tu historial de pedidos y datos de cuenta.
             </p>
             <button
               onClick={() => setMostrarLogin(true)}
@@ -311,26 +317,9 @@ export default function TiendaMobile() {
               </span>
             </div>
             <h2 className="text-2xl font-bebas text-white tracking-wider mb-1">¡HOLA, {perfil?.nombre?.toUpperCase() || 'CLIENTE'}!</h2>
-            <p className="text-slate-400 text-sm mb-5">Acá podés ver tus Chefsitos acumulados.</p>
+            <p className="text-slate-400 text-sm mb-5">Bienvenido a tu perfil.</p>
             
-            <div className="bg-[#141414] border border-white/5 rounded-2xl p-5 w-full max-w-sm shadow-xl flex flex-col items-center relative overflow-hidden mb-5">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-chefsy/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-              <span className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1 relative z-10">TUS CHEFSITOS</span>
-              <span className="text-5xl font-bebas text-chefsy-400 relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{perfil?.puntos_actuales || 0}</span>
-            </div>
-
             <div className="w-full max-w-sm space-y-3">
-              <button
-                onClick={() => {
-                  setModoTienda('chefsitos')
-                  setActiveTab('home')
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-3.5 px-6 rounded-2xl shadow-xl shadow-yellow-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg font-bebas tracking-wide cursor-pointer animate-pulse"
-              >
-                <span className="text-2xl">🪙</span>
-                <span>Canjear Chefsitos en Tienda</span>
-              </button>
               <button
                 onClick={() => setMostrarHistorial(true)}
                 className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
@@ -379,23 +368,7 @@ export default function TiendaMobile() {
             </div>
           )}
 
-          {modoTienda === 'chefsitos' && (
-            <div className="mx-3 mt-4 p-4 bg-gradient-to-r from-yellow-500/15 via-amber-500/15 to-yellow-500/15 border border-yellow-500/30 rounded-2xl backdrop-blur-md shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">🪙</span>
-                <div>
-                  <h3 className="font-bebas text-2xl text-yellow-400 tracking-wide leading-none">TIENDA CHEFSITOS</h3>
-                  <p className="text-xs text-slate-300 mt-0.5 font-sans">Canjeá tus productos gratis usando tus Chefsitos</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setModoTienda('normal')}
-                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-4 rounded-xl border border-white/20 text-xs tracking-wider uppercase transition-all shrink-0 cursor-pointer"
-              >
-                Volver a Tienda Normal
-              </button>
-            </div>
-          )}
+
 
           {/* Menú y Selección de Categorías - Más abajo, junto al catálogo */}
           <div className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
@@ -424,7 +397,6 @@ export default function TiendaMobile() {
               categoriaSeleccionada={categoriaSeleccionada || 'todos'}
               busqueda={busqueda}
               metadata={metadata}
-              modoTienda={modoTienda}
               onAbrirModal={abrirModalPersonalizacion}
             />
           </div>
@@ -457,7 +429,6 @@ export default function TiendaMobile() {
             cantidadModal={cantidadModal}
             notaPersonalizacion={notaPersonalizacion}
             precioUnitarioTotal={calcularPrecioUnitarioModal()}
-            modoTienda={modoTienda}
             onCerrar={() => setProductoAPersonalizar(null)}
             onAlternarModificador={alternarModificador}
             onSetCantidad={setCantidadModal}

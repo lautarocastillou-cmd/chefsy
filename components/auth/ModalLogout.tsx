@@ -80,7 +80,7 @@ export default function ModalLogout({ onConfirm, onCancel }: ModalLogoutProps) {
           <div className="space-y-1">
             <h3 className="text-white font-bebas text-2xl tracking-wide">¿Cerrar Sesión?</h3>
             <p className="text-slate-400 text-xs leading-relaxed max-w-[240px] mx-auto">
-              Tendrás que volver a ingresar para acumular y canjear tus puntos Chefsitos.
+              Tendrás que volver a ingresar para ver tu historial de pedidos.
             </p>
           </div>
 

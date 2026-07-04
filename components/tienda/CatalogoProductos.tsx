@@ -20,7 +20,6 @@ interface CatalogoProductosProps {
   categoriaSeleccionada: string | null
   busqueda: string
   metadata: Record<string, any>
-  modoTienda?: 'normal' | 'chefsitos'
   onAbrirModal: (prod: ProductoCatalogo) => void
 }
 
@@ -30,7 +29,6 @@ export default function CatalogoProductos({
   categoriaSeleccionada,
   busqueda,
   metadata,
-  modoTienda = 'normal',
   onAbrirModal,
 }: CatalogoProductosProps) {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
@@ -47,7 +45,7 @@ export default function CatalogoProductos({
     <main className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
       
       {/* Encabezado del Menú Seleccionado */}
-      {categoriaSeleccionada && (
+      {categoriaSeleccionada && !busqueda && (
         <div className="text-left border-b border-white/10 pb-4 flex items-center justify-between">
           <div>
             <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
@@ -103,7 +101,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
@@ -126,7 +124,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index + 50} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index + 50} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
@@ -148,7 +146,7 @@ export default function CatalogoProductos({
                       <ProductCard
                         key={prod.id} prod={prod} meta={meta} detalles={detalles}
                         agotado={agotado || false} imagenFinal={resolverImagen(meta?.imagen_url, detalles.img)}
-                        index={index + 100} modoTienda={modoTienda} onAbrirModal={onAbrirModal}
+                        index={index + 100} onAbrirModal={onAbrirModal}
                       />
                     )
                   })}
