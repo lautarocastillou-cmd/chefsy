@@ -13,6 +13,7 @@ import TimerPedido from './TimerPedido'
 import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
 
@@ -98,8 +99,9 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     const productosText = pedido.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('\n')
     
     let direccionTexto = `📍 ${pedido.direccion || pedido.tipoEntrega}`
-    if (pedido.coordenadas) {
-      direccionTexto += `\n🗺️ Mapa: https://www.google.com/maps?q=${pedido.coordenadas.latitud},${pedido.coordenadas.longitud}`
+    const linkMapa = crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)
+    if (linkMapa) {
+      direccionTexto += `\n🗺️ Mapa: ${linkMapa}`
     }
 
     const texto = `*Pedido de ${pedido.cliente}*

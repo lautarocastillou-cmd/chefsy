@@ -141,9 +141,13 @@ export default function ModalSelectorUbicacion({
             type="button"
             onClick={manejarGps}
             disabled={cargando}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-emerald-500 to-chefsy-600 hover:from-emerald-600 hover:to-chefsy-700 text-white font-extrabold px-4 py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer animate-[pulse_3s_ease-in-out_infinite]"
           >
-            {cargando ? 'Obteniendo ubicación…' : '📍 Usar mi ubicación (GPS)'}
+            {cargando ? (
+              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Obteniendo ubicación GPS…</>
+            ) : (
+              <><span className="text-base animate-bounce">📍</span> Usar mi ubicación actual (GPS Automático)</>
+            )}
           </button>
 
           <MapaSelector

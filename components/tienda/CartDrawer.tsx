@@ -350,23 +350,23 @@ export default function CartDrawer() {
 
                       {tipoEntrega === 'delivery' && (
                         <div className="animate-in fade-in duration-200 pt-1 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                              Dirección de envío
-                            </label>
-                            <button 
-                              type="button"
-                              onClick={obtenerUbicacion}
-                              disabled={buscandoUbicacion}
-                              className="text-xs text-chefsy-400 font-bold bg-chefsy-500/10 hover:bg-chefsy-500/20 px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                            >
-                              {buscandoUbicacion ? (
-                                <><div className="w-3 h-3 border-2 border-chefsy-400 border-t-transparent rounded-full animate-spin" /> Buscando...</>
-                              ) : (
-                                <>📍 Usar mi ubicación</>
-                              )}
-                            </button>
-                          </div>
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block text-left">
+                            Dirección de envío
+                          </label>
+
+                          <button 
+                            type="button"
+                            onClick={obtenerUbicacion}
+                            disabled={buscandoUbicacion}
+                            className="w-full bg-gradient-to-r from-emerald-500 to-chefsy-600 hover:from-emerald-400 hover:to-chefsy-500 text-white font-black text-xs sm:text-sm py-3 px-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-emerald-400/50 animate-[pulse_3s_ease-in-out_infinite] disabled:opacity-50 disabled:animate-none my-2 cursor-pointer"
+                          >
+                            {buscandoUbicacion ? (
+                              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Obteniendo tu ubicación GPS...</>
+                            ) : (
+                              <><span className="text-base animate-bounce">📍</span> Usar mi ubicación actual (GPS Automático)</>
+                            )}
+                          </button>
+
                           <div className="relative group text-left">
                             <MapPin size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-chefsy-400 transition-colors z-10" />
                             <input
@@ -376,7 +376,7 @@ export default function CartDrawer() {
                               value={direccionCliente}
                               onChange={(e) => onSetDireccionCliente(e.target.value)}
                               className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
-                              placeholder="Calle, Altura, Barrio..."
+                              placeholder="O escribí: Calle, Altura, Barrio..."
                             />
                           </div>
 

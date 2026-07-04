@@ -66,8 +66,17 @@ export function formatearCoordenadas(coordenadas: Coordenadas): string {
   return `${coordenadas.latitud.toFixed(6)}, ${coordenadas.longitud.toFixed(6)}`
 }
 
-export function crearEnlaceGoogleMaps(coordenadas: Coordenadas): string {
-  return `https://www.google.com/maps?q=${coordenadas.latitud},${coordenadas.longitud}`
+export function crearEnlaceGoogleMaps(coordenadas?: Coordenadas | null, direccion?: string): string {
+  if (coordenadas && typeof coordenadas.latitud === 'number' && typeof coordenadas.longitud === 'number' && !isNaN(coordenadas.latitud) && !isNaN(coordenadas.longitud)) {
+    return `https://www.google.com/maps?q=${coordenadas.latitud},${coordenadas.longitud}`
+  }
+  if (direccion && direccion !== 'Retiro por el local') {
+    const dirCompleta = direccion.toLowerCase().includes('catamarca')
+      ? direccion
+      : `${direccion}, San Fernando del Valle de Catamarca, Catamarca`
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dirCompleta)}`
+  }
+  return ''
 }
 
 export function crearEnlaceOpenStreetMap(coordenadas: Coordenadas): string {
@@ -80,22 +89,43 @@ export async function buscarCoordenadasPorDireccion(
   const texto = direccion.trim()
   if (!texto) return null
 
+  let queryBuscar = texto
+  if (!queryBuscar.toLowerCase().includes('catamarca')) {
+    queryBuscar = `${queryBuscar}, Catamarca`
+  }
+
   try {
     const parametros = new URLSearchParams({
       format: 'json',
-      q: texto,
+      q: queryBuscar,
       limit: '1',
       countrycodes: 'ar',
+      viewbox: '-65.95,-28.15,-65.60,-28.60',
+      bounded: '1',
     })
 
-    const respuesta = await fetch(
+    let respuesta = await fetch(
       `https://nominatim.openstreetmap.org/search?${parametros}`,
       { headers: { 'Accept-Language': 'es' } }
     )
 
-    if (!respuesta.ok) return null
+    let resultados = []
+    if (respuesta.ok) {
+      resultados = await respuesta.json()
+    }
 
-    const resultados = await respuesta.json()
+    if (resultados.length === 0) {
+      parametros.set('bounded', '0')
+      parametros.set('q', texto)
+      respuesta = await fetch(
+        `https://nominatim.openstreetmap.org/search?${parametros}`,
+        { headers: { 'Accept-Language': 'es' } }
+      )
+      if (respuesta.ok) {
+        resultados = await respuesta.json()
+      }
+    }
+
     const primero = resultados[0]
     if (!primero) return null
 
@@ -204,23 +234,43 @@ export async function buscarSugerenciasDireccion(
     return cacheSugerencias.get(cacheKey)!
   }
 
+  let queryBuscar = query
+  if (!queryBuscar.toLowerCase().includes('catamarca')) {
+    queryBuscar = `${queryBuscar}, Catamarca`
+  }
+
   try {
     const parametros = new URLSearchParams({
       format: 'json',
-      q: query,
+      q: queryBuscar,
       limit: '5',
       countrycodes: 'ar',
       addressdetails: '1',
+      viewbox: '-65.95,-28.15,-65.60,-28.60',
+      bounded: '1',
     })
 
-    const respuesta = await fetch(
+    let respuesta = await fetch(
       `https://nominatim.openstreetmap.org/search?${parametros}`,
       { headers: { 'Accept-Language': 'es' }, signal }
     )
 
-    if (!respuesta.ok) return []
+    let resultados = []
+    if (respuesta.ok) {
+      resultados = await respuesta.json()
+    }
 
-    const resultados = await respuesta.json()
+    if (resultados.length === 0) {
+      parametros.set('bounded', '0')
+      parametros.set('q', query)
+      respuesta = await fetch(
+        `https://nominatim.openstreetmap.org/search?${parametros}`,
+        { headers: { 'Accept-Language': 'es' }, signal }
+      )
+      if (respuesta.ok) {
+        resultados = await respuesta.json()
+      }
+    }
     
     const sugerencias = resultados.map((item: any) => ({
       nombre: item.display_name,

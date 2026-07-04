@@ -39,6 +39,7 @@ export default function InfoEntregaPedido({ pedido, destacado = false }: PropsIn
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
             {esDelivery ? 'Dirección de entrega' : 'Modalidad'}
             {esDelivery && pedido.coordenadas && <span className="text-chefsy-600">(Ver mapa)</span>}
+            {esDelivery && !pedido.coordenadas && <a href={crearEnlaceGoogleMaps(null, pedido.direccion)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-0.5 ml-1 font-extrabold" onClick={(e) => e.stopPropagation()}>(🔍 Buscar en Maps)</a>}
           </p>
           <p className="text-sm font-semibold text-slate-800 leading-snug">{resumen}</p>
         </div>
@@ -71,7 +72,17 @@ export default function InfoEntregaPedido({ pedido, destacado = false }: PropsIn
             )}
           </>
         ) : (
-          <span className="truncate max-w-[180px] font-medium">📍 {resumen}</span>
+          <a
+            href={crearEnlaceGoogleMaps(null, pedido.direccion)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline flex items-center gap-1 font-medium text-blue-600 transition-colors text-left"
+            title="Buscar dirección en Google Maps"
+          >
+            <span>📍</span>
+            <span className="truncate max-w-[180px]">{resumen}</span>
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded ml-1 font-bold">🔍 Maps</span>
+          </a>
         )
       ) : (
         <span className="font-medium">🏪 {resumen}</span>

@@ -130,9 +130,9 @@ function TarjetaPedidoCadete({
             </a>
           </>
         )}
-        {esPedidoDelivery(pedido) && pedido.coordenadas && (
+        {esPedidoDelivery(pedido) && (pedido.coordenadas || pedido.direccion) && (
           <a
-            href={crearEnlaceGoogleMaps(pedido.coordenadas)}
+            href={crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm"
