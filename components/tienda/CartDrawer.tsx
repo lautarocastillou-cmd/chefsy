@@ -431,7 +431,7 @@ export default function CartDrawer() {
                               <span>ℹ️</span> Tarifa base de envío: {formatearPrecio(1500)}
                             </p>
                             <p className="text-slate-300 text-[11px] leading-relaxed font-medium">
-                              El costo de envío se calculará automáticamente según la distancia de tu dirección.
+                              El costo de envío se calcula automáticamente según la distancia de tu dirección: <strong className="text-white font-bold">a mayor distancia, mayor será el valor del envío</strong>.
                             </p>
                           </div>
 
