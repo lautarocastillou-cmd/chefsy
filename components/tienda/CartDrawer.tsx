@@ -426,6 +426,15 @@ export default function CartDrawer() {
 
                       {tipoEntrega === 'delivery' && (
                         <div className="animate-in fade-in duration-200 pt-1 space-y-2">
+                          <div className="bg-chefsy-500/15 border border-chefsy-500/40 rounded-xl p-3 text-left">
+                            <p className="text-chefsy-400 font-bold text-xs mb-0.5 flex items-center gap-1.5">
+                              <span>ℹ️</span> Tarifa base de envío: {formatearPrecio(1500)}
+                            </p>
+                            <p className="text-slate-300 text-[11px] leading-relaxed font-medium">
+                              El costo de envío se calculará automáticamente según la distancia de tu dirección.
+                            </p>
+                          </div>
+
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block text-left">
                             Dirección de envío
                           </label>
@@ -650,13 +659,15 @@ export default function CartDrawer() {
                 <span className="font-semibold text-white">{formatearPrecio(subtotalCarrito)}</span>
               </div>
               {tipoEntrega === 'delivery' && (
-                <div className="flex justify-between">
-                  <span>Costo de envío</span>
-                  <span className="font-semibold text-white">{formatearPrecio(costoEnvio)}</span>
+                <div className="flex justify-between items-center">
+                  <span>{!coordenadasCliente ? 'Envío (Tarifa base)' : 'Costo de envío'}</span>
+                  <span className="font-semibold text-white">
+                    {!coordenadasCliente ? `Desde ${formatearPrecio(costoEnvio)}` : formatearPrecio(costoEnvio)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between border-t border-[#3d3d3d] pt-2 text-sm font-black text-white">
-                <span>Total a pagar</span>
+                <span>{!coordenadasCliente && tipoEntrega === 'delivery' ? 'Total apróx. (envío base)' : 'Total a pagar'}</span>
                 <span className="text-chefsy-400">{formatearPrecio(totalCarrito)}</span>
               </div>
             </div>
