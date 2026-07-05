@@ -85,8 +85,7 @@ export default function HeroSection({
             ) : (
               <div className="flex items-center gap-2">
                 <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
-                  <span className="text-white text-sm font-medium hidden sm:inline-block">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
-                  <span className="text-chefsy-400 font-bold text-sm whitespace-nowrap">🪙 {perfil?.puntos_actuales || 0} pts</span>
+                  <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
                 </div>
                 <button
                   onClick={() => setMostrarPerfil(true)}
