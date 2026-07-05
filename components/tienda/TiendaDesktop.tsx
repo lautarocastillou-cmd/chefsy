@@ -18,6 +18,8 @@ import Link from 'next/link'
 // Componentes de carga inmediata
 import HeroSection from '@/components/tienda/HeroSection'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
+import SeccionUbicacion from '@/components/tienda/SeccionUbicacion'
+import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
 
 // Componentes lazy
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
@@ -326,6 +328,8 @@ export default function TiendaDesktop() {
           onAbrirModal={abrirModalPersonalizacion}
         />
 
+        <SeccionUbicacion />
+
         {/* --- FOOTER --- */}
         <footer className="mt-12 mb-24 flex flex-col items-center gap-6 pb-8 border-t border-white/10 pt-8">
           {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
@@ -400,6 +404,7 @@ export default function TiendaDesktop() {
             />
           </Suspense>
         )}
+        <BotonFlotanteWhatsApp />
       </div>
     </div>
   )
