@@ -188,31 +188,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
         </div>
 
         <div className="flex flex-col gap-3 pt-2">
-          {/* Botón de notificaciones: solo para usuarios sin sesión iniciada */}
-          {!usuario && !suscrito && (
-            <button
-              onClick={habilitarNotificaciones}
-              disabled={suscribiendo}
-              className="w-full bg-blue-500 hover:bg-blue-600 active:scale-98 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {suscribiendo ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <BellRing size={18} className="animate-pulse" />
-                  {pedido.tipoEntrega === 'delivery' 
-                    ? 'Avisarme al celular cuando esté en camino' 
-                    : 'Avisarme al celular cuando esté listo'}
-                </>
-              )}
-            </button>
-          )}
-          {!usuario && suscrito && (
-            <div className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900/50">
-              <CheckCircle2 size={18} />
-              ¡Suscrito! Te avisaremos al celular.
-            </div>
-          )}
+
           <div className="pt-2 flex flex-col items-center gap-1 animate-bounce">
             <span className="text-emerald-400 font-extrabold text-sm sm:text-base tracking-wide uppercase drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
               Ahora, por favor 👇
