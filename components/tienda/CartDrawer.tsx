@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
-import { ItemCarrito } from '@/tipos/tienda'
 import { formatearPrecio } from '@/lib/utils'
+import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
 
 const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector'), { ssr: false })
 
@@ -58,6 +58,74 @@ export default function CartDrawer() {
   const [mostrarMapa, setMostrarMapa] = useState(false)
   const [coordsMapa, setCoordsMapa] = useState<{ latitud: number, longitud: number }>({ latitud: -28.4695, longitud: -65.7852 }) // Plaza 25 de Mayo
   const [cargandoMapaDir, setCargandoMapaDir] = useState(false)
+
+  // Estados para sugerencias de dirección y geocodificación en Catamarca
+  const [sugerencias, setSugerencias] = useState<SugerenciaDireccion[]>([])
+  const [buscandoSugerencias, setBuscandoSugerencias] = useState(false)
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false)
+  const sugerenciasRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickFuera = (event: MouseEvent) => {
+      if (sugerenciasRef.current && !sugerenciasRef.current.contains(event.target as Node)) {
+        setMostrarSugerencias(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [])
+
+  useEffect(() => {
+    if (direccionCliente.length < 4 || !mostrarSugerencias) {
+      setSugerencias([])
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      setBuscandoSugerencias(true)
+      try {
+        const resultados = await buscarSugerenciasDireccion(direccionCliente, controller.signal)
+        setSugerencias(resultados)
+      } catch (err: any) {
+        if (err.name !== 'AbortError') console.error('Error buscando sugerencias:', err)
+      } finally {
+        if (!controller.signal.aborted) setBuscandoSugerencias(false)
+      }
+    }, 600)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [direccionCliente, mostrarSugerencias])
+
+  // Geocodificación silenciosa en segundo plano (Fallback por si no eligen de la lista)
+  useEffect(() => {
+    if (!direccionCliente || direccionCliente.length < 5 || coordenadasCliente) return
+    
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const coords = await buscarCoordenadasPorDireccion(direccionCliente)
+        if (coords && !controller.signal.aborted) {
+          onSetCoordenadasCliente(coords)
+        }
+      } catch (e) {}
+    }, 1200)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [direccionCliente, coordenadasCliente, onSetCoordenadasCliente])
+
+  const seleccionarSugerencia = (sug: SugerenciaDireccion) => {
+    onSetDireccionCliente(sug.nombre)
+    onSetCoordenadasCliente(sug.coordenadas)
+    setMostrarSugerencias(false)
+    setSugerencias([])
+  }
 
   // Resetear paso cuando se cierra el carrito o se abre el checkout
   useEffect(() => {
@@ -375,7 +443,7 @@ export default function CartDrawer() {
                             )}
                           </button>
 
-                          <div className="relative group text-left">
+                          <div ref={sugerenciasRef} className="relative group text-left">
                             <MapPin size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-chefsy-400 transition-colors z-10" />
                             <input
                               id="direccion_cliente"
@@ -384,11 +452,45 @@ export default function CartDrawer() {
                               value={direccionCliente}
                               onChange={(e) => {
                                 onSetDireccionCliente(e.target.value)
+                                setMostrarSugerencias(true)
                                 if (coordenadasCliente) onSetCoordenadasCliente(null)
+                              }}
+                              onFocus={() => {
+                                if (direccionCliente.length >= 4) setMostrarSugerencias(true)
                               }}
                               className="w-full border border-[#3d3d3d] rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy-500 focus:border-chefsy-500 bg-[#1a1a1a] text-white placeholder:text-slate-500 transition-colors"
                               placeholder="O escribí: Calle, Altura, Barrio..."
                             />
+
+                            {/* Dropdown de Sugerencias */}
+                            {mostrarSugerencias && (sugerencias.length > 0 || buscandoSugerencias) && (
+                              <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[#222222] border border-[#3d3d3d] rounded-2xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-[#333333] animate-in fade-in slide-in-from-top-2 duration-150">
+                                {buscandoSugerencias && (
+                                  <div className="p-3 text-xs text-slate-400 flex items-center justify-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-chefsy-400 border-t-transparent rounded-full animate-spin" />
+                                    Buscando direcciones en Catamarca...
+                                  </div>
+                                )}
+                                {!buscandoSugerencias && sugerencias.map((sug, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => seleccionarSugerencia(sug)}
+                                    className="w-full text-left p-3.5 hover:bg-[#2a2a2a] transition-colors flex items-start gap-2.5 group/btn cursor-pointer"
+                                  >
+                                    <MapPin size={16} className="text-chefsy-400 mt-0.5 shrink-0 group-hover/btn:scale-110 transition-transform" />
+                                    <div>
+                                      <p className="text-xs font-bold text-white leading-snug">
+                                        {sug.nombre.split(',')[0]}
+                                      </p>
+                                      <p className="text-[11px] text-slate-400 line-clamp-1">
+                                        {sug.nombre.split(',').slice(1).join(',')}
+                                      </p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           {/* Botón para abrir/cerrar mapa */}
