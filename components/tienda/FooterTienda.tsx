@@ -12,47 +12,53 @@ export default function FooterTienda() {
   return (
     <footer className="mt-16 mb-24 w-full border-t border-white/10 pt-10 pb-8 px-4 max-w-5xl mx-auto">
       {/* Grid principal */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center text-left">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start text-left">
         
-        {/* Info de ubicación (Columna 1) */}
-        <div className="md:col-span-5 space-y-2">
-          <h4 className="text-white text-sm font-black uppercase tracking-wider flex items-center gap-1.5">
-            <MapPin size={16} className="text-chefsy-400" />
-            ¿Dónde estamos ubicados?
-          </h4>
-          <p className="text-slate-400 text-xs font-semibold leading-relaxed">
-            Nuestro local está ubicado en Rivadavia 195, antes de Almagro.
-          </p>
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-chefsy-400 hover:text-chefsy-300 text-xs font-extrabold transition-colors cursor-pointer group mt-1"
-          >
-            <Navigation size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            CÓMO LLEGAR EN GOOGLE MAPS
-          </a>
+        {/* Info de ubicación + Mapa (Columna Izquierda) */}
+        <div className="md:col-span-7 space-y-4">
+          <div className="space-y-2">
+            <h4 className="text-white text-sm font-black uppercase tracking-wider flex items-center gap-1.5">
+              <MapPin size={16} className="text-chefsy-400" />
+              ¿Dónde estamos ubicados?
+            </h4>
+            <p className="text-slate-400 text-xs font-semibold leading-relaxed">
+              Nuestro local está ubicado en Rivadavia 195, antes de Almagro.
+            </p>
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-chefsy-400 hover:text-chefsy-300 text-xs font-extrabold transition-colors cursor-pointer group pt-1"
+            >
+              <Navigation size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              CÓMO LLEGAR EN GOOGLE MAPS
+            </a>
+          </div>
+
+          {/* Mapa más grande debajo */}
+          <div className="pt-2">
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative w-full max-w-sm h-48 sm:h-56 rounded-2xl overflow-hidden border border-white/10 shadow-xl hover:border-chefsy-500/40 transition-all duration-300 group cursor-pointer block"
+            >
+              <img
+                src="/ubicacion-chefsy.png"
+                alt="Chefsy Mapa"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+              <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                <MapPin size={12} className="text-chefsy-400" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Ver en Google Maps</span>
+              </div>
+            </a>
+          </div>
         </div>
 
-        {/* Thumbnail del mapa (Columna 2) */}
-        <div className="md:col-span-3 flex justify-start md:justify-center">
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative w-36 h-20 rounded-xl overflow-hidden border border-white/10 shadow-lg hover:border-chefsy-500/40 transition-all duration-300 group cursor-pointer block"
-          >
-            <img
-              src="/ubicacion-chefsy.png"
-              alt="Chefsy Mapa"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-          </a>
-        </div>
-
-        {/* Redes y enlaces legales (Columna 3) */}
-        <div className="md:col-span-4 flex flex-col items-start md:items-end gap-4">
+        {/* Redes y enlaces legales (Columna Derecha) */}
+        <div className="md:col-span-5 flex flex-col items-start md:items-end justify-between h-full gap-6 pt-1">
           {/* Redes Sociales */}
           {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
             <div className="flex items-center gap-4">
@@ -72,13 +78,15 @@ export default function FooterTienda() {
           )}
 
           {/* Enlaces Legales */}
-          <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
-            <Link href="/privacidad" className="hover:text-chefsy-400 transition-colors">Privacidad</Link>
-            <span className="text-slate-700">•</span>
-            <Link href="/terminos" className="hover:text-chefsy-400 transition-colors">Términos</Link>
-          </div>
+          <div className="flex flex-col items-start md:items-end gap-3 mt-auto">
+            <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+              <Link href="/privacidad" className="hover:text-chefsy-400 transition-colors">Privacidad</Link>
+              <span className="text-slate-700">•</span>
+              <Link href="/terminos" className="hover:text-chefsy-400 transition-colors">Términos</Link>
+            </div>
 
-          <p className="text-[11px] text-slate-600 font-medium">&copy; {new Date().getFullYear()} Chefsy. Todos los derechos reservados.</p>
+            <p className="text-[11px] text-slate-600 font-medium">&copy; {new Date().getFullYear()} Chefsy. Todos los derechos reservados.</p>
+          </div>
         </div>
 
       </div>
