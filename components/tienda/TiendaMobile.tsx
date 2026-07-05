@@ -17,7 +17,7 @@ import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
-import SeccionUbicacion from '@/components/tienda/SeccionUbicacion'
+import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
@@ -403,7 +403,7 @@ export default function TiendaMobile() {
             />
           </div>
           
-          <SeccionUbicacion />
+          <FooterTienda />
       </>
       )}
 
