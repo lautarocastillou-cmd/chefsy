@@ -22,7 +22,7 @@ export default function FooterTienda() {
               ¿Dónde estamos ubicados?
             </h4>
             <p className="text-slate-400 text-xs font-semibold leading-relaxed">
-              Nuestro local está ubicado en Rivadavia 195, antes de Almagro.
+              Nuestro local está ubicado en Rivadavia 195, antes de almagro. Atendemos de 20:30hs a 01:00hs de Lunes a Sábado, domingo cerrado!
             </p>
             <a
               href={googleMapsUrl}
@@ -58,7 +58,7 @@ export default function FooterTienda() {
         </div>
 
         {/* Redes y enlaces legales (Columna Derecha) */}
-        <div className="md:col-span-5 flex flex-col items-start md:items-end justify-between h-full gap-6 pt-1">
+        <div className="md:col-span-5 flex flex-col items-start md:items-end gap-6 pt-1">
           {/* Redes Sociales */}
           {(configuracion?.link_instagram || configuracion?.link_tiktok) && (
             <div className="flex items-center gap-4">
@@ -78,7 +78,7 @@ export default function FooterTienda() {
           )}
 
           {/* Enlaces Legales */}
-          <div className="flex flex-col items-start md:items-end gap-3 mt-auto">
+          <div className="flex flex-col items-start md:items-end gap-3">
             <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
               <Link href="/privacidad" className="hover:text-chefsy-400 transition-colors">Privacidad</Link>
               <span className="text-slate-700">•</span>
