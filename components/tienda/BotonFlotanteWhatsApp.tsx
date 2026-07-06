@@ -16,7 +16,7 @@ export default function BotonFlotanteWhatsApp() {
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed z-[9990] bottom-20 right-4 md:bottom-8 md:left-8 w-14 h-14 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(37,211,102,0.45)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.6)] active:scale-95 transition-all duration-200 group border border-white/10"
+      className="fixed z-[9990] bottom-28 right-4 md:bottom-8 md:left-8 w-14 h-14 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(37,211,102,0.45)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.6)] active:scale-95 transition-all duration-200 group border border-white/10"
       title="Escríbenos por WhatsApp"
     >
       {/* Ondas pulsantes de fondo */}
