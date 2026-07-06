@@ -135,7 +135,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
 
   const [mostrarCheckout, setMostrarCheckout] = useState(false)
-  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
+  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('retiro')
   const [nombreCliente, setNombreCliente] = useState('')
   const [telefonoCliente, setTelefonoCliente] = useState('')
   const [direccionCliente, setDireccionCliente] = useState('')
@@ -371,6 +371,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setCarrito([])
     setMostrarCheckout(false)
     setCartAbierto(false)
+    setTipoEntrega('retiro')
     } finally {
       setProcesandoCompra(false)
     }
