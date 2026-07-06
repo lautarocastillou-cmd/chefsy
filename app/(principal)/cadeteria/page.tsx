@@ -249,6 +249,7 @@ export default function PaginaCadeteria() {
   )
 
   const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo')
+  const hayPedidosListos = pedidosListos.length > 0
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
   const [simulando, setSimulando] = useState(false)
   const [alertaVisibility, setAlertaVisibility] = useState(false)
@@ -265,7 +266,7 @@ export default function PaginaCadeteria() {
 
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator && pedidosListos.length > 0) {
+        if ('wakeLock' in navigator && hayPedidosListos) {
           wakeLock = await (navigator as any).wakeLock.request('screen')
         }
       } catch (err) {
@@ -273,7 +274,7 @@ export default function PaginaCadeteria() {
       }
     }
 
-    if (pedidosListos.length > 0 && usuarioActivo && usuarioActivo.rol !== 'admin') {
+    if (hayPedidosListos && usuarioActivo && usuarioActivo.rol !== 'admin') {
       requestWakeLock()
     } else if (wakeLock) {
       wakeLock.release().catch(console.error)
@@ -281,10 +282,10 @@ export default function PaginaCadeteria() {
     }
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && pedidosListos.length > 0) {
+      if (document.visibilityState === 'visible' && hayPedidosListos) {
         requestWakeLock()
         setAlertaVisibility(false)
-      } else if (document.visibilityState === 'hidden' && pedidosListos.length > 0) {
+      } else if (document.visibilityState === 'hidden' && hayPedidosListos) {
         // Mostrar alerta si minimiza la app en pleno reparto
         setAlertaVisibility(true)
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -301,12 +302,12 @@ export default function PaginaCadeteria() {
         wakeLock.release().catch(console.error)
       }
     }
-  }, [pedidosListos.length, usuarioActivo])
+  }, [hayPedidosListos, usuarioActivo])
 
   // Seguimiento GPS en tiempo real
   useEffect(() => {
     // Si no es el cadete o no hay pedidos listos, no rastrear
-    if (!usuarioActivo || usuarioActivo.rol === 'admin' || pedidosListos.length === 0) {
+    if (!usuarioActivo || usuarioActivo.rol === 'admin' || !hayPedidosListos) {
       setErrorGps(null)
       // Detección de App Nativa (Expo) para detener
       if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
@@ -458,7 +459,7 @@ export default function PaginaCadeteria() {
         navigator.geolocation.clearWatch(watchId)
       }
     }
-  }, [usuarioActivo, pedidosListos.length])
+  }, [usuarioActivo, hayPedidosListos])
 
   // Recaudación y conteo del cadete (entregados hoy)
   const hoy = obtenerFechaNegocio()

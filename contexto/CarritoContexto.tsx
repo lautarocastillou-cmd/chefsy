@@ -72,7 +72,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   useEffect(() => {
     const verificarTurno = async () => {
       try {
-        const res = await fetch('/api/tienda/turno', { cache: 'no-store' })
+        const res = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setTurnoActivo(data.activo)
@@ -339,7 +339,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
 
     try {
-      const resTurno = await fetch('/api/tienda/turno', { cache: 'no-store' })
+      const resTurno = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
       if (resTurno.ok) {
         const dataTurno = await resTurno.json()
         if (!dataTurno.activo) {
