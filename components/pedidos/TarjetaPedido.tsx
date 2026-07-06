@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
+import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -52,40 +53,31 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     setNotaTemporal(pedido.observaciones || '')
   }, [pedido.observaciones])
 
-  const [esAtrasado, setEsAtrasado] = useState(false)
+  const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
+  const ahoraDate = useRelojGlobal(!esFinal)
+  const ahora = ahoraDate.getTime()
 
-  useEffect(() => {
-    const calcularAtraso = () => {
-      const ahora = Date.now()
-      let fechaInicio: string | null | undefined = null
-      let limiteMs = 0
+  let esAtrasado = false
+  if (!esFinal) {
+    let fechaInicio: string | null | undefined = null
+    let limiteMs = 0
 
-      if (pedido.estado === 'nuevo') {
-        fechaInicio = pedido.created_at
-        limiteMs = 1 * 60 * 1000 // 1 min
-      } else if (pedido.estado === 'en_cocina') {
-        fechaInicio = pedido.cocina_at || pedido.created_at
-        limiteMs = 45 * 60 * 1000 // 45 min
-      } else if (pedido.estado === 'listo') {
-        fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
-        limiteMs = 10 * 60 * 1000 // 10 min
-      }
-
-      if (!fechaInicio) {
-        setEsAtrasado(false)
-        return
-      }
-
-      const startMs = new Date(fechaInicio).getTime()
-      setEsAtrasado(ahora - startMs >= limiteMs)
+    if (pedido.estado === 'nuevo') {
+      fechaInicio = pedido.created_at
+      limiteMs = 1 * 60 * 1000 // 1 min
+    } else if (pedido.estado === 'en_cocina') {
+      fechaInicio = pedido.cocina_at || pedido.created_at
+      limiteMs = 45 * 60 * 1000 // 45 min
+    } else if (pedido.estado === 'listo') {
+      fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
+      limiteMs = 10 * 60 * 1000 // 10 min
     }
 
-    calcularAtraso()
-    const interval = setInterval(calcularAtraso, 10000) // Recalcular cada 10 segundos
-    return () => clearInterval(interval)
-  }, [pedido])
-
-  const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
+    if (fechaInicio) {
+      const startMs = new Date(fechaInicio).getTime()
+      esAtrasado = ahora - startMs >= limiteMs
+    }
+  }
 
   const manejarAvance = () => {
     if (siguienteEstado) cambiarEstado(pedido.id, siguienteEstado)

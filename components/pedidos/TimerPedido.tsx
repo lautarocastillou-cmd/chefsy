@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Pedido } from '@/tipos'
 import { parsearFechaHora, calcularDiferenciaSegundos, formatearSegundos } from '@/lib/tiempo'
 import { cn } from '@/lib/utils'
+import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 
 interface PropsTimerPedido {
   pedido: Pedido
@@ -15,22 +16,8 @@ interface PropsTimerPedido {
  * a medida que el pedido cambia de estado.
  */
 const TimerPedido = React.memo(function TimerPedido({ pedido }: PropsTimerPedido) {
-  const [ahora, setAhora] = useState<Date>(() => new Date())
-
-  useEffect(() => {
-    // Si el pedido está en un estado final (entregado o cancelado), los contadores no corren
-    const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-    if (esFinal) return
-
-    // Actualizar cada segundo para reflejar el paso del tiempo real
-    const intervaloId = setInterval(() => {
-      setAhora(new Date())
-    }, 1000)
-
-    return () => {
-      clearInterval(intervaloId)
-    }
-  }, [pedido.estado])
+  const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
+  const ahora = useRelojGlobal(!esFinal)
 
   // Función de parseo segura compatible con todos los navegadores (incluso Safari de iOS)
   const parsearFechaSegura = (val: any): Date | null => {

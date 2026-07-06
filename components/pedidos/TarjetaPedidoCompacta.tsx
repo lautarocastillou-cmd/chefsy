@@ -3,7 +3,7 @@
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerSiguienteEstado, obtenerIconoTipoEntrega } from '@/lib/entrega'
-import { useState, useEffect } from 'react'
+import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 import { cn } from '@/lib/utils'
 import { ChevronRight } from 'lucide-react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
@@ -25,52 +25,38 @@ import React from 'react'
 
 const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsTarjetaCompacta) {
   const { cambiarEstado } = usarPedidos()
-  const [esAtrasado, setEsAtrasado] = useState(false)
-  const [minutos, setMinutos] = useState<string>('0m')
-
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
+  const ahoraDate = useRelojGlobal(!esFinal)
+  const ahora = ahoraDate.getTime()
 
-  useEffect(() => {
-    const calcularTiempos = () => {
-      const ahora = Date.now()
-      let fechaInicio: string | null | undefined = null
-      let limiteMs = 0
+  // Calcular tiempo transcurrido total para mostrar
+  const tInicial = new Date(pedido.created_at || ahora).getTime()
+  const diffTotal = Math.floor((ahora - tInicial) / 60000)
+  const minutos = diffTotal >= 60 ? `${Math.floor(diffTotal / 60)}h ${diffTotal % 60}m` : `${diffTotal}m`
 
-      // Calcular tiempo transcurrido total para mostrar
-      const tInicial = new Date(pedido.created_at || ahora).getTime()
-      const diffTotal = Math.floor((ahora - tInicial) / 60000)
-      if (diffTotal >= 60) {
-        setMinutos(`${Math.floor(diffTotal / 60)}h ${diffTotal % 60}m`)
-      } else {
-        setMinutos(`${diffTotal}m`)
-      }
+  // Calcular si está demorado en su etapa actual
+  let esAtrasado = false
+  if (!esFinal) {
+    let fechaInicio: string | null | undefined = null
+    let limiteMs = 0
 
-      // Calcular si está demorado en su etapa actual
-      if (pedido.estado === 'nuevo') {
-        fechaInicio = pedido.created_at
-        limiteMs = 1 * 60 * 1000 // 1 min
-      } else if (pedido.estado === 'en_cocina') {
-        fechaInicio = pedido.cocina_at || pedido.created_at
-        limiteMs = 45 * 60 * 1000 // 45 min
-      } else if (pedido.estado === 'listo') {
-        fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
-        limiteMs = 10 * 60 * 1000 // 10 min
-      }
-
-      if (!fechaInicio) {
-        setEsAtrasado(false)
-        return
-      }
-
-      const startMs = new Date(fechaInicio).getTime()
-      setEsAtrasado(ahora - startMs >= limiteMs)
+    if (pedido.estado === 'nuevo') {
+      fechaInicio = pedido.created_at
+      limiteMs = 1 * 60 * 1000 // 1 min
+    } else if (pedido.estado === 'en_cocina') {
+      fechaInicio = pedido.cocina_at || pedido.created_at
+      limiteMs = 45 * 60 * 1000 // 45 min
+    } else if (pedido.estado === 'listo') {
+      fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
+      limiteMs = 10 * 60 * 1000 // 10 min
     }
 
-    calcularTiempos()
-    const interval = setInterval(calcularTiempos, 15000)
-    return () => clearInterval(interval)
-  }, [pedido])
+    if (fechaInicio) {
+      const startMs = new Date(fechaInicio).getTime()
+      esAtrasado = ahora - startMs >= limiteMs
+    }
+  }
 
   const cantidadItems = pedido.productos.reduce((sum, p) => sum + p.cantidad, 0)
   const iconoEntrega = obtenerIconoTipoEntrega(pedido.tipoEntrega)
