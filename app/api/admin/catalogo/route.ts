@@ -108,20 +108,6 @@ export async function POST(request: Request) {
       .not('id', 'in', `(${idsProductosNuevos.map((id) => `'${id}'`).join(',')})`)
     if (errProdDel) console.warn('[API Catalogo] No se pudo limpiar productos obsoletos:', errProdDel.message)
 
-    // ── 3. Mantener blob legacy actualizado (respaldo) ──
-    await supabaseAdmin
-      .from('catalogo')
-      .upsert({
-        id: 'principal',
-        categorias,
-        productos,
-        modificadores,
-        updated_at: new Date().toISOString(),
-      })
-      .then(({ error }) => {
-        if (error) console.warn('[API Catalogo] No se pudo actualizar blob legacy:', error.message)
-      })
-
     return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error('[API Catalogo] Error al sincronizar:', error)
