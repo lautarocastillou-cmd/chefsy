@@ -10,6 +10,11 @@ import configuracionFallback from '@/config/operacion.json'
 // ─────────────────────────────────────────────────────
 
 export async function GET() {
+  const sesion = await obtenerSesion()
+  if (!sesion) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
   try {
     const supabase = obtenerSupabaseAdmin()
 

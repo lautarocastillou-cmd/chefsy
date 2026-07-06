@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('chefsy-token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'Acceso denegado. Se requiere sesión de administrador.' }, { status: 403 })
     }
 
     const contentType = request.headers.get('content-type') || ''

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { obtenerProblemasOperativos, AlertaOperativa } from '@/lib/problemas'
 import { obtenerSiguienteEstado, obtenerEtiquetaAccionEstado } from '@/lib/entrega'
@@ -14,25 +14,31 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
   const { pedidos, cambiarEstado, asignarCadete, cadetes } = usarPedidos()
   const [alertas, setAlertas] = useState<AlertaOperativa[]>([])
 
+  // Ref para acceder a la lista más reciente de pedidos sin recrear intervalos
+  const pedidosRef = useRef(pedidos)
+  useEffect(() => {
+    pedidosRef.current = pedidos
+  }, [pedidos])
+
   // Función interna para recalcular las alertas operativas
-  const recalcularAlertas = () => {
-    const problemas = obtenerProblemasOperativos(pedidos)
+  const recalcularAlertas = (listaPedidos = pedidosRef.current) => {
+    const problemas = obtenerProblemasOperativos(listaPedidos)
     setAlertas(problemas)
   }
 
-  // Recalcular cuando cambien los pedidos
+  // Recalcular en tiempo real cuando cambien los pedidos
   useEffect(() => {
-    recalcularAlertas()
+    recalcularAlertas(pedidos)
   }, [pedidos])
 
-  // Temporizador para recalcular cada 30 segundos en el cliente
+  // Temporizador para recalcular cada 30 segundos (solo se monta una vez)
   useEffect(() => {
     const intervalo = setInterval(() => {
-      recalcularAlertas()
+      recalcularAlertas(pedidosRef.current)
     }, 30000)
 
     return () => clearInterval(intervalo)
-  }, [pedidos])
+  }, [])
 
   if (alertas.length === 0) {
     return (

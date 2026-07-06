@@ -19,6 +19,21 @@ export async function POST(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
 
+    // Verificar que el pedido exista y esté en un estado activo
+    const { data: pedidoBd, error: errorBusqueda } = await supabase
+      .from('pedidos')
+      .select('id, estado, archivado')
+      .eq('id', pedido_id)
+      .single()
+
+    if (errorBusqueda || !pedidoBd) {
+      return NextResponse.json({ error: 'Pedido no encontrado.' }, { status: 404 })
+    }
+
+    if (pedidoBd.archivado || ['entregado', 'cancelado'].includes(pedidoBd.estado)) {
+      return NextResponse.json({ error: 'El pedido ya fue finalizado o archivado.' }, { status: 403 })
+    }
+
     // Guardar la suscripción push directamente en la columna push_subscription del pedido
     const { error } = await supabase
       .from('pedidos')
