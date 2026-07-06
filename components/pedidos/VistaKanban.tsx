@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useMemo } from 'react'
 import { Pedido } from '@/tipos'
 import TarjetaPedidoCompacta from './TarjetaPedidoCompacta'
 import { PlusCircle, ChefHat, CheckCircle2, Bike } from 'lucide-react'
@@ -10,35 +11,17 @@ interface PropsVistaKanban {
   onEditarPedido: (pedido: Pedido) => void
 }
 
-export default function VistaKanban({ pedidos, onEditarPedido }: PropsVistaKanban) {
-  // Filtramos pedidos cancelados o entregados (para no mostrar basura en el kanban)
-  const pedidosActivos = pedidos.filter(p => p.estado !== 'cancelado' && p.estado !== 'entregado')
-
-  // Agrupamos por columna
-  const nuevos = pedidosActivos.filter(p => p.estado === 'nuevo')
-  const enCocina = pedidosActivos.filter(p => p.estado === 'en_cocina')
-  const listos = pedidosActivos.filter(p => p.estado === 'listo')
-  
-  // "En Reparto" es un estado derivado para pedidos que ya pasaron de listo pero no están "entregados"
-  // (En nuestro flujo actual, si es delivery y se marcó como listo y tiene cadete, está en reparto.
-  // Pero formalmente nuestro estado llega a 'entregado'. Vamos a agrupar todo lo demás acá si hubiera).
-  // Como solo nos quedan activos, en_cocina, listo y nuevo, la columna "En Reparto" va a estar vacía
-  // a menos que haya estados intermedios. Para que sea útil, vamos a cambiar la lógica del KANBAN:
-  // Columna 1: Nuevos
-  // Columna 2: En Cocina
-  // Columna 3: Listos
-  // Columna 4: En Reparto (vamos a poner los listos que son delivery acá si queremos separarlos, 
-  // pero para no romper la lógica actual, mostraremos los que su tipoEntrega sea delivery y estén listos).
-  
-  // Mejor agrupamos exactamente por los estados reales para no confundir:
-  // 1. Nuevos (nuevo)
-  // 2. En Cocina (en_cocina)
-  // 3. Listos para entregar (listo)
-  // 4. Entregados recientes (entregado, limitados a los últimos 5 para tener un registro visual)
-  // El usuario pidió "Nuevos | En Cocina | Listos | En Reparto".
-  // Haremos:
-  const enReparto = pedidosActivos.filter(p => p.estado === 'listo' && p.tipoEntrega === 'delivery')
-  const listosLocal = pedidosActivos.filter(p => p.estado === 'listo' && p.tipoEntrega !== 'delivery')
+const VistaKanban = React.memo(function VistaKanban({ pedidos, onEditarPedido }: PropsVistaKanban) {
+  const { nuevos, enCocina, enReparto, listosLocal } = useMemo(() => {
+    // Filtramos pedidos cancelados o entregados
+    const activos = pedidos.filter(p => p.estado !== 'cancelado' && p.estado !== 'entregado')
+    return {
+      nuevos: activos.filter(p => p.estado === 'nuevo'),
+      enCocina: activos.filter(p => p.estado === 'en_cocina'),
+      enReparto: activos.filter(p => p.estado === 'listo' && p.tipoEntrega === 'delivery'),
+      listosLocal: activos.filter(p => p.estado === 'listo' && p.tipoEntrega !== 'delivery')
+    }
+  }, [pedidos])
 
   const columnas = [
     {
@@ -134,4 +117,6 @@ export default function VistaKanban({ pedidos, onEditarPedido }: PropsVistaKanba
       })}
     </div>
   )
-}
+})
+
+export default VistaKanban
