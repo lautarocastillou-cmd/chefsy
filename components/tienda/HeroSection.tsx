@@ -116,10 +116,16 @@ export default function HeroSection({
           
           {/* 1. Tipografía Gigante (Hero) */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
-            <h1 className={`hero-title-1 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-white tracking-normal leading-[0.85] uppercase`}>
+            <h1 
+              className={`hero-title-1 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] tracking-normal leading-[0.85] uppercase`}
+              style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
+            >
               {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
             </h1>
-            <h1 className={`hero-title-2 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] text-chefsy tracking-normal leading-[0.85] uppercase`}>
+            <h1 
+              className={`hero-title-2 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] tracking-normal leading-[0.85] uppercase`}
+              style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
+            >
               {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
             </h1>
           </div>
@@ -147,7 +153,10 @@ export default function HeroSection({
 
           {/* 3. Selector de Categorías y Subtítulo */}
           <div className="hero-controls flex flex-col gap-3 lg:gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start mt-2 lg:mt-0">
-            <p className="font-bebas text-4xl md:text-7xl text-white tracking-wide leading-none whitespace-nowrap text-center lg:text-left uppercase">
+            <p 
+              className="font-bebas text-4xl md:text-7xl tracking-wide leading-none whitespace-nowrap text-center lg:text-left uppercase"
+              style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
+            >
               {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
             </p>
             <div className="relative w-full">
@@ -187,7 +196,8 @@ export default function HeroSection({
               <div className="word-carousel w-[50%] h-[60px]">
                 <h2
                   key={animatedWordIndex}
-                  className="word-enter font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide"
+                  className="word-enter font-bebas text-4xl sm:text-5xl md:text-6xl tracking-wide"
+                  style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
                 >
                   {animatedWords[animatedWordIndex]}
                 </h2>

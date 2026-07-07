@@ -53,7 +53,16 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
   useEffect(() => {
     if (configuracion) {
       if (configuracion.color_principal) {
-        document.documentElement.style.setProperty('--chefsy-main', configuracion.color_principal)
+        const parts = configuracion.color_principal.split('|')
+        const brandColor = parts[0] || '#2A6348'
+        const textHero1 = parts[1] || '#ffffff'
+        const textHero2 = parts[2] || brandColor
+        const textMenu = parts[3] || '#ffffff'
+
+        document.documentElement.style.setProperty('--chefsy-main', brandColor)
+        document.documentElement.style.setProperty('--chefsy-text-hero-1', textHero1)
+        document.documentElement.style.setProperty('--chefsy-text-hero-2', textHero2)
+        document.documentElement.style.setProperty('--chefsy-text-menu', textMenu)
       }
       if (typeof window !== 'undefined') {
         try {

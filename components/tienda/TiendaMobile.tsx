@@ -84,6 +84,11 @@ export default function TiendaMobile() {
     }
     fetchMeta()
   }, [])
+
+  // Resetear error de carga de portada cuando cambie la URL en el diseño
+  useEffect(() => {
+    setImgError(false)
+  }, [configuracion?.hero_image_url])
   
   const categoriasActivas = useMemo(() => {
     return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
@@ -199,8 +204,35 @@ export default function TiendaMobile() {
     anton: 'font-anton',
   }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
 
+  const isVideoBg = configuracion?.textura_fondo_url?.match(/\.(mp4|webm)(\?.*)?$/i)
+  const bgImage = (!isVideoBg && configuracion?.textura_fondo_url) ? `url(${configuracion.textura_fondo_url})` : undefined
+
   return (
-    <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24`}>
+    <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24 relative`}>
+      {/* CAPA DE FONDO FIJA (Optimización de rendimiento para Mobile) */}
+      {(isVideoBg || bgImage) && (
+        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
+          {isVideoBg ? (
+            <video 
+              key={configuracion!.textura_fondo_url!}
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-full h-full object-cover opacity-100 will-change-transform"
+            >
+              <source src={configuracion!.textura_fondo_url!} type={`video/${configuracion!.textura_fondo_url!.split('.').pop()?.split('?')[0]}`} />
+            </video>
+          ) : (
+            <div 
+              className="w-full h-full bg-cover bg-center opacity-100 will-change-transform"
+              style={{ backgroundImage: bgImage }}
+            />
+          )}
+        </div>
+      )}
+      {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
+      {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none" />}
       {/* Header App-like minimalista */}
       <div className="bg-[#141414] sticky top-0 z-40 px-4 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
@@ -357,10 +389,16 @@ export default function TiendaMobile() {
                 </div>
 
                 <div className="text-center w-full z-20 relative mb-4 mt-1">
-                  <h1 className="font-bebas text-5xl sm:text-6xl text-white tracking-wide uppercase leading-none drop-shadow-md">
+                  <h1 
+                    className="font-bebas text-5xl sm:text-6xl tracking-wide uppercase leading-none drop-shadow-md"
+                    style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
+                  >
                     {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
                   </h1>
-                  <h2 className="font-bebas text-5xl sm:text-6xl text-chefsy-400 tracking-wide uppercase leading-none drop-shadow-md mt-1">
+                  <h2 
+                    className="font-bebas text-5xl sm:text-6xl tracking-wide uppercase leading-none drop-shadow-md mt-1"
+                    style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
+                  >
                     {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
                   </h2>
                 </div>
@@ -372,7 +410,10 @@ export default function TiendaMobile() {
 
           {/* Menú y Selección de Categorías - Más abajo, junto al catálogo */}
           <div className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
-            <h3 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide uppercase leading-none drop-shadow-md">
+            <h3 
+              className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none drop-shadow-md"
+              style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
+            >
               {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
             </h3>
             <div className="w-full max-w-sm mt-1">

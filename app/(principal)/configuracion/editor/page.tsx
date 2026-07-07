@@ -28,10 +28,19 @@ export default function EditorTienda() {
     init()
   }, [])
 
-  // Inyectar el color primario en vivo para previsualización
+  // Inyectar el color primario en vivo para previsualización (incluyendo colores de textos)
   useEffect(() => {
     if (configLive?.color_principal) {
-      document.documentElement.style.setProperty('--chefsy-main', configLive.color_principal)
+      const parts = configLive.color_principal.split('|')
+      const brandColor = parts[0] || '#2A6348'
+      const textHero1 = parts[1] || '#ffffff'
+      const textHero2 = parts[2] || brandColor
+      const textMenu = parts[3] || '#ffffff'
+
+      document.documentElement.style.setProperty('--chefsy-main', brandColor)
+      document.documentElement.style.setProperty('--chefsy-text-hero-1', textHero1)
+      document.documentElement.style.setProperty('--chefsy-text-hero-2', textHero2)
+      document.documentElement.style.setProperty('--chefsy-text-menu', textMenu)
     }
   }, [configLive?.color_principal])
 
@@ -64,9 +73,62 @@ export default function EditorTienda() {
     await procesarYSubirImagen(file, tipo)
   }
 
+  const optimizarImagenCliente = (file: File, maxWidth = 1200, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/') || file.type.includes('svg') || file.type.includes('gif')) {
+        resolve(file)
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width)
+            width = maxWidth
+          }
+
+          canvas.width = width
+          canvas.height = height
+
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(file)
+            return
+          }
+
+          ctx.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(file)
+              return
+            }
+            const nombreSinExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name
+            const compressedFile = new File([blob], `${nombreSinExt}_opt.webp`, {
+              type: 'image/webp',
+              lastModified: Date.now()
+            })
+            resolve(compressedFile)
+          }, 'image/webp', quality)
+        }
+        img.src = e.target?.result as string
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const procesarYSubirImagen = async (file: File, tipo: 'logo_url' | 'hero_image_url' | 'hero_image_secundaria' | 'textura_fondo_url') => {
     try {
       setSubiendoImagen(tipo)
+
+      const maxWidth = tipo === 'logo_url' ? 600 : 1200
+      const fileParaSubir = await optimizarImagenCliente(file, maxWidth, 0.82)
 
       let oldUrl = ''
       if (tipo === 'hero_image_secundaria') {
@@ -84,10 +146,10 @@ export default function EditorTienda() {
       const uploadRes = await fetch(`/api/admin/upload${oldUrlParam}`, {
         method: 'POST',
         headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-          'X-File-Name': encodeURIComponent(file.name)
+          'Content-Type': fileParaSubir.type || 'application/octet-stream',
+          'X-File-Name': encodeURIComponent(fileParaSubir.name)
         },
-        body: file
+        body: fileParaSubir
       })
 
       const uploadData = await uploadRes.json()
@@ -161,23 +223,98 @@ export default function EditorTienda() {
                 <Smartphone size={14} />
               </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300">Color Principal de la Marca</label>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="color" 
-                  value={configLive.color_principal}
-                  onChange={(e) => handleChange('color_principal', e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer bg-transparent border-0 p-0"
-                />
-                <input 
-                  type="text" 
-                  value={configLive.color_principal}
-                  onChange={(e) => handleChange('color_principal', e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-chefsy-400"
-                />
-              </div>
-            </div>
+            {(() => {
+              const colorParts = (configLive.color_principal || '#2A6348').split('|')
+              const brandColor = colorParts[0] || '#2A6348'
+              const textHero1 = colorParts[1] || '#ffffff'
+              const textHero2 = colorParts[2] || brandColor
+              const textMenu = colorParts[3] || '#ffffff'
+
+              const handleColorChange = (index: number, val: string) => {
+                const newParts = [...colorParts]
+                while (newParts.length < 4) {
+                  newParts.push(newParts.length === 2 ? newParts[0] : (newParts.length === 1 || newParts.length === 3 ? '#ffffff' : newParts[0]))
+                }
+                newParts[index] = val
+                handleChange('color_principal', newParts.join('|'))
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-300 block">Color Principal de la Marca</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color" 
+                        value={brandColor}
+                        onChange={(e) => handleColorChange(0, e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input 
+                        type="text" 
+                        value={brandColor}
+                        onChange={(e) => handleColorChange(0, e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-chefsy-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-300 block">Color de Texto Gigante: Línea 1</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color" 
+                        value={textHero1}
+                        onChange={(e) => handleColorChange(1, e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input 
+                        type="text" 
+                        value={textHero1}
+                        onChange={(e) => handleColorChange(1, e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-chefsy-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-300 block">Color de Texto Gigante: Línea 2</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color" 
+                        value={textHero2}
+                        onChange={(e) => handleColorChange(2, e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input 
+                        type="text" 
+                        value={textHero2}
+                        onChange={(e) => handleColorChange(2, e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-chefsy-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-300 block">Color de Frase/Títulos del Menú</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color" 
+                        value={textMenu}
+                        onChange={(e) => handleColorChange(3, e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input 
+                        type="text" 
+                        value={textMenu}
+                        onChange={(e) => handleColorChange(3, e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-chefsy-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             <div className="space-y-2 pt-2">
               <label className="text-xs font-bold text-slate-300">Textura de Fondo (Opcional)</label>

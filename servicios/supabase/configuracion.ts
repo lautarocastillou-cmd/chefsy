@@ -36,7 +36,7 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
     // Devolver valores por defecto si falla
     return {
       id: 1,
-      color_principal: '#2A6348',
+      color_principal: '#2A6348|#ffffff|#2A6348|#ffffff',
       titulo_principal: '¿Qué pinta hoy?',
       palabras_animadas: ['LOMOS', 'MILAS', 'ZAPPING', 'BURGERS', 'PIZZAS', 'PATYS'],
       logo_url: '/logo.jpg',
