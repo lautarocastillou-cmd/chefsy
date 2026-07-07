@@ -68,6 +68,25 @@ export async function obtenerCatalogoPrincipal(): Promise<CatalogoGuardado | nul
   }
 
   if ((catRes.data?.length ?? 0) === 0) {
+    try {
+      const { data: legacyData, error: legacyError } = await supabaseAnon
+        .from('catalogo')
+        .select('*')
+        .eq('id', 'principal')
+        .single()
+
+      if (!legacyError && legacyData) {
+        console.log('[Servicio Catalogo] Tablas normalizadas vacías. Cargando desde fallback legacy (tabla "catalogo")')
+        return {
+          id:           'principal',
+          categorias:   legacyData.categorias || [],
+          productos:    legacyData.productos || [],
+          modificadores:legacyData.modificadores || [],
+        }
+      }
+    } catch (e) {
+      console.error('[Servicio Catalogo] Error al leer tabla legacy catalogo:', e)
+    }
     return null
   }
 
