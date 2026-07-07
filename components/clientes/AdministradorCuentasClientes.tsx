@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Search, Plus, Key, Edit2, Trash2, X, Check, AlertTriangle, User, Phone, Coins, ShieldAlert
 } from 'lucide-react'
@@ -193,13 +193,15 @@ export default function AdministradorCuentasClientes() {
     }
   }
 
-  const filtrados = (Array.isArray(clientes) ? clientes : []).filter(c => {
-    if (!c) return false
+  const filtrados = useMemo(() => {
     const q = (busqueda || '').toLowerCase()
-    const nom = (c.nombre || '').toString().toLowerCase()
-    const tel = (c.telefono || '').toString().toLowerCase()
-    return nom.includes(q) || tel.includes(q)
-  })
+    return (Array.isArray(clientes) ? clientes : []).filter(c => {
+      if (!c) return false
+      const nom = (c.nombre || '').toString().toLowerCase()
+      const tel = (c.telefono || '').toString().toLowerCase()
+      return nom.includes(q) || tel.includes(q)
+    })
+  }, [clientes, busqueda])
 
   return (
     <div className="space-y-6">

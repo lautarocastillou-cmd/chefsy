@@ -4,7 +4,7 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion } from '@/lib/ubicacion'
 import { generarId } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
@@ -72,7 +72,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   useEffect(() => {
     const verificarTurno = async () => {
       try {
-        const res = await fetch('/api/tienda/turno', { cache: 'no-store' })
+        const res = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setTurnoActivo(data.activo)
@@ -135,7 +135,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [notaPersonalizacion, setNotaPersonalizacion] = useState('')
 
   const [mostrarCheckout, setMostrarCheckout] = useState(false)
-  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('delivery')
+  const [tipoEntrega, setTipoEntrega] = useState<'delivery' | 'retiro'>('retiro')
   const [nombreCliente, setNombreCliente] = useState('')
   const [telefonoCliente, setTelefonoCliente] = useState('')
   const [direccionCliente, setDireccionCliente] = useState('')
@@ -220,6 +220,9 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       }).catch(err => {
         if (err.name !== 'AbortError') console.error(err)
       })
+    } else if (tipoEntrega === 'delivery') {
+      setDistanciaClienteKm(undefined)
+      setCostoEnvio(1500) // Tarifa base mínima de seguridad contra envíos a $0
     } else {
       setDistanciaClienteKm(undefined)
       setCostoEnvio(0)
@@ -262,6 +265,27 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
 
     setProcesandoCompra(true)
     try {
+      let coordsFinal = coordenadasCliente
+      let distFinal = distanciaClienteKm
+      let costoFinal = costoEnvio
+
+      // Capa 2: Geocodificación silenciosa de respaldo si aún no hay coordenadas
+      if (tipoEntrega === 'delivery' && !coordsFinal && direccionCliente.trim()) {
+        try {
+          const resCoords = await buscarCoordenadasPorDireccion(direccionCliente)
+          if (resCoords) {
+            coordsFinal = resCoords
+            setCoordenadasCliente(resCoords)
+            const dist = await obtenerDistanciaConduccion(UBICACION_LOCAL, resCoords)
+            distFinal = Number(dist.toFixed(2))
+            costoFinal = calcularCostoEnvio(dist)
+            setDistanciaClienteKm(distFinal)
+            setCostoEnvio(costoFinal)
+          }
+        } catch (e) {
+          console.error('Fallback geocoding procesarCompra:', e)
+        }
+      }
 
     // Obtener sesión actual (cliente logueado)
     const { data: { session } } = await supabase.auth.getSession()
@@ -299,10 +323,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           categoriaId: item.producto.categoriaId
         }
       }),
-      total: totalCarrito,
-      costoEnvio: tipoEntrega === 'delivery' ? costoEnvio : 0,
-      distanciaKm: distanciaClienteKm,
-      coordenadas: coordenadasCliente || undefined,
+      total: subtotalCarrito + (tipoEntrega === 'delivery' ? costoFinal : 0),
+      costoEnvio: tipoEntrega === 'delivery' ? costoFinal : 0,
+      distanciaKm: distFinal,
+      coordenadas: coordsFinal || undefined,
       estado: 'nuevo',
       metodoPago,
       observaciones: observaciones.trim() || undefined,
@@ -315,7 +339,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
 
     try {
-      const resTurno = await fetch('/api/tienda/turno', { cache: 'no-store' })
+      const resTurno = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
       if (resTurno.ok) {
         const dataTurno = await resTurno.json()
         if (!dataTurno.activo) {
@@ -347,6 +371,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setCarrito([])
     setMostrarCheckout(false)
     setCartAbierto(false)
+    setTipoEntrega('retiro')
     } finally {
       setProcesandoCompra(false)
     }

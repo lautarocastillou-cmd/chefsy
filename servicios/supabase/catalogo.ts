@@ -52,67 +52,78 @@ function mapModificador(row: any): ModificadorCatalogo {
 // ── Obtener catálogo completo ─────────────────────────
 
 /**
- * Obtiene el catálogo principal.
- * Intenta las tablas normalizadas primero; si están vacías
- * hace fallback al blob legacy para máxima resiliencia.
+ * Obtiene el catálogo principal exclusivamente desde las tablas normalizadas.
  */
 export async function obtenerCatalogoPrincipal(): Promise<CatalogoGuardado | null> {
-  // 1. Intentar leer desde tablas normalizadas
   const [catRes, prodRes, modRes] = await Promise.all([
     supabaseAnon.from('categorias').select('*').order('orden'),
     supabaseAnon.from('productos').select('*'),
     supabaseAnon.from('modificadores').select('*'),
   ])
 
-  const hayDatos =
-    !catRes.error &&
-    !prodRes.error &&
-    (catRes.data?.length ?? 0) > 0
-
-  if (hayDatos) {
-    return {
-      id:           'principal',
-      categorias:   (catRes.data  ?? []).map(mapCategoria),
-      productos:    (prodRes.data ?? []).map(mapProducto),
-      modificadores:(modRes.data  ?? []).map(mapModificador),
-    }
+  if (catRes.error || prodRes.error || modRes.error) {
+    const err = catRes.error || prodRes.error || modRes.error
+    console.error('[Servicio Catalogo] Error al leer tablas normalizadas:', err?.message)
+    return null
   }
 
-  // 2. Fallback: blob legacy
-  console.warn('[Catalogo] Tablas normalizadas vacías o con error — usando blob de respaldo.')
-  const { data, error } = await supabaseAnon
-    .from('catalogo')
-    .select('*')
-    .eq('id', 'principal')
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    console.error('[Servicio Catalogo] Error al obtener catálogo:', error.message)
-    throw new Error(error.message)
+  if ((catRes.data?.length ?? 0) === 0) {
+    return null
   }
 
-  return data as CatalogoGuardado
+  return {
+    id:           'principal',
+    categorias:   (catRes.data  ?? []).map(mapCategoria),
+    productos:    (prodRes.data ?? []).map(mapProducto),
+    modificadores:(modRes.data  ?? []).map(mapModificador),
+  }
 }
 
 // ── Inicializar (solo si la tabla no existe) ──────────
 
 /**
- * Inicializa el catálogo principal si no existe.
- * Escribe en el blob legacy para compatibilidad con sistemas anteriores.
+ * Inicializa el catálogo escribiendo en las tablas normalizadas.
  */
 export async function inicializarCatalogo(datosBase: {
   categorias:   CategoriaCatalogo[]
   productos:    ProductoCatalogo[]
   modificadores:ModificadorCatalogo[]
 }): Promise<void> {
-  const { error } = await supabase
-    .from('catalogo')
-    .insert({ id: 'principal', ...datosBase })
+  const [catRes, prodRes, modRes] = await Promise.all([
+    supabase.from('categorias').insert(
+      datosBase.categorias.map((c) => ({
+        id:     c.id,
+        nombre: c.nombre,
+        orden:  c.orden,
+        activa: c.activa,
+      }))
+    ),
+    supabase.from('productos').insert(
+      datosBase.productos.map((p) => ({
+        id:                p.id,
+        categoria_id:      p.categoriaId,
+        nombre:            p.nombre,
+        precio:            p.precio,
+        precio_puntos:     p.precio_puntos ?? null,
+        activo:            p.activo,
+        es_combo:          p.esCombo ?? false,
+        stock:             p.stock ?? null,
+        modificadores_ids: p.modificadoresIds ?? [],
+      }))
+    ),
+    supabase.from('modificadores').insert(
+      datosBase.modificadores.map((m) => ({
+        id:           m.id,
+        nombre:       m.nombre,
+        precio_extra: m.precioExtra,
+      }))
+    ),
+  ])
 
-  if (error) {
-    console.error('[Servicio Catalogo] Error al inicializar catálogo:', error.message)
-    throw new Error(error.message)
+  if (catRes.error || prodRes.error || modRes.error) {
+    const err = catRes.error || prodRes.error || modRes.error
+    console.error('[Servicio Catalogo] Error al inicializar catálogo normalizado:', err?.message)
+    throw new Error(err?.message || 'Error al inicializar catálogo normalizado')
   }
 }
 
