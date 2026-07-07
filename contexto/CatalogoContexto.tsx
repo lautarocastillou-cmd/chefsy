@@ -71,16 +71,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
           const catalogoGuardado = await obtenerCatalogoPrincipal()
 
           if (!catalogoGuardado) {
-            // El catálogo principal no existe, crearlo con valores iniciales
-            try {
-              await inicializarCatalogo({
-                categorias: catsActuales,
-                productos: prodsActuales,
-                modificadores: modsActuales
-              })
-            } catch (insError) {
-              console.error('[Supabase] Error al inicializar catálogo:', insError)
-            }
+            console.warn('[Supabase] El catálogo remoto está vacío. Usando valores locales por defecto.')
           } else {
             const cats = catalogoGuardado.categorias || []
             const prods = catalogoGuardado.productos || []
