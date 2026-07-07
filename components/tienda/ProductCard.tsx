@@ -46,7 +46,6 @@ function ProductCard({
           alt={prod.nombre}
           fill
           unoptimized={isCloudinary}
-          priority={index < 6}
           placeholder="blur"
           blurDataURL={blurSrc}
           sizes="(max-width: 768px) 80px, 96px"
