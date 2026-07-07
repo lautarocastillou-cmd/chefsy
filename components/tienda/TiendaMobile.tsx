@@ -210,10 +210,10 @@ export default function TiendaMobile() {
   const bgImage = (!isVideoBg && configuracion?.textura_fondo_url) ? `url(${configuracion.textura_fondo_url})` : undefined
 
   return (
-    <div className={`bg-[#0c0c0c] text-slate-200 ${fuenteClase} min-h-screen pb-24 relative`}>
+    <div className={`${(isVideoBg || bgImage) ? 'bg-transparent' : 'bg-[#0c0c0c]'} text-slate-200 ${fuenteClase} min-h-screen pb-24 relative`}>
       {/* CAPA DE FONDO FIJA (Optimización de rendimiento para Mobile) */}
       {(isVideoBg || bgImage) && (
-        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
+        <div className="fixed inset-0 w-full h-full -z-20 pointer-events-none">
           {isVideoBg ? (
             <video 
               key={configuracion!.textura_fondo_url!}
@@ -234,7 +234,7 @@ export default function TiendaMobile() {
         </div>
       )}
       {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
-      {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/70 z-0 pointer-events-none" />}
+      {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/75 -z-10 pointer-events-none" />}
       {/* Header App-like minimalista */}
       <div className="bg-[#141414] sticky top-0 z-40 px-4 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
@@ -368,7 +368,7 @@ export default function TiendaMobile() {
         <>
           {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
           {!categoriaSeleccionada && !busqueda && (
-            <div className="relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0c0c0c] px-4 py-8 border-b border-white/5 shadow-2xl flex items-center justify-center">
+            <div className={`relative overflow-hidden px-4 py-8 border-b border-white/5 shadow-2xl flex items-center justify-center ${(isVideoBg || bgImage) ? 'bg-transparent' : 'bg-gradient-to-b from-[#141414] to-[#0c0c0c]'}`}>
               {/* Círculo de fondo animado */}
               <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-chefsy/5 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
               
