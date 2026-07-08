@@ -133,27 +133,41 @@ export default function TiendaMobile() {
     
     let mensaje = configuracion?.whatsapp_mensaje 
       ? `${configuracion.whatsapp_mensaje}\n\n` 
-      : `*¡Hola Chefsy!* Hice un pedido online: \n\n`
+      : `¡Hola Chefsy! Hice un pedido :)\n\n`
     
-    mensaje += `*Orden:* #${pedido.id}\n`
-    mensaje += `*Cliente:* ${pedido.cliente}\n`
-    mensaje += `*Teléfono:* ${pedido.telefono}\n`
-    mensaje += `*Entrega:* ${pedido.tipoEntrega === 'delivery' ? `Delivery a "${pedido.direccion}"` : 'Retiro por el local'}\n`
-    mensaje += `*Método de Pago:* ${pedido.metodoPago?.toUpperCase() || 'NO ESPECIFICADO'}\n`
+    mensaje += `Nombre: ${pedido.cliente}\n`
+    mensaje += `Teléfono: ${pedido.telefono}\n`
+    mensaje += `Entrega: ${pedido.tipoEntrega === 'delivery' ? (pedido.direccion || 'Delivery') : 'Retiro por local'}\n`
+    mensaje += `Método de pago: ${pedido.metodoPago?.toUpperCase() || 'NO ESPECIFICADO'}\n`
     if (pedido.observaciones) {
-      mensaje += `*Notas:* _${pedido.observaciones}_\n`
+      mensaje += `Notas: ${pedido.observaciones}\n`
     }
-    mensaje += `\n*Detalle del pedido:* \n`
+    
+    mensaje += `\n--------------------------------\n\n`
+    mensaje += `Detalle del pedido: \n`
     
     pedido.productos.forEach(p => {
       mensaje += `• ${p.cantidad}x ${p.nombre} - ${formatearPrecio(p.precio * p.cantidad)}\n`
     })
 
-    if (pedido.costoEnvio && pedido.costoEnvio > 0) {
-      mensaje += `• Costo de Envío - ${formatearPrecio(pedido.costoEnvio)}\n`
+    if (pedido.tipoEntrega === 'delivery') {
+      const costo = pedido.costoEnvio || 0
+      if (costo === 0) {
+        mensaje += `• Costo de envío - envío gratis!\n`
+      } else {
+        mensaje += `• Costo de envío - ${formatearPrecio(costo)}\n`
+      }
     }
-
-    mensaje += `\n*Total a pagar: ${formatearPrecio(pedido.total)}*\n`
+    
+    const subtotal = pedido.total - (pedido.costoEnvio || 0)
+    mensaje += `\nSubtotal: ${formatearPrecio(subtotal)}\n`
+    mensaje += `Total: ${formatearPrecio(pedido.total)}\n`
+    
+    mensaje += `\n--------------------------------\n\n`
+    mensaje += `• Datos de pago\n`
+    mensaje += `• Alias: chefsy\n`
+    mensaje += `• Titular: Hector Alejandro Obregón\n`
+    mensaje += `• Banco: Mercado Pago`
 
     return `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
   }, [configuracion])
