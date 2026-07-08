@@ -193,8 +193,7 @@ Subtotal: ${formatearPrecio(subtotal)}
 ${textoEnvio}
 Total: ${formatearPrecio(total)}
 ----------------------------------
-Método de Pago: ${etiquetaMetodoPago[pedido.metodoPago] || pedido.metodoPago}
-${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim()
+${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(/\n-+$/, '')
 
     navigator.clipboard.writeText(texto)
     setTicketCopiado(true)
