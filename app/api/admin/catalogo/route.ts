@@ -108,6 +108,18 @@ export async function POST(request: Request) {
       .not('id', 'in', `(${idsProductosNuevos.map((id) => `'${id}'`).join(',')})`)
     if (errProdDel) console.warn('[API Catalogo] No se pudo limpiar productos obsoletos:', errProdDel.message)
 
+    // 2d. Mantener el blob legacy actualizado como respaldo de emergencia
+    const { error: errLegacy } = await supabaseAdmin
+      .from('catalogo')
+      .upsert({
+        id: 'principal',
+        categorias,
+        productos,
+        modificadores,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
+    if (errLegacy) console.warn('[API Catalogo] No se pudo actualizar el catálogo legacy de respaldo:', errLegacy.message)
+
     return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error('[API Catalogo] Error al sincronizar:', error)

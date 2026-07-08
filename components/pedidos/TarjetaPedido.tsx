@@ -10,13 +10,14 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Bell } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
+import { usarCatalogo } from '@/contexto/CatalogoContexto'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -41,17 +42,25 @@ import React from 'react'
 
 const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
+  const { modificadores: catalogoModificadores } = usarCatalogo()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
   const [verMapa, setVerMapa] = useState(false)
   const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
-  const [menuNotificacionesAbierto, setMenuNotificacionesAbierto] = useState(false)
+  const [ticketCopiado, setTicketCopiado] = useState(false)
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
   }, [pedido.observaciones])
+
+  useEffect(() => {
+    if (ticketCopiado) {
+      const t = setTimeout(() => setTicketCopiado(false), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [ticketCopiado])
 
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const ahoraDate = useRelojGlobal(!esFinal)
@@ -111,23 +120,84 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
     setTimeout(() => setCopiado(false), 2000)
   }
 
-  const enviarNotificacion = async (mensaje: string) => {
-    setMenuNotificacionesAbierto(false)
-    try {
-      const res = await fetch('/api/webpush/notificar-cliente', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pedidoId: pedido.id, mensaje })
-      })
-      const data = await res.json()
-      if (data.ok) {
-        alert(`Notificación push enviada al cliente: "${mensaje}"`)
-      } else {
-        alert(data.error || 'El cliente no tiene notificaciones activadas para este pedido.')
+  const copiarTicketCliente = () => {
+    let subtotal = 0
+
+    const lineasProductos = pedido.productos.map(p => {
+      // Intentar extraer extras e instrucciones del nombre
+      // Formato: "Nombre Base (+ Extra 1, Extra 2 | \"Instruccion\")" o "Nombre Base (+ Extra 1, Extra 2)"
+      const match = p.nombre.match(/^(.*?)\s*\(\+\s*(.*?)\s*\)$/)
+      let nombreBase = p.nombre
+      let extrasTexto = ''
+      let precioBase = p.precio // precio unitario del producto con extras
+      let extrasDetalle: { nombre: string; precio: number }[] = []
+
+      if (match) {
+        nombreBase = match[1].trim()
+        const contenidoParentesis = match[2]
+        
+        // Separar por " | " para dividir extras de comentarios/notas
+        const partes = contenidoParentesis.split('|')
+        const extrasParte = partes[0].trim()
+        const notasParte = partes[1] ? partes[1].trim() : ''
+
+        // Procesar extras
+        if (extrasParte && !extrasParte.includes('[PAGADO CON PUNTOS]')) {
+          const nombresExtras = extrasParte.split(',').map(e => e.trim())
+          let sumaExtras = 0
+          
+          nombresExtras.forEach(nombreExtra => {
+            // Buscar en el catálogo de modificadores
+            const modInfo = catalogoModificadores?.find(
+              (m: any) => m.nombre.toLowerCase().trim() === nombreExtra.toLowerCase().trim()
+            )
+            const precioExtra = modInfo ? Number(modInfo.precioExtra || 0) : 0
+            sumaExtras += precioExtra
+            extrasDetalle.push({ nombre: nombreExtra, precio: precioExtra })
+          })
+          
+          // El precio base sin extras
+          precioBase = Math.max(0, p.precio - sumaExtras)
+        }
+        
+        // Construir líneas de extras para el texto del ticket
+        const lineasExtras = extrasDetalle.map(ext => 
+          `   + ${ext.nombre} (+${formatearPrecio(ext.precio)})`
+        ).join('\n')
+
+        const lineaNota = notasParte ? `   (Nota: ${notasParte})` : ''
+        
+        extrasTexto = (lineasExtras ? '\n' + lineasExtras : '') + (lineaNota ? '\n' + lineaNota : '')
       }
-    } catch (e) {
-      alert('Hubo un error al enviar la notificación.')
+
+      const totalProducto = p.precio * p.cantidad
+      subtotal += totalProducto
+
+      return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${extrasTexto}`
+    }).join('\n\n')
+
+    const costoEnvio = pedido.costoEnvio || 0
+    const total = subtotal + costoEnvio
+
+    let textoEnvio = ''
+    if (pedido.tipoEntrega === 'delivery') {
+      textoEnvio = `\nEnvío: ${formatearPrecio(costoEnvio)}`
     }
+
+    const texto = `Este es el resumen de tu pedido en Chefsy.
+
+${lineasProductos}
+
+----------------------------------
+Subtotal: ${formatearPrecio(subtotal)}
+${textoEnvio}
+Total: ${formatearPrecio(total)}
+----------------------------------
+Método de Pago: ${etiquetaMetodoPago[pedido.metodoPago] || pedido.metodoPago}
+${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim()
+
+    navigator.clipboard.writeText(texto)
+    setTicketCopiado(true)
   }
 
   const imprimirComanda = () => {
@@ -200,29 +270,17 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
             >
               <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
-            <div className="relative">
-              <button 
-                onClick={() => setMenuNotificacionesAbierto(!menuNotificacionesAbierto)}
-                className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950/30 transition-all p-1 rounded-md border border-yellow-100 dark:border-yellow-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
-                title="Avisar al cliente por la App"
-              >
-                <Bell size={11} className="dark:text-yellow-400" />
-              </button>
-              
-              {menuNotificacionesAbierto && (
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-[#3d3d3d] rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.2)] z-50 overflow-hidden flex flex-col">
-                  <button onClick={() => enviarNotificacion('¡Tu pedido está en cocina! 🍳')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] border-b border-slate-100 dark:border-[#333] transition-colors">
-                    Avisar: En Cocina
-                  </button>
-                  <button onClick={() => enviarNotificacion('¡Tu pedido está en camino! 🛵')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] border-b border-slate-100 dark:border-[#333] transition-colors">
-                    Avisar: En Camino
-                  </button>
-                  <button onClick={() => enviarNotificacion('¡Tu pedido está listo para retirar! 🏪')} className="text-left px-3 py-2.5 text-[11px] font-bold text-slate-700 dark:text-[#e6e6e6] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
-                    Avisar: Listo / Retiro
-                  </button>
-                </div>
+            <button 
+              onClick={copiarTicketCliente}
+              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all p-1 rounded-md border border-amber-100 dark:border-amber-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+              title="Copiar Ticket / Desglose para el Cliente"
+            >
+              {ticketCopiado ? (
+                <Check size={11} className="text-green-500" />
+              ) : (
+                <Receipt size={11} className="dark:text-amber-400" />
               )}
-            </div>
+            </button>
           </div>
         </div>
       </div>
