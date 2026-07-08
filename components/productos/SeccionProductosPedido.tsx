@@ -43,7 +43,24 @@ export default function SeccionProductosPedido({
   useEffect(() => {
     if (mostrarBuscador && inputBuscadorRef.current) {
       inputBuscadorRef.current.focus()
+      inputBuscadorRef.current.select()
     }
+  }, [mostrarBuscador])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && (e.key === '<' || e.key === '>')) {
+        e.preventDefault()
+        setMostrarBuscador(true)
+        if (mostrarBuscador && inputBuscadorRef.current) {
+          inputBuscadorRef.current.focus()
+          inputBuscadorRef.current.select()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [mostrarBuscador])
 
   const agregarProductoRapido = (producto: ProductoCatalogo) => {
