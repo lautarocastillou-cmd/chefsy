@@ -212,7 +212,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   const prevPedidosRef = useRef<Pedido[]>([])
-  const esCambioLocalRef = useRef(false)
+  const cambiosLocalesRef = useRef<Record<string, number>>({})
 
   const { usuarioActivo } = usarAuth()
   const { agregarNotificacion } = usarTemaNotificacion()
@@ -223,7 +223,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const { estaListo, dbEstado, setDbEstado } = usePedidosRealtime({
     despachar,
     prevPedidosRef,
-    esCambioLocalRef,
+    cambiosLocalesRef,
   })
 
   useSincronizacionOffline({ setDbEstado, agregarNotificacion, isAdmin })
@@ -331,7 +331,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       nuevosPedidos.forEach((nuevo) => {
         if (!esCadete && !esVistaCadeteria) {
           reproducirSonidoCampanaCocina()
-          if (!esCambioLocalRef.current) {
+          const ultCambio = cambiosLocalesRef.current[nuevo.id] || 0
+          const esCambioReciente = Date.now() - ultCambio < 4000
+          if (!esCambioReciente) {
             agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
           }
         }
@@ -348,7 +350,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           nuevo.cadete_id === usuarioActivo?.usuario &&
           anterior.cadete_id !== nuevo.cadete_id
 
-        if (seLeAsignoAlCadete && !esCambioLocalRef.current) {
+        const ultCambio = cambiosLocalesRef.current[nuevo.id] || 0
+        const esCambioReciente = Date.now() - ultCambio < 4000
+
+        if (seLeAsignoAlCadete && !esCambioReciente) {
           agregarNotificacion(`🔔 ¡Tenés un nuevo pedido! para ${nuevo.cliente}`, 'info')
           reproducirSonidoNotificacion()
         }
@@ -365,7 +370,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
           const esPedidoPropioDelCadete = esCadete && nuevo.cadete_id === usuarioActivo?.usuario
 
-          if (esPedidoPropioDelCadete && !esCambioLocalRef.current) {
+          if (esPedidoPropioDelCadete && !esCambioReciente) {
             const estadosPermitidosParaCadete = ['en_cocina', 'listo', 'entregado', 'cancelado']
             if (estadosPermitidosParaCadete.includes(nuevo.estado)) {
               let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
@@ -379,12 +384,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
           if (!esCadete && !esVistaCadeteria) {
             if (nuevo.estado === 'entregado') {
-              if (!esCambioLocalRef.current) {
+              if (!esCambioReciente) {
                 agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
                 reproducirSonidoNotificacion()
               }
             } else {
-              if (!esCambioLocalRef.current) {
+              if (!esCambioReciente) {
                 agregarNotificacion(
                   `Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`,
                   'info'
@@ -397,14 +402,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       })
     }
 
-    const timeoutFlag = setTimeout(() => {
-      esCambioLocalRef.current = false
-    }, 100)
     prevPedidosRef.current = estado.pedidos
 
     return () => {
       clearTimeout(timeoutCache)
-      clearTimeout(timeoutFlag)
     }
   }, [estado.pedidos, estaListo, usuarioActivo])
 
@@ -438,7 +439,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   // ── Operaciones CRUD ──────────────────────────────────
 
   const agregarPedido = async (pedido: Pedido) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[pedido.id] = Date.now()
     despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
     reproducirSonidoCampanaCocina()
     try {
@@ -450,7 +451,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const editarPedido = async (pedido: Pedido) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[pedido.id] = Date.now()
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
     try {
       await enviarAccionPedido({ accion: 'editar', id: pedido.id, pedido })
@@ -468,7 +469,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido && pedido.estado !== nuevoEstado) {
       const estadoAnterior = pedido.estado
-      esCambioLocalRef.current = true
+      cambiosLocalesRef.current[id] = Date.now()
 
       const updates = obtenerCamposDeTiempoParaEstado(nuevoEstado, pedido)
       despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
@@ -489,7 +490,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
               etiqueta: 'Deshacer',
               alHacerClick: async () => {
                 if (!pedido) return
-                esCambioLocalRef.current = true
+                cambiosLocalesRef.current[id] = Date.now()
                 const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
                 despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
                 try {
@@ -546,7 +547,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         return
     }
 
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[id] = Date.now()
     updates.estado = estadoAnterior
     despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
 
@@ -560,7 +561,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const marcarPagoConfirmado = async (id: string, confirmado: boolean) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
       despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, pago_confirmado: confirmado } })
@@ -574,7 +575,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const eliminarPedido = async (id: string) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[id] = Date.now()
     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
     try {
       await enviarAccionPedido({ accion: 'eliminar', id })
@@ -589,7 +590,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cadete_id: string | null,
     cadete_nombre: string | null
   ) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
       despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, cadete_id, cadete_nombre } })
@@ -603,7 +604,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const cambiarMetodoPago = async (id: string, metodoPago: string) => {
-    esCambioLocalRef.current = true
+    cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
       despachar({

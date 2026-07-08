@@ -64,6 +64,15 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       if (pedidoInicial.montoTransferencia) setMontoTransferencia(String(pedidoInicial.montoTransferencia))
       if (pedidoInicial.montoTarjeta) setMontoTarjeta(String(pedidoInicial.montoTarjeta))
       
+      // Sincronizar estados de envío manual y costos
+      const isManual = !!pedidoInicial.costoEnvio && pedidoInicial.distanciaKm === undefined
+      setEnvioManual(isManual)
+      setCostoEnvioManualInput(pedidoInicial.costoEnvio?.toString() || '')
+      setDistanciaKm(pedidoInicial.distanciaKm || 0)
+      if (!isManual && pedidoInicial.costoEnvio) {
+        setCostoEnvio(pedidoInicial.costoEnvio)
+      }
+
       const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
         id: p.id,
         idCategoria: p.categoriaId || '',
@@ -101,7 +110,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   useEffect(() => {
     const controller = new AbortController()
 
-    if (pideDireccion && coordenadas) {
+    if (pideDireccion && coordenadas && !envioManual) {
       setCargandoEnvio(true)
       obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas, controller.signal)
         .then((dist) => {
@@ -114,13 +123,13 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
             setCargandoEnvio(false)
           }
         })
-    } else {
+    } else if (!pideDireccion) {
       setDistanciaKm(0)
       setCostoEnvio(0)
     }
 
     return () => controller.abort()
-  }, [coordenadas, pideDireccion])
+  }, [coordenadas, pideDireccion, envioManual])
 
   // 5. Acciones
   const aplicarDatosCRM = () => {

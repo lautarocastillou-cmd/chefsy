@@ -19,13 +19,13 @@ type AccionDespachar =
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
   prevPedidosRef: MutableRefObject<Pedido[]>
-  esCambioLocalRef: MutableRefObject<boolean>
+  cambiosLocalesRef: MutableRefObject<Record<string, number>>
 }
 
 export function usePedidosRealtime({
   despachar,
   prevPedidosRef,
-  esCambioLocalRef,
+  cambiosLocalesRef,
 }: UsePedidosRealtimeProps) {
   const [estaListo, setEstaListo] = useState(false)
   const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
@@ -80,7 +80,9 @@ export function usePedidosRealtime({
 
     const channel = suscribirAPedidos(
       (pedido, archivado) => {
-        if (esCambioLocalRef.current) return
+        const ultCambio = cambiosLocalesRef.current[pedido.id] || 0
+        if (Date.now() - ultCambio < 4000) return
+
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
         } else {
@@ -88,7 +90,8 @@ export function usePedidosRealtime({
         }
       },
       (id) => {
-        if (esCambioLocalRef.current) return
+        const ultCambio = cambiosLocalesRef.current[id] || 0
+        if (Date.now() - ultCambio < 4000) return
         despachar({ tipo: 'ELIMINAR_PEDIDO', id })
       }
     )
