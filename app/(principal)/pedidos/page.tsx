@@ -16,6 +16,7 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
+import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -53,6 +54,11 @@ export default function PaginaPedidos() {
     }
     setModalNuevoPedidoAbierto(true)
   }
+
+  useAtajoNuevoPedido({
+    modalAbierto: modalNuevoPedidoAbierto || Boolean(pedidoAEditar),
+    onAbrirModal: handleAbrirNuevoPedido,
+  })
 
   // Cargar pedidos del día seleccionado cuando corresponda (sincronizado con cambios en tiempo real)
   useEffect(() => {

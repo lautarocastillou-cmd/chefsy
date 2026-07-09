@@ -13,14 +13,21 @@ import { usarAuth } from '@/contexto/AuthContexto'
 import VerificadorLogin from '@/components/auth/VerificadorLogin'
 import NotificadorAccesos from '@/components/auth/NotificadorAccesos'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
 import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
+import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
 export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const { usuarioActivo, estaListoAuth } = usarAuth()
   const pathname = usePathname()
+  const router = useRouter()
+
+  useAtajoNuevoPedido({
+    modalAbierto: pathname === '/dashboard' || pathname === '/pedidos' || pathname === '/nuevo-pedido',
+    onAbrirModal: () => router.push('/nuevo-pedido'),
+  })
 
   if (!estaListoAuth) {
     return (
