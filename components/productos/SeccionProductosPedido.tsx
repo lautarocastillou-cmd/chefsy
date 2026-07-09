@@ -49,13 +49,28 @@ export default function SeccionProductosPedido({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && (e.key === '<' || e.key === '>')) {
+      // Cerrar buscador con Escape
+      if (e.key === 'Escape' && mostrarBuscador) {
+        e.preventDefault()
+        setMostrarBuscador(false)
+        setBusqueda('')
+        return
+      }
+
+      // Detectar teclas < y > (tanto por caracter como por codigo de tecla fisica)
+      const esTeclaMenorMayor = 
+        e.key === '<' || 
+        e.key === '>' || 
+        e.code === 'IntlBackslash' || 
+        e.code === 'Backslash' || 
+        e.code === 'Backquote';
+
+      // Acceso directo universal Ctrl + K
+      const esBuscarAlternativo = e.key.toLowerCase() === 'k' || e.code === 'KeyK';
+
+      if (e.ctrlKey && (esTeclaMenorMayor || esBuscarAlternativo)) {
         e.preventDefault()
         setMostrarBuscador(true)
-        if (mostrarBuscador && inputBuscadorRef.current) {
-          inputBuscadorRef.current.focus()
-          inputBuscadorRef.current.select()
-        }
       }
     }
 
