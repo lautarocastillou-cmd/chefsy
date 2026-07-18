@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
-// Coordenadas del local Chefsy por defecto
+// Coordenadas del local Chefsy
 const LOCAL_LAT = -32.8894
 const LOCAL_LNG = -68.8458
 
@@ -17,36 +17,27 @@ export async function GET(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
 
-    // Solo pedimos las columnas estrictamente necesarias para el cliente por privacidad
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, estado, tipoEntrega, coordenadas, cadete_nombre, cadete_coordenadas')
+      .select('id, cliente, estado, coordenadas, cadete_nombre, cadete_coordenadas')
       .eq('id', pedidoId)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
-      }
-      throw error
-    }
-
-    if (!data) {
+    if (error || !data) {
       return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
     }
 
-    // Si no es delivery, no hay rastreo
-    if (data.tipoEntrega !== 'delivery') {
-      return NextResponse.json({ error: 'Este pedido no es para envío a domicilio' }, { status: 400 })
-    }
+    // Mostrar las coordenadas del cadete solo si el pedido está activo (no entregado/cancelado)
+    const estadosActivos = ['en_cocina', 'listo', 'en_camino']
+    const mostrarCadete = estadosActivos.includes(data.estado)
 
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
       estado: data.estado,
-      cadete_nombre: data.cadete_nombre,
-      cadete_coordenadas: data.estado === 'en_camino' ? data.cadete_coordenadas : null, // Ocultar si ya se entregó
-      destino_coordenadas: data.coordenadas,
+      cadete_nombre: data.cadete_nombre ?? null,
+      cadete_coordenadas: mostrarCadete ? (data.cadete_coordenadas ?? null) : null,
+      destino_coordenadas: data.coordenadas ?? null,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG }
     })
   } catch (error) {
@@ -54,3 +45,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+

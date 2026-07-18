@@ -107,13 +107,13 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Datos incompletos para actualizar_estado.' }, { status: 400 })
         }
 
-        const ESTADOS_VALIDOS = ['nuevo', 'en_cocina', 'listo', 'entregado', 'cancelado']
+        const ESTADOS_VALIDOS = ['nuevo', 'en_cocina', 'listo', 'en_camino', 'entregado', 'cancelado']
         if (!ESTADOS_VALIDOS.includes(estado)) {
           return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 })
         }
 
-        // Un cadete solo puede cambiar el estado a "entregado" o "listo"
-        if (rol === 'cadete' && estado !== 'entregado' && estado !== 'listo') {
+        // Un cadete solo puede cambiar el estado a "en_camino" o "entregado"
+        if (rol === 'cadete' && estado !== 'entregado' && estado !== 'en_camino') {
           return NextResponse.json({ error: 'Operación no permitida para el rol de cadete.' }, { status: 403 })
         }
 

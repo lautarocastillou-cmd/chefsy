@@ -76,6 +76,8 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
   const isTerminado = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const isEnPreparacion = pedido.estado === 'nuevo' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
   const isEnCamino = pedido.estado === 'en_camino'
+  // Mostrar el mapa si hay coordenadas del cadete (sea en cocina, listo o en camino)
+  const tieneUbicacionCadete = !!(pedido as any).cadete_coordenadas
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
@@ -111,7 +113,7 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
 
       {/* Contenido principal (Mapa o Estado visual) */}
       <div className="flex-1 w-full relative">
-        {isEnCamino ? (
+        {tieneUbicacionCadete ? (
           <div className="absolute inset-0">
             <MapaSeguimiento pedido={pedido} />
           </div>
