@@ -18,6 +18,7 @@ import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'
+import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
 export default function PaginaDashboard() {
   const { pedidos, cadetes, estadoTurno } = usarPedidos()
@@ -33,6 +34,11 @@ export default function PaginaDashboard() {
     }
     setModalNuevoPedidoAbierto(true)
   }
+
+  useAtajoNuevoPedido({
+    modalAbierto: modalNuevoPedidoAbierto || Boolean(pedidoSeleccionadoParaEditar),
+    onAbrirModal: handleAbrirNuevoPedido,
+  })
 
   // ── Cálculo de métricas ──
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length

@@ -41,26 +41,55 @@ export default function SeccionProductosPedido({
   const inputBuscadorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (mostrarBuscador && inputBuscadorRef.current) {
-      inputBuscadorRef.current.focus()
-      inputBuscadorRef.current.select()
+    if (mostrarBuscador) {
+      const focusTimeout = setTimeout(() => {
+        if (inputBuscadorRef.current) {
+          inputBuscadorRef.current.focus()
+          inputBuscadorRef.current.select()
+        }
+      }, 30)
+      return () => clearTimeout(focusTimeout)
     }
   }, [mostrarBuscador])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && (e.key === '<' || e.key === '>')) {
+      // Cerrar buscador con Escape
+      if (e.key === 'Escape' && mostrarBuscador) {
         e.preventDefault()
+        setMostrarBuscador(false)
+        setBusqueda('')
+        return
+      }
+
+      // Detectar teclas < y > por todos sus caracteres, códigos físicos y keyCode en Windows/Mac/Linux
+      const esTeclaMenorMayor = 
+        e.key === '<' || 
+        e.key === '>' || 
+        e.code === 'IntlBackslash' || 
+        e.code === 'Backslash' || 
+        e.code === 'Backquote' ||
+        e.code === 'Comma' ||
+        e.code === 'Period' ||
+        e.keyCode === 226 ||
+        e.keyCode === 188 ||
+        e.keyCode === 190 ||
+        e.keyCode === 60 ||
+        e.keyCode === 62;
+
+      // Acceso directo universal Ctrl + K
+      const esBuscarAlternativo = e.key.toLowerCase() === 'k' || e.code === 'KeyK' || e.keyCode === 75;
+
+      if ((e.ctrlKey || e.metaKey) && (esTeclaMenorMayor || esBuscarAlternativo)) {
+        e.preventDefault()
+        e.stopPropagation()
         setMostrarBuscador(true)
-        if (mostrarBuscador && inputBuscadorRef.current) {
-          inputBuscadorRef.current.focus()
-          inputBuscadorRef.current.select()
-        }
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    // Usar useCapture: true para interceptar el evento antes que cualquier input o modal lo detenga
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [mostrarBuscador])
 
   const agregarProductoRapido = (producto: ProductoCatalogo) => {
