@@ -17,11 +17,13 @@ export async function GET(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
 
+    console.log('[API Rastreo] Buscando pedido con id:', pedidoId)
+
     const { data, error } = await supabase
       .from('pedidos')
       .select('id, cliente, estado, coordenadas, cadete_nombre, cadete_coordenadas')
       .eq('id', pedidoId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       // PGRST116 = no rows found (not found)
