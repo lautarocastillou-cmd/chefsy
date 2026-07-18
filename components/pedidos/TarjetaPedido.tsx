@@ -484,14 +484,26 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         )
       )}
 
-      {/* Botón de Seguimiento GPS */}
+      {/* Botones de Seguimiento GPS */}
       {pedido.cadete_id && !esFinal && (
-        <button
-          onClick={() => setVerMapa(true)}
-          className="w-full mt-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-        >
-          <MapPin size={14} /> Seguir Envío Real-Time
-        </button>
+        <div className="flex gap-1.5 mt-1.5">
+          <button
+            onClick={() => setVerMapa(true)}
+            className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <MapPin size={14} /> Mapa (Admin)
+          </button>
+          <button
+            onClick={() => {
+              const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+              navigator.clipboard.writeText(url)
+              alert('Enlace de rastreo para el cliente copiado al portapapeles.')
+            }}
+            className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <Copy size={14} /> Link Cliente
+          </button>
+        </div>
       )}
 
       {/* Modal del Mapa */}
