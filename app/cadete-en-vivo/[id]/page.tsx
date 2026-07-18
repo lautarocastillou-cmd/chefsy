@@ -66,7 +66,8 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-sm w-full border border-gray-100">
           <div className="text-5xl mb-4">😕</div>
           <h1 className="text-xl font-bold text-gray-800 mb-2">Ups...</h1>
-          <p className="text-gray-500">{error || 'No se encontró el pedido.'}</p>
+          <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
+          <p className="text-gray-300 text-xs mt-3 font-mono break-all">ID: {typeof window !== 'undefined' ? window.location.pathname : ''}</p>
         </div>
       </div>
     )

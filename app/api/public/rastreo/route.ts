@@ -23,7 +23,17 @@ export async function GET(request: Request) {
       .eq('id', pedidoId)
       .single()
 
-    if (error || !data) {
+    if (error) {
+      // PGRST116 = no rows found (not found)
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+      }
+      // Cualquier otro error de Supabase — lo exponemos para poder diagnosticarlo
+      console.error('[API Rastreo] Error de Supabase:', error)
+      return NextResponse.json({ error: `Error de base de datos: ${error.message}` }, { status: 500 })
+    }
+
+    if (!data) {
       return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
     }
 
