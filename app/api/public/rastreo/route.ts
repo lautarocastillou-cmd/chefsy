@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
-// Coordenadas del local Chefsy
-const LOCAL_LAT = -32.8894
-const LOCAL_LNG = -68.8458
+// Coordenadas del local Chefsy (San Fernando del Valle de Catamarca)
+const LOCAL_LAT = -28.462809031658047
+const LOCAL_LNG = -65.77850065400358
 
 // GET /api/public/rastreo?id=[UUID]
 export async function GET(request: Request) {

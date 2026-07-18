@@ -22,17 +22,21 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
         
         // Mapear los datos públicos a un objeto parcial compatible con Pedido
         setPedido({
-          ...data,
-          // Rellenamos campos requeridos por el tipo Pedido pero irrelevantes acá
-          productos: [], 
+          id: data.id,
+          cliente: data.cliente,
+          estado: data.estado,
+          cadete_nombre: data.cadete_nombre ?? null,
+          cadete_coordenadas: data.cadete_coordenadas ?? null,
+          coordenadas: data.destino_coordenadas ?? null,
+          local_coordenadas: data.local_coordenadas ?? null,
+          tipoEntrega: data.tipoEntrega ?? 'delivery',
+          // Campos requeridos por el tipo Pedido pero irrelevantes acá
+          productos: [],
           total: 0,
           metodoPago: 'efectivo',
           telefono: '',
           direccion: '',
-          tipoEntrega: data.tipoEntrega,
-          coordenadas: data.destino_coordenadas,
-          // cadete_coordenadas ya viene en data si está en camino
-        } as Pedido)
+        } as unknown as Pedido)
 
       } catch (err: any) {
         setError(err.message)
