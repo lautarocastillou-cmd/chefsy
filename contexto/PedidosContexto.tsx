@@ -364,6 +364,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             nuevo: 'Nuevo',
             en_cocina: 'En Cocina',
             listo: 'Listo',
+            en_camino: 'En Camino',
             entregado: 'Entregado',
             cancelado: 'Cancelado',
           }
@@ -478,6 +479,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         nuevo: 'Nuevo',
         en_cocina: 'En Cocina',
         listo: 'Listo',
+        en_camino: 'En Camino',
         entregado: 'Entregado',
         cancelado: 'Cancelado',
       }

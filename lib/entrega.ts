@@ -80,7 +80,8 @@ export function obtenerSiguienteEstado(
     const flujo: Record<EstadoPedido, EstadoPedido | null> = {
       nuevo: 'en_cocina',
       en_cocina: 'listo',
-      listo: 'entregado',
+      listo: 'en_camino',
+      en_camino: 'entregado',
       entregado: null,
       cancelado: null,
     }
@@ -91,6 +92,7 @@ export function obtenerSiguienteEstado(
     nuevo: 'en_cocina',
     en_cocina: 'listo',
     listo: 'entregado',
+    en_camino: 'entregado',
     entregado: null,
     cancelado: null,
   }

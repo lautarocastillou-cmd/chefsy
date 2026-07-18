@@ -29,6 +29,7 @@ const bordesPorEstado: Record<Pedido['estado'], string> = {
   nuevo:      'border-l-[3px] border-l-blue-500',
   en_cocina:  'border-l-[3px] border-l-orange-500',
   listo:      'border-l-[3px] border-l-amber-500',
+  en_camino:  'border-l-[3px] border-l-indigo-500',
   entregado:  'border-l-[3px] border-l-green-500',
   cancelado:  'border-l-[3px] border-l-red-500',
 }
