@@ -8,6 +8,7 @@ export type EstadoPedido =
   | 'nuevo'
   | 'en_cocina'
   | 'listo'
+  | 'en_camino'
   | 'entregado'
   | 'cancelado'
 

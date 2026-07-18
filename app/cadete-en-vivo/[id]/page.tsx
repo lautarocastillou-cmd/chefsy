@@ -74,7 +74,7 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
 
   // Vista según el estado del pedido
   const isTerminado = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-  const isEnPreparacion = pedido.estado === 'pendiente' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
+  const isEnPreparacion = pedido.estado === 'nuevo' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
   const isEnCamino = pedido.estado === 'en_camino'
 
   return (
