@@ -104,7 +104,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const esperandoGps = !pedido.cadete_coordenadas
 
   return (
-    <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner relative z-0">
+    <div className="w-full h-full rounded-xl overflow-hidden relative z-0">
       <style dangerouslySetInnerHTML={{__html: `
         .animated-marker {
           transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);

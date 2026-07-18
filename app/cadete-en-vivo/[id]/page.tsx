@@ -61,21 +61,20 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   if (cargando) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
-        <p className="text-gray-500 animate-pulse font-medium">Buscando tu pedido...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #2A6348 0%, #1e4a34 100%)' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+        <p className="text-white/80 animate-pulse font-medium">Buscando tu pedido...</p>
       </div>
     )
   }
 
   if (error || !pedido) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-sm w-full border border-gray-100">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #2A6348 0%, #1e4a34 100%)' }}>
+        <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full">
           <div className="text-5xl mb-4">😕</div>
           <h1 className="text-xl font-bold text-gray-800 mb-2">Ups...</h1>
           <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
-          <p className="text-gray-300 text-xs mt-3 font-mono break-all">ID: {typeof window !== 'undefined' ? window.location.pathname : ''}</p>
         </div>
       </div>
     )
@@ -85,70 +84,62 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const isTerminado = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const isEnPreparacion = pedido.estado === 'nuevo' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
   const isEnCamino = pedido.estado === 'en_camino'
-  // Mostrar el mapa si hay coordenadas del cadete (sea en cocina, listo o en camino)
   const tieneUbicacionCadete = !!(pedido as any).cadete_coordenadas
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative">
-      {/* Header flotante */}
-      <div className="absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-4 pointer-events-auto max-w-md mx-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-xl shrink-0">
-              {isTerminado ? '🎉' : isEnPreparacion ? '🧑‍🍳' : '🛵'}
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-900 leading-tight">
-                {isTerminado ? '¡Pedido entregado!' : 
-                 isEnPreparacion ? 'Preparando tu pedido' : 
-                 '¡Tu pedido está en camino!'}
-              </h1>
-              <p className="text-sm text-gray-500 font-medium truncate">
-                Para {pedido.cliente.split(' ')[0]}
-              </p>
-            </div>
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 gap-5" style={{ background: 'linear-gradient(135deg, #2A6348 0%, #1e4a34 100%)' }}>
+
+      {/* Header card */}
+      <div className="w-full max-w-sm bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl shrink-0" style={{ background: 'rgba(42,99,72,0.12)' }}>
+            {isTerminado ? '🎉' : isEnPreparacion ? '🧑‍🍳' : '🛵'}
           </div>
-          
-          {isEnCamino && pedido.cadete_nombre && (
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Cadete asignado:</span>
-              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-md">
-                {pedido.cadete_nombre}
-              </span>
-            </div>
-          )}
+          <div className="min-w-0">
+            <h1 className="font-bold text-gray-900 leading-tight text-base">
+              {isTerminado ? '¡Pedido entregado!' : 
+               isEnPreparacion ? 'Preparando tu pedido' : 
+               '¡Tu pedido está en camino!'}
+            </h1>
+            <p className="text-sm font-medium truncate" style={{ color: '#2A6348' }}>
+              Para {pedido.cliente.split(' ')[0]}
+            </p>
+          </div>
         </div>
+        
+        {isEnCamino && pedido.cadete_nombre && (
+          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-sm text-gray-500">Cadete asignado:</span>
+            <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-md">
+              {pedido.cadete_nombre}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Contenido principal (Mapa o Estado visual) */}
-      <div className="flex-1 w-full relative">
+      {/* Mapa cuadrado */}
+      <div className="w-full max-w-sm aspect-square rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
         {tieneUbicacionCadete ? (
-          <div className="absolute inset-0">
-            <MapaSeguimiento pedido={pedido} />
-          </div>
+          <MapaSeguimiento pedido={pedido} />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-white">
-            <div className={`w-32 h-32 rounded-full flex items-center justify-center text-6xl mb-6 shadow-xl ${isTerminado ? 'bg-green-50 shadow-green-100' : 'bg-orange-50 shadow-orange-100'}`}>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-white p-6 text-center">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-5xl mb-4 shadow-lg ${isTerminado ? 'bg-green-50' : 'bg-orange-50'}`}>
               {isTerminado ? '🛍️' : '🔥'}
             </div>
-            <h2 className="text-2xl font-black text-gray-800 mb-2 text-center">
+            <h2 className="text-xl font-black text-gray-800 mb-2">
               {isTerminado ? '¡Que lo disfrutes!' : 'Cocinando con amor'}
             </h2>
-            <p className="text-gray-500 text-center max-w-xs leading-relaxed">
+            <p className="text-gray-400 text-sm leading-relaxed max-w-[200px]">
               {isTerminado 
-                ? 'El pedido ya fue entregado en tu domicilio. Gracias por elegir Chefsy.' 
-                : 'Nuestro equipo está preparando todo. Apenas salga el cadete, vas a poder rastrearlo en vivo por acá.'}
+                ? 'El pedido fue entregado. ¡Gracias por elegir Chefsy!' 
+                : 'Te avisamos cuando el cadete salga a entregar.'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Footer Powered By */}
-      <div className="absolute bottom-4 left-0 right-0 z-50 text-center pointer-events-none">
-        <span className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold text-gray-400 shadow-sm">
-          Powered by Chefsy
-        </span>
-      </div>
+      {/* Footer */}
+      <p className="text-white/40 text-xs font-semibold tracking-wider">Powered by Chefsy</p>
     </div>
   )
 }
