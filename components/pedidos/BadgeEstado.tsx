@@ -12,6 +12,7 @@ const configuracionEstado: Record<EstadoPedido, { etiqueta: string; clases: stri
   nuevo:      { etiqueta: 'Nuevo',       clases: 'bg-blue-100 text-blue-800' },
   en_cocina:  { etiqueta: 'En Cocina',   clases: 'bg-orange-100 text-orange-800' },
   listo:      { etiqueta: 'Listo',       clases: 'bg-yellow-100 text-yellow-800' },
+  en_camino:  { etiqueta: 'En Camino',   clases: 'bg-indigo-100 text-indigo-800' },
   entregado:  { etiqueta: 'Entregado',   clases: 'bg-green-100 text-green-800' },
   cancelado:  { etiqueta: 'Cancelado',   clases: 'bg-red-100 text-red-800' },
 }
