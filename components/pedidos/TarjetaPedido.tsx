@@ -99,16 +99,20 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const copiarParaWhatsApp = () => {
     const productosText = pedido.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('\n')
     
-    let direccionTexto = `📍 ${pedido.direccion || pedido.tipoEntrega}`
-    const linkMapa = crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)
-    if (linkMapa) {
-      direccionTexto += `\n🗺️ Mapa: ${linkMapa}`
+    let direccionTexto = ''
+    if (pedido.direccion && pedido.direccion.trim() !== '') {
+      direccionTexto = `📍 ${pedido.direccion.trim()}`
+      const linkMapa = crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)
+      if (linkMapa) {
+        direccionTexto += `\n🗺️ Mapa: ${linkMapa}`
+      }
+    } else if (pedido.tipoEntrega && pedido.tipoEntrega !== 'delivery') {
+      direccionTexto = `📍 ${pedido.tipoEntrega === 'retiro' ? 'Retiro en el local' : 'Consumo en el local'}`
     }
 
     const texto = `*Pedido de ${pedido.cliente}*
 📞 ${pedido.telefono}
-${direccionTexto}
-
+${direccionTexto ? `${direccionTexto}\n` : ''}
 *Detalle:*
 ${productosText}
 
@@ -179,6 +183,14 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
     const costoEnvio = pedido.costoEnvio || 0
     const total = subtotal + costoEnvio
 
+    let infoCliente = `Cliente: ${pedido.cliente}`
+    if (pedido.telefono && pedido.telefono !== 'Sin especificar') {
+      infoCliente += `\nTeléfono: ${pedido.telefono}`
+    }
+    if (pedido.direccion && pedido.direccion.trim() !== '') {
+      infoCliente += `\nDirección: ${pedido.direccion.trim()}`
+    }
+
     let textoEnvio = ''
     if (pedido.tipoEntrega === 'delivery') {
       textoEnvio = `\nEnvío: ${formatearPrecio(costoEnvio)}`
@@ -186,6 +198,9 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
 
     const texto = `Este es el resumen de tu pedido en Chefsy.
 
+${infoCliente}
+
+----------------------------------
 ${lineasProductos}
 
 ----------------------------------
