@@ -1,21 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import { Pedido } from '@/tipos'
 import Link from 'next/link'
 
-export default function CadeteEnVivoPage({ params }: { params: { id: string } }) {
+export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: string }> }) {
+  // En Next.js 15+ params es una Promise — usar React.use() para leerlo
+  const { id: pedidoId } = use(params)
+
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!pedidoId) return
     let intervalo: NodeJS.Timeout
 
     const fetchUbicacion = async () => {
       try {
-        const res = await fetch(`/api/public/rastreo?id=${params.id}`)
+        const res = await fetch(`/api/public/rastreo?id=${pedidoId}`)
         const data = await res.json()
         
         if (!res.ok) throw new Error(data.error || 'Error al obtener la ubicación')
@@ -53,7 +57,7 @@ export default function CadeteEnVivoPage({ params }: { params: { id: string } })
     }, 5000)
 
     return () => clearInterval(intervalo)
-  }, [params.id])
+  }, [pedidoId])
 
   if (cargando) {
     return (
