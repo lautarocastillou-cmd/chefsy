@@ -236,6 +236,46 @@ export default function PaginaCadeteria() {
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
 
+  // Estado GPS de los cadetes activos (para el admin)
+  const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
+
+  // Polling del estado GPS de cadetes activos (solo para admin)
+  useEffect(() => {
+    if (!usuarioActivo || usuarioActivo.rol !== 'admin') return
+
+    const consultarEstadoGps = async () => {
+      try {
+        const res = await supabase
+          .from('cadetes')
+          .select('id, nombre, updated_at, gps_activo')
+          .eq('activo', true)
+        
+        if (res.data) {
+          const ahora = Date.now()
+          const nuevoEstado: Record<string, { activo: boolean; hace: string }> = {}
+          
+          for (const c of res.data) {
+            const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
+            const segundos = Math.floor((ahora - updatedAt) / 1000)
+            const gpsActivo = c.gps_activo !== false && segundos < 120 // más de 2min = sin señal
+            
+            let hace = ''
+            if (segundos < 60) hace = `${segundos}s`
+            else if (segundos < 3600) hace = `${Math.floor(segundos / 60)}min`
+            else hace = `+1h`
+
+            nuevoEstado[c.id] = { activo: gpsActivo, hace }
+          }
+          setEstadoGpsCadetes(nuevoEstado)
+        }
+      } catch (_) {}
+    }
+
+    consultarEstadoGps()
+    const intervalo = setInterval(consultarEstadoGps, 15000) // cada 15s
+    return () => clearInterval(intervalo)
+  }, [usuarioActivo])
+
   // Guardar última ubicación y marca de tiempo para el control/throttling de GPS
   const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
   const ultimaActualizacionGpsRef = useRef<number>(0)
@@ -650,6 +690,34 @@ export default function PaginaCadeteria() {
               </button>
             </div>
           </>
+        )}
+
+        {esAdmin && Object.keys(estadoGpsCadetes).length > 0 && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">📡 Estado GPS Cadetes</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(estadoGpsCadetes).map(([id, estado]) => (
+                <div
+                  key={id}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                    estado.activo
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
+                      : "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30"
+                  )}
+                >
+                  <span className={cn(
+                    "h-2 w-2 rounded-full shrink-0",
+                    estado.activo ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                  )} />
+                  <span>{id}</span>
+                  <span className="opacity-60 text-[10px]">
+                    {estado.activo ? `hace ${estado.hace}` : `Sin señal (${estado.hace})`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {esAdmin || pestaña === 'activos' ? (

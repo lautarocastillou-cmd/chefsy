@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
-// Este token debe coincidir con el que envíe la app de Expo
 const EXPO_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
 
 export async function POST(request: Request) {
@@ -12,16 +11,28 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { cadeteId, lat, lng, accuracy, heading, speed } = body
+    const { cadeteId, lat, lng, accuracy, heading, speed, gps_activo } = body
+
+    const adminClient = obtenerSupabaseAdmin()
+
+    // Si el cadete mandó gps_activo=false, solo actualizamos el estado GPS sin tocar coordenadas
+    if (gps_activo === false) {
+      await adminClient
+        .from('cadetes')
+        .update({
+          gps_activo: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cadeteId)
+
+      return NextResponse.json({ success: true })
+    }
 
     if (!cadeteId || lat === undefined || lng === undefined) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
     }
 
-    // Actualizamos usando supabaseAdmin para bypassear cualquier política RLS
-    const adminClient = obtenerSupabaseAdmin()
-
-
+    // Actualizar coordenadas y marcar GPS como activo
     await adminClient
       .from('cadetes')
       .update({
@@ -30,11 +41,12 @@ export async function POST(request: Request) {
         accuracy: accuracy || null,
         heading: heading || null,
         speed: speed || null,
+        gps_activo: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', cadeteId)
 
-    // Actualizamos también cadete_coordenadas en los pedidos activos de este cadete para que el mapa en vivo de Chefsy los muestre al instante
+    // Actualizar coordenadas en los pedidos activos del cadete
     const coords = { latitud: lat, longitud: lng }
     await adminClient
       .from('pedidos')
