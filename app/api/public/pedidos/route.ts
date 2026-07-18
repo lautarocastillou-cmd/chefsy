@@ -6,7 +6,7 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
 
 // GET /api/public/pedidos?cadeteId=paulo
-// Devuelve todos los datos del pedido asignado al cadete (en_cocina, listo, en_camino)
+// Devuelve todos los datos del pedido asignado al cadete (en_cocina, listo, en_camino, entregado)
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get('authorization')
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       .from('pedidos')
       .select('*')
       .eq('cadete_id', cadeteId)
-      .in('estado', ['en_cocina', 'listo', 'en_camino'])
+      .in('estado', ['en_cocina', 'listo', 'en_camino', 'entregado'])
       .eq('archivado', false)
       .order('hora', { ascending: true })
 
