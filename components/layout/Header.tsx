@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { usePathname } from 'next/navigation'
-import { usePedidos } from '@/contexto/PedidosContexto'
+import { usarPedidos } from '@/contexto/PedidosContexto'
 
 const titulosPorRuta: Record<string, string> = {
   '/dashboard':     'Dashboard',
@@ -24,7 +24,7 @@ const titulosPorRuta: Record<string, string> = {
 export default function Header() {
   const rutaActual = usePathname()
   const titulo = titulosPorRuta[rutaActual] ?? 'Chefsy'
-  const { cadetes } = usePedidos()
+  const { cadetes } = usarPedidos()
 
   const ahora = new Date()
   const horaFormateada = ahora.toLocaleTimeString('es-AR', {
