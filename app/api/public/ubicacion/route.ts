@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { cadeteId, lat, lng, accuracy, heading, speed, gps_activo } = body
+    const { cadeteId, lat, lng, accuracy, heading, speed, gps_activo, batteryLevel } = body
 
     const adminClient = obtenerSupabaseAdmin()
 
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
         .from('cadetes')
         .update({
           gps_activo: false,
+          ...(batteryLevel !== undefined && { bateria: batteryLevel }),
           updated_at: new Date().toISOString()
         })
         .eq('id', cadeteId)
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
         heading: heading || null,
         speed: speed || null,
         gps_activo: true,
+        ...(batteryLevel !== undefined && { bateria: batteryLevel }),
         updated_at: new Date().toISOString()
       })
       .eq('id', cadeteId)

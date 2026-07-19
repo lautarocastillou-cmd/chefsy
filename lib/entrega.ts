@@ -119,4 +119,5 @@ export function obtenerEtiquetaAccionEstado(
 export interface Cadete {
   id: string
   nombre: string
+  bateria?: number
 }
