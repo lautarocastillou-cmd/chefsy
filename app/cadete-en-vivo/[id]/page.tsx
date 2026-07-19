@@ -114,9 +114,22 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const isEnPreparacion = pedido.estado === 'nuevo' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
   const isEnCamino    = pedido.estado === 'en_camino'
   const tieneUbicacion = !!(pedido as any).cadete_coordenadas
+  const gpsApagado = (pedido as any).cadete_gps_activo === false && isEnCamino
 
   // ── Bloque del mapa / estado visual ──────────────────────────
-  const bloqueContenido = tieneUbicacion ? (
+  const bloqueContenido = gpsApagado ? (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
+      <div className="w-24 h-24 rounded-full flex items-center justify-center text-5xl mb-4 shadow-lg bg-red-50">
+        📍
+      </div>
+      <h2 className="text-lg font-black text-gray-800 mb-2">
+        Señal GPS perdida
+      </h2>
+      <p className="text-gray-500 text-sm leading-relaxed max-w-[220px]">
+        El cadete está con el GPS apagado o sin señal. De todas formas, tu pedido sigue en camino.
+      </p>
+    </div>
+  ) : tieneUbicacion ? (
     <MapaSeguimiento pedido={pedido} />
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">

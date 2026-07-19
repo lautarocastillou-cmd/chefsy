@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, estado, coordenadas, cadete_nombre, cadete_coordenadas')
+      .select('id, cliente, estado, coordenadas, cadete_nombre, cadete_coordenadas, cadetes(gps_activo)')
       .eq('id', pedidoId)
       .maybeSingle()
 
@@ -43,6 +43,9 @@ export async function GET(request: Request) {
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = estadosActivos.includes(data.estado)
 
+    // @ts-ignore
+    const gpsActivo = data.cadetes ? (data.cadetes as any).gps_activo : true
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
@@ -50,6 +53,7 @@ export async function GET(request: Request) {
       cadete_nombre: data.cadete_nombre ?? null,
       cadete_coordenadas: mostrarCadete ? (data.cadete_coordenadas ?? null) : null,
       destino_coordenadas: data.coordenadas ?? null,
+      cadete_gps_activo: gpsActivo,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG }
     })
   } catch (error) {

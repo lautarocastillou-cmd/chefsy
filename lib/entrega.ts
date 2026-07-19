@@ -107,6 +107,8 @@ export function obtenerEtiquetaAccionEstado(
   if (siguienteEstado === 'listo') return 'Marcar como Listo'
 
 
+  if (siguienteEstado === 'en_camino') return 'Comenzar Viaje'
+
   if (siguienteEstado === 'entregado') {
     if (tipoEntrega === 'retiro') return 'Marcar como Retirado'
     if (tipoEntrega === 'consumo_local') return 'Marcar como Servido'
