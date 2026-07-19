@@ -24,7 +24,7 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
             ✕
           </button>
         </div>
-        <div className="p-0">
+        <div className="p-0 h-[400px] w-full">
           {/* Reutilizamos el mapa de seguimiento que ya tiene toda la lógica visual */}
           <MapaSeguimiento pedido={pedido} />
         </div>

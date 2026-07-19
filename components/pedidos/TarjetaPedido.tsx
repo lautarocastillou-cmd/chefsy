@@ -522,7 +522,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-950">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 h-[400px]">
               <MapaSeguimiento pedido={pedido} />
             </div>
           </div>
