@@ -4,6 +4,8 @@ import { use, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 
+import { supabaseAnon } from '@/lib/supabase'
+
 // Leaflet pesa ~150KB — cargarlo de forma lazy para no bloquear el render inicial
 const MapaSeguimiento = dynamic(
   () => import('@/components/ubicacion/MapaSeguimiento'),
@@ -31,7 +33,6 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     if (!pedidoId) return
-    let intervalo: NodeJS.Timeout
 
     const fetchUbicacion = async () => {
       try {
@@ -61,8 +62,31 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     }
 
     fetchUbicacion()
-    intervalo = setInterval(fetchUbicacion, 5000)
-    return () => clearInterval(intervalo)
+    
+    // Suscripción en tiempo real a Supabase para actualización instantánea
+    const canal = supabaseAnon
+      .channel(`public-rastreo-${pedidoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+          filter: `id=eq.${pedidoId}`,
+        },
+        () => {
+          fetchUbicacion() // Si hay un cambio en el pedido, pedimos los datos actualizados
+        }
+      )
+      .subscribe()
+
+    // Polling de respaldo (cada 15s) por si los WebSockets de Supabase se duermen o fallan
+    const intervalo = setInterval(fetchUbicacion, 15000)
+    
+    return () => {
+      clearInterval(intervalo)
+      supabaseAnon.removeChannel(canal)
+    }
   }, [pedidoId])
 
   if (cargando) {

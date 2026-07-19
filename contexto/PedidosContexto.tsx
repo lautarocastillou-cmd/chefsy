@@ -541,8 +541,11 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         estadoAnterior = 'en_cocina'
         updates.listo_at = null
         break
-      case 'entregado':
+      case 'en_camino':
         estadoAnterior = 'listo'
+        break
+      case 'entregado':
+        estadoAnterior = pedido.tipoEntrega === 'delivery' ? 'en_camino' : 'listo'
         updates.entregado_at = null
         break
       default:
