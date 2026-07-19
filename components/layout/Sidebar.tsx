@@ -15,7 +15,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   Sun, Moon, LogOut, Settings, 
   LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush, Package,
-  ChevronLeft, ChevronRight, Target
+  ChevronLeft, ChevronRight, Target, Radar
 } from 'lucide-react'
 
 // Ítems de navegación principal (Configuración se movió al pie)
@@ -23,6 +23,7 @@ const elementosNavegacion = [
   { href: '/dashboard',     etiqueta: 'Dashboard',     icono: LayoutDashboard },
   { href: '/pedidos',       etiqueta: 'Pedidos',       icono: ClipboardList },
   { href: '/cadeteria',     etiqueta: 'Cadetería',     icono: Bike },
+  { href: '/torre-control', etiqueta: 'Torre de Control', icono: Radar },
   { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
   { href: '/configuracion/stock', etiqueta: 'Stock', icono: Package },
