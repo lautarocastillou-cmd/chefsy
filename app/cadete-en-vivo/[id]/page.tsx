@@ -187,8 +187,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Mapa: ocupa todo lo que queda */}
-        <div className="flex-1 px-4 pb-4 min-h-0">
-          <div className="w-full h-full min-h-[55vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
+        <div className="flex-1 px-4 pb-4 flex flex-col">
+          <div className="flex-1 relative w-full min-h-[60vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
             {bloqueContenido}
           </div>
         </div>
