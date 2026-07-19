@@ -17,11 +17,24 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
   // Calcular ETA basado en distancia en cada render
   useEffect(() => {
-    if (pedido.cadete_coordenadas && pedido.coordenadas && pedido.estado === 'listo') {
-      const dist = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
-      // Asumimos velocidad promedio en ciudad de ~25 km/h -> 2.4 min por km + 2 min extra
-      const minEstimados = Math.ceil((dist * 2.4) + 2)
-      setEtaText(`Llegando en ~${minEstimados} min (${dist.toFixed(1)} km)`)
+    if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
+      const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
+      // Multiplicamos por 1.3 para aproximar la distancia real en calles (Manhattan approx)
+      const distRuta = distDirecta * 1.3
+      
+      if (distRuta < 0.15) {
+        setEtaText(`¡Llegando! (a metros)`)
+      } else {
+        // Velocidad promedio moto en ciudad: 20 km/h -> 3 min por km + 1 min extra
+        const minEstimados = Math.round((distRuta * 3) + 1)
+        const kmMostrados = distRuta.toFixed(1)
+        
+        if (minEstimados <= 1) {
+          setEtaText(`Llegando en < 1 min (${kmMostrados} km)`)
+        } else {
+          setEtaText(`Llegando en ~${minEstimados} min (${kmMostrados} km)`)
+        }
+      }
     } else {
       setEtaText(null)
     }
