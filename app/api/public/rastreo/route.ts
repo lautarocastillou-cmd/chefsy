@@ -21,16 +21,14 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, estado, coordenadas, cadete_nombre, cadete_coordenadas, cadetes(gps_activo)')
+      .select('id, cliente, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas')
       .eq('id', pedidoId)
       .maybeSingle()
 
     if (error) {
-      // PGRST116 = no rows found (not found)
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
       }
-      // Cualquier otro error de Supabase — lo exponemos para poder diagnosticarlo
       console.error('[API Rastreo] Error de Supabase:', error)
       return NextResponse.json({ error: `Error de base de datos: ${error.message}` }, { status: 500 })
     }
@@ -39,12 +37,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
     }
 
-    // Mostrar las coordenadas del cadete solo si el pedido está activo (no entregado/cancelado)
+    let gpsActivo = true
+    if (data.cadete_id) {
+      const { data: cadeteData } = await supabase
+        .from('cadetes')
+        .select('gps_activo')
+        .eq('id', data.cadete_id)
+        .maybeSingle()
+      
+      if (cadeteData && cadeteData.gps_activo !== undefined) {
+        gpsActivo = cadeteData.gps_activo
+      }
+    }
+
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = estadosActivos.includes(data.estado)
-
-    // @ts-ignore
-    const gpsActivo = data.cadetes ? (data.cadetes as any).gps_activo : true
 
     return NextResponse.json({
       id: data.id,
