@@ -87,18 +87,6 @@ function TarjetaPedidoCadete({
     }
   }
 
-  const marcarEnCamino = async () => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate([100, 50, 100])
-      }
-      cambiarEstado(pedido.id, 'en_camino', false)
-    } catch (e) {
-      alert('Error al marcar en camino. Reintentá.')
-      throw e
-    }
-  }
-
   return (
     <div className="bg-white dark:bg-slate-900 border border-chefsy-200 dark:border-slate-800 rounded-2xl p-4 space-y-3.5 animate-[slideIn_0.2s_ease-out] transition-colors">
       {/* Cabecera del pedido: Cliente y Estado */}
@@ -228,20 +216,8 @@ function TarjetaPedidoCadete({
         </div>
       )}
 
-      {/* Botón para Comenzar Viaje (pasar de listo a en_camino) */}
+      {/* Estado "En Camino" con opción a entregar (cuando está listo para el cadete, ya está en camino hacia el cliente) */}
       {pedido.estado === 'listo' && (
-        <div className="pt-2 pb-1">
-          <SwipeToConfirm
-            key={`encamino-${pedido.id}-${pedido.estado}`}
-            onConfirm={marcarEnCamino}
-            texto="Comenzar Viaje >"
-            variante="azul"
-          />
-        </div>
-      )}
-
-      {/* Estado "En Camino" con opción a entregar */}
-      {pedido.estado === 'en_camino' && (
         <div className="pt-2 pb-1 flex flex-col gap-2">
           <div className="w-full text-center py-2 bg-blue-100 text-blue-700 font-bold rounded-lg border border-blue-200 uppercase tracking-widest text-xs animate-pulse">
             En Camino
