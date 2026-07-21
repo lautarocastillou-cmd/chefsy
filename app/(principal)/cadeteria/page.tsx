@@ -8,7 +8,8 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw } from 'lucide-react'
+import { mutate } from 'swr'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
@@ -602,6 +603,13 @@ export default function PaginaCadeteria() {
               )}
             >
               {simulando ? '🛑 Detener Simulación' : '🕹️ Simular Viaje DEV'}
+            </button>
+            <button
+              onClick={() => mutate('pedidosActivos')}
+              className="text-xs bg-chefsy-600 hover:bg-chefsy-500 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+            >
+              <RefreshCw size={14} />
+              Actualizar
             </button>
             {usuarioActivo?.rol !== 'admin' && <BotonNotificaciones />}
             <button
