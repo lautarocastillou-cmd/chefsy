@@ -8,7 +8,7 @@ interface SwipeToConfirmProps {
   onConfirm: () => Promise<void> | void
   texto?: string
   textoCargando?: string
-  variante?: 'verde' | 'rojo'
+  variante?: 'verde' | 'rojo' | 'azul'
 }
 
 export default function SwipeToConfirm({ 
@@ -18,6 +18,7 @@ export default function SwipeToConfirm({
   variante = 'verde'
 }: SwipeToConfirmProps) {
   const esRojo = variante === 'rojo'
+  const esAzul = variante === 'azul'
   const [deslizamiento, setDeslizamiento] = useState(0)
   const [estaPresionado, setEstaPresionado] = useState(false)
   const [confirmado, setConfirmado] = useState(false)
@@ -117,12 +118,12 @@ export default function SwipeToConfirm({
     : 0
 
   // Colores según variante
-  const colorFondoConfirmado = esRojo ? 'bg-red-500' : 'bg-emerald-500'
-  const colorFondoBase = esRojo ? 'bg-red-950/20 border border-red-900/30' : 'bg-green-950/20 border border-green-900/30'
-  const colorProgreso = esRojo ? 'bg-red-500/20' : 'bg-green-500/20'
-  const colorTexto = esRojo ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'
-  const colorBoton = esRojo ? 'bg-red-500' : 'bg-green-500'
-  const textoConfirmado = esRojo ? '¡Entregado!' : '¡Listo!'
+  const colorFondoConfirmado = esRojo ? 'bg-red-500' : esAzul ? 'bg-blue-500' : 'bg-emerald-500'
+  const colorFondoBase = esRojo ? 'bg-red-950/20 border border-red-900/30' : esAzul ? 'bg-blue-950/20 border border-blue-900/30' : 'bg-green-950/20 border border-green-900/30'
+  const colorProgreso = esRojo ? 'bg-red-500/20' : esAzul ? 'bg-blue-500/20' : 'bg-green-500/20'
+  const colorTexto = esRojo ? 'text-red-600 dark:text-red-400' : esAzul ? 'text-blue-600 dark:text-blue-400' : 'text-green-700 dark:text-green-400'
+  const colorBoton = esRojo ? 'bg-red-500' : esAzul ? 'bg-blue-500' : 'bg-green-500'
+  const textoConfirmado = esRojo ? '¡Entregado!' : esAzul ? '¡En Camino!' : '¡Listo!'
 
   return (
     <div 
@@ -143,7 +144,7 @@ export default function SwipeToConfirm({
 
       {/* Texto de fondo */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 gap-0.5">
-        {!esRojo && !confirmado && !cargando && (
+        {!esRojo && !esAzul && !confirmado && !cargando && (
           <span className="text-[10px] font-black uppercase tracking-widest text-green-800 dark:text-green-400 opacity-90">
             ¿ESTÁ LISTO?
           </span>
