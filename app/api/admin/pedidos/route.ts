@@ -112,8 +112,8 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 })
         }
 
-        // Un cadete solo puede cambiar el estado a "en_camino" o "entregado"
-        if (rol === 'cadete' && estado !== 'entregado' && estado !== 'en_camino') {
+        // Un cadete puede cambiar a "listo", "en_camino" o "entregado"
+        if (rol === 'cadete' && !['listo', 'en_camino', 'entregado'].includes(estado)) {
           return NextResponse.json({ error: 'Operación no permitida para el rol de cadete.' }, { status: 403 })
         }
 
