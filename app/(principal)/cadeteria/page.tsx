@@ -218,7 +218,7 @@ function TarjetaPedidoCadete({
       )}
 
       {/* Estado "En Camino" con opción a entregar (cuando está listo para el cadete, ya está en camino hacia el cliente) */}
-      {pedido.estado === 'listo' && (
+      {(pedido.estado === 'listo' || pedido.estado === 'en_camino') && (
         <div className="pt-2 pb-1 flex flex-col gap-2">
           <div className="w-full text-center py-2 bg-blue-100 text-blue-700 font-bold rounded-lg border border-blue-200 uppercase tracking-widest text-xs animate-pulse">
             En Camino
@@ -288,11 +288,11 @@ export default function PaginaCadeteria() {
   const pedidosCadeteria = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
-      (p.estado === 'en_cocina' || p.estado === 'listo') &&
+      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino') &&
       (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
   )
 
-  const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo')
+  const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo' || p.estado === 'en_camino')
   const hayPedidosListos = pedidosListos.length > 0
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
   const [simulando, setSimulando] = useState(false)
