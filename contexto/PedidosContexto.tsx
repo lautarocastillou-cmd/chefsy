@@ -324,7 +324,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
       if (!usuarioActivo || !esPaginaGestion) {
         prevPedidosRef.current = estado.pedidos
-        return () => clearTimeout(timeoutCache)
+        return
       }
 
       const esCadete = usuarioActivo?.rol === 'cadete'
