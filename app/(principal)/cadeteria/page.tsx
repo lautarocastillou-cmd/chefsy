@@ -52,8 +52,17 @@ function TarjetaPedidoCadete({
   useEffect(() => {
     const key = `original-pago-${pedido.id}`
     const guardado = localStorage.getItem(key)
+    
     if (guardado) {
-      setMetodoOriginal(guardado)
+      const esGuardadoInvalido = guardado.toLowerCase().replace(/_/g, ' ') === 'sin especificar'
+      const esNuevoValido = pedido.metodoPago.toLowerCase().replace(/_/g, ' ') !== 'sin especificar'
+      
+      if (esGuardadoInvalido && esNuevoValido) {
+        localStorage.setItem(key, pedido.metodoPago)
+        setMetodoOriginal(pedido.metodoPago)
+      } else {
+        setMetodoOriginal(guardado)
+      }
     } else {
       localStorage.setItem(key, pedido.metodoPago)
       setMetodoOriginal(pedido.metodoPago)
