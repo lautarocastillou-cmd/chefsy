@@ -1,9 +1,6 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "leaflet/dist/leaflet.css";
 
 /* ─── Tipografía base y bloqueo de scroll lateral/zoom ──────────────── */
 html {
