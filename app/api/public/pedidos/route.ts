@@ -64,6 +64,8 @@ export async function POST(request: Request) {
       updatePayload.entregado_at = new Date().toISOString()
     } else if (estado === 'listo') {
       updatePayload.listo_at = new Date().toISOString()
+    } else if (estado === 'en_camino') {
+      updatePayload.en_camino_at = new Date().toISOString()
     }
 
     const { data: pedidoPrevio } = await supabase

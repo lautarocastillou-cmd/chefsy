@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS clientes_cuentas (
 CREATE TABLE IF NOT EXISTS pedidos (
     id TEXT PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    estado TEXT NOT NULL DEFAULT 'nuevo' CHECK (estado IN ('nuevo', 'en_cocina', 'listo', 'entregado', 'cancelado')),
+    estado TEXT NOT NULL DEFAULT 'nuevo' CHECK (estado IN ('nuevo', 'en_cocina', 'listo', 'en_camino', 'entregado', 'cancelado')),
     tipoEntrega TEXT NOT NULL CHECK (tipoEntrega IN ('delivery', 'retiro', 'local')),
     cliente TEXT NOT NULL,
     telefono TEXT NOT NULL,
@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     cadete_nombre TEXT,
     cocina_at TIMESTAMPTZ,
     listo_at TIMESTAMPTZ,
+    en_camino_at TIMESTAMPTZ,
     entregado_at TIMESTAMPTZ,
     cancelado_at TIMESTAMPTZ,
     fecha TEXT,

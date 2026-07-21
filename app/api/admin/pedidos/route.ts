@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       }
 
       case 'actualizar_estado': {
-        const { id, estado, cocina_at, listo_at, entregado_at } = body
+        const { id, estado, cocina_at, listo_at, entregado_at, en_camino_at } = body
         if (!id || !estado) {
           return NextResponse.json({ error: 'Datos incompletos para actualizar_estado.' }, { status: 400 })
         }
@@ -121,6 +121,8 @@ export async function POST(request: Request) {
         if (cocina_at !== undefined) updatePayload.cocina_at = cocina_at
         if (listo_at !== undefined) updatePayload.listo_at = listo_at
         if (entregado_at !== undefined) updatePayload.entregado_at = entregado_at
+        if (en_camino_at !== undefined) updatePayload.en_camino_at = en_camino_at
+        if (estado === 'en_camino' && en_camino_at === undefined) updatePayload.en_camino_at = new Date().toISOString()
 
         // Limpiar coordenadas del cadete automáticamente al finalizar la entrega
         if (estado === 'entregado') {

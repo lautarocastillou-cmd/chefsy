@@ -176,33 +176,44 @@ export function obtenerCamposDeTiempoParaEstado(
   estado: EstadoPedido
   cocina_at: string | null
   listo_at: string | null
+  en_camino_at: string | null
   entregado_at: string | null
 } {
   const ahora = new Date().toISOString()
 
   let cocina_at = pedidoActual.cocina_at || null
   let listo_at = pedidoActual.listo_at || null
+  let en_camino_at = pedidoActual.en_camino_at || null
   let entregado_at = pedidoActual.entregado_at || null
 
   if (nuevoEstado === 'nuevo') {
     cocina_at = null
     listo_at = null
+    en_camino_at = null
     entregado_at = null
   } else if (nuevoEstado === 'en_cocina') {
     if (!cocina_at) cocina_at = ahora
     listo_at = null
+    en_camino_at = null
     entregado_at = null
   } else if (nuevoEstado === 'listo') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = ahora
+    en_camino_at = null
+    entregado_at = null
+  } else if (nuevoEstado === 'en_camino') {
+    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
+    if (!listo_at) listo_at = cocina_at || ahora
+    if (!en_camino_at) en_camino_at = ahora
     entregado_at = null
   } else if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
     if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
     if (!listo_at) listo_at = cocina_at || ahora
+    if (pedidoActual.tipoEntrega === 'delivery' && !en_camino_at) en_camino_at = listo_at || ahora
     if (!entregado_at) entregado_at = ahora
   }
 
-  return { estado: nuevoEstado, cocina_at, listo_at, entregado_at }
+  return { estado: nuevoEstado, cocina_at, listo_at, en_camino_at, entregado_at }
 }
 
 // ── Proveedor Interno ─────────────────────────────────
@@ -294,11 +305,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!estaListo) return
-
-    // Diferir el guardado en caché al siguiente tick (no bloquear el hilo de render)
-    const timeoutCache = setTimeout(() => {
-      localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify(estado.pedidos))
-    }, 0)
 
     if (prevPedidosRef.current.length > 0) {
       // BAJO NINGÚN CONTEXTO mostrar notificaciones internas del sistema de pedidos al cliente en la tienda.
@@ -404,10 +410,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
 
     prevPedidosRef.current = estado.pedidos
-
-    return () => {
-      clearTimeout(timeoutCache)
-    }
   }, [estado.pedidos, estaListo, usuarioActivo])
 
   // ── Función auxiliar: enviar acciones al servidor ─────
@@ -543,6 +545,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         break
       case 'en_camino':
         estadoAnterior = 'listo'
+        updates.en_camino_at = null
         break
       case 'entregado':
         estadoAnterior = pedido.tipoEntrega === 'delivery' ? 'en_camino' : 'listo'
@@ -684,7 +687,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
       despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: [] })
       prevPedidosRef.current = []
-      localStorage.setItem('chefsy-pedidos-cache-v1', JSON.stringify([]))
+      import('swr').then((mod) => mod.mutate('pedidosActivos', [], false))
 
       const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null }
       await fetch('/api/admin/turno', {

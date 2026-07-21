@@ -1,13 +1,13 @@
 'use client'
 // ─────────────────────────────────────────────────────
 // hooks/usePedidosRealtime.ts
-// Responsabilidad única: carga inicial de pedidos desde
-// Supabase (con fallback al caché de localStorage) y
-// suscripción al canal realtime para recibir cambios
-// en tiempo real de otros dispositivos.
+// Responsabilidad única: carga inicial de pedidos con SWR
+// y suscripción al canal realtime para recibir cambios
+// en tiempo real de otros dispositivos, mutando el caché.
 // ─────────────────────────────────────────────────────
 
 import { useState, useEffect, MutableRefObject } from 'react'
+import useSWR from 'swr'
 import { Pedido } from '@/tipos'
 import { obtenerPedidosActivos, suscribirAPedidos } from '@/servicios/supabase/pedidos'
 
@@ -22,6 +22,11 @@ interface UsePedidosRealtimeProps {
   cambiosLocalesRef: MutableRefObject<Record<string, number>>
 }
 
+const fetcher = async () => {
+  const data = await obtenerPedidosActivos(100)
+  return (data || []) as Pedido[]
+}
+
 export function usePedidosRealtime({
   despachar,
   prevPedidosRef,
@@ -30,51 +35,32 @@ export function usePedidosRealtime({
   const [estaListo, setEstaListo] = useState(false)
   const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
 
-  // 1) Carga inicial: Supabase con fallback al caché de localStorage
+  // 1) Carga inicial y caché con SWR (Stale-While-Revalidate)
+  const { data: pedidosSWR, error, mutate } = useSWR('pedidosActivos', fetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshInterval: 0,
+    fallbackData: [],
+  })
+
+  // Sincronizar SWR con el estado local
   useEffect(() => {
-    async function cargarInicial() {
-      const estaOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
-
-      try {
-        if (!estaOnline) {
-          throw new Error('Navegador offline')
-        }
-
-        // Se eliminó la validación de sesión (race condition) porque ahora se usa supabaseAnon 
-        // para la obtención de pedidos, evitando el bug de Web Lock.
-
-        const pedidosGuardados = await obtenerPedidosActivos(100)
-        setDbEstado('conectado')
-
-        if (pedidosGuardados) {
-          despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosGuardados as Pedido[] })
-          prevPedidosRef.current = pedidosGuardados as Pedido[]
-        }
-      } catch (error) {
-        console.error('[Supabase] Error al cargar pedidos, intentando recuperar del caché:', error)
-        setDbEstado('desconectado')
-
-        const cache = localStorage.getItem('chefsy-pedidos-cache-v1')
-        if (cache) {
-          try {
-            const pedidosCache = JSON.parse(cache) as Pedido[]
-            // Cargar solo los no archivados del caché
-            const noArchivados = pedidosCache.filter((p) => !(p as any).archivado)
-            despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: noArchivados })
-            prevPedidosRef.current = noArchivados
-          } catch (e) {
-            console.error('Error al parsear el caché de pedidos:', e)
-          }
-        }
-      } finally {
-        setEstaListo(true)
-      }
+    if (error) {
+      console.error('[SWR] Error cargando pedidos:', error)
+      setDbEstado('desconectado')
+      setEstaListo(true)
+      return
     }
-    cargarInicial()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
-  // 2) Suscripción a Supabase Realtime — solo cuando la carga inicial terminó
+    if (pedidosSWR) {
+      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWR })
+      prevPedidosRef.current = pedidosSWR
+      setDbEstado('conectado')
+      setEstaListo(true)
+    }
+  }, [pedidosSWR, error, despachar, prevPedidosRef])
+
+  // 2) Suscripción a Supabase Realtime
   useEffect(() => {
     if (!estaListo) return
 
@@ -85,14 +71,23 @@ export function usePedidosRealtime({
 
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
+          mutate((current) => current ? current.filter((p) => p.id !== pedido.id) : [], false)
         } else {
           despachar({ tipo: 'UPSERT_PEDIDO', pedido })
+          mutate((current) => {
+            if (!current) return [pedido]
+            const exists = current.some((p) => p.id === pedido.id)
+            return exists 
+              ? current.map((p) => p.id === pedido.id ? pedido : p)
+              : [pedido, ...current]
+          }, false)
         }
       },
       (id) => {
         const ultCambio = cambiosLocalesRef.current[id] || 0
         if (Date.now() - ultCambio < 4000) return
         despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+        mutate((current) => current ? current.filter((p) => p.id !== id) : [], false)
       }
     )
 
