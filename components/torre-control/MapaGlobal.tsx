@@ -5,9 +5,11 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+import { UBICACION_LOCAL } from '@/lib/ubicacion'
+
 // Coordenadas del local Chefsy
-const LOCAL_LAT = -32.8894
-const LOCAL_LNG = -68.8458
+const LOCAL_LAT = UBICACION_LOCAL.latitud
+const LOCAL_LNG = UBICACION_LOCAL.longitud
 
 // Icono del Local
 const storeIcon = new L.Icon({
@@ -89,10 +91,11 @@ export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
       zoom={14}
       scrollWheelZoom={true}
       className="w-full h-full z-0"
+      style={{ height: '100%', width: '100%', minHeight: '400px' }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
       {/* Marcador del Local */}

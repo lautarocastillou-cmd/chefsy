@@ -141,7 +141,7 @@ export default function TorreControlPage() {
       </div>
 
       {/* Main Area: Mapa */}
-      <div className="flex-1 h-[50vh] md:h-full relative border-t md:border-t-0 md:border-l border-gray-200">
+      <div className="flex-1 h-[50vh] md:h-full min-h-[400px] relative border-t md:border-t-0 md:border-l border-gray-200">
         <MapaGlobal cadetes={cadetes} />
         
         {/* Overlay Legend */}

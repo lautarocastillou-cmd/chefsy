@@ -36,15 +36,10 @@ function extraerCoordenadasDeUrl(url: string) {
 }
 
 export async function GET(request: Request) {
-  const sesion = await obtenerSesion()
-  if (!sesion) {
-    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-  }
-
   const { searchParams } = new URL(request.url)
   const urlParam = searchParams.get('url')
 
-  // -- NUEVO: PROXY OSRM --
+  // -- PROXY OSRM (Público para cálculo exacto de envío en la web y panel) --
   const origenLon = searchParams.get('origenLon')
   const origenLat = searchParams.get('origenLat')
   const destinoLon = searchParams.get('destinoLon')
@@ -79,6 +74,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No se pudo calcular la ruta' }, { status: 502 })
   }
   // -- FIN PROXY OSRM --
+
+  const sesion = await obtenerSesion()
+  if (!sesion) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
 
   if (!urlParam) {
     return NextResponse.json({ error: 'URL o coordenadas no provistas.' }, { status: 400 })
