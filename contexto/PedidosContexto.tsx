@@ -338,7 +338,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         if (!esCadete && !esVistaCadeteria) {
           reproducirSonidoCampanaCocina()
           const ultCambio = cambiosLocalesRef.current[nuevo.id] || 0
-          const esCambioReciente = Date.now() - ultCambio < 4000
+          const esCambioReciente = Date.now() - ultCambio < 10000
           if (!esCambioReciente) {
             agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
           }
@@ -357,7 +357,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           anterior.cadete_id !== nuevo.cadete_id
 
         const ultCambio = cambiosLocalesRef.current[nuevo.id] || 0
-        const esCambioReciente = Date.now() - ultCambio < 4000
+        const esCambioReciente = Date.now() - ultCambio < 10000
 
         if (seLeAsignoAlCadete && !esCambioReciente) {
           agregarNotificacion(`🔔 ¡Tenés un nuevo pedido! para ${nuevo.cliente}`, 'info')

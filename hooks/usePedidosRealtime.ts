@@ -67,7 +67,7 @@ export function usePedidosRealtime({
     const channel = suscribirAPedidos(
       (pedido, archivado) => {
         const ultCambio = cambiosLocalesRef.current[pedido.id] || 0
-        if (Date.now() - ultCambio < 4000) return
+        if (Date.now() - ultCambio < 10000) return
 
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
@@ -85,7 +85,7 @@ export function usePedidosRealtime({
       },
       (id) => {
         const ultCambio = cambiosLocalesRef.current[id] || 0
-        if (Date.now() - ultCambio < 4000) return
+        if (Date.now() - ultCambio < 10000) return
         despachar({ tipo: 'ELIMINAR_PEDIDO', id })
         mutate((current) => current ? current.filter((p) => p.id !== id) : [], false)
       }
