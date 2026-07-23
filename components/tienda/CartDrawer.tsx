@@ -235,7 +235,7 @@ export default function CartDrawer() {
             <ShoppingCart className="text-chefsy-500" size={20} />
             <h2 className="font-extrabold text-white text-sm">Tu Carrito</h2>
             <span className="bg-[#252525] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#3d3d3d]">
-              {totalProductosCarrito} items
+              {totalProductosCarrito} {totalProductosCarrito === 1 ? 'Producto' : 'Productos'}
             </span>
           </div>
           <button
@@ -332,7 +332,7 @@ export default function CartDrawer() {
                 <div className="relative flex-1 min-h-[350px]">
                   {/* PASO 1: DATOS PERSONALES */}
                   <div className={`absolute inset-0 overflow-y-auto scrollbar-hide transition-[opacity,transform] duration-250 ease-out will-change-[opacity,transform] ${checkoutStep === 1 ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none z-0'}`}>
-                    <h3 className="text-xl font-black text-white mb-6 text-left">Tus Datos</h3>
+                    <h3 className="text-xl font-black text-white mb-6 text-left tracking-wide">TUS DATOS</h3>
                     
                     <div className="space-y-5">
                       {/* Floating Label Input: Nombre */}
@@ -387,7 +387,7 @@ export default function CartDrawer() {
                         }}
                         className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
-                        Siguiente Paso <ChevronRight size={18} />
+                        SIGUIENTE PASO <ChevronRight size={18} />
                       </button>
                     </div>
                   </div>
@@ -556,7 +556,7 @@ export default function CartDrawer() {
                         }}
                         className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
-                        Siguiente Paso <ChevronRight size={18} />
+                        SIGUIENTE PASO <ChevronRight size={18} />
                       </button>
                     </div>
                   </div>
