@@ -52,43 +52,21 @@ export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
  * se utiliza la API `/api/admin/pedidos`.
  */
 export async function insertarPedidoLocal(payload: any): Promise<void> {
-  const payloadCompleto = { ...payload, archivado: false }
-  
-  // Helper: timeout para evitar cuelgues silenciosos de red/RLS
-  // Usamos Promise.resolve() para convertir PostgrestFilterBuilder (thenable) a Promise real
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const conTimeout = (thenable: any, ms = 15000): Promise<any> =>
-    Promise.race([
-      Promise.resolve(thenable),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Timeout: la operación tardó más de ${ms / 1000}s`)), ms)
-      ),
-    ])
+  // Usamos la API server-side en lugar de Supabase directo para bypassear RLS
+  const res = await fetch('/api/tienda/pedido', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, archivado: false }),
+  })
 
-  // 1. Ejecutar transacción de puntos si aplica
-  if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
-    const { error: rpcError } = await conTimeout(
-      supabase.rpc('procesar_compra_puntos', {
-        p_cliente_id: payload.cliente_id,
-        p_puntos_a_gastar: payload.puntos_gastados || 0,
-        p_puntos_a_ganar: payload.puntos_ganados || 0
-      })
-    )
-    
-    if (rpcError) {
-      console.error('[Servicio Pedidos] Error en RPC de puntos:', rpcError.message)
-      throw new Error(`No se pudo procesar los puntos: ${rpcError.message}`)
-    }
-  }
-
-  // 2. Insertar el pedido en sí
-  const { error } = await conTimeout(
-    supabase.from('pedidos').insert(payloadCompleto)
-  )
-
-  if (error) {
-    console.error('[Servicio Pedidos] Error al insertar pedido:', error.message)
-    throw new Error(error.message)
+  if (!res.ok) {
+    let mensaje = `Error HTTP ${res.status}`
+    try {
+      const data = await res.json()
+      if (data?.error) mensaje = data.error
+    } catch {}
+    console.error('[insertarPedidoLocal] Error:', mensaje)
+    throw new Error(mensaje)
   }
 }
 
