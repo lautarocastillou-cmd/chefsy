@@ -21,6 +21,7 @@ import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
+import HeroParallax3D from '@/components/tienda/HeroParallax3D'
 import dynamic from 'next/dynamic'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
@@ -222,7 +223,7 @@ export default function TiendaMobile() {
     anton: 'font-anton',
   }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
 
-  const isVideoBg = configuracion?.textura_fondo_url?.match(/\.(mp4|webm)(\?.*)?$/i)
+  const isVideoBg = Boolean(configuracion?.textura_fondo_url?.match(/\.(mp4|webm)(\?.*)?$/i))
   const bgImage = (!isVideoBg && configuracion?.textura_fondo_url) ? `url(${configuracion.textura_fondo_url})` : undefined
 
   return (
@@ -382,52 +383,29 @@ export default function TiendaMobile() {
         )
       ) : (
         <>
-          {/* Hero Section (Visible solo cuando no hay búsqueda ni categoría seleccionada) */}
+          {/* Hero Section Parallax 3D & Insignias Flotantes */}
           {!categoriaSeleccionada && !busqueda && (
-            <div className={`relative overflow-hidden px-4 py-8 border-b border-white/5 shadow-2xl flex items-center justify-center ${(isVideoBg || bgImage) ? 'bg-transparent' : 'bg-gradient-to-b from-[#141414] to-[#0c0c0c]'}`}>
-              {/* Círculo de fondo animado */}
-              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-chefsy/5 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-              
-              <div className="relative z-10 w-full flex flex-col py-4 justify-center">
-                
-                <div className="relative w-full max-w-[220px] md:max-w-[240px] aspect-square drop-shadow-2xl mx-auto mt-4 mb-4 z-30">
-                  <Image
-                    src={imgError ? "/burger-loca.webp" : (configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp")}
-                    alt="Hero Image"
-                    fill
-                    priority
-                    sizes="(max-width: 768px) 100vw, 300px"
-                    onError={() => setImgError(true)}
-                    className="object-contain"
-                    style={{
-                      objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
-                      transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
-                    }}
-                  />
-                </div>
-
-                <div className="text-center w-full z-20 relative mb-4 mt-1">
-                  <h1 
-                    className="font-bebas text-5xl sm:text-6xl tracking-wide uppercase leading-none drop-shadow-md"
-                    style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
-                  >
-                    {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
-                  </h1>
-                  <h2 
-                    className="font-bebas text-5xl sm:text-6xl tracking-wide uppercase leading-none drop-shadow-md mt-1"
-                    style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
-                  >
-                    {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
-                  </h2>
-                </div>
-              </div>
-            </div>
+            <HeroParallax3D
+              heroImageUrl={configuracion?.hero_image_url || '/burger-loca.webp'}
+              heroLinea1={configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
+              heroLinea2={configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
+              heroScale={configuracion?.hero_escala}
+              heroPosX={configuracion?.hero_pos_x}
+              heroPosY={configuracion?.hero_pos_y}
+              isVideoBg={isVideoBg}
+              bgImage={bgImage}
+              onExplorarClick={() => {
+                setSelectorAbierto(true)
+                const el = document.getElementById('seccion-menu-categorias')
+                if (el) el.scrollIntoView({ behavior: 'smooth' })
+              }}
+            />
           )}
 
 
 
           {/* Menú y Selección de Categorías - Más abajo, junto al catálogo */}
-          <div className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
+          <div id="seccion-menu-categorias" className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
             <h3 
               className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none drop-shadow-md"
               style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
