@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X, LayoutGrid } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 
 interface SelectorCategoriasProps {
@@ -140,7 +140,10 @@ export default function SelectorCategorias({
                   }}
                   className={`w-full text-left px-6 py-4 rounded-2xl transition-all font-medium border border-transparent ${categoriaSeleccionada === 'todos' || !categoriaSeleccionada ? 'bg-chefsy/20 border-chefsy/50 text-chefsy-200' : 'text-white bg-white/5 md:hover:bg-white/10 active:bg-white/15'}`}
                 >
-                  ⬅ Ver todo el menú (Menú Completo)
+                  <div className="flex items-center gap-2.5">
+                    <LayoutGrid size={18} className="text-chefsy-400 shrink-0" />
+                    <span>Ver todo el menú (Menú Completo)</span>
+                  </div>
                 </button>
                 {(() => {
                   const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
