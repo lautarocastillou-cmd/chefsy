@@ -31,11 +31,13 @@ function ProductCard({
   
   const optimizedSrc = optimizarUrlImagen(rawSrc, 250)
   const blurSrc = generarBlurUrl(rawSrc)
+  const esPrioritario = index < 4
 
   return (
     <div
       onClick={() => !agotado && onAbrirModal(prod)}
-      className={`bg-transparent group flex items-start gap-4 cursor-pointer transition-all duration-150 animate-in fade-in slide-in-from-bottom-4 touch-pan-y ${
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 90px' }}
+      className={`bg-transparent group flex items-start gap-4 cursor-pointer transition-all duration-150 animate-in fade-in slide-in-from-bottom-4 touch-manipulation ${
         agotado ? 'opacity-50 grayscale' : 'md:hover:bg-white/5 active:bg-white/10 active:scale-[0.99] p-2 -m-2 rounded-2xl'
       }`}
     >
@@ -45,6 +47,8 @@ function ProductCard({
           src={optimizedSrc}
           alt={prod.nombre}
           fill
+          priority={esPrioritario}
+          loading={esPrioritario ? 'eager' : 'lazy'}
           unoptimized={isCloudinary}
           placeholder="blur"
           blurDataURL={blurSrc}
