@@ -9,6 +9,7 @@ import { generarId } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { supabase } from '@/lib/supabase'
+import { guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
 
 interface ValorContextoCarrito {
   carrito: ItemCarrito[]
@@ -366,6 +367,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       localStorage.setItem('chefsy_direccion', direccionCliente.trim())
     }
     localStorage.setItem('chefsy_ultimo_pedido_id', nuevoPedido.id)
+    // Guardar pedido activo completo para el botón flotante
+    guardarPedidoActivo({
+      id: nuevoPedido.id,
+      clienteNombre: nuevoPedido.cliente,
+      tipoEntrega,
+      estado: 'nuevo',
+    })
 
     setPedidoCompletado(nuevoPedido)
     setCarrito([])

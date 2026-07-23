@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { CheckCircle2, MessageCircle, BellRing } from 'lucide-react'
+import { CheckCircle2, MessageCircle, BellRing, MapPin } from 'lucide-react'
 import Image from 'next/image'
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import { leerPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
 
 interface PantallaExitoProps {
   pedido: Pedido
@@ -194,6 +195,17 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
             <MessageCircle size={18} />
             CONFIRMAR PEDIDO POR WHATSAPP
           </a>
+
+          {/* Botón Seguir mi Pedido — solo si hay pedido activo en localStorage */}
+          {leerPedidoActivo()?.id === pedido.id && (
+            <a
+              href={`/cadete-en-vivo/${pedido.id}`}
+              className="w-full bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 transition-all active:scale-[0.98] border border-emerald-500/30"
+            >
+              <MapPin size={18} />
+              SEGUIR MI PEDIDO EN VIVO
+            </a>
+          )}
           
           <button
             onClick={onNuevoPedido}

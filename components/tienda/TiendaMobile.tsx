@@ -19,6 +19,7 @@ import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
+import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroParallax3D from '@/components/tienda/HeroParallax3D'
@@ -489,6 +490,7 @@ export default function TiendaMobile() {
         abierto={mostrarHistorial}
         onCerrar={() => setMostrarHistorial(false)}
       />
+      <BotonPedidoFlotante />
       <BotonFlotanteWhatsApp />
     </div>
   )

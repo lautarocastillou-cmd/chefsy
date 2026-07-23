@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { supabaseAnon } from '@/lib/supabase'
+import { limpiarPedidoActivo, guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
 import { 
   Flame, 
   UtensilsCrossed, 
@@ -63,6 +64,17 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           telefono: '',
           direccion: '',
         } as unknown as Pedido)
+        // Sincronizar estado del pedido activo en localStorage
+        if (data.estado === 'entregado' || data.estado === 'cancelado') {
+          limpiarPedidoActivo()
+        } else {
+          guardarPedidoActivo({
+            id: data.id,
+            clienteNombre: data.cliente,
+            tipoEntrega: data.tipoEntrega ?? 'delivery',
+            estado: data.estado,
+          })
+        }
       } catch (err: any) {
         setError(err.message)
       } finally {

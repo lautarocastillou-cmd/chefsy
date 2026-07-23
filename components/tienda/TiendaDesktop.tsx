@@ -20,6 +20,7 @@ import HeroSection from '@/components/tienda/HeroSection'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
+import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 
 // Componentes lazy
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
@@ -392,6 +393,7 @@ export default function TiendaDesktop() {
             />
           </Suspense>
         )}
+        <BotonPedidoFlotante />
         <BotonFlotanteWhatsApp />
       </div>
     </div>
