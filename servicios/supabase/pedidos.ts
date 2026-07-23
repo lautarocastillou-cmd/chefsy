@@ -54,13 +54,26 @@ export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
 export async function insertarPedidoLocal(payload: any): Promise<void> {
   const payloadCompleto = { ...payload, archivado: false }
   
+  // Helper: timeout para evitar cuelgues silenciosos de red/RLS
+  // Usamos Promise.resolve() para convertir PostgrestFilterBuilder (thenable) a Promise real
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conTimeout = (thenable: any, ms = 15000): Promise<any> =>
+    Promise.race([
+      Promise.resolve(thenable),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout: la operación tardó más de ${ms / 1000}s`)), ms)
+      ),
+    ])
+
   // 1. Ejecutar transacción de puntos si aplica
   if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
-    const { error: rpcError } = await supabase.rpc('procesar_compra_puntos', {
-      p_cliente_id: payload.cliente_id,
-      p_puntos_a_gastar: payload.puntos_gastados || 0,
-      p_puntos_a_ganar: payload.puntos_ganados || 0
-    })
+    const { error: rpcError } = await conTimeout(
+      supabase.rpc('procesar_compra_puntos', {
+        p_cliente_id: payload.cliente_id,
+        p_puntos_a_gastar: payload.puntos_gastados || 0,
+        p_puntos_a_ganar: payload.puntos_ganados || 0
+      })
+    )
     
     if (rpcError) {
       console.error('[Servicio Pedidos] Error en RPC de puntos:', rpcError.message)
@@ -69,7 +82,9 @@ export async function insertarPedidoLocal(payload: any): Promise<void> {
   }
 
   // 2. Insertar el pedido en sí
-  const { error } = await supabase.from('pedidos').insert(payloadCompleto)
+  const { error } = await conTimeout(
+    supabase.from('pedidos').insert(payloadCompleto)
+  )
 
   if (error) {
     console.error('[Servicio Pedidos] Error al insertar pedido:', error.message)

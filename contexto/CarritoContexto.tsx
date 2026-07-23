@@ -288,9 +288,18 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         }
       }
 
-    // Obtener sesión actual (cliente logueado)
-    const { data: { session } } = await supabase.auth.getSession()
-    const clienteId = session?.user?.id
+    // Obtener sesión actual (cliente logueado) con timeout de 5s
+    let clienteId: string | undefined
+    try {
+      const sessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ])
+      clienteId = sessionResult.data?.session?.user?.id
+    } catch {
+      // Sin sesión o timeout — continuar como invitado
+      clienteId = undefined
+    }
 
     const puntosGanados = Math.floor(totalCarrito * 0.05) // 5% de cashback en puntos
 
