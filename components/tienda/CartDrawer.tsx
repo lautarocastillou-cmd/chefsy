@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store } from 'lucide-react'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
@@ -407,7 +407,9 @@ export default function CartDrawer() {
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
-                          <img src="/cadete-perro.png" alt="Delivery Chefsy" className="h-10 w-auto object-contain rounded-lg drop-shadow-md" />
+                          <div className="h-10 flex items-center justify-center">
+                            <Bike size={28} className={tipoEntrega === 'delivery' ? 'text-chefsy-400' : 'text-slate-400'} />
+                          </div>
                           <span>Delivery</span>
                         </button>
                         <button
