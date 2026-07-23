@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map } from 'lucide-react'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
@@ -401,26 +401,28 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('delivery')}
-                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-1 ${
+                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center justify-center gap-1.5 ${
                             tipoEntrega === 'delivery'
-                              ? 'bg-chefsy-500/20 text-white border-chefsy-500'
+                              ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
-                          <span className="text-2xl mb-0.5">🛵</span>
-                          Delivery
+                          <img src="/cadete-perro.png" alt="Delivery Chefsy" className="h-10 w-auto object-contain rounded-lg drop-shadow-md" />
+                          <span>Delivery</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => onSetTipoEntrega('retiro')}
-                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center gap-1 ${
+                          className={`py-3 px-3 rounded-2xl border-2 text-sm font-bold transition-[colors,transform,border-color] duration-150 active:scale-[0.98] flex flex-col items-center justify-center gap-1.5 ${
                             tipoEntrega === 'retiro'
-                              ? 'bg-chefsy-500/20 text-white border-chefsy-500'
+                              ? 'bg-chefsy-500/20 text-white border-chefsy-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
                               : 'border-[#3d3d3d] bg-[#1a1a1a] text-slate-400 hover:bg-[#252525] hover:border-slate-500'
                           }`}
                         >
-                          <span className="text-2xl mb-0.5">🏪</span>
-                          Retiro por local
+                          <div className="h-10 flex items-center justify-center">
+                            <Store size={28} className={tipoEntrega === 'retiro' ? 'text-chefsy-400' : 'text-slate-400'} />
+                          </div>
+                          <span>Retiro por local</span>
                         </button>
                       </div>
 
