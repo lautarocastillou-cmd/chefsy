@@ -67,7 +67,7 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
       {/* Ventana flotante superpuesta */}
       {abierto && (
         <div 
-          className="absolute top-full left-0 mt-2 z-50 w-72 sm:w-80 bg-[#161618]/95 backdrop-blur-xl border border-white/15 text-white rounded-2xl p-4 sm:p-5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute top-full left-0 mt-2 z-[9999] w-72 sm:w-80 bg-[#161618]/95 backdrop-blur-xl border border-white/15 text-white rounded-2xl p-4 sm:p-5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
           style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))' }}
         >
           {/* Triángulo indicador superior */}

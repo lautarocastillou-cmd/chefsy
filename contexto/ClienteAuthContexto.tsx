@@ -79,6 +79,8 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     let resolucionPropiaCompletada = false
 
     const restaurar = async () => {
+      let perfilPropioEncontrado = false
+
       // 1. Intentar sesión del sistema propio (cookie HttpOnly)
       try {
         const res = await fetch('/api/clientes/sesion', { credentials: 'same-origin', cache: 'no-store' })
@@ -88,24 +90,29 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
             guardarSesionCache(data.perfil, 'propio')
             setEstaListo(true)
             resolucionPropiaCompletada = true
+            perfilPropioEncontrado = true
             return
-          } else if (!data.perfil && localStorage.getItem('chefsy_cliente_fuente_cache') === 'propio') {
-            guardarSesionCache(null, null)
           }
         }
-      } catch { /* sin conexión — mantener caché offline */ }
+      } catch { /* sin conexión — mantener caché offline si la red falla */ }
 
       resolucionPropiaCompletada = true
 
-      // 2. Delegamos a Supabase/Google
+      // 2. Delegamos a Supabase/Google si no hay sesión propia
+      let perfilGoogleEncontrado = false
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !cancelado) {
           await cargarPerfilGoogle(session.user.id, session.user)
+          perfilGoogleEncontrado = true
         }
       } catch { /* continuar */ }
 
-      if (!cancelado) setEstaListo(true)
+      // 3. Si no se encontró ningún perfil en ninguno de los dos sistemas, limpiar todo
+      if (!perfilPropioEncontrado && !perfilGoogleEncontrado && !cancelado) {
+        guardarSesionCache(null, null)
+        setEstaListo(true)
+      }
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {

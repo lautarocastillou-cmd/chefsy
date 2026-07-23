@@ -57,7 +57,7 @@ export default function HeroSection({
   return (
     <>
       {/* --- CABECERA DE LA TIENDA --- */}
-      <header className="bg-transparent px-4 py-6 relative z-40 border-b border-white/5">
+      <header className="bg-transparent px-4 py-6 relative z-[100] border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative">
