@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { supabaseAnon } from '@/lib/supabase'
-import { limpiarPedidoActivo, guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
+import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import { 
   Flame, 
   UtensilsCrossed, 
@@ -17,7 +17,6 @@ import {
   Package,
 } from 'lucide-react'
 
-// Leaflet pesa ~150KB — cargarlo de forma lazy para no bloquear el render inicial
 const MapaSeguimiento = dynamic(
   () => import('@/components/ubicacion/MapaSeguimiento'),
   {
@@ -25,7 +24,7 @@ const MapaSeguimiento = dynamic(
     loading: () => (
       <div className="w-full h-full flex items-center justify-center bg-slate-100 animate-pulse">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-4 border-chefsy border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2A6348', borderTopColor: 'transparent' }} />
+          <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2A6348', borderTopColor: 'transparent' }} />
           <span className="text-xs text-slate-400 font-medium">Cargando mapa...</span>
         </div>
       </div>
@@ -35,65 +34,66 @@ const MapaSeguimiento = dynamic(
 
 const BG = 'linear-gradient(150deg, #2A6348 0%, #1a3d2e 100%)'
 
-// ── Etiqueta de estado ────────────────────────────────────────────────────────
+// ── Badge de estado ─────────────────────────────────────────────────────────
 function EtiquetaEstado({ estado }: { estado: string }) {
-  const configs: Record<string, { label: string; cls: string }> = {
-    nuevo:       { label: 'Recibido',     cls: 'bg-blue-100 text-blue-700' },
-    en_cocina:   { label: 'En cocina',    cls: 'bg-amber-100 text-amber-700' },
-    listo:       { label: 'Listo',        cls: 'bg-emerald-100 text-emerald-700' },
-    en_camino:   { label: 'En camino',    cls: 'bg-green-100 text-green-700' },
-    entregado:   { label: 'Entregado',    cls: 'bg-gray-100 text-gray-500' },
-    cancelado:   { label: 'Cancelado',    cls: 'bg-red-100 text-red-600' },
+  const cfg: Record<string, { label: string; cls: string }> = {
+    nuevo:     { label: 'Recibido',  cls: 'bg-blue-100 text-blue-700' },
+    en_cocina: { label: 'En cocina', cls: 'bg-amber-100 text-amber-700' },
+    listo:     { label: 'Listo',     cls: 'bg-emerald-100 text-emerald-700' },
+    en_camino: { label: 'En camino', cls: 'bg-green-100 text-green-700' },
+    entregado: { label: 'Entregado', cls: 'bg-gray-100 text-gray-500' },
+    cancelado: { label: 'Cancelado', cls: 'bg-red-100 text-red-600' },
   }
-  const cfg = configs[estado] || { label: estado, cls: 'bg-gray-100 text-gray-600' }
+  const c = cfg[estado] ?? { label: estado, cls: 'bg-gray-100 text-gray-600' }
   return (
-    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${c.cls}`}>
+      {c.label}
     </span>
   )
 }
 
-// ── Mini resumen de productos de un pedido ────────────────────────────────────
+// ── Lista de productos ──────────────────────────────────────────────────────
 function ResumenProductos({ productos }: { productos: any[] }) {
   if (!productos || productos.length === 0) return null
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
-      {productos.map((prod: any, i: number) => (
+      {productos.map((p: any, i: number) => (
         <div key={i} className="flex items-start gap-2 text-xs">
-          <span className="font-black text-[#2A6348] shrink-0 mt-0.5">{prod.cantidad}×</span>
-          <span className="text-gray-700 leading-snug">{prod.nombre}</span>
+          <span className="font-black shrink-0 mt-0.5" style={{ color: '#2A6348' }}>{p.cantidad}×</span>
+          <span className="text-gray-700 leading-snug">{p.nombre}</span>
         </div>
       ))}
     </div>
   )
 }
 
-// ── Tarjeta de pedido relacionado (apilada) ───────────────────────────────────
-function TarjetaPedidoRelacionado({ pedido, index }: { pedido: any; index: number }) {
-  const offsetY  = (index + 1) * 10  // desplazamiento vertical
-  const scale    = 1 - (index + 1) * 0.035  // escala ligeramente menor
-  const opacity  = 1 - (index + 1) * 0.15   // un poco más transparente
+// ── Tarjeta apilada de pedido adicional ─────────────────────────────────────
+interface PedidoExtra { id: string; estado: string; productos: any[] }
+
+function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
+  // Cada tarjeta está 12px más abajo y es ligeramente más pequeña
+  const translateY = (index + 1) * 12
+  const scale      = 1 - (index + 1) * 0.04
+  const opacity    = 1 - (index + 1) * 0.18
 
   return (
     <div
-      className="absolute inset-x-0 top-0 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/30 p-4 pointer-events-none"
+      className="absolute inset-x-0 top-0 bg-white/85 backdrop-blur-sm rounded-2xl border border-white/40 p-4 pointer-events-none shadow-md"
       style={{
-        transform: `translateY(${offsetY}px) scale(${scale})`,
-        opacity,
-        zIndex: -(index + 1),
+        transform: `translateY(${translateY}px) scale(${scale})`,
         transformOrigin: 'top center',
+        opacity,
+        zIndex: 10 - (index + 1),
       }}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Package size={15} className="text-gray-400 shrink-0" />
-          <span className="text-xs font-bold text-gray-600">
-            Pedido adicional
-          </span>
+          <Package size={14} className="text-gray-400 shrink-0" />
+          <span className="text-xs font-bold text-gray-500">Pedido adicional</span>
         </div>
-        <EtiquetaEstado estado={pedido.estado} />
+        <EtiquetaEstado estado={data.estado} />
       </div>
-      <ResumenProductos productos={pedido.productos || []} />
+      <ResumenProductos productos={data.productos} />
     </div>
   )
 }
@@ -101,20 +101,22 @@ function TarjetaPedidoRelacionado({ pedido, index }: { pedido: any; index: numbe
 export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: pedidoId } = use(params)
 
-  const [pedido, setPedido]   = useState<Pedido | null>(null)
-  const [productos, setProductos] = useState<any[]>([])
-  const [pedidosRelacionados, setPedidosRelacionados] = useState<any[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
+  const [pedido, setPedido]           = useState<Pedido | null>(null)
+  const [productos, setProductos]     = useState<any[]>([])
+  const [pedidosExtra, setPedidosExtra] = useState<PedidoExtra[]>([])
+  const [cargando, setCargando]       = useState(true)
+  const [error, setError]             = useState<string | null>(null)
 
+  // ── Fetch del pedido principal ──────────────────────────────────────────────
   useEffect(() => {
     if (!pedidoId) return
 
-    const fetchUbicacion = async () => {
+    const fetchPrincipal = async () => {
       try {
-        const res = await fetch(`/api/public/rastreo?id=${pedidoId}`)
+        const res  = await fetch(`/api/public/rastreo?id=${pedidoId}`)
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Error al obtener la ubicación')
+        if (!res.ok) throw new Error(data.error || 'Error al obtener el pedido')
+
         setPedido({
           id: data.id,
           cliente: data.cliente,
@@ -131,11 +133,10 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           direccion: '',
         } as unknown as Pedido)
         setProductos(data.productos || [])
-        setPedidosRelacionados(data.pedidos_relacionados || [])
 
-        // Sincronizar estado del pedido activo en localStorage
+        // Sincronizar localStorage
         if (data.estado === 'entregado' || data.estado === 'cancelado') {
-          limpiarPedidoActivo()
+          limpiarPedidoActivo(pedidoId)
         } else {
           guardarPedidoActivo({
             id: data.id,
@@ -151,77 +152,84 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       }
     }
 
-    fetchUbicacion()
-    
-    // Suscripción en tiempo real a Supabase para actualización instantánea
+    fetchPrincipal()
+
     const canal = supabaseAnon
-      .channel(`public-rastreo-${pedidoId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pedidos',
-          filter: `id=eq.${pedidoId}`,
-        },
-        () => {
-          fetchUbicacion()
-        }
-      )
+      .channel(`rastreo-${pedidoId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, fetchPrincipal)
       .subscribe()
 
-    // Polling de respaldo (cada 15s)
-    const intervalo = setInterval(fetchUbicacion, 15000)
-    
-    return () => {
-      clearInterval(intervalo)
-      supabaseAnon.removeChannel(canal)
-    }
+    const intervalo = setInterval(fetchPrincipal, 15000)
+    return () => { clearInterval(intervalo); supabaseAnon.removeChannel(canal) }
   }, [pedidoId])
 
-  if (cargando) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: BG }}>
-        <div className="w-12 h-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
-        <p className="text-white/70 text-sm font-medium animate-pulse">Buscando tu pedido...</p>
-      </div>
-    )
-  }
+  // ── Fetch de los pedidos adicionales (desde localStorage) ───────────────────
+  useEffect(() => {
+    const cargarExtras = async () => {
+      const todos = leerTodosPedidosActivos()
+      const otros = todos.filter(p => p.id !== pedidoId)
+      if (otros.length === 0) { setPedidosExtra([]); return }
 
-  if (error || !pedido) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: BG }}>
-        <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
-          <AlertCircle size={44} className="text-amber-500" />
-          <h1 className="text-lg font-bold text-gray-800">Ups...</h1>
-          <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
-          <a
-            href="https://chefsy.xyz/"
-            className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-[#2A6348] hover:underline"
-          >
-            <ArrowLeft size={14} />
-            <span>Volver a la tienda</span>
-          </a>
-        </div>
+      const resultados = await Promise.all(
+        otros.map(async (p) => {
+          try {
+            const res  = await fetch(`/api/public/rastreo?id=${p.id}`)
+            if (!res.ok) return null
+            const data = await res.json()
+            // Si está terminado, limpiar del localStorage
+            if (data.estado === 'entregado' || data.estado === 'cancelado') {
+              limpiarPedidoActivo(p.id)
+              return null
+            }
+            return { id: data.id, estado: data.estado, productos: data.productos || [] }
+          } catch { return null }
+        })
+      )
+      setPedidosExtra(resultados.filter(Boolean) as PedidoExtra[])
+    }
+
+    // Cargar cuando montan y cada 20s
+    cargarExtras()
+    const t = setInterval(cargarExtras, 20000)
+    return () => clearInterval(t)
+  }, [pedidoId])
+
+  // ── Loading / Error ─────────────────────────────────────────────────────────
+  if (cargando) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: BG }}>
+      <div className="w-12 h-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+      <p className="text-white/70 text-sm font-medium animate-pulse">Buscando tu pedido...</p>
+    </div>
+  )
+
+  if (error || !pedido) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: BG }}>
+      <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
+        <AlertCircle size={44} className="text-amber-500" />
+        <h1 className="text-lg font-bold text-gray-800">Ups...</h1>
+        <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
+        <a href="https://chefsy.xyz/" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-[#2A6348] hover:underline">
+          <ArrowLeft size={14} /><span>Volver a la tienda</span>
+        </a>
       </div>
-    )
-  }
+    </div>
+  )
 
   const isTerminado     = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-  const isEnPreparacion = pedido.estado === 'nuevo' || pedido.estado === 'en_cocina' || pedido.estado === 'listo'
+  const isEnPreparacion = ['nuevo', 'en_cocina', 'listo'].includes(pedido.estado)
   const isEnCamino      = pedido.estado === 'en_camino'
   const tieneUbicacion  = !!(pedido as any).cadete_coordenadas
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
 
-  // ── Bloque del mapa / estado visual ──────────────────────────────────────────
+  // ── Mapa / estado visual ────────────────────────────────────────────────────
   const bloqueContenido = gpsApagado ? (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
-      <div className="w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg bg-red-50">
+      <div className="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center mb-4 shadow-lg">
         <WifiOff size={40} className="text-red-500" />
       </div>
       <h2 className="text-lg font-black text-gray-800 mb-2">Señal GPS perdida</h2>
-      <p className="text-gray-500 text-sm leading-relaxed max-w-[220px]">
-        El cadete está con el GPS apagado o sin señal. De todas formas, tu pedido sigue en camino.
+      <p className="text-gray-500 text-sm max-w-[220px] leading-relaxed">
+        El cadete está con GPS apagado, pero tu pedido sigue en camino.
       </p>
     </div>
   ) : tieneUbicacion ? (
@@ -229,16 +237,14 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
       <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg ${isTerminado ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-        {isTerminado ? (
-          <ShoppingBag size={42} className="text-emerald-600" />
-        ) : (
-          <Flame size={42} className="text-amber-500 animate-pulse" />
-        )}
+        {isTerminado
+          ? <ShoppingBag size={42} className="text-emerald-600" />
+          : <Flame size={42} className="text-amber-500 animate-pulse" />}
       </div>
       <h2 className="text-lg font-black text-gray-800 mb-2">
         {isTerminado ? '¡Que lo disfrutes!' : 'Cocinando con amor'}
       </h2>
-      <p className="text-gray-400 text-sm leading-relaxed max-w-[220px]">
+      <p className="text-gray-400 text-sm max-w-[220px] leading-relaxed">
         {isTerminado
           ? 'El pedido fue entregado. ¡Gracias por elegir Chefsy!'
           : 'Te avisamos cuando el cadete salga a entregar.'}
@@ -246,24 +252,22 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </div>
   )
 
-  // ── Header del pedido principal con productos ─────────────────────────────────
-  const headerInfo = (
+  // ── Header del pedido principal ─────────────────────────────────────────────
+  const headerPrincipal = (
     <>
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
           style={{ background: 'rgba(42,99,72,0.12)' }}>
-          {isTerminado ? (
-            <CheckCircle2 size={24} className="text-emerald-600" />
-          ) : isEnPreparacion ? (
-            <UtensilsCrossed size={24} className="text-amber-600" />
-          ) : (
-            <Bike size={24} className="text-emerald-600" />
-          )}
+          {isTerminado     ? <CheckCircle2 size={24} className="text-emerald-600" />
+           : isEnPreparacion ? <UtensilsCrossed size={24} className="text-amber-600" />
+           : <Bike size={24} className="text-emerald-600" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-bold text-gray-900 text-base leading-tight">
-              {isTerminado ? '¡Pedido entregado!' : isEnPreparacion ? 'Preparando tu pedido' : '¡Tu pedido está en camino!'}
+              {isTerminado ? '¡Pedido entregado!'
+               : isEnPreparacion ? 'Preparando tu pedido'
+               : '¡Tu pedido está en camino!'}
             </h1>
             <EtiquetaEstado estado={pedido.estado} />
           </div>
@@ -273,13 +277,13 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Resumen de productos del pedido principal */}
+      {/* Productos */}
       <ResumenProductos productos={productos} />
 
       {/* Cadete asignado */}
       {isEnCamino && pedido.cadete_nombre && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm text-gray-500">Cadete asignado:</span>
+          <span className="text-sm text-gray-500">Cadete:</span>
           <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-md">
             {pedido.cadete_nombre}
           </span>
@@ -288,23 +292,23 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </>
   )
 
-  // ── Header con stack de pedidos relacionados ──────────────────────────────────
-  const headerConStack = (
-    <div
-      className="relative"
-      style={{
-        // Espacio extra abajo para que las tarjetas apiladas no se superpongan al siguiente elemento
-        marginBottom: pedidosRelacionados.length > 0 ? `${pedidosRelacionados.length * 10}px` : undefined,
-      }}
-    >
-      {/* Tarjetas de fondo apiladas (de atrás hacia adelante) */}
-      {pedidosRelacionados.map((rel, i) => (
-        <TarjetaPedidoRelacionado key={rel.id} pedido={rel} index={i} />
-      ))}
+  // ── Stack de tarjetas (principal + adicionales) ─────────────────────────────
+  // El margen inferior evita que las tarjetas apiladas tapen el mapa
+  const stackMarginBottom = pedidosExtra.length * 12
 
-      {/* Tarjeta principal (al frente) */}
-      <div className="relative z-10 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-4">
-        {headerInfo}
+  const headerConStack = (
+    <div className="relative" style={{ marginBottom: stackMarginBottom }}>
+      {/* Tarjetas de fondo (de la más al fondo a la más cercana) */}
+      {[...pedidosExtra].reverse().map((extra, i) => (
+        <TarjetaApilada
+          key={extra.id}
+          data={extra}
+          index={pedidosExtra.length - 1 - i}
+        />
+      ))}
+      {/* Tarjeta principal encima */}
+      <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-4" style={{ zIndex: 20 }}>
+        {headerPrincipal}
       </div>
     </div>
   )
@@ -315,8 +319,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         href="https://chefsy.xyz/"
         className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition-all backdrop-blur-md shadow-lg active:scale-95"
       >
-        <ArrowLeft size={14} />
-        <span>Volver a la tienda</span>
+        <ArrowLeft size={14} /><span>Volver a la tienda</span>
       </a>
       <p className="text-center text-white/30 text-xs font-semibold tracking-wider">Powered by Chefsy</p>
     </div>
@@ -324,34 +327,25 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      {/* ══ MOBILE (< md) ══════════════════════════════════════════ */}
+      {/* ══ MOBILE ══════════════════════════════════════════════════════════ */}
       <div className="md:hidden min-h-screen flex flex-col" style={{ background: BG }}>
-        {/* Header superpuesto con stack */}
-        <div className="z-50 px-4 pt-5 pb-3">
-          {headerConStack}
-        </div>
-
-        {/* Mapa: ocupa todo lo que queda */}
+        <div className="z-50 px-4 pt-5 pb-3">{headerConStack}</div>
         <div className="flex-1 px-4 pb-4 flex flex-col">
           <div className="flex-1 relative w-full min-h-[60vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
             {bloqueContenido}
           </div>
         </div>
-
         {footerBloque}
       </div>
 
-      {/* ══ DESKTOP (≥ md) ════════════════════════════════════════ */}
+      {/* ══ DESKTOP ═════════════════════════════════════════════════════════ */}
       <div className="hidden md:flex min-h-screen flex-col items-center justify-center px-8 py-10 gap-6" style={{ background: BG }}>
         <div className="w-full max-w-xl flex flex-col gap-5">
           {headerConStack}
-
-          {/* Mapa rectangular más grande en desktop */}
           <div className="w-full rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20" style={{ height: '480px' }}>
             {bloqueContenido}
           </div>
         </div>
-
         {footerBloque}
       </div>
     </>

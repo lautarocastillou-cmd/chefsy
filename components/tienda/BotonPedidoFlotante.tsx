@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, X } from 'lucide-react'
 
-const STORAGE_KEY = 'chefsy_pedido_activo'
-const MAX_EDAD_HS = 4 // Desaparece solo si tiene más de 4 horas
+const STORAGE_KEY = 'chefsy_pedidos_activos'
+const MAX_EDAD_HS = 4     // Expira si tiene más de 4 horas
+const MAX_PEDIDOS  = 3    // Máximo 3 pedidos en paralelo
 
 export interface PedidoActivo {
   id: string
@@ -15,66 +16,94 @@ export interface PedidoActivo {
   estado?: string
 }
 
-// Helpers para leer/escribir/limpiar el pedido activo
-export function guardarPedidoActivo(data: Omit<PedidoActivo, 'timestamp'>) {
-  try {
-    const payload: PedidoActivo = { ...data, timestamp: Date.now() }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-    // Disparar evento para que otros componentes en la misma pestaña se enteren
-    window.dispatchEvent(new Event('pedidoActivo:cambio'))
-  } catch {}
+// ── Helpers internos ──────────────────────────────────────────────────────────
+
+function esPedidoExpirado(p: PedidoActivo): boolean {
+  const hs = (Date.now() - p.timestamp) / 1000 / 3600
+  return hs > MAX_EDAD_HS || p.estado === 'entregado' || p.estado === 'cancelado'
 }
 
-export function leerPedidoActivo(): PedidoActivo | null {
+function leerArray(): PedidoActivo[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const data: PedidoActivo = JSON.parse(raw)
-    // Limpiar si expiró (más de MAX_EDAD_HS horas) o está terminado
-    const horasTranscurridas = (Date.now() - data.timestamp) / 1000 / 3600
-    if (horasTranscurridas > MAX_EDAD_HS) {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
-    if (data.estado === 'entregado' || data.estado === 'cancelado') {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
-    return data
-  } catch {
-    return null
-  }
+    if (!raw) return []
+    const arr: PedidoActivo[] = JSON.parse(raw)
+    if (!Array.isArray(arr)) return []
+    // Filtrar expirados
+    return arr.filter(p => !esPedidoExpirado(p))
+  } catch { return [] }
 }
 
-export function limpiarPedidoActivo() {
+function escribirArray(arr: PedidoActivo[]) {
   try {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr))
     window.dispatchEvent(new Event('pedidoActivo:cambio'))
   } catch {}
 }
 
-// ─── Componente Botón Flotante ────────────────────────────────────────────────
+// ── API pública ───────────────────────────────────────────────────────────────
+
+/** Agrega o actualiza un pedido activo en el array localStorage */
+export function guardarPedidoActivo(data: Omit<PedidoActivo, 'timestamp'>) {
+  try {
+    const arr = leerArray()
+    const idx = arr.findIndex(p => p.id === data.id)
+    const payload: PedidoActivo = { ...data, timestamp: idx >= 0 ? arr[idx].timestamp : Date.now() }
+    if (idx >= 0) {
+      arr[idx] = payload  // Actualizar existente (estado, etc.)
+    } else {
+      arr.unshift(payload)  // Agregar al principio (más reciente primero)
+      if (arr.length > MAX_PEDIDOS) arr.pop()  // Limitar a MAX_PEDIDOS
+    }
+    escribirArray(arr)
+  } catch {}
+}
+
+/** Devuelve el pedido activo más reciente (para el botón flotante) */
+export function leerPedidoActivo(): PedidoActivo | null {
+  const arr = leerArray()
+  return arr.length > 0 ? arr[0] : null
+}
+
+/** Devuelve todos los pedidos activos */
+export function leerTodosPedidosActivos(): PedidoActivo[] {
+  return leerArray()
+}
+
+/** Elimina un pedido específico del array */
+export function limpiarPedidoActivo(id?: string) {
+  try {
+    if (!id) {
+      localStorage.removeItem(STORAGE_KEY)
+    } else {
+      const arr = leerArray().filter(p => p.id !== id)
+      escribirArray(arr)
+    }
+    window.dispatchEvent(new Event('pedidoActivo:cambio'))
+  } catch {}
+}
+
+// ── Componente Botón Flotante ─────────────────────────────────────────────────
 export default function BotonPedidoFlotante() {
   const [pedido, setPedido] = useState<PedidoActivo | null>(null)
+  const [cantidadExtra, setCantidadExtra] = useState(0)
   const [visible, setVisible] = useState(false)
   const [cerrado, setCerrado] = useState(false)
   const router = useRouter()
 
   const sincronizar = () => {
-    const p = leerPedidoActivo()
-    setPedido(p)
-    if (p && !cerrado) setVisible(true)
+    const todos = leerTodosPedidosActivos()
+    const primero = todos[0] ?? null
+    setPedido(primero)
+    setCantidadExtra(Math.max(0, todos.length - 1))
+    if (primero && !cerrado) setVisible(true)
     else setVisible(false)
   }
 
   useEffect(() => {
     sincronizar()
-
-    // Escuchar cambios en la misma pestaña
     window.addEventListener('pedidoActivo:cambio', sincronizar)
-    // Escuchar cambios de otras pestañas
     window.addEventListener('storage', sincronizar)
-
     return () => {
       window.removeEventListener('pedidoActivo:cambio', sincronizar)
       window.removeEventListener('storage', sincronizar)
@@ -102,6 +131,12 @@ export default function BotonPedidoFlotante() {
 
         <MapPin size={16} className="shrink-0" />
         <span className="tracking-wide">SEGUIR MI PEDIDO</span>
+        {/* Badge de pedidos extra */}
+        {cantidadExtra > 0 && (
+          <span className="ml-0.5 bg-white/25 text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center shrink-0">
+            +{cantidadExtra}
+          </span>
+        )}
       </button>
 
       {/* Botón cerrar */}
