@@ -20,6 +20,7 @@ import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
 import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
+import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroParallax3D from '@/components/tienda/HeroParallax3D'
@@ -261,6 +262,7 @@ export default function TiendaMobile() {
               <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
+            <BotonUbicacionLocal size="sm" />
           </div>
 
           {usuario ? (
