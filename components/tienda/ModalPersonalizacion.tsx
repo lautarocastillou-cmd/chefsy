@@ -91,7 +91,7 @@ export default function ModalPersonalizacion({
 
       {/* Modal Panel */}
       <div 
-        className="relative w-full h-[100dvh] sm:h-auto sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 fade-in duration-250 ease-out pb-6 sm:pb-0 pointer-events-auto will-change-transform"
+        className="relative w-full h-[100dvh] sm:h-auto sm:max-w-md bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 fade-in duration-250 ease-out pb-6 sm:pb-0 pointer-events-auto will-change-transform transform-gpu"
         onClick={(e) => e.stopPropagation()}
       >
         

@@ -20,10 +20,12 @@ import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
-import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
-import ModalLogout from '@/components/auth/ModalLogout'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
-import ModalHistorialPedidos from '@/components/tienda/ModalHistorialPedidos'
+import dynamic from 'next/dynamic'
+
+const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
+const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr: false })
+const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHistorialPedidos'), { ssr: false })
 
 const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
 const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))

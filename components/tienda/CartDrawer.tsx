@@ -228,7 +228,7 @@ export default function CartDrawer() {
         onClick={onCerrar}
       />
       
-      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-200 ease-out border-l border-[#3d3d3d] will-change-transform">
+      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-200 ease-out border-l border-[#3d3d3d] will-change-transform transform-gpu">
         {/* Cabecera del Drawer */}
         <div className="px-5 py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
