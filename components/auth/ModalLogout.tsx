@@ -36,8 +36,17 @@ export default function ModalLogout({ onConfirm, onCancel }: ModalLogoutProps) {
 
   const confirmar = async () => {
     setCargando(true)
-    await onConfirm()
-    setCargando(false)
+    try {
+      // Timeout de 6s: si onConfirm se cuelga, el modal no queda bloqueado
+      await Promise.race([
+        onConfirm(),
+        new Promise<void>(res => setTimeout(res, 6000)),
+      ])
+    } catch {
+      // Ignorar errores — el logout ya limpió el estado local
+    } finally {
+      setCargando(false)
+    }
   }
 
   return (

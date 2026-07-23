@@ -221,9 +221,12 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   // ── Cerrar sesión (ambos sistemas) ─────────────────────────────────────
   const cerrarSesion = useCallback(async () => {
     guardarSesionCache(null, null)
+    // Timeout de 5s por si alguna de las llamadas se cuelga
+    const conTimeout = (p: Promise<any>) =>
+      Promise.race([p, new Promise(res => setTimeout(res, 5000))])
     await Promise.allSettled([
-      fetch('/api/clientes/logout', { method: 'POST', credentials: 'same-origin' }),
-      supabase.auth.signOut(),
+      conTimeout(fetch('/api/clientes/logout', { method: 'POST', credentials: 'same-origin' })),
+      conTimeout(supabase.auth.signOut()),
     ])
   }, [])
 
