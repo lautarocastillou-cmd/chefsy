@@ -34,14 +34,6 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
   const { usuario } = usarClienteAuth()
 
   useEffect(() => {
-    // Abrir WhatsApp automáticamente tras 1 segundo para agilizar la confirmación en cocina
-    const timerWa = setTimeout(() => {
-      try {
-        const url = generarEnlaceWhatsApp(pedido)
-        window.open(url, '_blank')
-      } catch (e) {}
-    }, 1000)
-
     window.history.pushState({ pantallaExito: true }, '', window.location.href)
 
     const handlePopState = () => {
@@ -50,10 +42,9 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
 
     window.addEventListener('popstate', handlePopState)
     return () => {
-      clearTimeout(timerWa)
       window.removeEventListener('popstate', handlePopState)
     }
-  }, [pedido, generarEnlaceWhatsApp, onNuevoPedido])
+  }, [onNuevoPedido])
 
   const habilitarNotificaciones = async () => {
     try {

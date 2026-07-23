@@ -36,7 +36,8 @@ export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Co
       destinoLat: coord2.latitud.toString()
     })
     
-    const res = await fetch(`/api/resolve-maps?${params}`, { signal })
+    const fetchSignal = signal || AbortSignal.timeout(3000)
+    const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
     if (res.ok) {
       const data = await res.json()
       if (data && typeof data.distance === 'number') {
@@ -44,7 +45,7 @@ export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Co
       }
     }
   } catch (err: any) {
-    if (err.name === 'AbortError') throw err // Dejar pasar para que el hook lo maneje
+    if (err?.name === 'AbortError' && signal) throw err // Dejar pasar para que el hook lo maneje
     console.warn("Proxy OSRM falló. Usando fallback matemático.")
   }
   
@@ -107,9 +108,10 @@ export async function buscarCoordenadasPorDireccion(
       bounded: '1',
     })
 
+    const fetchSignal = AbortSignal.timeout(3000)
     let respuesta = await fetch(
       `https://nominatim.openstreetmap.org/search?${parametros}`,
-      { headers: { 'Accept-Language': 'es' } }
+      { headers: { 'Accept-Language': 'es' }, signal: fetchSignal }
     )
 
     let resultados = []
@@ -122,7 +124,7 @@ export async function buscarCoordenadasPorDireccion(
       parametros.set('q', texto)
       respuesta = await fetch(
         `https://nominatim.openstreetmap.org/search?${parametros}`,
-        { headers: { 'Accept-Language': 'es' } }
+        { headers: { 'Accept-Language': 'es' }, signal: fetchSignal }
       )
       if (respuesta.ok) {
         resultados = await respuesta.json()
@@ -161,7 +163,7 @@ export async function buscarDireccionPorCoordenadas(
 
     const respuesta = await fetch(
       `https://nominatim.openstreetmap.org/reverse?${parametros}`,
-      { headers: { 'Accept-Language': 'es' } }
+      { headers: { 'Accept-Language': 'es' }, signal: AbortSignal.timeout(3000) }
     )
 
     if (!respuesta.ok) return null
