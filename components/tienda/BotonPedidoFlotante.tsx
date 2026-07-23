@@ -100,11 +100,45 @@ export default function BotonPedidoFlotante() {
     else setVisible(false)
   }
 
+  // Verifica el estado real de cada pedido contra la API y limpia los terminados
+  const verificarContraAPI = async () => {
+    const todos = leerTodosPedidosActivos()
+    if (todos.length === 0) return
+    await Promise.all(
+      todos.map(async (p) => {
+        try {
+          const res  = await fetch(`/api/public/rastreo?id=${p.id}`)
+          if (!res.ok) {
+            // 404 u otro error → el pedido no existe o fue eliminado
+            limpiarPedidoActivo(p.id)
+            return
+          }
+          const data = await res.json()
+          if (data.estado === 'entregado' || data.estado === 'cancelado') {
+            limpiarPedidoActivo(p.id)
+          } else {
+            // Actualizar el estado local
+            guardarPedidoActivo({ id: p.id, clienteNombre: p.clienteNombre, tipoEntrega: p.tipoEntrega, estado: data.estado })
+          }
+        } catch {
+          // Error de red — no limpiar, puede ser temporal
+        }
+      })
+    )
+    sincronizar()
+  }
+
   useEffect(() => {
     sincronizar()
+
+    // Verificar contra la API al montar y cada 30 segundos
+    verificarContraAPI()
+    const intervalo = setInterval(verificarContraAPI, 30_000)
+
     window.addEventListener('pedidoActivo:cambio', sincronizar)
     window.addEventListener('storage', sincronizar)
     return () => {
+      clearInterval(intervalo)
       window.removeEventListener('pedidoActivo:cambio', sincronizar)
       window.removeEventListener('storage', sincronizar)
     }
