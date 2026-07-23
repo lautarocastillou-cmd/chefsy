@@ -91,18 +91,6 @@ export default function HeroParallax3D({
           0%, 100% { opacity: 0.4; transform: scale(1); }
           50% { opacity: 0.75; transform: scale(1.12); }
         }
-        @keyframes badgeFloat1 {
-          0%, 100% { transform: translateY(0px) rotate(-2deg); }
-          50% { transform: translateY(-6px) rotate(1deg); }
-        }
-        @keyframes badgeFloat2 {
-          0%, 100% { transform: translateY(0px) rotate(3deg); }
-          50% { transform: translateY(-8px) rotate(-1deg); }
-        }
-        @keyframes badgeFloat3 {
-          0%, 100% { transform: translateY(0px) rotate(-1deg); }
-          50% { transform: translateY(-7px) rotate(2deg); }
-        }
         @keyframes textShimmer {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
@@ -114,9 +102,6 @@ export default function HeroParallax3D({
         .anim-glow {
           animation: pulseGlow 3.5s ease-in-out infinite;
         }
-        .badge-1 { animation: badgeFloat1 3.8s ease-in-out infinite; }
-        .badge-2 { animation: badgeFloat2 4.2s ease-in-out infinite 0.6s; }
-        .badge-3 { animation: badgeFloat3 4.0s ease-in-out infinite 1.2s; }
         .text-gradient-neon {
           background: linear-gradient(90deg, #f59e0b, #fbbf24, #10b981, #f59e0b);
           background-size: 300% 100%;
@@ -136,9 +121,9 @@ export default function HeroParallax3D({
 
       <div className="relative z-10 w-full max-w-md mx-auto flex flex-col items-center justify-center py-2">
         
-        {/* Contenedor 3D de la Imagen + Badges */}
+        {/* Contenedor 3D de la Imagen */}
         <div 
-          className="relative w-full max-w-[260px] sm:max-w-[290px] aspect-square mx-auto my-2 transition-transform duration-200 ease-out"
+          className="relative w-full max-w-[240px] sm:max-w-[270px] aspect-square mx-auto my-2 transition-transform duration-200 ease-out"
           style={{
             transformStyle: 'preserve-3d',
             transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isHovered ? 1.04 : 1})`
@@ -163,39 +148,6 @@ export default function HeroParallax3D({
               }}
             />
           </div>
-
-          {/* Badge 1: Top-Left */}
-          <div 
-            className="absolute top-2 -left-2 z-30 badge-1 pointer-events-none"
-            style={{ transform: 'translateZ(40px)' }}
-          >
-            <div className="bg-slate-950/80 backdrop-blur-md border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-xl flex items-center gap-1.5 tracking-wide ring-1 ring-amber-500/20">
-              <span className="text-sm">🧀</span>
-              <span>+Cheddar Extra</span>
-            </div>
-          </div>
-
-          {/* Badge 2: Top-Right */}
-          <div 
-            className="absolute top-8 -right-3 z-30 badge-2 pointer-events-none"
-            style={{ transform: 'translateZ(50px)' }}
-          >
-            <div className="bg-slate-950/80 backdrop-blur-md border border-orange-500/40 text-orange-400 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-xl flex items-center gap-1.5 tracking-wide ring-1 ring-orange-500/20">
-              <span className="text-sm">🔥</span>
-              <span>100% Recién Hecho</span>
-            </div>
-          </div>
-
-          {/* Badge 3: Bottom-Right */}
-          <div 
-            className="absolute bottom-2 -right-1 z-30 badge-3 pointer-events-none"
-            style={{ transform: 'translateZ(35px)' }}
-          >
-            <div className="bg-slate-950/80 backdrop-blur-md border border-emerald-500/40 text-emerald-300 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-xl flex items-center gap-1.5 tracking-wide ring-1 ring-emerald-500/20">
-              <span className="text-sm">⚡</span>
-              <span>Envío Rápido 25m</span>
-            </div>
-          </div>
         </div>
 
         {/* Textos Neón Animados */}
@@ -219,7 +171,7 @@ export default function HeroParallax3D({
             className="mt-3 group bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 hover:border-amber-400/40 px-5 py-2 rounded-full text-xs font-bold text-white transition-all flex items-center gap-2 shadow-lg cursor-pointer backdrop-blur-sm"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>EXPORAR MENÚ COMPLETO</span>
+            <span>EXPLORAR MENÚ COMPLETO</span>
             <span className="group-hover:translate-y-0.5 transition-transform">↓</span>
           </button>
         )}
