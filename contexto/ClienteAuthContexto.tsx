@@ -41,6 +41,9 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilCliente | null>(() => {
     if (typeof window !== 'undefined') {
       try {
+        if (localStorage.getItem('chefsy_logout_manual') === 'true') {
+          return null
+        }
         const cache = localStorage.getItem('chefsy_cliente_sesion_cache')
         if (cache) return JSON.parse(cache)
       } catch {}
@@ -51,6 +54,9 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   const [fuenteSesion, setFuenteSesion] = useState<FuenteSesion>(() => {
     if (typeof window !== 'undefined') {
       try {
+        if (localStorage.getItem('chefsy_logout_manual') === 'true') {
+          return null
+        }
         return (localStorage.getItem('chefsy_cliente_fuente_cache') as FuenteSesion) || null
       } catch {}
     }
@@ -65,6 +71,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         if (p && fuente) {
           localStorage.setItem('chefsy_cliente_sesion_cache', JSON.stringify(p))
           localStorage.setItem('chefsy_cliente_fuente_cache', fuente)
+          localStorage.removeItem('chefsy_logout_manual')
         } else {
           localStorage.removeItem('chefsy_cliente_sesion_cache')
           localStorage.removeItem('chefsy_cliente_fuente_cache')
@@ -79,6 +86,13 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     let resolucionPropiaCompletada = false
 
     const restaurar = async () => {
+      // Si el usuario hizo logout explícito, respetamos su decisión
+      if (typeof window !== 'undefined' && localStorage.getItem('chefsy_logout_manual') === 'true') {
+        guardarSesionCache(null, null)
+        if (!cancelado) setEstaListo(true)
+        return
+      }
+
       let perfilPropioEncontrado = false
 
       // 1. Intentar sesión del sistema propio (cookie HttpOnly)
@@ -117,6 +131,13 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelado) return
+
+      // Ignorar reconexiones automáticas si se marcó un logout explícito
+      if (typeof window !== 'undefined' && localStorage.getItem('chefsy_logout_manual') === 'true') {
+        guardarSesionCache(null, null)
+        setEstaListo(true)
+        return
+      }
 
       if (session?.user) {
         await cargarPerfilGoogle(session.user.id, session.user)
@@ -175,6 +196,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     clave:    string
   ): Promise<{ error: string | null }> => {
     try {
+      if (typeof window !== 'undefined') localStorage.removeItem('chefsy_logout_manual')
       const res = await fetch('/api/clientes/registro', {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
@@ -196,6 +218,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     clave:    string
   ): Promise<{ error: string | null }> => {
     try {
+      if (typeof window !== 'undefined') localStorage.removeItem('chefsy_logout_manual')
       const res = await fetch('/api/clientes/login', {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
@@ -213,6 +236,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
 
   // ── Google OAuth ───────────────────────────────────────────────────────
   const iniciarSesionGoogle = useCallback(async () => {
+    if (typeof window !== 'undefined') localStorage.removeItem('chefsy_logout_manual')
     const redirectTo = typeof window !== 'undefined'
       ? `${window.location.origin}/auth/callback`
       : 'https://chefsy.xyz/auth/callback'
@@ -227,12 +251,26 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
 
   // ── Cerrar sesión (ambos sistemas) ─────────────────────────────────────
   const cerrarSesion = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('chefsy_logout_manual', 'true')
+        // Limpieza de claves internas de Supabase Auth
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key)
+          }
+        })
+      } catch {}
+    }
+
     guardarSesionCache(null, null)
-    // Timeout de 5s por si alguna de las llamadas se cuelga
+
     const conTimeout = (p: Promise<any>) =>
       Promise.race([p, new Promise(res => setTimeout(res, 5000))])
+
     await Promise.allSettled([
       conTimeout(fetch('/api/clientes/logout', { method: 'POST', credentials: 'same-origin' })),
+      conTimeout(supabase.auth.signOut({ scope: 'local' })),
       conTimeout(supabase.auth.signOut()),
     ])
   }, [])
