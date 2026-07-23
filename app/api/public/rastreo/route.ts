@@ -17,11 +17,9 @@ export async function GET(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
 
-    console.log('[API Rastreo] Buscando pedido con id:', pedidoId)
-
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas')
+      .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega')
       .eq('id', pedidoId)
       .maybeSingle()
 
@@ -53,6 +51,25 @@ export async function GET(request: Request) {
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = estadosActivos.includes(data.estado)
 
+    // Buscar otros pedidos activos del mismo cliente (por teléfono)
+    let pedidosRelacionados: any[] = []
+    if (data.telefono) {
+      const estadosNoTerminados = ['nuevo', 'en_cocina', 'listo', 'en_camino']
+      const { data: otrosPedidos } = await supabase
+        .from('pedidos')
+        .select('id, estado, productos, tipoEntrega, hora')
+        .eq('telefono', data.telefono)
+        .in('estado', estadosNoTerminados)
+        .eq('archivado', false)
+        .neq('id', pedidoId)
+        .order('created_at', { ascending: true })
+        .limit(2)
+
+      if (otrosPedidos && otrosPedidos.length > 0) {
+        pedidosRelacionados = otrosPedidos
+      }
+    }
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
@@ -61,11 +78,14 @@ export async function GET(request: Request) {
       cadete_coordenadas: mostrarCadete ? (data.cadete_coordenadas ?? null) : null,
       destino_coordenadas: data.coordenadas ?? null,
       cadete_gps_activo: gpsActivo,
-      local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG }
+      local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },
+      // Nuevos campos
+      productos: data.productos ?? [],
+      tipoEntrega: data.tipoEntrega ?? 'delivery',
+      pedidos_relacionados: pedidosRelacionados,
     })
   } catch (error) {
     console.error('[API Pública Rastreo GET] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
-
