@@ -47,7 +47,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
   } = useFormularioPedido({ pedidoInicial, onClose })
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div data-formulario-pedido="true" className="w-full max-w-6xl mx-auto space-y-6">
 
       {error && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">

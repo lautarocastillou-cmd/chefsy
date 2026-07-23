@@ -33,6 +33,11 @@ export function useAtajoNuevoPedido({ modalAbierto = false, onAbrirModal }: Prop
       const esBuscarAlternativo = e.key.toLowerCase() === 'k' || e.code === 'KeyK' || e.keyCode === 75;
 
       if ((e.ctrlKey || e.metaKey) && (esTeclaMenorMayor || esBuscarAlternativo)) {
+        // Si el formulario de pedido ya está abierto en pantalla (creando o editando), no hacer nada
+        if (typeof document !== 'undefined' && document.querySelector('[data-formulario-pedido="true"]')) {
+          return
+        }
+
         if (!modalAbierto && onAbrirModal) {
           e.preventDefault()
           e.stopPropagation()
