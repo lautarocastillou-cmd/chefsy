@@ -404,26 +404,19 @@ export default function TiendaMobile() {
 
 
 
-          {/* Menú y Selección de Categorías - Más abajo, junto al catálogo */}
-          <div id="seccion-menu-categorias" className="text-center w-full z-20 relative mt-6 mb-2 flex flex-col items-center gap-3 px-4">
-            <h3 
-              className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none drop-shadow-md"
-              style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
-            >
-              {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
-            </h3>
-            <div className="w-full max-w-sm mt-1">
-              <SelectorCategorias
-                categoriasActivas={categoriasActivas}
-                categoriaSeleccionada={categoriaSeleccionada}
-                selectorAbierto={selectorAbierto}
-                onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
-                onSeleccionarCategoria={(id) => {
-                  setCategoriaSeleccionada(id === 'todos' ? null : id)
-                  setSelectorAbierto(false)
-                }}
-              />
-            </div>
+          {/* Modal de Selección de Categorías (se activa desde el botón del Hero) */}
+          <div id="seccion-menu-categorias">
+            <SelectorCategorias
+              categoriasActivas={categoriasActivas}
+              categoriaSeleccionada={categoriaSeleccionada}
+              selectorAbierto={selectorAbierto}
+              onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
+              onSeleccionarCategoria={(id) => {
+                setCategoriaSeleccionada(id === 'todos' ? null : id)
+                setSelectorAbierto(false)
+              }}
+              soloModal={true}
+            />
           </div>
 
           {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}

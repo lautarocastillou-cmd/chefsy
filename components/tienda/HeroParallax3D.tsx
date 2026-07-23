@@ -75,7 +75,7 @@ export default function HeroParallax3D({
       onMouseLeave={handleMouseLeave}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleMouseLeave}
-      className={`relative overflow-hidden px-4 py-8 md:py-12 border-b border-white/10 shadow-2xl flex items-center justify-center select-none cursor-pointer ${
+      className={`relative overflow-hidden px-4 pt-8 pb-4 md:py-12 flex items-center justify-center select-none cursor-pointer ${
         (isVideoBg || bgImage) ? 'bg-transparent' : 'bg-gradient-to-b from-[#141414] via-[#101010] to-[#0c0c0c]'
       }`}
       style={{ perspective: '1000px' }}
