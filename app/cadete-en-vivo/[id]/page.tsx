@@ -3,8 +3,17 @@
 import { use, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
-
 import { supabaseAnon } from '@/lib/supabase'
+import { 
+  Flame, 
+  UtensilsCrossed, 
+  Bike, 
+  CheckCircle2, 
+  ShoppingBag, 
+  WifiOff, 
+  AlertCircle, 
+  ArrowLeft 
+} from 'lucide-react'
 
 // Leaflet pesa ~150KB — cargarlo de forma lazy para no bloquear el render inicial
 const MapaSeguimiento = dynamic(
@@ -101,10 +110,17 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   if (error || !pedido) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: BG }}>
-        <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full">
-          <div className="text-5xl mb-3">😕</div>
-          <h1 className="text-lg font-bold text-gray-800 mb-1">Ups...</h1>
+        <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
+          <AlertCircle size={44} className="text-amber-500" />
+          <h1 className="text-lg font-bold text-gray-800">Ups...</h1>
           <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
+          <a
+            href="https://chefsy.xyz/"
+            className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-[#2A6348] hover:underline"
+          >
+            <ArrowLeft size={14} />
+            <span>Volver a la tienda</span>
+          </a>
         </div>
       </div>
     )
@@ -119,8 +135,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   // ── Bloque del mapa / estado visual ──────────────────────────
   const bloqueContenido = gpsApagado ? (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
-      <div className="w-24 h-24 rounded-full flex items-center justify-center text-5xl mb-4 shadow-lg bg-red-50">
-        📍
+      <div className="w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg bg-red-50">
+        <WifiOff size={40} className="text-red-500" />
       </div>
       <h2 className="text-lg font-black text-gray-800 mb-2">
         Señal GPS perdida
@@ -133,8 +149,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     <MapaSeguimiento pedido={pedido} />
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
-      <div className={`w-24 h-24 rounded-full flex items-center justify-center text-5xl mb-4 shadow-lg ${isTerminado ? 'bg-green-50' : 'bg-orange-50'}`}>
-        {isTerminado ? '🛍️' : '🔥'}
+      <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg ${isTerminado ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+        {isTerminado ? (
+          <ShoppingBag size={42} className="text-emerald-600" />
+        ) : (
+          <Flame size={42} className="text-amber-500 animate-pulse" />
+        )}
       </div>
       <h2 className="text-lg font-black text-gray-800 mb-2">
         {isTerminado ? '¡Que lo disfrutes!' : 'Cocinando con amor'}
@@ -151,9 +171,15 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const headerInfo = (
     <>
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl shrink-0"
+        <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
           style={{ background: 'rgba(42,99,72,0.12)' }}>
-          {isTerminado ? '🎉' : isEnPreparacion ? '🧑‍🍳' : '🛵'}
+          {isTerminado ? (
+            <CheckCircle2 size={24} className="text-emerald-600" />
+          ) : isEnPreparacion ? (
+            <UtensilsCrossed size={24} className="text-amber-600" />
+          ) : (
+            <Bike size={24} className="text-emerald-600" />
+          )}
         </div>
         <div className="min-w-0">
           <h1 className="font-bold text-gray-900 text-base leading-tight">
@@ -175,6 +201,19 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </>
   )
 
+  const footerBloque = (
+    <div className="flex flex-col items-center gap-2 pt-2 pb-4">
+      <a
+        href="https://chefsy.xyz/"
+        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition-all backdrop-blur-md shadow-lg active:scale-95"
+      >
+        <ArrowLeft size={14} />
+        <span>Volver a la tienda</span>
+      </a>
+      <p className="text-center text-white/30 text-xs font-semibold tracking-wider">Powered by Chefsy</p>
+    </div>
+  )
+
   return (
     <>
       {/* ══ MOBILE (< md) ══════════════════════════════════════════ */}
@@ -193,7 +232,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <p className="text-center text-white/30 text-xs font-semibold pb-4 tracking-wider">Powered by Chefsy</p>
+        {footerBloque}
       </div>
 
       {/* ══ DESKTOP (≥ md) ════════════════════════════════════════ */}
@@ -210,7 +249,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <p className="text-white/30 text-xs font-semibold tracking-wider">Powered by Chefsy</p>
+        {footerBloque}
       </div>
     </>
   )
