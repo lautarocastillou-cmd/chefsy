@@ -244,6 +244,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     const ahora = new Date()
 
     const nuevoPedido: Pedido = {
+      ...(pedidoInicial || {}),
       id: pedidoInicial?.id || generarId(),
       cliente: cliente.trim(),
       telefono: telefono.trim() || 'Sin especificar',
