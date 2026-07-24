@@ -19,6 +19,7 @@ import {
   XCircle,
   Tag,
   Sliders,
+  UtensilsCrossed,
 } from 'lucide-react'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 
@@ -381,11 +382,16 @@ export default function PaginaAdministracionCatalogos() {
       
       {/* Cabecera Principal */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">🍔 Gestión del Catálogo</h1>
-          <p className="text-xs text-gray-400 dark:text-slate-400">
-            Administrá los productos, promociones, combos y adiciones del sistema
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 bg-chefsy/10 dark:bg-chefsy-400/20 text-chefsy dark:text-chefsy-400 rounded-2xl shrink-0">
+            <UtensilsCrossed size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Gestión del Catálogo</h1>
+            <p className="text-xs text-gray-400 dark:text-slate-400">
+              Administrá los productos, promociones, combos y adiciones del sistema
+            </p>
+          </div>
         </div>
 
         {/* Pestanas Selectoras */}

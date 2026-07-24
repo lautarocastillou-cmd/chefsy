@@ -2,6 +2,7 @@
 
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
+import { obtenerSiguienteEstado } from '@/lib/entrega'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 import { cn } from '@/lib/utils'

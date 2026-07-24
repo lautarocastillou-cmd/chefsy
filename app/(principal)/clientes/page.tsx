@@ -44,11 +44,16 @@ export default function PaginaAgendaClientes() {
       
       {/* Cabecera Principal */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">👥 Gestión de Clientes</h1>
-          <p className="text-xs text-gray-400 dark:text-slate-400">
-            Administrá cuentas de soporte y analizá métricas de consumo de tus clientes
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Gestión de Clientes</h1>
+            <p className="text-xs text-gray-400 dark:text-slate-400">
+              Administrá cuentas de soporte y analizá métricas de consumo de tus clientes
+            </p>
+          </div>
         </div>
 
         {/* Pestañas de navegación */}

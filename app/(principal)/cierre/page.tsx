@@ -376,7 +376,10 @@ _Generado automáticamente desde Chefsy_`.trim()
 
         {/* Desglose por Método de Pago */}
         <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2">💳 Facturación por Método de Pago</h2>
+          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2 flex items-center gap-2">
+            <CreditCard size={16} className="text-chefsy dark:text-chefsy-400" />
+            <span>Facturación por Método de Pago</span>
+          </h2>
           
           {totalPedidos === 0 ? (
             <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-6">

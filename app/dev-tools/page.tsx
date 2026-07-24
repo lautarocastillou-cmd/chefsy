@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { Save, Image as ImageIcon, Loader2, Search, ArrowLeft, RefreshCw } from 'lucide-react'
+import { Save, Image as ImageIcon, Loader2, Search, ArrowLeft, RefreshCw, Wrench } from 'lucide-react'
 
 interface TiendaMetadata {
   producto_id: string
@@ -236,7 +236,8 @@ export default function DevToolsPage() {
             </button>
             <div>
               <h1 className="text-2xl font-black flex items-center gap-2">
-                🛠️ Herramienta de Desarrollador
+                <Wrench className="w-6 h-6 text-slate-700" />
+                <span>Herramienta de Desarrollador</span>
               </h1>
               <p className="text-slate-500 text-sm">Metadatos de la Tienda (Público)</p>
             </div>
