@@ -304,7 +304,6 @@ export default function PaginaCadeteria() {
   const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo' || p.estado === 'en_camino')
   const hayPedidosListos = pedidosListos.length > 0
   const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
-  const [simulando, setSimulando] = useState(false)
   const [alertaVisibility, setAlertaVisibility] = useState(false)
 
   const pedidosListosRef = useRef<Pedido[]>([])
@@ -375,45 +374,6 @@ export default function PaginaCadeteria() {
     // Forzar actualización inmediata en el primer tick del nuevo rastreo
     ultimasCoordenadasRef.current = null
     ultimaActualizacionGpsRef.current = 0
-
-    // SIMULADOR DEV
-    if (simulando && pedidosListos.length > 0) {
-      const pedidoObjetivo = pedidosListos[0]
-      const origen = { latitud: -28.473522, longitud: -65.787723 } // Centro de ejemplo o UBICACION_LOCAL
-      const destino = pedidoObjetivo.coordenadas || { latitud: -28.48, longitud: -65.79 }
-      let paso = 0
-      
-      const interval = setInterval(async () => {
-        paso += 0.05 // Avanza 5% cada vez
-        if (paso > 1) paso = 1
-        
-        const coords = {
-          latitud: origen.latitud + (destino.latitud - origen.latitud) * paso,
-          longitud: origen.longitud + (destino.longitud - origen.longitud) * paso
-        }
-
-        const pedidosIds = pedidosListosRef.current.map(p => p.id)
-        if (pedidosIds.length === 0) return
-
-        try {
-          await fetch('/api/admin/pedidos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              accion: 'actualizar_gps',
-              ids: pedidosIds,
-              cadete_coordenadas: coords
-            })
-          })
-        } catch (e) {
-          console.error('Error enviando coords simuladas', e)
-        }
-        
-        if (paso >= 1) clearInterval(interval)
-      }, 3000) // cada 3 seg en simulación
-      
-      return () => clearInterval(interval)
-    }
 
     let watchId: number
 
@@ -623,17 +583,6 @@ export default function PaginaCadeteria() {
               <span className="hidden sm:inline">Descargar</span> APK
             </a>
             <button
-              onClick={() => setSimulando(!simulando)}
-              className={cn(
-                "text-[10px] font-bold py-1.5 px-3 rounded-lg transition-colors border shadow-sm",
-                simulando 
-                  ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-800 animate-pulse"
-                  : "bg-white/10 hover:bg-white/20 text-white border-white/20"
-              )}
-            >
-              {simulando ? '🛑 Detener Simulación' : '🕹️ Simular Viaje DEV'}
-            </button>
-            <button
               onClick={() => mutate('pedidosActivos')}
               className="text-xs bg-chefsy-600 hover:bg-chefsy-500 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
             >
@@ -662,7 +611,7 @@ export default function PaginaCadeteria() {
           </div>
         )}
         
-        {errorGps && !simulando && (
+        {errorGps && (
           <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
             <span className="text-base shrink-0">⚠️</span>
             <div>

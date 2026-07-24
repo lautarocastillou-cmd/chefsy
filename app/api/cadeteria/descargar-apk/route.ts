@@ -1,41 +1,23 @@
 import { NextResponse } from 'next/server'
+import { obtenerSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/cadeteria/descargar-apk
-// Redirecciona directamente a la última APK compilada por GitHub Actions en GitHub Releases
+// Redirecciona directamente a la última APK en los servidores públicos de Chefsy (Supabase Storage)
 export async function GET(request: Request) {
   try {
-    const urlPublica = 'https://github.com/lautarocastillou-cmd/flutter-chefsy-app/releases/latest/download/app-release.apk'
-    
-    const { searchParams } = new URL(request.url)
-    if (searchParams.get('json') === 'true') {
-      try {
-        const resGh = await fetch('https://api.github.com/repos/lautarocastillou-cmd/flutter-chefsy-app/releases/latest', {
-          headers: { 'Accept': 'application/vnd.github.v3+json' },
-          next: { revalidate: 60 }
-        })
-        if (resGh.ok) {
-          const data = await resGh.json()
-          return NextResponse.json({
-            ok: true,
-            tag_name: data.tag_name || 'latest',
-            name: data.name || 'Chefsy Cadete App',
-            published_at: data.published_at,
-            download_url: data.assets?.[0]?.browser_download_url || urlPublica
-          })
-        }
-      } catch (e) {}
+    const supabase = obtenerSupabaseAdmin()
+    const { data: urlData } = supabase.storage.from('cadeteria').getPublicUrl('app-release.apk')
 
-      return NextResponse.json({
-        ok: true,
-        tag_name: 'latest',
-        download_url: urlPublica
-      })
+    if (urlData?.publicUrl) {
+      return NextResponse.redirect(urlData.publicUrl, { status: 307 })
     }
 
-    return NextResponse.redirect(urlPublica, { status: 307 })
+    const fallbackUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vuhubnblmsedpxedwepc.supabase.co'}/storage/v1/object/public/cadeteria/app-release.apk`
+    return NextResponse.redirect(fallbackUrl, { status: 307 })
   } catch (error) {
-    return NextResponse.json({ error: 'Error al obtener la APK' }, { status: 500 })
+    const fallbackUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vuhubnblmsedpxedwepc.supabase.co'}/storage/v1/object/public/cadeteria/app-release.apk`
+    return NextResponse.redirect(fallbackUrl, { status: 307 })
   }
 }
