@@ -8,7 +8,7 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone } from 'lucide-react'
 import { mutate } from 'swr'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
@@ -572,6 +572,16 @@ export default function PaginaCadeteria() {
               </span>
             </div>
           </div>
+          <a
+            href="/api/cadeteria/descargar-apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0"
+            title="Descargar última versión APK compilada por GitHub Actions"
+          >
+            <Download size={14} />
+            <span>Descargar APK Cadete</span>
+          </a>
         </div>
       ) : (
         <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-30">
@@ -601,7 +611,17 @@ export default function PaginaCadeteria() {
               </span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/api/cadeteria/descargar-apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 shadow-sm border border-emerald-500/30"
+              title="Descargar última versión APK de Cadetería"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Descargar</span> APK
+            </a>
             <button
               onClick={() => setSimulando(!simulando)}
               className={cn(
