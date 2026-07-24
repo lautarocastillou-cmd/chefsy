@@ -89,12 +89,28 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     }
   }
 
-  const manejarAvance = () => {
-    if (siguienteEstado) cambiarEstado(pedido.id, siguienteEstado)
+  const [procesando, setProcesando] = useState(false)
+
+  const manejarAvance = async () => {
+    if (siguienteEstado && !procesando) {
+      setProcesando(true)
+      try {
+        await cambiarEstado(pedido.id, siguienteEstado)
+      } finally {
+        setProcesando(false)
+      }
+    }
   }
 
-  const manejarCancelacion = () => {
-    cambiarEstado(pedido.id, 'cancelado')
+  const manejarCancelacion = async () => {
+    if (!procesando) {
+      setProcesando(true)
+      try {
+        await cambiarEstado(pedido.id, 'cancelado')
+      } finally {
+        setProcesando(false)
+      }
+    }
   }
 
   const copiarParaWhatsApp = () => {
@@ -563,13 +579,22 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             <>
               <button
                 onClick={manejarAvance}
-                className="flex-1 px-3 py-1.5 bg-chefsy text-white text-xs font-semibold rounded-md hover:bg-chefsy-700 transition-colors shadow-sm active:scale-[0.98]"
+                disabled={procesando}
+                className="flex-1 px-3 py-1.5 bg-chefsy text-white text-xs font-semibold rounded-md hover:bg-chefsy-700 transition-colors shadow-sm active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)}
+                {procesando ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Actualizando...</span>
+                  </>
+                ) : (
+                  obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)
+                )}
               </button>
               <button
                 onClick={manejarCancelacion}
-                className="px-2.5 py-1.5 border border-red-100 dark:border-red-900/50 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition-colors shrink-0"
+                disabled={procesando}
+                className="px-2.5 py-1.5 border border-red-100 dark:border-red-900/50 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition-colors shrink-0 disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -577,7 +602,8 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
           ) : (
             <button
               onClick={manejarCancelacion}
-              className="w-full px-3 py-1.5 border border-red-100 dark:border-red-900/50 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              disabled={procesando}
+              className="w-full px-3 py-1.5 border border-red-100 dark:border-red-900/50 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
             >
               Cancelar Pedido
             </button>

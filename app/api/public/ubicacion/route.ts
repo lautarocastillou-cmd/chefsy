@@ -24,7 +24,7 @@ export async function POST(request: Request) {
           ...(batteryLevel !== undefined && { bateria: batteryLevel }),
           updated_at: new Date().toISOString()
         })
-        .eq('id', cadeteId)
+        .ilike('id', cadeteId)
 
       return NextResponse.json({ success: true })
     }
@@ -46,14 +46,14 @@ export async function POST(request: Request) {
         ...(batteryLevel !== undefined && { bateria: batteryLevel }),
         updated_at: new Date().toISOString()
       })
-      .eq('id', cadeteId)
+      .ilike('id', cadeteId)
 
     // Actualizar coordenadas en los pedidos activos del cadete
     const coords = { latitud: lat, longitud: lng }
     await adminClient
       .from('pedidos')
       .update({ cadete_coordenadas: coords })
-      .eq('cadete_id', cadeteId)
+      .ilike('cadete_id', cadeteId)
       .in('estado', ['en_cocina', 'listo', 'en_camino'])
       .eq('archivado', false)
 
