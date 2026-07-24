@@ -318,8 +318,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         pathname.startsWith('/stock') ||
         pathname.startsWith('/configuracion') ||
         pathname.startsWith('/imprimir') ||
-        pathname.startsWith('/dev-tools') ||
-        pathname.startsWith('/malu')
+        pathname.startsWith('/dev-tools')
       )
 
       if (!usuarioActivo || !esPaginaGestion) {

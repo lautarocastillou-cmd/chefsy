@@ -9,7 +9,6 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
 
   useEffect(() => {
     const esPaginaPublica = pathname === '/' || 
-                            pathname?.startsWith('/malu') || 
                             pathname?.startsWith('/sobre-nosotros') || 
                             pathname?.startsWith('/privacidad') || 
                             pathname?.startsWith('/terminos')

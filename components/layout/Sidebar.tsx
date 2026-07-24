@@ -15,7 +15,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   Sun, Moon, LogOut, Settings, 
   LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush, Package,
-  ChevronLeft, ChevronRight, Target, Radar
+  ChevronLeft, ChevronRight, Radar
 } from 'lucide-react'
 
 // Ítems de navegación principal (Configuración se movió al pie)
@@ -28,7 +28,6 @@ const elementosNavegacion = [
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
   { href: '/configuracion/stock', etiqueta: 'Stock', icono: Package },
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
-  { href: '/caceria',       etiqueta: 'Cacería',       icono: Target },
   { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },
   { href: '/',        etiqueta: 'Tienda',        icono: Store },
 ]
@@ -190,44 +189,6 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
         {itemTienda && (
           <div className="pt-3 border-t border-chefsy-800/60 mt-4 space-y-2">
-            {/* Tarjeta de acceso a Malú Clothing */}
-            <a
-              href="/malu"
-              target="_blank"
-              rel="noopener noreferrer"
-              title={colapsado && !isMobile ? "Malú Clothing" : undefined}
-              className={cn("flex items-center rounded-xl transition-all duration-200 group relative", (!colapsado || isMobile) ? "px-3 py-2.5 gap-3" : "justify-center p-2 mx-auto w-11 h-11")}
-              style={{
-                background: 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.06) 100%)',
-                border: '1px solid rgba(212,175,55,0.18)',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.1) 100%)'
-                ;(e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(212,175,55,0.35)'
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.06) 100%)'
-                ;(e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(212,175,55,0.18)'
-              }}
-            >
-              <img
-                src="/malu-logo.png"
-                alt="Malú"
-                className="w-7 h-7 rounded-full object-cover shrink-0 transition-transform duration-200 group-hover:scale-105"
-                style={{ border: '1px solid rgba(212,175,55,0.3)' }}
-              />
-              {(!colapsado || isMobile) && (
-                <div className="flex flex-col text-left min-w-0 transition-transform group-hover:translate-x-1">
-                  <span className="text-xs font-bold leading-tight" style={{ color: '#d4af37' }}>
-                    Malú Clothing
-                  </span>
-                  <span className="text-[9px] leading-none mt-0.5" style={{ color: 'rgba(212,175,55,0.5)' }}>
-                    Gestión de deudoras ↗
-                  </span>
-                </div>
-              )}
-            </a>
-
             {/* Link Tienda */}
             {(() => {
               const IconoTienda = itemTienda.icono
