@@ -3,6 +3,7 @@
 import { TipoEntrega } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
+import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 
 interface PropsSelectorTipoEntrega {
   valor: TipoEntrega
@@ -12,7 +13,7 @@ interface PropsSelectorTipoEntrega {
 export default function SelectorTipoEntrega({ valor, onCambio }: PropsSelectorTipoEntrega) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
         Tipo de pedido <span className="text-red-400">*</span>
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -26,13 +27,13 @@ export default function SelectorTipoEntrega({ valor, onCambio }: PropsSelectorTi
               className={cn(
                 'text-left border rounded-md px-3 py-2.5 transition-colors',
                 seleccionado
-                  ? 'border-chefsy bg-chefsy-50 ring-2 ring-chefsy'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                  ? 'border-chefsy bg-chefsy-50 dark:bg-chefsy-950/30 ring-2 ring-chefsy'
+                  : 'border-gray-300 dark:border-slate-800 hover:border-gray-400 dark:hover:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-850'
               )}
             >
-              <span className="text-lg">{opcion.icono}</span>
-              <p className="text-sm font-medium text-gray-900 mt-1">{opcion.etiqueta}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{opcion.descripcion}</p>
+              <IconoTipoEntrega tipo={opcion.valor} className="w-5 h-5 text-chefsy dark:text-chefsy-400" />
+              <p className="text-sm font-medium text-gray-900 dark:text-slate-100 mt-1">{opcion.etiqueta}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{opcion.descripcion}</p>
             </button>
           )
         })}

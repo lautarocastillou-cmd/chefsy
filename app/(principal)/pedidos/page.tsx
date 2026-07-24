@@ -13,10 +13,11 @@ import { EstadoPedido, TipoEntrega, Pedido } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
-import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns } from 'lucide-react'
+import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns, Zap } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
+import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -109,7 +110,9 @@ export default function PaginaPedidos() {
                 : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
             )}
           >
-            ⚡ Pedidos Activos
+            <span className="inline-flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" /> Pedidos Activos
+            </span>
           </button>
           <button
             onClick={() => {
@@ -124,7 +127,9 @@ export default function PaginaPedidos() {
                 : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
             )}
           >
-            📅 Historial por Fecha
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-slate-500" /> Historial por Fecha
+            </span>
           </button>
         </div>
 
@@ -226,13 +231,14 @@ export default function PaginaPedidos() {
                   key={opcion.valor}
                   onClick={() => setFiltroEntrega(opcion.valor)}
                   className={cn(
-                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer',
+                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer inline-flex items-center gap-1.5',
                     filtroEntrega === opcion.valor
                       ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-700'
                       : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-850'
                   )}
                 >
-                  {opcion.icono} {opcion.etiqueta}
+                  <IconoTipoEntrega tipo={opcion.valor} />
+                  <span>{opcion.etiqueta}</span>
                 </button>
               ))}
             </div>

@@ -2,7 +2,7 @@
 
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
-import { obtenerSiguienteEstado, obtenerIconoTipoEntrega } from '@/lib/entrega'
+import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 import { cn } from '@/lib/utils'
 import { ChevronRight } from 'lucide-react'
@@ -81,7 +81,7 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm" title={pedido.tipoEntrega}>{iconoEntrega}</span>
+            <IconoTipoEntrega tipo={pedido.tipoEntrega} className="text-slate-500 dark:text-slate-400" />
             <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-none" title={pedido.cliente}>
               {pedido.cliente}
             </h4>

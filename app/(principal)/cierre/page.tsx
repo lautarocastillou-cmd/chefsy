@@ -20,7 +20,8 @@ import {
   Check,
   Play,
   X,
-  BarChart3
+  BarChart3,
+  Wallet
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
@@ -220,9 +221,14 @@ _Generado automáticamente desde Chefsy_`.trim()
       
       {/* Selector de fecha, cabecera y botón de finalizar turno */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#252525] p-5 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6]">💰 Cierre de Caja</h1>
-          <p className="text-xs text-gray-400 dark:text-[#686868]">Resumen y métricas de facturación diaria</p>
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
+            <Wallet size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-[#e6e6e6] leading-tight">Cierre de Caja</h1>
+            <p className="text-xs text-gray-400 dark:text-[#686868]">Resumen y métricas de facturación diaria</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 border border-slate-200 dark:border-[#4d4d4d] rounded-lg px-3 py-1.5 bg-slate-50 dark:bg-[#2f2f2f]">

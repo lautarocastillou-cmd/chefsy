@@ -505,8 +505,11 @@ export default function PaginaCadeteria() {
       {esAdmin ? (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-colors">
           <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
+              <Bike size={22} />
+            </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">🛵 Cadetería</h1>
+              <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Cadetería</h1>
               <p className="text-xs text-gray-400 dark:text-slate-400">
                 Pedidos asignados y listos para reparto (Solo Delivery)
               </p>
@@ -546,8 +549,11 @@ export default function PaginaCadeteria() {
       ) : (
         <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 text-white rounded-xl">
+              <Bike size={20} />
+            </div>
             <div>
-              <h1 className="text-lg font-bold text-white">🛵 Cadetería</h1>
+              <h1 className="text-lg font-bold text-white leading-tight">Cadetería</h1>
               <p className="text-xs text-chefsy-200">Solo delivery</p>
             </div>
             <div className={cn(
