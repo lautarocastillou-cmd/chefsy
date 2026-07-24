@@ -61,7 +61,6 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
   }
 
   const cantidadItems = pedido.productos.reduce((sum, p) => sum + p.cantidad, 0)
-  const iconoEntrega = obtenerIconoTipoEntrega(pedido.tipoEntrega)
 
   const manejarAvance = (e: React.MouseEvent) => {
     e.stopPropagation()
