@@ -1,33 +1,45 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 
-function extraerCoordenadasDeUrl(url: string) {
+function extraerCoordenadasDeUrl(rawUrl: string) {
+  if (!rawUrl) return null
+  let url = rawUrl
+  try {
+    url = decodeURIComponent(rawUrl)
+  } catch (e) {}
+
   // 1. Intentar extraer coordenadas específicas del pin (formato data de Google Maps !3d...!4d)
   const match3d4d = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
   if (match3d4d) {
     return { latitud: parseFloat(match3d4d[1]), longitud: parseFloat(match3d4d[2]) }
   }
 
-  // 2. Buscar formato q=lat,lng (ej: q=-28.468200,-65.782100)
-  const matchQ = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 2. Buscar formato q=lat,lng o query=lat,lng (ej: q=-28.4593648%2C-65.7796141)
+  const matchQ = url.match(/[?&](?:q|query)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchQ) {
     return { latitud: parseFloat(matchQ[1]), longitud: parseFloat(matchQ[2]) }
   }
 
   // 3. Buscar formato daddr=lat,lng (ej: daddr=-28.468200,-65.782100)
-  const matchDaddr = url.match(/[?&]daddr=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  const matchDaddr = url.match(/[?&]daddr=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchDaddr) {
     return { latitud: parseFloat(matchDaddr[1]), longitud: parseFloat(matchDaddr[2]) }
   }
 
-  // 4. Buscar formato ll=lat,lng
-  const matchLl = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 4. Buscar formato ll=lat,lng / center=lat,lng / sll=lat,lng
+  const matchLl = url.match(/[?&](?:ll|sll|center)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchLl) {
     return { latitud: parseFloat(matchLl[1]), longitud: parseFloat(matchLl[2]) }
   }
 
-  // 5. Buscar formato @lat,lng (fallback)
-  const matchAt = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 5. Formato /place/lat,lng o /dir/.../lat,lng
+  const matchPath = url.match(/\/(?:place|dir)\/(?:[^\/]+\/)?(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchPath) {
+    return { latitud: parseFloat(matchPath[1]), longitud: parseFloat(matchPath[2]) }
+  }
+
+  // 6. Buscar formato @lat,lng (fallback)
+  const matchAt = url.match(/@(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchAt) {
     return { latitud: parseFloat(matchAt[1]), longitud: parseFloat(matchAt[2]) }
   }

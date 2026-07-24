@@ -20,38 +20,50 @@ function dmsToDecimal(degrees: number, minutes: number, seconds: number, directi
 }
 
 // Helper para extraer coordenadas de un texto o link de Google Maps
-function extraerCoordenadasDeTexto(texto: string): Coordenadas | null {
+function extraerCoordenadasDeTexto(rawTexto: string): Coordenadas | null {
+  if (!rawTexto) return null
+  let texto = rawTexto
+  try {
+    texto = decodeURIComponent(rawTexto)
+  } catch (e) {}
+
   // 1. Intentar extraer coordenadas específicas del pin (formato data de Google Maps !3d...!4d)
   const match3d4d = texto.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
   if (match3d4d) {
     return { latitud: parseFloat(match3d4d[1]), longitud: parseFloat(match3d4d[2]) }
   }
 
-  // 2. Formato query string q=lat,lng (ej: q=-28.468200,-65.782100)
-  const matchQ = texto.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 2. Formato query string q=lat,lng o query=lat,lng (ej: q=-28.4593648%2C-65.7796141 o q=-28.468200,-65.782100)
+  const matchQ = texto.match(/[?&](?:q|query)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchQ) {
     return { latitud: parseFloat(matchQ[1]), longitud: parseFloat(matchQ[2]) }
   }
 
   // 3. Formato destino daddr=lat,lng (ej: daddr=-28.468200,-65.782100)
-  const matchDaddr = texto.match(/[?&]daddr=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  const matchDaddr = texto.match(/[?&]daddr=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchDaddr) {
     return { latitud: parseFloat(matchDaddr[1]), longitud: parseFloat(matchDaddr[2]) }
   }
 
-  // 4. Formato ll=lat,lng
-  const matchLl = texto.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 4. Formato ll=lat,lng / center=lat,lng / sll=lat,lng
+  const matchLl = texto.match(/[?&](?:ll|sll|center)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchLl) {
     return { latitud: parseFloat(matchLl[1]), longitud: parseFloat(matchLl[2]) }
   }
 
-  // 5. Formato @lat,lng (como fallback si no hay pin explícito)
-  const matchAt = texto.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+  // 5. Formato /place/lat,lng o /dir/.../lat,lng
+  const matchPath = texto.match(/\/(?:place|dir)\/(?:[^\/]+\/)?(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchPath) {
+    return { latitud: parseFloat(matchPath[1]), longitud: parseFloat(matchPath[2]) }
+  }
+
+  // 6. Formato @lat,lng (como fallback si no hay pin explícito)
+  const matchAt = texto.match(/@(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchAt) {
     return { latitud: parseFloat(matchAt[1]), longitud: parseFloat(matchAt[2]) }
   }
 
-  // 6. Formato DMS (Degrees, Minutes, Seconds - ej: 28°27'13.5"S 65°47'00.5"W)
+  // 7. Formato DMS (Degrees, Minutes, Seconds - ej: 28°27'13.5"S 65°47'00.5"W)
   const dmsRegex = /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])\s*[,/]?\s*(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([WOEwoeOo])/
   const matchDms = texto.match(dmsRegex)
   if (matchDms) {
@@ -60,8 +72,8 @@ function extraerCoordenadasDeTexto(texto: string): Coordenadas | null {
     return { latitud: lat, longitud: lng }
   }
 
-  // 7. Coordenadas sueltas pegadas directamente (ej: -28.468200, -65.782100 o con paréntesis/texto extra)
-  const matchCoordsSueltas = texto.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/)
+  // 8. Coordenadas sueltas pegadas directamente (ej: -28.468200, -65.782100 o con %2C)
+  const matchCoordsSueltas = texto.match(/(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
   if (matchCoordsSueltas) {
     const lat = parseFloat(matchCoordsSueltas[1])
     const lng = parseFloat(matchCoordsSueltas[2])
