@@ -1,18 +1,19 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Plus } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
+import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 
 interface ProductCardProps {
-  prod: any
-  meta: any
-  detalles: any
-  agotado: boolean
+  prod:        ProductoCatalogo
+  meta:        MetaProducto | undefined | null
+  detalles:    DetallesComplementarios
+  agotado:     boolean
   imagenFinal: string
-  index: number
-  onAbrirModal: (prod: any) => void
+  index:       number
+  onAbrirModal: (prod: ProductoCatalogo) => void
 }
 
 function ProductCard({
@@ -25,6 +26,25 @@ function ProductCard({
   onAbrirModal
 }: ProductCardProps) {
 
+  // ── Animación de entrada escalonada con IntersectionObserver ──────────────
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(index < 4) // primeros 4 ya visibles (above the fold)
+
+  useEffect(() => {
+    if (index < 4) return // ya visibles, no observar
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.05 }
+    )
+    if (ref.current) observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [index])
+
   // Optimización de imágenes inteligente (CDN Cloudinary o Next.js Image Optimization)
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
   const isCloudinary = rawSrc.includes('res.cloudinary.com')
@@ -33,19 +53,32 @@ function ProductCard({
   const blurSrc = generarBlurUrl(rawSrc)
   const esPrioritario = index < 4
 
+  // Nombre visible: el admin puede renombrarlo en el panel
+  const nombreVisible = meta?.nombre_publico || prod.nombre
+  // Descripción visible
+  const descripcionVisible = meta?.descripcion_publica || detalles.desc
+
   return (
     <div
+      ref={ref}
       onClick={() => !agotado && onAbrirModal(prod)}
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 90px' }}
-      className={`bg-transparent group flex items-start gap-4 cursor-pointer transition-all duration-150 animate-in fade-in slide-in-from-bottom-4 touch-manipulation ${
-        agotado ? 'opacity-50 grayscale' : 'md:hover:bg-white/5 active:bg-white/10 active:scale-[0.99] p-2 -m-2 rounded-2xl'
-      }`}
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 90px',
+        // Delay escalonado según posición relativa en el grupo (0-4 items por grupo visual)
+        transitionDelay: visible ? `${(index % 5) * 55}ms` : '0ms',
+      }}
+      className={`bg-transparent group flex items-start gap-4 cursor-pointer touch-manipulation
+        transition-all duration-500
+        ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
+        ${agotado ? 'opacity-50 grayscale' : 'md:hover:bg-white/5 active:bg-white/10 active:scale-[0.99] p-2 -m-2 rounded-2xl'}
+      `}
     >
       {/* Imagen a la izquierda */}
       <div className="relative h-20 w-20 md:h-24 md:w-24 shrink-0 overflow-hidden rounded-xl bg-black/20 mt-0.5">
         <Image
           src={optimizedSrc}
-          alt={prod.nombre}
+          alt={nombreVisible ?? prod.nombre}
           fill
           priority={esPrioritario}
           loading={esPrioritario ? 'eager' : 'lazy'}
@@ -73,7 +106,7 @@ function ProductCard({
       <div className="flex-1 flex flex-col justify-center text-left py-0.5">
         <div className="flex justify-between items-start gap-2">
           <h4 className="font-bebas text-xl sm:text-2xl md:text-4xl text-white leading-none tracking-wide">
-            {prod.nombre}
+            {nombreVisible}
           </h4>
           <div className="flex flex-col items-end shrink-0 mt-0.5">
             <span className="font-sans font-bold text-xs sm:text-sm md:text-base text-chefsy-400">
@@ -81,9 +114,9 @@ function ProductCard({
             </span>
           </div>
         </div>
-        {(meta?.descripcion_publica || detalles?.desc) ? (
+        {descripcionVisible ? (
           <p className="text-xs sm:text-sm md:text-base text-slate-300 font-medium leading-snug mt-1.5">
-            {meta?.descripcion_publica || detalles?.desc}
+            {descripcionVisible}
           </p>
         ) : null}
       </div>
@@ -93,11 +126,14 @@ function ProductCard({
 
 export default React.memo(ProductCard, (prevProps, nextProps) => {
   return (
-    prevProps.prod.id === nextProps.prod.id &&
-    prevProps.prod.nombre === nextProps.prod.nombre &&
-    prevProps.agotado === nextProps.agotado &&
-    prevProps.imagenFinal === nextProps.imagenFinal &&
+    prevProps.prod.id          === nextProps.prod.id          &&
+    prevProps.prod.nombre      === nextProps.prod.nombre      &&
+    prevProps.prod.precio      === nextProps.prod.precio      &&
+    prevProps.prod.stock       === nextProps.prod.stock       &&
+    prevProps.agotado          === nextProps.agotado          &&
+    prevProps.imagenFinal      === nextProps.imagenFinal      &&
     prevProps.meta?.descripcion_publica === nextProps.meta?.descripcion_publica &&
-    prevProps.meta?.nombre_publico === nextProps.meta?.nombre_publico
+    prevProps.meta?.nombre_publico      === nextProps.meta?.nombre_publico      &&
+    prevProps.meta?.imagen_url          === nextProps.meta?.imagen_url
   )
 })

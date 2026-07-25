@@ -5,7 +5,7 @@ import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
-import { ModificadorCatalogo } from '@/tipos/catalogo'
+import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
@@ -34,7 +34,7 @@ export default function TiendaDesktop() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [selectorAbierto, setSelectorAbierto] = useState(false)
-  const [metadata, setMetadata] = useState<Record<string, any>>(metadataRespaldo)
+  const [metadata, setMetadata] = useState<Record<string, MetaProducto>>(metadataRespaldo as Record<string, MetaProducto>)
   
   const { configuracion } = usarConfiguracionTienda()
   const animatedWords = configuracion?.palabras_animadas || ["LOMOS", "MILAS", "ZAPPING", "BURGERS", "PIZZAS", "PATYS"]
@@ -92,7 +92,7 @@ export default function TiendaDesktop() {
         })
         const data = await res.json()
         if (Array.isArray(data)) {
-          const m: Record<string, any> = {}
+          const m: Record<string, MetaProducto> = {}
           data.forEach(d => m[d.producto_id] = d)
           setMetadata(m)
         }

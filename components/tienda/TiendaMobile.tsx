@@ -5,7 +5,7 @@ import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
-import { ModificadorCatalogo } from '@/tipos/catalogo'
+import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { Search, ChevronRight, LogOut, User } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
@@ -42,7 +42,7 @@ export default function TiendaMobile() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'profile' | 'cart'>('home')
-  const [metadata, setMetadata] = useState<Record<string, any>>(metadataRespaldo)
+  const [metadata, setMetadata] = useState<Record<string, MetaProducto>>(metadataRespaldo as Record<string, MetaProducto>)
   const [imgError, setImgError] = useState(false)
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)

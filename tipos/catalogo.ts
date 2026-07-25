@@ -3,6 +3,17 @@
 // Tipos del catálogo centralizado de productos.
 // ─────────────────────────────────────────────────────
 
+/**
+ * Metadata pública de un producto almacenada en la tabla `tienda_metadata`.
+ * Enriquece a ProductoCatalogo con datos editables desde el panel admin.
+ */
+export interface MetaProducto {
+  producto_id:        string
+  nombre_publico:     string | null
+  descripcion_publica: string | null
+  imagen_url:         string | null
+}
+
 export interface CategoriaCatalogo {
   id: string
   nombre: string
@@ -35,4 +46,13 @@ export interface ModificadorCatalogo {
   id: string
   nombre: string
   precioExtra: number
+}
+
+/**
+ * Detalles complementarios resueltos por OBTENER_DETALLES_COMPLEMENTARIOS.
+ * Nunca serán undefined: siempre tienen imagen y descripción fallback.
+ */
+export interface DetallesComplementarios {
+  desc: string
+  img:  string
 }
