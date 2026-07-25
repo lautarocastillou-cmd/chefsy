@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { Flame } from 'lucide-react'
 import { ScrollSpyNavBar } from '@/components/tienda/ScrollSpyNavBar'
 import ProductCard from '@/components/tienda/ProductCard'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
@@ -14,13 +13,24 @@ import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA } from '@/
 // Si imagen_url es un base64 crudo (no configurado Cloudinary), usar fallback
 function resolverImagen(imagenUrl: string | null | undefined, fallback: string): string {
   if (!imagenUrl) return fallback
-  if (imagenUrl.startsWith('data:')) return fallback  // base64 enorme — fallan en Chrome moderno
+  if (imagenUrl.startsWith('data:')) return fallback  // base64 enormes — fallan en Chrome moderno
   return imagenUrl
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Número máximo de productos a mostrar en la sección "Lo más pedido"
-const MAX_DESTACADOS = 8
+// Helper interno: construye los props de ProductCard para un producto dado
+function buildCardProps(
+  prodOriginal: ProductoCatalogo,
+  metadata:     Record<string, MetaProducto>,
+  index:        number,
+  onAbrirModal: (prod: ProductoCatalogo) => void,
+) {
+  const meta     = metadata[prodOriginal.id] ?? null
+  const prod     = meta?.nombre_publico ? { ...prodOriginal, nombre: meta.nombre_publico } : prodOriginal
+  const agotado  = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock ?? 0) <= 0
+  const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre, prodOriginal.id)
+  const imagenFinal = resolverImagen(meta?.imagen_url, detalles.img)
+  return { prod, meta, agotado, detalles, imagenFinal, index, onAbrirModal }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -37,23 +47,6 @@ interface CatalogoProductosProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper interno: construye los props de ProductCard para un producto
-// ─────────────────────────────────────────────────────────────────────────────
-function buildCardProps(
-  prodOriginal: ProductoCatalogo,
-  metadata: Record<string, MetaProducto>,
-  index: number,
-  onAbrirModal: (prod: ProductoCatalogo) => void,
-) {
-  const meta    = metadata[prodOriginal.id] ?? null
-  const prod    = meta?.nombre_publico ? { ...prodOriginal, nombre: meta.nombre_publico } : prodOriginal
-  const agotado = (prodOriginal.stock !== undefined && prodOriginal.stock !== null) && (prodOriginal.stock ?? 0) <= 0
-  const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(prodOriginal.categoriaId, prodOriginal.nombre, prodOriginal.id)
-  const imagenFinal = resolverImagen(meta?.imagen_url, detalles.img)
-  return { prod, meta, agotado, detalles, imagenFinal, index, onAbrirModal }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Componente
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -67,48 +60,10 @@ export default function CatalogoProductos({
 }: CatalogoProductosProps) {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
 
-  // ── Sin categoría ni búsqueda: mostrar sección "Lo más pedido" ─────────────
+  // Sin categoría ni búsqueda: no mostrar nada (el hero ya hace de pantalla principal)
   if (!categoriaSeleccionada && !busqueda) {
-    // Tomamos los primeros MAX_DESTACADOS productos activos (no agotados primero)
-    const disponibles = productosFiltrados.filter(p =>
-      p.activo && !(p.stock !== undefined && p.stock !== null && (p.stock ?? 0) <= 0)
-    )
-    const agotados    = productosFiltrados.filter(p =>
-      p.activo &&  (p.stock !== undefined && p.stock !== null && (p.stock ?? 0) <= 0)
-    )
-    const destacados  = [...disponibles, ...agotados].slice(0, MAX_DESTACADOS)
-
-    if (destacados.length === 0) return null
-
-    return (
-      <main className="max-w-6xl mx-auto p-4 pt-6">
-        {/* Encabezado de la sección */}
-        <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30">
-            <Flame className="w-5 h-5 text-orange-400" strokeWidth={2.5} />
-          </div>
-          <div>
-            <h2 className="font-bebas text-4xl md:text-5xl text-white leading-none tracking-wide">
-              Lo más pedido
-            </h2>
-            <p className="text-slate-400 text-xs mt-0.5">
-              Elegí una categoría arriba para ver el menú completo
-            </p>
-          </div>
-        </div>
-
-        {/* Grid de productos destacados */}
-        <div className="flex flex-col gap-4">
-          {destacados.map((prodOriginal, index) => {
-            const props = buildCardProps(prodOriginal, metadata, index, onAbrirModal)
-            return <ProductCard key={prodOriginal.id} {...props} />
-          })}
-        </div>
-      </main>
-    )
+    return null
   }
-
-  // ── Con categoría seleccionada o búsqueda: vista normal ────────────────────
 
   const idPatys   = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
   const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
