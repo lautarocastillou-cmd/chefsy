@@ -7,43 +7,54 @@ import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/
 import { CategoriaCatalogo, FilaProductoPedido, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { ProductoPedido } from '@/tipos'
 
+import { getCache } from '@/lib/localCache'
+
 // Funciones para cargar dinámicamente desde localStorage en cliente, con fallback estático para SSR/hidratación inicial
 function cargarCategoriasDinamicas(): CategoriaCatalogo[] {
   if (typeof window === 'undefined') return categoriasCatalogo
-  const crudo = localStorage.getItem('chefsy-categorias-v1')
-  if (crudo) {
-    try {
-      return JSON.parse(crudo)
-    } catch {
-      return categoriasCatalogo
+  const cacheData = getCache<CategoriaCatalogo[]>('chefsy-categorias-v1', 2)
+  if (Array.isArray(cacheData)) return cacheData
+
+  try {
+    const crudo = localStorage.getItem('chefsy-categorias-v1')
+    if (crudo) {
+      const parsed = JSON.parse(crudo)
+      if (Array.isArray(parsed)) return parsed
+      if (parsed && Array.isArray(parsed.v)) return parsed.v
     }
-  }
+  } catch {}
   return categoriasCatalogo
 }
 
 function cargarProductosDinamicos(): ProductoCatalogo[] {
   if (typeof window === 'undefined') return productosCatalogo
-  const crudo = localStorage.getItem('chefsy-productos-v1')
-  if (crudo) {
-    try {
-      return JSON.parse(crudo)
-    } catch {
-      return productosCatalogo
+  const cacheData = getCache<ProductoCatalogo[]>('chefsy-productos-v1', 2)
+  if (Array.isArray(cacheData)) return cacheData
+
+  try {
+    const crudo = localStorage.getItem('chefsy-productos-v1')
+    if (crudo) {
+      const parsed = JSON.parse(crudo)
+      if (Array.isArray(parsed)) return parsed
+      if (parsed && Array.isArray(parsed.v)) return parsed.v
     }
-  }
+  } catch {}
   return productosCatalogo
 }
 
 export function cargarModificadoresDinamicos(): ModificadorCatalogo[] {
   if (typeof window === 'undefined') return modificadoresCatalogo
-  const crudo = localStorage.getItem('chefsy-modificadores-v1')
-  if (crudo) {
-    try {
-      return JSON.parse(crudo)
-    } catch {
-      return modificadoresCatalogo
+  const cacheData = getCache<ModificadorCatalogo[]>('chefsy-modificadores-v1', 2)
+  if (Array.isArray(cacheData)) return cacheData
+
+  try {
+    const crudo = localStorage.getItem('chefsy-modificadores-v1')
+    if (crudo) {
+      const parsed = JSON.parse(crudo)
+      if (Array.isArray(parsed)) return parsed
+      if (parsed && Array.isArray(parsed.v)) return parsed.v
     }
-  }
+  } catch {}
   return modificadoresCatalogo
 }
 
