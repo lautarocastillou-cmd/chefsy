@@ -18,7 +18,7 @@ import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
-import BotonFlotanteWhatsApp from '@/components/tienda/BotonFlotanteWhatsApp'
+import BotonWhatsAppHeader from '@/components/tienda/BotonWhatsAppHeader'
 import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
@@ -263,6 +263,7 @@ export default function TiendaMobile() {
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
             <BotonUbicacionLocal size="sm" />
+            <BotonWhatsAppHeader size="sm" />
           </div>
 
           {usuario ? (
@@ -493,7 +494,6 @@ export default function TiendaMobile() {
         onCerrar={() => setMostrarHistorial(false)}
       />
       <BotonPedidoFlotante />
-      <BotonFlotanteWhatsApp />
     </div>
   )
 }

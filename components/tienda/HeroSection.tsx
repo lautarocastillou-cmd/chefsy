@@ -13,6 +13,7 @@ import ModalLogout from '@/components/auth/ModalLogout'
 import ModalHistorialPedidos from '@/components/tienda/ModalHistorialPedidos'
 import ModalPerfilCliente from '@/components/tienda/ModalPerfilCliente'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
+import BotonWhatsAppHeader from '@/components/tienda/BotonWhatsAppHeader'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -72,6 +73,7 @@ export default function HeroSection({
             </div>
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
             <BotonUbicacionLocal />
+            <BotonWhatsAppHeader />
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
