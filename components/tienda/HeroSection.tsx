@@ -61,7 +61,7 @@ export default function HeroSection({
       <header className="bg-transparent px-4 py-6 relative z-[100] border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl overflow-hidden relative shadow-md border border-white/10">
               <Image 
                 src={configuracion?.logo_url || "/logo.jpg"} 
                 alt="Chefsy" 

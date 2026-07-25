@@ -258,7 +258,7 @@ export default function TiendaMobile() {
       <div className="bg-[#141414] sticky top-0 z-[100] px-4 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden relative">
+            <div className="w-8 h-8 rounded-lg overflow-hidden relative shadow-sm border border-white/10">
               <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
