@@ -53,12 +53,38 @@ export function usePedidosRealtime({
     }
 
     if (pedidosSWR) {
-      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWR })
-      prevPedidosRef.current = pedidosSWR
+      // Proteger cambios locales recientes: si un pedido fue modificado
+      // localmente en los últimos 10 segundos, preservar la versión local
+      // en lugar de sobreescribirla con datos potencialmente desactualizados
+      // del servidor (ej. SWR revalidateOnFocus tras un swipe en cadetería).
+      const ahora = Date.now()
+      const idsProtegidos = new Set(
+        Object.entries(cambiosLocalesRef.current)
+          .filter(([, ts]) => ahora - ts < 10000)
+          .map(([id]) => id)
+      )
+
+      if (idsProtegidos.size > 0 && prevPedidosRef.current.length > 0) {
+        // Merge: tomar la versión local de los pedidos protegidos
+        const localesPorId = new Map(
+          prevPedidosRef.current
+            .filter(p => idsProtegidos.has(p.id))
+            .map(p => [p.id, p])
+        )
+        const pedidosMerged = pedidosSWR.map(p =>
+          localesPorId.has(p.id) ? localesPorId.get(p.id)! : p
+        )
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMerged })
+        prevPedidosRef.current = pedidosMerged
+      } else {
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWR })
+        prevPedidosRef.current = pedidosSWR
+      }
+
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, prevPedidosRef])
+  }, [pedidosSWR, error, despachar, prevPedidosRef, cambiosLocalesRef])
 
   // 2) Suscripción a Supabase Realtime
   useEffect(() => {

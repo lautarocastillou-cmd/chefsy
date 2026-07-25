@@ -65,6 +65,7 @@ type AccionPedidos =
       estado: EstadoPedido
       cocina_at: string | null
       listo_at: string | null
+      en_camino_at: string | null
       entregado_at: string | null
     }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
@@ -117,9 +118,10 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
             ? {
                 ...p,
                 estado: accion.estado,
-                cocina_at: accion.cocina_at,
-                listo_at: accion.listo_at,
-                entregado_at: accion.entregado_at,
+                ...(accion.cocina_at !== undefined && { cocina_at: accion.cocina_at }),
+                ...(accion.listo_at !== undefined && { listo_at: accion.listo_at }),
+                ...(accion.en_camino_at !== undefined && { en_camino_at: accion.en_camino_at }),
+                ...(accion.entregado_at !== undefined && { entregado_at: accion.entregado_at }),
               }
             : p
         ),
