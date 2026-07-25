@@ -9,6 +9,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { verificarVersionEsquema } from '@/lib/localCache'
 
 export interface PerfilCliente {
   id:              string
@@ -86,6 +87,9 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     let resolucionPropiaCompletada = false
 
     const restaurar = async () => {
+      // Verificar versionado de esquema: limpia cachés obsoletos al iniciar
+      verificarVersionEsquema()
+
       // Si el usuario hizo logout explícito, respetamos su decisión
       if (typeof window !== 'undefined' && localStorage.getItem('chefsy_logout_manual') === 'true') {
         guardarSesionCache(null, null)

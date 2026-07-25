@@ -1,6 +1,12 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL para los datos del checkout: 30 días.
+// Permite pre-rellenar el formulario en visitas posteriores pero evita mostrar
+// datos muy viejos si el cliente cambió de teléfono/dirección.
+const TTL_CHECKOUT_DIAS = 30 * 24  // en horas
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -237,9 +243,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const totalCarrito = subtotalCarrito + (tipoEntrega === 'delivery' ? costoEnvio : 0)
 
   useEffect(() => {
-    const n = localStorage.getItem('chefsy_nombre')
-    const t = localStorage.getItem('chefsy_telefono')
-    const d = localStorage.getItem('chefsy_direccion')
+    // getCache devuelve null si la clave no existe o superó los 30 días
+    const n = getCache<string>('chefsy_nombre', TTL_CHECKOUT_DIAS)
+    const t = getCache<string>('chefsy_telefono', TTL_CHECKOUT_DIAS)
+    const d = getCache<string>('chefsy_direccion', TTL_CHECKOUT_DIAS)
     if (n) setNombreCliente(n)
     if (t) setTelefonoCliente(t)
     if (d) setDireccionCliente(d)
@@ -370,10 +377,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       return
     }
 
-    localStorage.setItem('chefsy_nombre', nombreCliente.trim())
-    localStorage.setItem('chefsy_telefono', telefonoCliente.trim())
+    setCache('chefsy_nombre', nombreCliente.trim())
+    setCache('chefsy_telefono', telefonoCliente.trim())
     if (tipoEntrega === 'delivery') {
-      localStorage.setItem('chefsy_direccion', direccionCliente.trim())
+      setCache('chefsy_direccion', direccionCliente.trim())
     }
     localStorage.setItem('chefsy_ultimo_pedido_id', nuevoPedido.id)
     // Guardar pedido activo completo para el botón flotante

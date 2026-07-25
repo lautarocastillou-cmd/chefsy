@@ -4,6 +4,11 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/datos/productos'
 import { obtenerCatalogoPrincipal, inicializarCatalogo, suscribirACatalogo } from '@/servicios/supabase/catalogo'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL del catálogo: 2 horas. Pasado ese tiempo, la próxima apertura
+// descartará el caché y descargará el catálogo fresco desde Supabase.
+const TTL_CATALOGO_HS = 2
 
 export interface ValorContextoCatalogo {
   categorias: CategoriaCatalogo[]
@@ -18,16 +23,9 @@ export interface ValorContextoCatalogo {
 
 const ContextoCatalogo = createContext<ValorContextoCatalogo | undefined>(undefined)
 
-function parsearLocalStorageSeguro<T>(clave: string, fallback: T): T {
-  const raw = localStorage.getItem(clave)
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw) as T
-  } catch {
-    console.warn(`[Cache] Dato corrupto en localStorage['${clave}']. Usando fallback.`)
-    localStorage.removeItem(clave) // Limpiar el dato corrupto
-    return fallback
-  }
+function leerCatalogoCache<T>(clave: string, fallback: T): T {
+  // getCache ya maneja TTL, corrupción y limpieza automática
+  return getCache<T>(clave, TTL_CATALOGO_HS) ?? fallback
 }
 
 export function ProveedorCatalogo({ children }: { children: ReactNode }) {
@@ -44,19 +42,19 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   // Cargar Catálogo (Supabase con fallback de LocalStorage)
   useEffect(() => {
     async function cargarInicial() {
-      // 1.a) Primero cargar fallbacks locales desde localStorage o estáticos
-      let catsActuales = parsearLocalStorageSeguro<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
+      // 1.a) Primero cargar fallbacks desde caché (con TTL) o estáticos
+      let catsActuales = leerCatalogoCache<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
       if (!catsActuales.some((c: any) => c.id === 'promos')) {
         catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
       }
       setCategorias(catsActuales)
       categoriasRef.current = catsActuales
 
-      let prodsActuales = parsearLocalStorageSeguro<ProductoCatalogo[]>('chefsy-productos-v1', productosCatalogo)
+      let prodsActuales = leerCatalogoCache<ProductoCatalogo[]>('chefsy-productos-v1', productosCatalogo)
       setProductos(prodsActuales)
       productosRef.current = prodsActuales
 
-      let modsActuales = parsearLocalStorageSeguro<ModificadorCatalogo[]>('chefsy-modificadores-v1', modificadoresCatalogo)
+      let modsActuales = leerCatalogoCache<ModificadorCatalogo[]>('chefsy-modificadores-v1', modificadoresCatalogo)
       setModificadores(modsActuales)
       modificadoresRef.current = modsActuales
 
@@ -79,15 +77,15 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
 
             setCategorias(cats)
             categoriasRef.current = cats
-            localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
+            setCache('chefsy-categorias-v1', cats)
 
             setProductos(prods)
             productosRef.current = prods
-            localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
+            setCache('chefsy-productos-v1', prods)
 
             setModificadores(mods)
             modificadoresRef.current = mods
-            localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
+            setCache('chefsy-modificadores-v1', mods)
           }
         } catch (err) {
           console.error('[Supabase] Error al cargar catálogo remoto:', err)
@@ -111,15 +109,15 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
 
       setCategorias(cats)
       categoriasRef.current = cats
-      localStorage.setItem('chefsy-categorias-v1', JSON.stringify(cats))
+      setCache('chefsy-categorias-v1', cats)
 
       setProductos(prods)
       productosRef.current = prods
-      localStorage.setItem('chefsy-productos-v1', JSON.stringify(prods))
+      setCache('chefsy-productos-v1', prods)
 
       setModificadores(mods)
       modificadoresRef.current = mods
-      localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(mods))
+      setCache('chefsy-modificadores-v1', mods)
     })
 
     return () => {
@@ -160,21 +158,21 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   const actualizarCategorias = (nuevasCategorias: CategoriaCatalogo[]) => {
     setCategorias(nuevasCategorias)
     categoriasRef.current = nuevasCategorias
-    localStorage.setItem('chefsy-categorias-v1', JSON.stringify(nuevasCategorias))
+    setCache('chefsy-categorias-v1', nuevasCategorias)
     sincronizarCatalogoCompleto()
   }
 
   const actualizarProductos = (nuevosProductos: ProductoCatalogo[]) => {
     setProductos(nuevosProductos)
     productosRef.current = nuevosProductos
-    localStorage.setItem('chefsy-productos-v1', JSON.stringify(nuevosProductos))
+    setCache('chefsy-productos-v1', nuevosProductos)
     sincronizarCatalogoCompleto()
   }
 
   const actualizarModificadores = (nuevosModificadores: ModificadorCatalogo[]) => {
     setModificadores(nuevosModificadores)
     modificadoresRef.current = nuevosModificadores
-    localStorage.setItem('chefsy-modificadores-v1', JSON.stringify(nuevosModificadores))
+    setCache('chefsy-modificadores-v1', nuevosModificadores)
     sincronizarCatalogoCompleto()
   }
 
