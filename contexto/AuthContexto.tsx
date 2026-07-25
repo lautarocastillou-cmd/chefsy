@@ -10,6 +10,11 @@
 // ─────────────────────────────────────────────────────
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { setCache, getCache, removeCache } from '@/lib/localCache'
+
+// TTL de la sesión del admin: 8 horas (un turno de trabajo).
+// Si la cookie del servidor expira, el caché local tampoco sobrevive.
+const TTL_ADMIN_HS = 8
 
 export interface Usuario {
   usuario: string
@@ -30,8 +35,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cache = localStorage.getItem('chefsy_admin_sesion_cache')
-        if (cache) return JSON.parse(cache)
+        return getCache<Usuario>('chefsy_admin_sesion_cache', TTL_ADMIN_HS)
       } catch {}
     }
     return null
@@ -52,11 +56,11 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
               rol:     data.rol,
             }
             setUsuarioActivo(sesionData)
-            try { localStorage.setItem('chefsy_admin_sesion_cache', JSON.stringify(sesionData)) } catch {}
+            try { setCache('chefsy_admin_sesion_cache', sesionData) } catch {}
           } else {
             // El servidor confirma que no hay sesión activa -> limpiar caché
             setUsuarioActivo(null)
-            try { localStorage.removeItem('chefsy_admin_sesion_cache') } catch {}
+            try { removeCache('chefsy_admin_sesion_cache') } catch {}
           }
         }
       } catch {
@@ -91,7 +95,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
           rol:     data.rol,
         }
         setUsuarioActivo(sesionData)
-        try { localStorage.setItem('chefsy_admin_sesion_cache', JSON.stringify(sesionData)) } catch {}
+        try { setCache('chefsy_admin_sesion_cache', sesionData) } catch {}
         return data.rol
       }
 
@@ -115,7 +119,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       // Continuar aunque falle la llamada
     } finally {
       setUsuarioActivo(null)
-      try { localStorage.removeItem('chefsy_admin_sesion_cache') } catch {}
+      try { removeCache('chefsy_admin_sesion_cache') } catch {}
     }
   }
 

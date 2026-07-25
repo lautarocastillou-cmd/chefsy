@@ -9,7 +9,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
-import { verificarVersionEsquema } from '@/lib/localCache'
+import { verificarVersionEsquema, setCache, getCache, removeCache } from '@/lib/localCache'
+
+// TTL de la sesión del cliente: 7 días.
+// Si el cliente no visitó la tienda en más de una semana, la próxima
+// apertura validará de nuevo contra la API en lugar de confiar en el caché.
+const TTL_SESION_HS = 7 * 24
 
 export interface PerfilCliente {
   id:              string
@@ -45,8 +50,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         if (localStorage.getItem('chefsy_logout_manual') === 'true') {
           return null
         }
-        const cache = localStorage.getItem('chefsy_cliente_sesion_cache')
-        if (cache) return JSON.parse(cache)
+        return getCache<PerfilCliente>('chefsy_cliente_sesion_cache', TTL_SESION_HS)
       } catch {}
     }
     return null
@@ -58,7 +62,7 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         if (localStorage.getItem('chefsy_logout_manual') === 'true') {
           return null
         }
-        return (localStorage.getItem('chefsy_cliente_fuente_cache') as FuenteSesion) || null
+        return getCache<FuenteSesion>('chefsy_cliente_fuente_cache', TTL_SESION_HS)
       } catch {}
     }
     return null
@@ -70,12 +74,12 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       try {
         if (p && fuente) {
-          localStorage.setItem('chefsy_cliente_sesion_cache', JSON.stringify(p))
-          localStorage.setItem('chefsy_cliente_fuente_cache', fuente)
+          setCache('chefsy_cliente_sesion_cache', p)
+          setCache('chefsy_cliente_fuente_cache', fuente)
           localStorage.removeItem('chefsy_logout_manual')
         } else {
-          localStorage.removeItem('chefsy_cliente_sesion_cache')
-          localStorage.removeItem('chefsy_cliente_fuente_cache')
+          removeCache('chefsy_cliente_sesion_cache')
+          removeCache('chefsy_cliente_fuente_cache')
         }
       } catch {}
     }

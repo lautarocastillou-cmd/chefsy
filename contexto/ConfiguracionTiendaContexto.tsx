@@ -2,6 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { ConfiguracionTienda, obtenerConfiguracionTienda } from '@/servicios/supabase/configuracion'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL de la configuración de tienda: 1 hora.
+// Si cambiás el logo, color o banner, los clientes lo verán en máximo 1 hora.
+const TTL_CONFIG_HS = 1
 
 interface ConfiguracionContextType {
   configuracion: ConfiguracionTienda | null
@@ -20,10 +25,7 @@ export const usarConfiguracionTienda = () => useContext(ConfiguracionContext)
 export const ConfiguracionTiendaProvider = ({ children }: { children: React.ReactNode }) => {
   const [configuracion, setConfiguracion] = useState<ConfiguracionTienda | null>(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const cache = localStorage.getItem('chefsy_configuracion_cache')
-        if (cache) return JSON.parse(cache)
-      } catch (e) {}
+      return getCache<ConfiguracionTienda>('chefsy_configuracion_cache', TTL_CONFIG_HS)
     }
     return null
   })
@@ -36,9 +38,7 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
         const configDB = await obtenerConfiguracionTienda()
         setConfiguracion(configDB)
         if (typeof window !== 'undefined' && configDB) {
-          try {
-            localStorage.setItem('chefsy_configuracion_cache', JSON.stringify(configDB))
-          } catch (e) {}
+          setCache('chefsy_configuracion_cache', configDB)
         }
       } catch (error) {
         console.error('Error cargando configuracion:', error)
@@ -65,9 +65,7 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
         document.documentElement.style.setProperty('--chefsy-text-menu', textMenu)
       }
       if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('chefsy_configuracion_cache', JSON.stringify(configuracion))
-        } catch (e) {}
+        setCache('chefsy_configuracion_cache', configuracion)
       }
     }
   }, [configuracion])

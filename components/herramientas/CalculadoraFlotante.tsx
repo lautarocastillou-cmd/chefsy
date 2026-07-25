@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Calculator } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL de preferencias de UI del admin: 90 días
+const TTL_UI_HS = 90 * 24
 
 const evaluarExpresion = (expr: string): string => {
   try {
@@ -29,12 +33,10 @@ export default function CalculadoraFlotante() {
   const dragStart = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number } | null>(null)
   const calcRef = useRef<HTMLDivElement>(null)
 
-  // Cargar posición guardada
+  // Cargar posición guardada (TTL 90 días)
   useEffect(() => {
-    const savedPos = localStorage.getItem('chefsy-calc-pos-v2')
-    if (savedPos) {
-      try { setPos(JSON.parse(savedPos)) } catch {}
-    }
+    const savedPos = getCache<{ x: number; y: number }>('chefsy-calc-pos-v2', TTL_UI_HS)
+    if (savedPos) setPos(savedPos)
   }, [])
 
   const onMouseDown = (e: React.MouseEvent) => {
@@ -64,7 +66,7 @@ export default function CalculadoraFlotante() {
 
       const newPos = { x: nextX, y: nextY }
       setPos(newPos)
-      localStorage.setItem('chefsy-calc-pos-v2', JSON.stringify(newPos))
+      setCache('chefsy-calc-pos-v2', newPos)
     }
     const onUp = () => setIsDragging(false)
     window.addEventListener('mousemove', onMove)

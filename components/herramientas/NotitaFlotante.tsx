@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Plus, StickyNote, GripHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL de las notitas flotantes: 90 días
+const TTL_UI_HS = 90 * 24
 
 interface Notita {
   id: string
@@ -56,19 +60,16 @@ export default function NotitaFlotante() {
   const dragStart = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // ── Carga inicial desde localStorage ─────────────────
+  // ── Carga inicial desde caché (TTL 90 días) ─────────────
   useEffect(() => {
     try {
-      const guardadas = localStorage.getItem('chefsy-notitas-v2')
-      const abiertoPrev = localStorage.getItem('chefsy-notitas-abierto')
-      const savedPos = localStorage.getItem('chefsy-notitas-pos')
+      const guardadas = getCache<Notita[]>('chefsy-notitas-v2', TTL_UI_HS)
+      const abiertoPrev = getCache<boolean>('chefsy-notitas-abierto', TTL_UI_HS)
+      const savedPos = getCache<{ x: number; y: number }>('chefsy-notitas-pos', TTL_UI_HS)
 
-      if (guardadas) {
-        const parsed = JSON.parse(guardadas) as Notita[]
-        setNotitas(Array.isArray(parsed) ? parsed : [])
-      }
-      if (abiertoPrev === 'true') setAbierto(true)
-      if (savedPos) setPos(JSON.parse(savedPos))
+      if (Array.isArray(guardadas)) setNotitas(guardadas)
+      if (abiertoPrev) setAbierto(true)
+      if (savedPos) setPos(savedPos)
     } catch {
       // Si falla, estado vacío
     }
@@ -78,18 +79,18 @@ export default function NotitaFlotante() {
   // ── Guardar notitas (solo después de carga) ───────────
   useEffect(() => {
     if (!cargado) return
-    localStorage.setItem('chefsy-notitas-v2', JSON.stringify(notitas))
+    setCache('chefsy-notitas-v2', notitas)
   }, [notitas, cargado])
 
   // ── Guardar estado abierto ────────────────────────────
   useEffect(() => {
     if (!cargado) return
-    localStorage.setItem('chefsy-notitas-abierto', String(abierto))
+    setCache('chefsy-notitas-abierto', abierto)
   }, [abierto, cargado])
 
   // ── Guardar posición ──────────────────────────────────
   const guardarPos = useCallback((p: { x: number; y: number }) => {
-    localStorage.setItem('chefsy-notitas-pos', JSON.stringify(p))
+    setCache('chefsy-notitas-pos', p)
   }, [])
 
   // ── Drag logic ────────────────────────────────────────

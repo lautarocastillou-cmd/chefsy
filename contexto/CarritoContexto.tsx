@@ -1,12 +1,7 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
-import { setCache, getCache } from '@/lib/localCache'
-
-// TTL para los datos del checkout: 30 días.
-// Permite pre-rellenar el formulario en visitas posteriores pero evita mostrar
-// datos muy viejos si el cliente cambió de teléfono/dirección.
-const TTL_CHECKOUT_DIAS = 30 * 24  // en horas
+import { setCache, getCache, removeCache } from '@/lib/localCache'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -16,6 +11,12 @@ import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { supabase } from '@/lib/supabase'
 import { guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
+
+// TTL para los datos del checkout: 30 días.
+// Permite pre-rellenar el formulario en visitas posteriores pero evita mostrar
+// datos muy viejos si el cliente cambió de teléfono/dirección.
+const TTL_CHECKOUT_DIAS = 30 * 24  // en horas
+
 
 interface ValorContextoCarrito {
   carrito: ItemCarrito[]
@@ -98,7 +99,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [cartAbierto, setCartAbierto] = useState(false)
   const carritoInicialCargadoRef = useRef<string | null>(null)
 
-  // Cargar carrito de localStorage cuando se monta o cambia el usuario logueado
+  // Cargar carrito de caché (TTL 7 días) cuando se monta o cambia el usuario
   useEffect(() => {
     if (!authListo) return
     const userId = usuario?.id || 'guest'
@@ -106,12 +107,10 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     if (carritoInicialCargadoRef.current !== userId) {
       carritoInicialCargadoRef.current = userId
       try {
-        const guardado = localStorage.getItem(`chefsy_carrito_${userId}`)
-        if (guardado) {
-          const items = JSON.parse(guardado)
-          if (Array.isArray(items) && items.length > 0) {
-            setCarrito(prev => prev.length === 0 ? items : prev)
-          }
+        // getCache devuelve null si el carrito tiene más de 7 días
+        const items = getCache<ItemCarrito[]>(`chefsy_carrito_${userId}`, 7 * 24)
+        if (Array.isArray(items) && items.length > 0) {
+          setCarrito(prev => prev.length === 0 ? items : prev)
         }
       } catch (e) {
         console.error('Error cargando carrito guardado:', e)
@@ -119,16 +118,16 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
   }, [authListo, usuario?.id])
 
-  // Guardar carrito en localStorage en cada cambio
+  // Guardar carrito en caché (TTL 7 días) en cada cambio
   useEffect(() => {
     if (!authListo) return
     const userId = usuario?.id || 'guest'
     if (carritoInicialCargadoRef.current === userId) {
       try {
         if (carrito.length > 0) {
-          localStorage.setItem(`chefsy_carrito_${userId}`, JSON.stringify(carrito))
+          setCache(`chefsy_carrito_${userId}`, carrito)
         } else {
-          localStorage.removeItem(`chefsy_carrito_${userId}`)
+          removeCache(`chefsy_carrito_${userId}`)
         }
       } catch (e) {
         console.error('Error guardando carrito:', e)
@@ -382,7 +381,8 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     if (tipoEntrega === 'delivery') {
       setCache('chefsy_direccion', direccionCliente.trim())
     }
-    localStorage.setItem('chefsy_ultimo_pedido_id', nuevoPedido.id)
+    // TTL 24h: solo necesario para mostrar el botón de rastreo inmediatamente post-compra
+    setCache('chefsy_ultimo_pedido_id', nuevoPedido.id)
     // Guardar pedido activo completo para el botón flotante
     guardarPedidoActivo({
       id: nuevoPedido.id,

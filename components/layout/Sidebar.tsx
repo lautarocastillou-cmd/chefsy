@@ -11,6 +11,10 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
+import { setCache, getCache } from '@/lib/localCache'
+
+// TTL de preferencias de UI del admin: 90 días
+const TTL_UI_HS = 90 * 24
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   Sun, Moon, LogOut, Settings, 
@@ -48,10 +52,9 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   // Estado local para colapsar en desktop
   const [colapsado, setColapsado] = useState(false)
 
-  // Opcional: Persistir el estado de colapsado en localStorage para que no salte al recargar
+  // Persistir el estado colapsado (TTL 90 días)
   useEffect(() => {
-    const colapsadoGuardado = localStorage.getItem('chefsy_sidebar_colapsado')
-    if (colapsadoGuardado === 'true') {
+    if (getCache<boolean>('chefsy_sidebar_colapsado', TTL_UI_HS)) {
       setColapsado(true)
     }
   }, [])
@@ -59,7 +62,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   const toggleColapsar = () => {
     const nuevoEstado = !colapsado
     setColapsado(nuevoEstado)
-    localStorage.setItem('chefsy_sidebar_colapsado', nuevoEstado.toString())
+    setCache('chefsy_sidebar_colapsado', nuevoEstado)
   }
 
   const elementosFiltrados = elementosNavegacion.filter((item) => {
