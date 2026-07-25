@@ -59,6 +59,22 @@ export default function CartDrawer() {
   const [coordsMapa, setCoordsMapa] = useState<{ latitud: number, longitud: number }>({ latitud: -28.4695, longitud: -65.7852 }) // Plaza 25 de Mayo
   const [cargandoMapaDir, setCargandoMapaDir] = useState(false)
 
+  // Estado para aviso flotante que sale desde abajo (Toast animado de validación)
+  const [avisoInferior, setAvisoInferior] = useState<string | null>(null)
+  const [avisoAnimado, setAvisoAnimado] = useState(false)
+  const timerAvisoRef = useRef<NodeJS.Timeout | null>(null)
+
+  const mostrarAvisoInferior = (texto: string) => {
+    if (timerAvisoRef.current) clearTimeout(timerAvisoRef.current)
+    setAvisoInferior(texto)
+    setAvisoAnimado(true)
+
+    timerAvisoRef.current = setTimeout(() => {
+      setAvisoAnimado(false)
+      setTimeout(() => setAvisoInferior(null), 300)
+    }, 3200)
+  }
+
   // Estados para sugerencias de dirección y geocodificación en Catamarca
   const [sugerencias, setSugerencias] = useState<SugerenciaDireccion[]>([])
   const [buscandoSugerencias, setBuscandoSugerencias] = useState(false)
@@ -308,7 +324,35 @@ export default function CartDrawer() {
           ) : (
             /* --- FORMULARIO DE CHECKOUT (STEPPER) --- */
             <div className="flex-1 overflow-y-auto scrollbar-hide p-5">
-              <form onSubmit={(e) => { e.preventDefault(); onProcesarCompra() }} className="flex flex-col h-full relative">
+              <form 
+                onSubmit={(e) => { 
+                  e.preventDefault()
+                  if (checkoutStep === 1) {
+                    if (!nombreCliente.trim()) {
+                      mostrarAvisoInferior('¡Por favor ingresá tu nombre!')
+                      return
+                    }
+                    if (telefonoCliente.replace(/\D/g, '').length < 8) {
+                      mostrarAvisoInferior('¡Ingresá un número de teléfono válido!')
+                      return
+                    }
+                    setCheckoutStep(2)
+                  } else if (checkoutStep === 2) {
+                    if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
+                      mostrarAvisoInferior('¡Ingresá tu dirección de envío!')
+                      return
+                    }
+                    setCheckoutStep(3)
+                  } else if (checkoutStep === 3) {
+                    if (metodoPago === 'sin_especificar') {
+                      mostrarAvisoInferior('¡Elegí un método de pago!')
+                      return
+                    }
+                    onProcesarCompra((msg) => mostrarAvisoInferior(msg))
+                  }
+                }} 
+                className="flex flex-col h-full relative"
+              >
                 {/* Header con botón de volver y progreso */}
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#3d3d3d] shrink-0">
                   <button
@@ -376,11 +420,11 @@ export default function CartDrawer() {
                         type="button"
                         onClick={() => {
                           if (!nombreCliente.trim()) {
-                            alert('Por favor ingresá tu nombre completo')
+                            mostrarAvisoInferior('¡Por favor ingresá tu nombre!')
                             return
                           }
                           if (telefonoCliente.replace(/\D/g, '').length < 8) {
-                            alert('Por favor ingresá un número de teléfono válido (al menos 8 dígitos)')
+                            mostrarAvisoInferior('¡Ingresá un número de teléfono válido!')
                             return
                           }
                           setCheckoutStep(2)
@@ -555,8 +599,11 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (tipoEntrega === 'delivery' && !direccionCliente.trim()) alert('Ingresá tu dirección o usá el botón de ubicación.')
-                          else setCheckoutStep(3)
+                          if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
+                            mostrarAvisoInferior('¡Ingresá tu dirección de envío!')
+                          } else {
+                            setCheckoutStep(3)
+                          }
                         }}
                         className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
                       >
@@ -630,7 +677,13 @@ export default function CartDrawer() {
                       ) : (
                         <button
                           type="button"
-                          onClick={onProcesarCompra}
+                          onClick={() => {
+                            if (metodoPago === 'sin_especificar') {
+                              mostrarAvisoInferior('¡Elige un método de pago!')
+                              return
+                            }
+                            onProcesarCompra((msg) => mostrarAvisoInferior(msg))
+                          }}
                           disabled={procesandoCompra}
                           className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-50"
                         >
@@ -704,6 +757,31 @@ export default function CartDrawer() {
         <ModalLoginCliente 
           onCerrar={() => setMostrarLogin(false)} 
         />
+      )}
+
+      {/* AVISO FLOTANTE DE ADVERTENCIA (TOAST QUE SALE DESDE ABAJO) */}
+      {avisoInferior && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-sm pointer-events-none transition-all duration-300 ease-out transform ${
+            avisoAnimado
+              ? 'translate-y-0 opacity-100 scale-100'
+              : 'translate-y-12 opacity-0 scale-95'
+          }`}
+        >
+          <div className="bg-[#181818]/95 backdrop-blur-xl border border-amber-500/50 text-white px-5 py-3.5 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(245,158,11,0.2)] flex items-center gap-3.5 border-l-4 border-l-amber-500">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-lg font-bold shadow-inner">
+              ⚠️
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">
+                Atención
+              </p>
+              <p className="text-xs font-black text-slate-100 leading-tight truncate">
+                {avisoInferior}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

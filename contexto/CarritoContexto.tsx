@@ -66,7 +66,7 @@ interface ValorContextoCarrito {
 
   pedidoCompletado: Pedido | null
   setPedidoCompletado: (p: Pedido | null) => void
-  procesarCompra: () => Promise<void>
+  procesarCompra: (onError?: (msg: string) => void) => Promise<void>
   turnoActivo: boolean | null
   procesandoCompra: boolean
 }
@@ -251,22 +251,31 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     if (d) setDireccionCliente(d)
   }, [])
 
-  const procesarCompra = useCallback(async () => {
+  const procesarCompra = useCallback(async (onError?: (msg: string) => void) => {
     if (procesandoCompra) return
     if (carrito.length === 0) {
-      alert('Tu carrito está vacío.')
+      if (onError) onError('Tu carrito está vacío.')
+      else alert('Tu carrito está vacío.')
       return
     }
-    if (!nombreCliente.trim() || telefonoCliente.replace(/\D/g, '').length < 8) {
-      alert('Por favor completa tu nombre y un número de teléfono válido (al menos 8 dígitos).')
+    if (!nombreCliente.trim()) {
+      if (onError) onError('¡Por favor ingresá tu nombre!')
+      else alert('Por favor ingresá tu nombre.')
+      return
+    }
+    if (telefonoCliente.replace(/\D/g, '').length < 8) {
+      if (onError) onError('¡Ingresá un número de teléfono válido!')
+      else alert('Por favor ingresá un número de teléfono válido (al menos 8 dígitos).')
       return
     }
     if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
-      alert('Por favor ingresa la dirección para la entrega del delivery.')
+      if (onError) onError('¡Ingresá tu dirección para la entrega!')
+      else alert('Por favor ingresa la dirección para la entrega del delivery.')
       return
     }
     if (metodoPago === 'sin_especificar') {
-      alert('Por favor selecciona un método de pago antes de confirmar el pedido.')
+      if (onError) onError('¡Elegí un método de pago!')
+      else alert('Por favor selecciona un método de pago antes de confirmar el pedido.')
       return
     }
 
