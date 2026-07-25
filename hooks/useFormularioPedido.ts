@@ -151,6 +151,30 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
   }
 
+  // 4b. Atajo de teclado: Ctrl + Flecha Derecha para rotar Tipo de Entrega (delivery -> retiro -> consumo_local -> delivery)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowRight' || e.code === 'ArrowRight')) {
+        e.preventDefault()
+        setTipoEntrega((prev) => {
+          let siguiente: TipoEntrega = 'delivery'
+          if (prev === 'delivery') siguiente = 'retiro'
+          else if (prev === 'retiro') siguiente = 'consumo_local'
+          else if (prev === 'consumo_local') siguiente = 'delivery'
+
+          if (!requiereDireccion(siguiente)) {
+            setDireccion('')
+            setCoordenadas(null)
+          }
+          return siguiente
+        })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const cargarEjemplo = () => {
     const ejemplos = [
       {

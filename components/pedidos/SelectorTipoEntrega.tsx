@@ -13,9 +13,14 @@ interface PropsSelectorTipoEntrega {
 export default function SelectorTipoEntrega({ valor, onCambio }: PropsSelectorTipoEntrega) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-        Tipo de pedido <span className="text-red-400">*</span>
-      </label>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+          Tipo de pedido <span className="text-red-400">*</span>
+        </label>
+        <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+          Ctrl + →
+        </span>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {opcionesTipoEntrega.map((opcion) => {
           const seleccionado = valor === opcion.valor
