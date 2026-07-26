@@ -36,20 +36,30 @@ export async function GET(request: Request) {
     }
 
     let gpsActivo = true
+    let cadeteCoordsFallback: { latitud: number; longitud: number } | null = null
+
     if (data.cadete_id) {
       const { data: cadeteData } = await supabase
         .from('cadetes')
-        .select('gps_activo')
-        .eq('id', data.cadete_id)
+        .select('gps_activo, lat, lng')
+        .ilike('id', data.cadete_id)
         .maybeSingle()
       
-      if (cadeteData && cadeteData.gps_activo !== undefined) {
-        gpsActivo = cadeteData.gps_activo
+      if (cadeteData) {
+        if (cadeteData.gps_activo !== undefined) {
+          gpsActivo = cadeteData.gps_activo
+        }
+        if (cadeteData.lat != null && cadeteData.lng != null) {
+          cadeteCoordsFallback = { latitud: cadeteData.lat, longitud: cadeteData.lng }
+        }
       }
     }
 
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = estadosActivos.includes(data.estado)
+    const coordsFinalesCadete = mostrarCadete
+      ? (data.cadete_coordenadas ?? cadeteCoordsFallback ?? null)
+      : null
 
     // Buscar otros pedidos activos del mismo cliente (por teléfono)
     let pedidosRelacionados: any[] = []
@@ -75,7 +85,7 @@ export async function GET(request: Request) {
       cliente: data.cliente,
       estado: data.estado,
       cadete_nombre: data.cadete_nombre ?? null,
-      cadete_coordenadas: mostrarCadete ? (data.cadete_coordenadas ?? null) : null,
+      cadete_coordenadas: coordsFinalesCadete,
       destino_coordenadas: data.coordenadas ?? null,
       cadete_gps_activo: gpsActivo,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },

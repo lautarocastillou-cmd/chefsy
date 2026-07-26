@@ -129,12 +129,24 @@ export async function POST(request: Request) {
           updatePayload.cadete_coordenadas = null
         }
 
-        // Obtener estado anterior para evitar doble descuento
+        // Obtener estado anterior para evitar doble descuento y obtener cadete_id
         const { data: pedidoPrevio } = await supabaseAdmin
           .from('pedidos')
-          .select('estado')
+          .select('estado, cadete_id')
           .eq('id', id)
           .single()
+
+        if (estado === 'en_camino' && pedidoPrevio?.cadete_id) {
+          const { data: cadeteInfo } = await supabaseAdmin
+            .from('cadetes')
+            .select('lat, lng')
+            .ilike('id', pedidoPrevio.cadete_id)
+            .maybeSingle()
+
+          if (cadeteInfo && cadeteInfo.lat != null && cadeteInfo.lng != null) {
+            updatePayload.cadete_coordenadas = { latitud: cadeteInfo.lat, longitud: cadeteInfo.lng }
+          }
+        }
 
         // C4: Una sola query — update + select en la misma operación
         const { data: updateData, error } = await supabaseAdmin

@@ -70,9 +70,21 @@ export async function POST(request: Request) {
 
     const { data: pedidoPrevio } = await supabase
       .from('pedidos')
-      .select('estado')
+      .select('estado, cadete_id')
       .eq('id', id)
       .single()
+
+    if (estado === 'en_camino' && pedidoPrevio?.cadete_id) {
+      const { data: cadeteInfo } = await supabase
+        .from('cadetes')
+        .select('lat, lng')
+        .ilike('id', pedidoPrevio.cadete_id)
+        .maybeSingle()
+
+      if (cadeteInfo && cadeteInfo.lat != null && cadeteInfo.lng != null) {
+        updatePayload.cadete_coordenadas = { latitud: cadeteInfo.lat, longitud: cadeteInfo.lng }
+      }
+    }
 
     const { data: updateData, error } = await supabase
       .from('pedidos')

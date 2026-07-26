@@ -232,7 +232,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         El cadete está con GPS apagado, pero tu pedido sigue en camino.
       </p>
     </div>
-  ) : tieneUbicacion ? (
+  ) : (tieneUbicacion || isEnCamino) ? (
     <MapaSeguimiento pedido={pedido} />
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
