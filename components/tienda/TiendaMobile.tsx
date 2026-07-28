@@ -307,53 +307,8 @@ export default function TiendaMobile() {
         </div>
       </div>
 
-      {activeTab === 'profile' ? (
-        !usuario ? (
-          <div className="flex flex-col items-center justify-center pt-20 px-4 text-center animate-in fade-in duration-300">
-            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-inner">
-              <span className="text-3xl">👤</span>
-            </div>
-            <h2 className="text-3xl font-bebas text-white tracking-wider mb-2">¡Iniciá sesión para ver tu perfil!</h2>
-            <p className="text-slate-400 max-w-xs mb-8 text-sm leading-relaxed">
-              Accedé a tu historial de pedidos y datos de cuenta.
-            </p>
-            <button
-              onClick={() => setMostrarLogin(true)}
-              className="bg-chefsy hover:bg-chefsy-600 text-white font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all cursor-pointer text-sm"
-            >
-              Iniciar sesión / Registrarse
-            </button>
-            <button
-              onClick={() => setMostrarLogin(true)}
-              className="mt-3 bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all cursor-pointer text-sm flex items-center gap-2"
-            >
-              <span>📜</span>
-              <span>Historial de pedidos</span>
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center pt-8 px-4 text-center pb-12">
-            <div className="w-20 h-20 bg-chefsy/20 rounded-full flex items-center justify-center mb-4 border border-chefsy/30 shadow-lg">
-              <span className="text-3xl text-chefsy-400 font-bebas">
-                {perfil?.nombre?.charAt(0)?.toUpperCase() || 'C'}
-              </span>
-            </div>
-            <h2 className="text-2xl font-bebas text-white tracking-wider mb-1">¡HOLA, {perfil?.nombre?.toUpperCase() || 'CLIENTE'}!</h2>
-            <p className="text-slate-400 text-sm mb-5">Bienvenido a tu perfil.</p>
-            
-            <div className="w-full max-w-sm space-y-3">
-              <button
-                onClick={() => setMostrarHistorial(true)}
-                className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
-              >
-                <span className="text-xl">📜</span>
-                <span>Historial de pedidos</span>
-              </button>
-            </div>
-          </div>
-        )
-      ) : (
-        <>
+      {/* Contenido principal de la Tienda */}
+      <>
           {/* Hero Section Parallax 3D & Insignias Flotantes */}
           {!categoriaSeleccionada && !busqueda && (
             <HeroParallax3D
@@ -404,7 +359,6 @@ export default function TiendaMobile() {
           
           <FooterTienda />
       </>
-      )}
 
       <BottomNav activeTab={activeTab} onNavClick={handleNavClick} />
 
