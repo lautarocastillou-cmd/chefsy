@@ -266,7 +266,7 @@ export default function TiendaMobile() {
             <BotonWhatsAppHeader size="sm" />
           </div>
 
-          {usuario ? (
+          {usuario && (
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="bg-white/10 px-2.5 py-1 rounded-full border border-white/15 shadow-sm flex items-center gap-1.5 min-w-0">
                 <span className="text-white text-xs font-medium truncate max-w-[80px]">
@@ -291,13 +291,6 @@ export default function TiendaMobile() {
                 <LogOut size={14} />
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setMostrarLogin(true)}
-              className="bg-white/10 hover:bg-white/25 text-white py-1.5 px-3 rounded-full border border-white/15 hover:border-white/30 text-xs font-bold transition-all active:scale-95 cursor-pointer"
-            >
-              Iniciar sesión
-            </button>
           )}
         </div>
         

@@ -77,16 +77,7 @@ export default function HeroSection({
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
-            {!usuario ? (
-              <>
-                <button onClick={() => setMostrarLogin(true)} className="text-white hover:text-chefsy-400 font-medium text-sm md:text-base transition-colors hidden sm:block">
-                  Iniciar sesión
-                </button>
-                <button onClick={() => setMostrarLogin(true)} className="bg-chefsy hover:bg-chefsy-600 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base transition-colors shadow-lg active:scale-95">
-                  Registrarse
-                </button>
-              </>
-            ) : (
+            {usuario && (
               <div className="flex items-center gap-2">
                 <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
                   <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
@@ -136,8 +127,7 @@ export default function HeroSection({
           {/* 2. Imagen de Producto Gigante Flotante */}
           <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-1 lg:pt-0">
             <div className="burger-float-wrapper relative w-full max-w-[250px] sm:max-w-[350px] md:max-w-[650px] xl:max-w-[850px] aspect-square">
-              {/* Sombra de alto rendimiento (Radial Gradient en lugar de drop-shadow CSS que laguea celulares) */}
-              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/60 blur-3xl rounded-full scale-y-50 -z-10 mix-blend-multiply opacity-70"></div>
+              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/50 blur-xl rounded-full scale-y-50 -z-10 opacity-70"></div>
               
               <Image 
                 src={configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp"} 

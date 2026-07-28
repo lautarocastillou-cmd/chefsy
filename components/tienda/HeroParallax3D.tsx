@@ -49,14 +49,10 @@ export default function HeroParallax3D({
   }, [])
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    setIsHovered(true)
-    handleMove(e.clientX, e.clientY)
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
+    // Solo aplicar inclinación 3D en pantallas de escritorio con ratón
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
       setIsHovered(true)
-      handleMove(e.touches[0].clientX, e.touches[0].clientY)
+      handleMove(e.clientX, e.clientY)
     }
   }
 
@@ -73,66 +69,32 @@ export default function HeroParallax3D({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleMouseLeave}
-      className={`relative overflow-hidden px-4 pt-8 pb-4 md:py-12 flex items-center justify-center select-none cursor-pointer ${
-        (isVideoBg || bgImage) ? 'bg-transparent' : 'bg-gradient-to-b from-[#141414] via-[#101010] to-[#0c0c0c]'
+      className={`relative overflow-hidden px-4 pt-6 pb-4 md:py-10 flex items-center justify-center select-none cursor-pointer ${
+        (isVideoBg || bgImage) ? 'bg-transparent' : 'bg-[#0d0d0d]'
       }`}
-      style={{ perspective: '1000px' }}
     >
-      {/* Estilos de animación embebidos */}
+      {/* Estilo de levitación ligera para la imagen */}
       <style jsx>{`
         @keyframes floatLevitate {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-12px) rotate(1deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.75; transform: scale(1.12); }
-        }
-        @keyframes textShimmer {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+          100% { transform: translateY(0px); }
         }
         .anim-float {
-          animation: floatLevitate 4.5s ease-in-out infinite;
-        }
-        .anim-glow {
-          animation: pulseGlow 3.5s ease-in-out infinite;
-        }
-        .text-gradient-neon {
-          background: linear-gradient(90deg, #f59e0b, #fbbf24, #10b981, #f59e0b);
-          background-size: 300% 100%;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: textShimmer 6s ease infinite;
+          animation: floatLevitate 5s ease-in-out infinite;
         }
       `}</style>
 
-      {/* Aura de fondo neón ambiental */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] md:w-[450px] md:h-[450px] bg-amber-500/15 rounded-full blur-[90px] pointer-events-none anim-glow"
-        style={{
-          transform: `translate(-50%, -50%) translate3d(${rotateY * -1.5}px, ${rotateX * -1.5}px, 0)`
-        }}
-      />
-
       <div className="relative z-10 w-full max-w-md mx-auto flex flex-col items-center justify-center py-2">
         
-        {/* Contenedor 3D de la Imagen */}
+        {/* Contenedor de la Imagen del Producto */}
         <div 
           className="relative w-full max-w-[240px] sm:max-w-[270px] aspect-square mx-auto my-2 transition-transform duration-200 ease-out"
           style={{
-            transformStyle: 'preserve-3d',
-            transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isHovered ? 1.04 : 1})`
+            transform: isHovered ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)` : 'none'
           }}
         >
-          {/* Resplandor trasero directo del producto */}
-          <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-amber-500/30 via-emerald-500/20 to-chefsy-500/30 blur-2xl -z-10" />
-
-          {/* Imagen principal con levitación */}
+          {/* Imagen principal con levitación sobria y rápida */}
           <div className="w-full h-full relative anim-float">
             <Image
               src={imgSrc}
@@ -141,7 +103,7 @@ export default function HeroParallax3D({
               priority
               sizes="(max-width: 768px) 100vw, 320px"
               onError={() => setImgError(true)}
-              className="object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.65)]"
+              className="object-contain"
               style={{
                 objectPosition: `${heroPosX}% ${heroPosY}%`,
                 transform: `scale(${heroScale / 100})`
@@ -150,16 +112,12 @@ export default function HeroParallax3D({
           </div>
         </div>
 
-        {/* Textos Neón Animados */}
-        <div className="text-center w-full z-20 relative mt-4 mb-2">
-          <h1 
-            className="font-bebas text-5xl sm:text-6xl tracking-wider uppercase leading-none drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] text-white"
-          >
+        {/* Textos Limpios Sin Neón */}
+        <div className="text-center w-full z-20 relative mt-3 mb-2">
+          <h1 className="font-bebas text-5xl sm:text-6xl tracking-wider uppercase leading-none text-white">
             {heroLinea1 || 'POCAS PALABRAS.'}
           </h1>
-          <h2 
-            className="font-bebas text-5xl sm:text-6xl tracking-wider uppercase leading-none drop-shadow-[0_4px_16px_rgba(245,158,11,0.3)] mt-0.5 text-gradient-neon"
-          >
+          <h2 className="font-bebas text-5xl sm:text-6xl tracking-wider uppercase leading-none mt-1 text-amber-400">
             {heroLinea2 || 'MUCHO CHEDDAR.'}
           </h2>
         </div>
@@ -168,9 +126,9 @@ export default function HeroParallax3D({
         {onExplorarClick && (
           <button
             onClick={onExplorarClick}
-            className="mt-3 group bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 hover:border-amber-400/40 px-5 py-2 rounded-full text-xs font-bold text-white transition-all flex items-center gap-2 shadow-lg cursor-pointer backdrop-blur-sm"
+            className="mt-3 group bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 px-5 py-2.5 rounded-full text-xs font-bold text-white transition-all flex items-center gap-2 shadow-md cursor-pointer"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
             <span>EXPLORAR MENÚ COMPLETO</span>
             <span className="group-hover:translate-y-0.5 transition-transform">↓</span>
           </button>
