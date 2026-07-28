@@ -76,29 +76,6 @@ export default function HeroSection({
             <BotonWhatsAppHeader />
           </div>
 
-          <div className="flex items-center gap-3 md:gap-4">
-            {usuario && (
-              <div className="flex items-center gap-2">
-                <div className="bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-sm flex items-center gap-2">
-                  <span className="text-white text-sm font-medium">Hola, {perfil?.nombre?.split(' ')[0] || 'Cliente'}</span>
-                </div>
-                <button
-                  onClick={() => setMostrarPerfil(true)}
-                  className="bg-white/10 hover:bg-white/20 text-white hover:text-chefsy-400 p-2 rounded-full border border-white/20 hover:border-chefsy-400/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                  title="Ver perfil"
-                >
-                  <User size={16} />
-                </button>
-                <button
-                  onClick={() => setMostrarConfirmLogout(true)}
-                  className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-2 rounded-full border border-white/20 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                  title="Cerrar sesión"
-                >
-                  <LogOut size={16} />
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </header>
 

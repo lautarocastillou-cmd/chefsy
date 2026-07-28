@@ -266,32 +266,6 @@ export default function TiendaMobile() {
             <BotonWhatsAppHeader size="sm" />
           </div>
 
-          {usuario && (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="bg-white/10 px-2.5 py-1 rounded-full border border-white/15 shadow-sm flex items-center gap-1.5 min-w-0">
-                <span className="text-white text-xs font-medium truncate max-w-[80px]">
-                  {perfil?.nombre?.split(' ')[0] || 'Cliente'}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setActiveTab('profile')
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                className="bg-white/10 hover:bg-white/20 text-white hover:text-chefsy-400 p-1.5 rounded-full border border-white/15 hover:border-chefsy-400/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
-                title="Ver perfil"
-              >
-                <User size={14} />
-              </button>
-              <button
-                onClick={() => setMostrarConfirmLogout(true)}
-                className="bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 p-1.5 rounded-full border border-white/15 hover:border-red-500/30 transition-all active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
-                title="Cerrar sesión"
-              >
-                <LogOut size={14} />
-              </button>
-            </div>
-          )}
         </div>
         
         {/* Barra de búsqueda integrada */}
