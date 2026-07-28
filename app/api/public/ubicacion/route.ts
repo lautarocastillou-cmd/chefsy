@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         ...(batteryLevel !== undefined && { bateria: batteryLevel }),
         updated_at: new Date().toISOString()
       })
-      .ilike('id', cadeteId)
+      .or(`id.ilike.${cadeteId},username.ilike.${cadeteId}`)
 
     // Actualizar coordenadas en los pedidos activos del cadete
     const coords = { latitud: lat, longitud: lng }

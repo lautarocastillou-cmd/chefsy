@@ -232,9 +232,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         {cadeteNombre} está con GPS apagado, pero tu pedido sigue en camino.
       </p>
     </div>
-  ) : (tieneUbicacion || isEnCamino) ? (
-    <MapaSeguimiento pedido={pedido} />
-  ) : cadeteOcupadoEnOtroViaje ? (
+  ) : (cadeteOcupadoEnOtroViaje && !isEnCamino) ? (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6 animate-in fade-in duration-300">
       <div className="w-24 h-24 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-4 shadow-lg relative">
         <Bike size={44} className="text-amber-600 animate-bounce" />
@@ -253,6 +251,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         Tu pedido ya está listo. <span className="font-bold text-gray-800">{cadeteNombre}</span> está entregando una orden cercana en este momento. Apenas la complete, saldrá en camino a tu dirección.
       </p>
     </div>
+  ) : isEnCamino ? (
+    <MapaSeguimiento pedido={pedido} />
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
       <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg ${isTerminado ? 'bg-emerald-50' : 'bg-amber-50'}`}>

@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       const { data: cadeteData } = await supabase
         .from('cadetes')
         .select('gps_activo, lat, lng')
-        .ilike('id', data.cadete_id)
+        .or(`id.ilike.${data.cadete_id},username.ilike.${data.cadete_id}`)
         .maybeSingle()
       
       if (cadeteData) {
