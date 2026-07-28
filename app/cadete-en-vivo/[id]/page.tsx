@@ -103,6 +103,9 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   const [pedido, setPedido]           = useState<Pedido | null>(null)
   const [productos, setProductos]     = useState<any[]>([])
+  const [pedidosExtra, setPedidosExtra] = useState<PedidoExtra[]>([])
+  const [cargando, setCargando]       = useState(true)
+  const [error, setError]             = useState<string | null>(null)
   const [cadeteOcupadoEnOtroViaje, setCadeteOcupadoEnOtroViaje] = useState(false)
 
   // ── Fetch del pedido principal ──────────────────────────────────────────────
