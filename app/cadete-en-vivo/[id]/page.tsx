@@ -103,9 +103,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   const [pedido, setPedido]           = useState<Pedido | null>(null)
   const [productos, setProductos]     = useState<any[]>([])
-  const [pedidosExtra, setPedidosExtra] = useState<PedidoExtra[]>([])
-  const [cargando, setCargando]       = useState(true)
-  const [error, setError]             = useState<string | null>(null)
+  const [cadeteOcupadoEnOtroViaje, setCadeteOcupadoEnOtroViaje] = useState(false)
 
   // ── Fetch del pedido principal ──────────────────────────────────────────────
   useEffect(() => {
@@ -133,6 +131,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           direccion: '',
         } as unknown as Pedido)
         setProductos(data.productos || [])
+        setCadeteOcupadoEnOtroViaje(Boolean(data.cadete_ocupado_en_otro_viaje))
 
         // Sincronizar localStorage
         if (data.estado === 'entregado' || data.estado === 'cancelado') {
@@ -220,6 +219,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const isEnCamino      = pedido.estado === 'en_camino'
   const tieneUbicacion  = !!(pedido as any).cadete_coordenadas
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
+  const cadeteNombre    = pedido.cadete_nombre || 'El cadete'
 
   // ── Mapa / estado visual ────────────────────────────────────────────────────
   const bloqueContenido = gpsApagado ? (
@@ -229,11 +229,30 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       </div>
       <h2 className="text-lg font-black text-gray-800 mb-2">Señal GPS perdida</h2>
       <p className="text-gray-500 text-sm max-w-[220px] leading-relaxed">
-        El cadete está con GPS apagado, pero tu pedido sigue en camino.
+        {cadeteNombre} está con GPS apagado, pero tu pedido sigue en camino.
       </p>
     </div>
   ) : (tieneUbicacion || isEnCamino) ? (
     <MapaSeguimiento pedido={pedido} />
+  ) : cadeteOcupadoEnOtroViaje ? (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6 animate-in fade-in duration-300">
+      <div className="w-24 h-24 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-4 shadow-lg relative">
+        <Bike size={44} className="text-amber-600 animate-bounce" />
+        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+        </span>
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full mb-2 border border-amber-200">
+        🛵 Viaje previo en curso
+      </span>
+      <h2 className="text-xl font-black text-gray-900 mb-2 leading-tight">
+        ¡{cadeteNombre} está en otro viaje!
+      </h2>
+      <p className="text-gray-500 text-xs sm:text-sm max-w-xs leading-relaxed font-medium">
+        Tu pedido ya está listo. <span className="font-bold text-gray-800">{cadeteNombre}</span> está entregando una orden cercana en este momento. Apenas la complete, saldrá en camino a tu dirección.
+      </p>
+    </div>
   ) : (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
       <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg ${isTerminado ? 'bg-emerald-50' : 'bg-amber-50'}`}>
@@ -265,9 +284,15 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-bold text-gray-900 text-base leading-tight">
-              {isTerminado ? '¡Pedido entregado!'
-               : isEnPreparacion ? 'Preparando tu pedido'
-               : '¡Tu pedido está en camino!'}
+              {isTerminado
+                ? '¡Pedido entregado!'
+                : isEnCamino
+                ? `¡${cadeteNombre} está en camino a tu dirección!`
+                : cadeteOcupadoEnOtroViaje
+                ? `¡${cadeteNombre} está en otro viaje!`
+                : isEnPreparacion
+                ? 'Preparando tu pedido'
+                : 'Procesando tu pedido'}
             </h1>
             <EtiquetaEstado estado={pedido.estado} />
           </div>
@@ -281,11 +306,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       <ResumenProductos productos={productos} />
 
       {/* Cadete asignado */}
-      {isEnCamino && pedido.cadete_nombre && (
+      {pedido.cadete_nombre && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm text-gray-500">Cadete:</span>
-          <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-md">
-            {pedido.cadete_nombre}
+          <span className="text-xs font-semibold text-gray-500">Cadete asignado:</span>
+          <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+            <span>🛵</span>
+            <span>{pedido.cadete_nombre}</span>
           </span>
         </div>
       )}

@@ -80,6 +80,23 @@ export async function GET(request: Request) {
       }
     }
 
+    // Verificar si el cadete asignado está realizando actualmente otro viaje en camino
+    let cadeteOcupadoEnOtroViaje = false
+    if (data.cadete_id && data.estado !== 'en_camino' && data.estado !== 'entregado' && data.estado !== 'cancelado') {
+      const { data: otroPedidoEnCamino } = await supabase
+        .from('pedidos')
+        .select('id')
+        .ilike('cadete_id', data.cadete_id)
+        .eq('estado', 'en_camino')
+        .neq('id', pedidoId)
+        .limit(1)
+        .maybeSingle()
+
+      if (otroPedidoEnCamino) {
+        cadeteOcupadoEnOtroViaje = true
+      }
+    }
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
@@ -88,8 +105,8 @@ export async function GET(request: Request) {
       cadete_coordenadas: coordsFinalesCadete,
       destino_coordenadas: data.coordenadas ?? null,
       cadete_gps_activo: gpsActivo,
+      cadete_ocupado_en_otro_viaje: cadeteOcupadoEnOtroViaje,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },
-      // Nuevos campos
       productos: data.productos ?? [],
       tipoEntrega: data.tipoEntrega ?? 'delivery',
       pedidos_relacionados: pedidosRelacionados,
