@@ -35,41 +35,41 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   }, [ultimoScrollY])
 
   return (
-    <div className="fixed bottom-5 left-0 right-0 z-40 flex justify-center pointer-events-none px-4 transition-all duration-300">
-      <div className={`pointer-events-auto bg-[#161616]/90 backdrop-blur-2xl border border-white/15 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) flex items-center justify-between ${
+    <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center pointer-events-none px-4 transition-all duration-300">
+      <div className={`pointer-events-auto bg-[#161616]/95 backdrop-blur-2xl border border-white/15 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) flex items-center justify-around ${
         esGrande 
-          ? 'w-full max-w-[350px] py-3 px-7 scale-100' 
-          : 'w-full max-w-[285px] py-2 px-5 scale-95 opacity-90 bg-[#121212]/95 border-white/20'
+          ? 'w-full max-w-[230px] py-2 px-4 scale-100' 
+          : 'w-full max-w-[185px] py-1.5 px-3 scale-95 opacity-90 bg-[#121212]/95 border-white/20'
       }`}>
         <button 
           onClick={() => onNavClick('home')}
-          className={`flex flex-col items-center gap-1 transition-all duration-300 cursor-pointer group ${activeTab === 'home' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
+          className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'home' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
-          <Home size={esGrande ? 22 : 20} className="transition-all duration-300 group-active:scale-90" />
-          <span className={`text-[10px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-4 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Inicio</span>
+          <Home size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
+          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Inicio</span>
         </button>
 
         <button 
           onClick={() => onNavClick('search')}
-          className={`flex flex-col items-center gap-1 transition-all duration-300 cursor-pointer group ${activeTab === 'search' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
+          className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'search' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
-          <Search size={esGrande ? 22 : 20} className="transition-all duration-300 group-active:scale-90" />
-          <span className={`text-[10px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-4 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Buscar</span>
+          <Search size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
+          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Buscar</span>
         </button>
 
         <button 
           onClick={() => onNavClick('cart')}
-          className={`relative flex flex-col items-center gap-1 transition-all duration-300 cursor-pointer group ${activeTab === 'cart' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
+          className={`relative flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'cart' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
           <div className="relative">
-            <ShoppingCart size={esGrande ? 22 : 20} className="transition-all duration-300 group-active:scale-90" />
+            <ShoppingCart size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
             {totalProductosCarrito > 0 && (
-              <span className="absolute -top-2 -right-2 bg-chefsy-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border-2 border-[#161616] shadow-sm animate-pulse">
+              <span className="absolute -top-1.5 -right-2 bg-chefsy-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#161616] shadow-sm animate-pulse">
                 {totalProductosCarrito}
               </span>
             )}
           </div>
-          <span className={`text-[10px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-4 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>
+          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>
             {totalProductosCarrito > 0 ? formatearPrecio(subtotalCarrito) : 'Carrito'}
           </span>
         </button>
