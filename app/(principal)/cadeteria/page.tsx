@@ -245,7 +245,7 @@ function TarjetaPedidoCadete({
 }
 
 export default function PaginaCadeteria() {
-  const { pedidos, cambiarEstado, dbEstado } = usarPedidos()
+  const { pedidos, cambiarEstado, dbEstado, configuracionOperativa } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
 
@@ -485,6 +485,8 @@ export default function PaginaCadeteria() {
   )
   const cantidadEnvios = pedidosEntregadosHoy.length
   const recaudacionEnvios = pedidosEntregadosHoy.reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0)
+  const montoBaseCadete = (configuracionOperativa as any)?.montoBaseCadete ?? 4000
+  const totalConBase = recaudacionEnvios + montoBaseCadete
 
   if (!estaListoAuth) {
     return (
@@ -646,17 +648,27 @@ export default function PaginaCadeteria() {
               </div>
             </div>
 
-            {/* Cartel de Recaudación y Envíos Hechos */}
-            <div className="grid grid-cols-2 gap-3.5 mb-4 animate-[slideIn_0.25s_ease-out]">
-              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col gap-1 transition-colors">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recaudación Envíos</span>
-                <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-450">{formatearPrecio(recaudacionEnvios)}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">Monto de envío acumulado</span>
+            {/* Cartel de Recaudación, Base Fija y Envíos Hechos */}
+            <div className="grid grid-cols-2 gap-3 mb-4 animate-[slideIn_0.25s_ease-out]">
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Viajes Entregados</span>
+                <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">{cantidadEnvios} {cantidadEnvios === 1 ? 'viaje' : 'viajes'}</span>
+                <span className="text-[9px] text-slate-400 dark:text-slate-500">Entregas hechas hoy</span>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col gap-1 transition-colors">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Envíos Entregados</span>
-                <span className="text-lg font-extrabold text-blue-600 dark:text-blue-400">{cantidadEnvios} {cantidadEnvios === 1 ? 'envío' : 'envíos'}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">Entregas hechas hoy</span>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recaudado Viajes</span>
+                <span className="text-base font-extrabold text-slate-700 dark:text-slate-300">{formatearPrecio(recaudacionEnvios)}</span>
+                <span className="text-[9px] text-slate-400 dark:text-slate-500">Por costo de envíos</span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Base Cadete</span>
+                <span className="text-base font-extrabold text-amber-600 dark:text-amber-400">{formatearPrecio(montoBaseCadete)}</span>
+                <span className="text-[9px] text-slate-400 dark:text-slate-500">Base fija configurada</span>
+              </div>
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
+                <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Total a Cobrar</span>
+                <span className="text-base font-black text-emerald-600 dark:text-emerald-300">{formatearPrecio(totalConBase)}</span>
+                <span className="text-[9px] text-emerald-700 dark:text-emerald-500 font-medium">Viajes + Base</span>
               </div>
             </div>
             {/* Tabs para Cadete */}

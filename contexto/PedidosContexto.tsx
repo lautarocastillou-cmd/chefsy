@@ -257,7 +257,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   >(configuracionOperativaInicial)
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!usuarioActivo) return;
     
     async function cargarConfig() {
       try {
@@ -272,7 +272,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       }
     }
     cargarConfig()
-  }, [isAdmin])
+  }, [usuarioActivo])
 
   const guardarConfiguracionOperativa = async (
     nuevaConfig: typeof configuracionOperativaInicial

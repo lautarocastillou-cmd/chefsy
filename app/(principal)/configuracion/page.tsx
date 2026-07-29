@@ -233,6 +233,9 @@ function PestanaParametros() {
   const [sinCadeteAltaMinutos, setSinCadeteAltaMinutos] = useState(15)
   const [cocinaDemoradoAltaMinutos, setCocinaDemoradoAltaMinutos] = useState(30)
 
+  // Estado local para el pago base a cadetes
+  const [montoBaseCadete, setMontoBaseCadete] = useState(4000)
+
   const [guardando, setGuardando] = useState(false)
 
   // Cargar valores iniciales desde la configuración centralizada
@@ -247,6 +250,8 @@ function PestanaParametros() {
       setListoDemoradoAltaMinutos(configuracionOperativa.prioridades.listoDemoradoAltaMinutos)
       setSinCadeteAltaMinutos(configuracionOperativa.prioridades.sinCadeteAltaMinutos)
       setCocinaDemoradoAltaMinutos(configuracionOperativa.prioridades.cocinaDemoradoAltaMinutos)
+
+      setMontoBaseCadete((configuracionOperativa as any).montoBaseCadete ?? 4000)
     }
   }, [configuracionOperativa])
 
@@ -268,6 +273,7 @@ function PestanaParametros() {
         sinCadeteAltaMinutos: Number(sinCadeteAltaMinutos),
         cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
       },
+      montoBaseCadete: Number(montoBaseCadete),
     }
 
     await guardarConfiguracionOperativa(nuevaConfig)
@@ -286,11 +292,39 @@ function PestanaParametros() {
       setListoDemoradoAltaMinutos(15)
       setSinCadeteAltaMinutos(15)
       setCocinaDemoradoAltaMinutos(30)
+      setMontoBaseCadete(4000)
     }
   }
 
   return (
     <form onSubmit={manejarGuardar} className="space-y-6">
+      {/* Tarjeta de Pago Base a Cadetes */}
+      <div className="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 shadow-sm space-y-4">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2 border-b border-emerald-100 dark:border-emerald-900/30 pb-3">
+          🛵 Dinero Base Fijo por Cadete ($)
+        </h3>
+        <div className="max-w-md">
+          <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-200">
+            Monto Base pagado a cada Cadete por turno ($)
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+            <input
+              type="number"
+              min="0"
+              step="100"
+              value={montoBaseCadete}
+              onChange={(e) => setMontoBaseCadete(Math.max(0, Number(e.target.value)))}
+              className="w-full pl-7 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-extrabold outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100"
+              required
+            />
+          </div>
+          <span className="text-[10px] text-gray-500 dark:text-slate-400 mt-1.5 block">
+            Este dinero base se sumará automáticamente a lo recaudado por viajes para cada cadete en Cadetería y en Cierre de Caja (Ej: $4.000, $6.000).
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Tarjeta 1: Límites para Detección */}

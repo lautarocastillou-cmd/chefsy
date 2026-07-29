@@ -10,5 +10,6 @@
     "listoDemoradoAltaMinutos": 15,
     "sinCadeteAltaMinutos": 15,
     "cocinaDemoradoAltaMinutos": 30
-  }
+  },
+  "montoBaseCadete": 4000
 }

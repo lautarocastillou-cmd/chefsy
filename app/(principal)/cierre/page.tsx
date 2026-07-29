@@ -27,13 +27,15 @@ import { Pedido } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 
 export default function PaginaCierreCaja() {
-  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno, configuracionOperativa } = usarPedidos()
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
+
+  const montoBaseCadete = (configuracionOperativa as any)?.montoBaseCadete ?? 4000
 
   // Estado para el modal de Iniciar Turno
   const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
@@ -61,6 +63,40 @@ export default function PaginaCierreCaja() {
     return pedidosDelDia.filter((p) => p.estado !== 'cancelado')
   }, [pedidosDelDia])
 
+  // ── Desglose y Liquidación por Cadete ───────────────
+  const resumenCadetes = useMemo(() => {
+    const deliveryOrders = pedidosValidos.filter((p) => p.tipoEntrega === 'delivery')
+    const grupos: Record<string, { id: string; nombre: string; cantidadViajes: number; recaudadoViajes: number; base: number; total: number }> = {}
+
+    deliveryOrders.forEach((p) => {
+      const key = p.cadete_id || p.cadete_nombre || 'sin_asignar'
+      const nombre = p.cadete_nombre || (p.cadete_id ? p.cadete_id : 'Sin Cadete')
+      
+      if (!grupos[key]) {
+        grupos[key] = {
+          id: key,
+          nombre,
+          cantidadViajes: 0,
+          recaudadoViajes: 0,
+          base: key === 'sin_asignar' ? 0 : montoBaseCadete,
+          total: 0
+        }
+      }
+      grupos[key].cantidadViajes += 1
+      grupos[key].recaudadoViajes += (p.costoEnvio || 0)
+    })
+
+    Object.values(grupos).forEach((g) => {
+      g.total = g.recaudadoViajes + g.base
+    })
+
+    return Object.values(grupos)
+  }, [pedidosValidos, montoBaseCadete])
+
+  const totalPagoCadetesTotal = useMemo(() => {
+    return resumenCadetes.reduce((acc, c) => acc + c.total, 0)
+  }, [resumenCadetes])
+
   // ── Cálculos de Facturación ──────────────────────────
 
   // Total bruto (lo que se cobró sumando todo)
@@ -68,12 +104,12 @@ export default function PaginaCierreCaja() {
     return pedidosValidos.reduce((acc, p) => acc + p.total, 0)
   }, [pedidosValidos])
 
-  // Total de costos de envío (= pago a cadetes)
+  // Total de costos de envío (= recaudado con envíos)
   const totalCostosEnvio = useMemo(() => {
     return pedidosValidos.reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
   }, [pedidosValidos])
 
-  // Facturación neta del local (lo que realmente queda)
+  // Facturación neta del local (lo que realmente queda del alimento)
   const facturacionNeta = facturacionBruta - totalCostosEnvio
 
   const totalPedidos = pedidosValidos.length
@@ -148,6 +184,10 @@ export default function PaginaCierreCaja() {
       day: 'numeric',
     })
 
+    const desgloseCadetesTexto = resumenCadetes.length > 0
+      ? resumenCadetes.map(c => `- 🛵 ${c.nombre}: ${c.cantidadViajes} viajes (${formatearPrecio(c.recaudadoViajes)}) ${c.base > 0 ? `+ ${formatearPrecio(c.base)} base` : ''} = *${formatearPrecio(c.total)}*`).join('\n')
+      : '- Sin entregas registradas'
+
     const mensaje = `*CIERRE DE CAJA - CHEFSY* 💰
 📅 *Fecha:* ${formattedDate}
 ----------------------------------------
@@ -170,7 +210,8 @@ export default function PaginaCierreCaja() {
 - 🏪 Retiro: ${formatearPrecio(retiroTotal)} (${retiroCount} ped.)
 - 🍽️ Consumo Local: ${formatearPrecio(localTotal)} (${localCount} ped.)
 
-🛵 *Pago a Cadetes:* ${formatearPrecio(totalCostosEnvio)} (${enviosDelivery.length} envíos)
+*Pago y Liquidación a Cadetes (Total: ${formatearPrecio(totalPagoCadetesTotal)}):*
+${desgloseCadetesTexto}
 ----------------------------------------
 ❌ *Pedidos Cancelados:* ${canceladosCount} (${formatearPrecio(canceladosMonto)})
 ----------------------------------------
@@ -367,9 +408,11 @@ _Generado automáticamente desde Chefsy_`.trim()
               <Bike size={24} />
             </div>
             <div>
-              <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Pago a Cadetes</p>
-              <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{formatearPrecio(totalCostosEnvio)}</p>
-              <p className="text-[10px] text-gray-400 dark:text-[#686868]">{enviosDelivery.length} envíos con costo</p>
+              <p className="text-xs text-gray-400 dark:text-[#686868] font-medium">Pago a Cadetes (Viajes + Base)</p>
+              <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{formatearPrecio(totalPagoCadetesTotal)}</p>
+              <p className="text-[10px] text-gray-400 dark:text-[#686868]">
+                {deliveryCount} envíos • Base: {formatearPrecio(montoBaseCadete)}
+              </p>
             </div>
           </div>
         </div>
@@ -462,6 +505,48 @@ _Generado automáticamente desde Chefsy_`.trim()
                 <p className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">{formatearPrecio(localTotal)}</p>
                 <p className="text-[10px] text-gray-400 dark:text-[#686868]">{localCount} servidos</p>
               </div>
+            </div>
+          )}
+        </section>
+
+        {/* Liquidación Individual por Cadete */}
+        <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Bike size={16} className="text-orange-500" />
+              <span>Liquidación a Cadetes (Viajes + Base)</span>
+            </span>
+            <span className="text-xs font-extrabold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-900/30">
+              Total: {formatearPrecio(totalPagoCadetesTotal)}
+            </span>
+          </h2>
+          
+          {resumenCadetes.length === 0 ? (
+            <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-4">
+              {cargando ? 'Cargando...' : 'No hay envíos asignados a cadetes en la fecha seleccionada.'}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {resumenCadetes.map((c) => (
+                <div key={c.id} className="bg-slate-50 dark:bg-[#2f2f2f] p-3.5 rounded-xl border border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-extrabold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
+                      <span>{c.nombre}</span>
+                      <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md">
+                        {c.cantidadViajes} {c.cantidadViajes === 1 ? 'viaje' : 'viajes'}
+                      </span>
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Recaudado por viajes: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatearPrecio(c.recaudadoViajes)}</span>
+                      {c.base > 0 && <> • Base fija: <span className="font-semibold text-amber-600 dark:text-amber-400">+{formatearPrecio(c.base)}</span></>}
+                    </p>
+                  </div>
+                  <div className="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-700">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Total a Pagar</span>
+                    <span className="text-base font-black text-emerald-600 dark:text-emerald-400">{formatearPrecio(c.total)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

@@ -20,7 +20,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('configuracion_operativa')
-      .select('limites, prioridades')
+      .select('*')
       .eq('id', 1)
       .single()
 
@@ -32,6 +32,7 @@ export async function GET() {
     return NextResponse.json({
       limites: data.limites,
       prioridades: data.prioridades,
+      montoBaseCadete: data.monto_base_cadete ?? data.prioridades?.montoBaseCadete ?? configuracionFallback.montoBaseCadete ?? 4000,
     })
   } catch (error: any) {
     console.error('[API Config] Error al leer la configuración:', error)
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { limites, prioridades } = body
+    const { limites, prioridades, montoBaseCadete } = body
 
     if (!limites || !prioridades) {
       return NextResponse.json(
@@ -61,12 +62,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Guardar también dentro de prioridades por si la columna física monto_base_cadete no existe aún en Postgres
+    const prioridadesActualizadas = typeof prioridades === 'object' && prioridades !== null
+      ? { ...prioridades, montoBaseCadete: Number(montoBaseCadete ?? 4000) }
+      : prioridades
+
     const supabase = obtenerSupabaseAdmin()
 
     const { error } = await supabase
       .from('configuracion_operativa')
       .upsert(
-        { id: 1, limites, prioridades, updated_at: new Date().toISOString() },
+        {
+          id: 1,
+          limites,
+          prioridades: prioridadesActualizadas,
+          monto_base_cadete: Number(montoBaseCadete ?? 4000),
+          updated_at: new Date().toISOString()
+        },
         { onConflict: 'id' }
       )
 
