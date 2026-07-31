@@ -12,27 +12,40 @@ interface BottomNavProps {
 
 export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   const { totalProductosCarrito, subtotalCarrito } = usarCarrito()
-  const [esGrande, setEsGrande] = useState(true)
-  const [ultimoScrollY, setUltimoScrollY] = useState(0)
-
   useEffect(() => {
+    let ultimoScrollY = window.scrollY
+    let scrollTimeout: NodeJS.Timeout | null = null
+
     const handleScroll = () => {
       const actualScrollY = window.scrollY
       if (actualScrollY < 30) {
         setEsGrande(true)
-      } else if (actualScrollY > ultimoScrollY + 8) {
-        // Scrolleo hacia abajo -> achicar suavemente
+        if (scrollTimeout) clearTimeout(scrollTimeout)
+        return
+      }
+
+      if (actualScrollY > ultimoScrollY + 5) {
+        // Scrolleando hacia abajo -> achicar suavemente
         setEsGrande(false)
-      } else if (actualScrollY < ultimoScrollY - 8) {
-        // Scrolleo hacia arriba -> agrandar suavemente
+      } else if (actualScrollY < ultimoScrollY - 5) {
+        // Scrolleando hacia arriba -> agrandar suavemente
         setEsGrande(true)
       }
-      setUltimoScrollY(actualScrollY)
+      ultimoScrollY = actualScrollY
+
+      // Cuando la pantalla queda quieta (idle por 250ms), volver a agrandar nuevamente
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(() => {
+        setEsGrande(true)
+      }, 250)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [ultimoScrollY])
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+    }
+  }, [])
 
   return (
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center pointer-events-none px-4 transition-all duration-300">
