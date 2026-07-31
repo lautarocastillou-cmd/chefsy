@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike } from 'lucide-react'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
@@ -143,6 +143,8 @@ export default function CartDrawer() {
     setSugerencias([])
   }
 
+  const [usadoGpsActual, setUsadoGpsActual] = useState(false)
+
   // Resetear paso cuando se cierra el carrito o se abre el checkout
   useEffect(() => {
     if (!mostrarCheckout) setCheckoutStep(1)
@@ -154,6 +156,7 @@ export default function CartDrawer() {
       return
     }
     setBuscandoUbicacion(true)
+    setUsadoGpsActual(true)
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         const { latitude, longitude } = pos.coords
@@ -476,7 +479,8 @@ export default function CartDrawer() {
                         <div className="animate-in fade-in duration-200 pt-1 space-y-2">
                           <div className="bg-chefsy-500/15 border border-chefsy-500/40 rounded-xl p-3 text-left">
                             <p className="text-chefsy-400 font-bold text-xs mb-0.5 flex items-center gap-1.5">
-                              <span>ℹ️</span> Tarifa base de envío: {formatearPrecio(1500)}
+                              <Info size={16} className="text-chefsy-400 shrink-0" />
+                              <span>Tarifa base de envío: {formatearPrecio(1500)}</span>
                             </p>
                             <p className="text-slate-300 text-[11px] leading-relaxed font-medium">
                               El costo de envío se calcula automáticamente según la distancia de tu dirección: <strong className="text-white font-bold">a mayor distancia, mayor será el valor del envío</strong>.
@@ -496,7 +500,10 @@ export default function CartDrawer() {
                             {buscandoUbicacion ? (
                               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Obteniendo tu ubicación GPS...</>
                             ) : (
-                              <><span className="text-base animate-bounce">📍</span> Usar mi ubicación actual (GPS Automático)</>
+                              <>
+                                <Navigation size={18} className="animate-bounce shrink-0 text-white" />
+                                <span>Usar mi ubicación actual (GPS Automático)</span>
+                              </>
                             )}
                           </button>
 
@@ -549,6 +556,13 @@ export default function CartDrawer() {
                               </div>
                             )}
                           </div>
+
+                          {/* Mensaje de confirmación en verde chefsy si el usuario activó GPS */}
+                          {usadoGpsActual && (
+                            <p className="text-xs font-bold text-chefsy-400 dark:text-chefsy-400 mt-1.5 text-left flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <span>¡Por favor, compruebe si la dirección esta correcta!</span>
+                            </p>
+                          )}
 
                           {/* Botón para abrir/cerrar mapa */}
                           <div className="flex justify-end pt-0.5">

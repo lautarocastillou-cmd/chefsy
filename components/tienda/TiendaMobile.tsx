@@ -97,6 +97,43 @@ export default function TiendaMobile() {
     setImgError(false)
   }, [configuracion?.hero_image_url])
   
+  // ── Control de scroll para navbar responsive (scroll down -> achica, idle/scroll up -> agranda) ──
+  const [navbarContraida, setNavbarContraida] = useState(false)
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY
+    let scrollTimeout: NodeJS.Timeout | null = null
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      if (currentScrollY <= 40) {
+        setNavbarContraida(false)
+        if (scrollTimeout) clearTimeout(scrollTimeout)
+        return
+      }
+
+      if (currentScrollY > lastScrollY && currentScrollY > 40) {
+        setNavbarContraida(true)
+      } else if (currentScrollY < lastScrollY) {
+        setNavbarContraida(false)
+      }
+
+      lastScrollY = currentScrollY
+
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(() => {
+        setNavbarContraida(false)
+      }, 250)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+    }
+  }, [])
+
   const categoriasActivas = useMemo(() => {
     return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
   }, [categorias])
@@ -254,22 +291,33 @@ export default function TiendaMobile() {
       )}
       {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
       {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/75 -z-10 pointer-events-none" />}
-      {/* Header App-like minimalista */}
-      <div className="bg-[#141414] sticky top-0 z-[100] px-4 py-3 shadow-md border-b border-white/5">
+      {/* Header App-like minimalista dinámico */}
+      <div className={cn(
+        "bg-[#141414]/95 backdrop-blur-md sticky top-0 z-[100] px-4 shadow-md border-b border-white/5 transition-all duration-300 ease-in-out",
+        navbarContraida ? "py-2" : "py-3"
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg overflow-hidden relative shadow-sm border border-white/10">
+            <div className={cn(
+              "rounded-lg overflow-hidden relative shadow-sm border border-white/10 shrink-0 transition-all duration-300",
+              navbarContraida ? "w-7 h-7" : "w-8 h-8"
+            )}>
               <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
             </div>
-            <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
+            <span className={cn(
+              "font-bebas text-white tracking-wider transition-all duration-300",
+              navbarContraida ? "text-lg" : "text-xl"
+            )}>CHEFSY</span>
             <BotonUbicacionLocal size="sm" />
             <BotonWhatsAppHeader size="sm" />
           </div>
-
         </div>
         
-        {/* Barra de búsqueda integrada */}
-        <div className="mt-4 relative mb-2">
+        {/* Barra de búsqueda integrada que se contrae cuando baja la pantalla y se vuelve grande cuando queda quieta */}
+        <div className={cn(
+          "relative transition-all duration-300 ease-in-out overflow-hidden origin-top",
+          navbarContraida ? "max-h-0 opacity-0 mt-0 mb-0 pointer-events-none scale-y-95" : "max-h-24 opacity-100 mt-3 mb-2 scale-y-100"
+        )}>
           <input
             id="busqueda_mobile"
             name="busqueda_mobile"
@@ -284,7 +332,7 @@ export default function TiendaMobile() {
                 setCategoriaSeleccionada(null)
               }
             }}
-            className="w-full bg-[#222222] border border-white/10 text-white py-3 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
+            className="w-full bg-[#222222] border border-white/10 text-white py-2.5 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-20" size={18} />
           

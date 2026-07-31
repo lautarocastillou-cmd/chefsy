@@ -12,6 +12,7 @@ import {
   obtenerUbicacionActual,
 } from '@/lib/ubicacion'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { Navigation } from 'lucide-react'
 
 const MapaSelector = dynamic(() => import('./MapaSelector'), {
   ssr: false,
@@ -146,7 +147,7 @@ export default function ModalSelectorUbicacion({
             {cargando ? (
               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Obteniendo ubicación GPS…</>
             ) : (
-              <><span className="text-base animate-bounce">📍</span> Usar mi ubicación actual (GPS Automático)</>
+              <><Navigation size={18} className="animate-bounce shrink-0 text-white" /> Usar mi ubicación actual (GPS Automático)</>
             )}
           </button>
 
