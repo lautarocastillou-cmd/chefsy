@@ -46,6 +46,7 @@ export interface Pedido {
   total: number
   costoEnvio?: number
   distanciaKm?: number
+  envioManual?: boolean
   estado: EstadoPedido
   metodoPago: MetodoPago
   observaciones?: string

@@ -44,11 +44,26 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
   }
 
+  const determinarEnvioManual = (p?: Pedido): boolean => {
+    if (!p || p.costoEnvio === undefined) return false
+    if (p.envioManual !== undefined) return p.envioManual
+    if (p.distanciaKm === undefined) return true
+    return p.costoEnvio !== calcularCostoEnvio(p.distanciaKm)
+  }
+
   const [costoEnvio, setCostoEnvio] = useState(0)
   const [distanciaKm, setDistanciaKm] = useState(pedidoInicial?.distanciaKm || 0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
-  const [envioManual, setEnvioManual] = useState(!!pedidoInicial?.costoEnvio && pedidoInicial.distanciaKm === undefined)
+  const [envioManual, setEnvioManualState] = useState(() => determinarEnvioManual(pedidoInicial))
   const [costoEnvioManualInput, setCostoEnvioManualInput] = useState(pedidoInicial?.costoEnvio?.toString() || '')
+
+  const manejarSetEnvioManual = (manual: boolean) => {
+    setEnvioManualState(manual)
+    if (manual && (!costoEnvioManualInput || Number(costoEnvioManualInput) === 0)) {
+      const val = costoEnvioFinal || costoEnvio || 0
+      if (val > 0) setCostoEnvioManualInput(val.toString())
+    }
+  }
 
   // 1. Inicialización si hay un pedido
   useEffect(() => {
@@ -65,11 +80,11 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       if (pedidoInicial.montoTarjeta) setMontoTarjeta(String(pedidoInicial.montoTarjeta))
       
       // Sincronizar estados de envío manual y costos
-      const isManual = !!pedidoInicial.costoEnvio && pedidoInicial.distanciaKm === undefined
-      setEnvioManual(isManual)
+      const isManual = determinarEnvioManual(pedidoInicial)
+      setEnvioManualState(isManual)
       setCostoEnvioManualInput(pedidoInicial.costoEnvio?.toString() || '')
       setDistanciaKm(pedidoInicial.distanciaKm || 0)
-      if (!isManual && pedidoInicial.costoEnvio) {
+      if (pedidoInicial.costoEnvio !== undefined) {
         setCostoEnvio(pedidoInicial.costoEnvio)
       }
 
@@ -278,7 +293,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       productos: productosParseados,
       total,
       costoEnvio: costoEnvioFinal > 0 ? costoEnvioFinal : undefined,
-      distanciaKm: !envioManual && distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
+      distanciaKm: distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
+      envioManual: envioManual,
       estado: pedidoInicial?.estado || 'nuevo',
       metodoPago,
       observaciones: observaciones.trim() || undefined,
@@ -309,7 +325,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
-      setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput,
+      setObservaciones, setFilasProductos, setEnvioManual: manejarSetEnvioManual, setCostoEnvioManualInput,
       setMontoEfectivo, setMontoTransferencia, setMontoTarjeta
     },
     derivados: {
