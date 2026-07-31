@@ -12,7 +12,7 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
   const containerRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const googleMapsUrl = 'https://www.google.com/maps?q=-28.462809031658047,-65.77850065400358'
+  const googleMapsUrl = 'https://maps.app.goo.gl/TRGjNnbVmeAABR3t8'
 
   // Cierre al hacer click afuera
   useEffect(() => {

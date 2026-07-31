@@ -7,7 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 
 export default function FooterTienda() {
   const { configuracion } = usarConfiguracionTienda()
-  const googleMapsUrl = 'https://www.google.com/maps?q=-28.462809031658047,-65.77850065400358'
+  const googleMapsUrl = 'https://maps.app.goo.gl/TRGjNnbVmeAABR3t8'
 
   return (
     <footer className="mt-16 mb-24 w-full border-t border-white/10 pt-10 pb-8 px-4 max-w-5xl mx-auto">
