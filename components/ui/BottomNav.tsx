@@ -12,6 +12,8 @@ interface BottomNavProps {
 
 export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   const { totalProductosCarrito, subtotalCarrito } = usarCarrito()
+  const [esGrande, setEsGrande] = useState(true)
+
   useEffect(() => {
     let ultimoScrollY = window.scrollY
     let scrollTimeout: NodeJS.Timeout | null = null
