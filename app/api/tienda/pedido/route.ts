@@ -100,9 +100,12 @@ export async function POST(request: Request) {
     }
 
     // ── Insertar pedido con service_role (bypasea RLS) ───────────────────────
+    const payload = { ...body, archivado: false }
+    delete payload.envioManual
+
     const { error } = await supabaseAdmin
       .from('pedidos')
-      .insert({ ...body, archivado: false })
+      .insert(payload)
 
     if (error) {
       console.error('[API Pedido] Error al insertar:', error.message)

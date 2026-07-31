@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         const payload = { ...pedido, archivado: false }
         delete payload.created_at
         delete payload.updated_at
+        delete payload.envioManual
 
         // 1. Ejecutar transacción de puntos si aplica
         if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         delete payload.id
         delete payload.created_at
         delete payload.updated_at
+        delete payload.envioManual
 
         const { error } = await supabaseAdmin
           .from('pedidos')
