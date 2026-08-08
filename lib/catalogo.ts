@@ -105,13 +105,17 @@ export function filasAProductosPedido(
   return filas
     .filter((f) => f.idProductoCatalogo && f.idCategoria)
     .map((fila) => {
-      const categoria = obtenerCategoriaPorId(fila.idCategoria)
-      const producto = obtenerProductoCatalogoPorId(fila.idProductoCatalogo)
-      
-      let nombreFinal = producto?.nombre ?? 'Producto'
-      if (categoria && producto) {
-        nombreFinal = `${categoria.nombre} - ${producto.nombre}`
-      }
+      // Preferir los nombres ya guardados en la fila (más confiable)
+      // y usar el caché solo como fallback
+      const nombreProducto = fila.nombreProducto
+        ?? obtenerProductoCatalogoPorId(fila.idProductoCatalogo)?.nombre
+        ?? 'Producto'
+      const nombreCategoria = fila.nombreCategoria
+        ?? obtenerCategoriaPorId(fila.idCategoria)?.nombre
+
+      let nombreFinal = nombreCategoria
+        ? `${nombreCategoria} - ${nombreProducto}`
+        : nombreProducto
 
       if (fila.modificadoresSeleccionadosIds && fila.modificadoresSeleccionadosIds.length > 0) {
         const modsNombres: string[] = []
@@ -136,3 +140,4 @@ export function filasAProductosPedido(
       }
     })
 }
+

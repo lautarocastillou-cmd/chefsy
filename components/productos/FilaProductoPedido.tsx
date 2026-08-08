@@ -32,17 +32,20 @@ export default function FilaProductoPedido({
   onCambio,
   onEliminar,
 }: PropsFilaProductoPedido) {
-  const { modificadores } = usarPedidos()
+  const { modificadores, categorias } = usarPedidos()
 
   const actualizar = (parcial: Partial<FilaProducto>) => {
     onCambio(indice, { ...fila, ...parcial })
   }
 
   const manejarCategoria = (idCategoria: string) => {
+    const cat = categorias.find(c => c.id === idCategoria)
     onCambio(indice, {
       ...fila,
       idCategoria,
+      nombreCategoria: cat?.nombre,
       idProductoCatalogo: '',
+      nombreProducto: undefined,
       precio: 0,
       modificadoresSeleccionadosIds: [],
     })
@@ -53,6 +56,7 @@ export default function FilaProductoPedido({
     onCambio(indice, {
       ...fila,
       idProductoCatalogo,
+      nombreProducto: producto?.nombre,
       precio: producto?.precio ?? 0,
       modificadoresSeleccionadosIds: [],
     })

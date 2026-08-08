@@ -93,12 +93,15 @@ export default function SeccionProductosPedido({
   }, [mostrarBuscador])
 
   const agregarProductoRapido = (producto: ProductoCatalogo) => {
+    const cat = categorias.find(c => c.id === producto.categoriaId)
     onFilasChange([
       ...filas,
       {
         id: generarIdProducto(),
         idCategoria: producto.categoriaId,
         idProductoCatalogo: producto.id,
+        nombreProducto: producto.nombre,
+        nombreCategoria: cat?.nombre,
         cantidad: 1,
         precio: producto.precio,
       }

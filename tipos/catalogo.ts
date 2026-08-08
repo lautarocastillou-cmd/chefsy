@@ -37,6 +37,8 @@ export interface FilaProductoPedido {
   id: string
   idCategoria: string
   idProductoCatalogo: string
+  nombreProducto?: string
+  nombreCategoria?: string
   cantidad: number
   precio: number
   modificadoresSeleccionadosIds?: string[]
