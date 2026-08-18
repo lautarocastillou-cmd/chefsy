@@ -204,9 +204,14 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
     if (pedido.telefono && pedido.telefono !== 'Sin especificar') {
       infoCliente += `\nTeléfono: ${pedido.telefono}`
     }
-    if (pedido.direccion && pedido.direccion.trim() !== '') {
-      infoCliente += `\nDirección: ${pedido.direccion.trim()}`
+
+    const etiquetasTipoEntrega: Record<string, string> = {
+      delivery: 'Delivery',
+      retiro: 'Retiro en el local',
+      consumo_local: 'Consumo en el local',
     }
+    const tipoTexto = etiquetasTipoEntrega[pedido.tipoEntrega] || 'Delivery'
+    infoCliente += `\nTipo de pedido: ${tipoTexto}`
 
     let textoEnvio = ''
     if (pedido.tipoEntrega === 'delivery') {
