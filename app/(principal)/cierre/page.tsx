@@ -24,7 +24,8 @@ import {
   Wallet,
   Sun,
   Moon,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react'
 import { Pedido, TipoTurno } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
@@ -33,6 +34,7 @@ export default function PaginaCierreCaja() {
   const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno, configuracionOperativa } = usarPedidos()
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
+  const [modoOrigen, setModoOrigen] = useState<'en_vivo' | 'fecha'>('en_vivo')
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
@@ -46,9 +48,32 @@ export default function PaginaCierreCaja() {
   const [cajaInicialInput, setCajaInicialInput] = useState('')
   const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>(() => detectarTipoTurnoActual())
 
-  // Cargar pedidos de la fecha seleccionada en Supabase (históricos + activos)
+  // Detectar si hay pedidos activos de un turno anterior sin archivar
+  const infoTurnoPendiente = useMemo(() => {
+    const activosNoArchivados = pedidos.filter(p => !p.archivado)
+    if (activosNoArchivados.length === 0) return null
+
+    const distintos = activosNoArchivados.filter(p => p.fecha && p.fecha !== fechaSeleccionada)
+    if (distintos.length === 0) return null
+
+    const fechaPendiente = distintos[0].fecha
+    const cantidad = distintos.length
+    const totalMonto = distintos.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0)
+
+    return { fechaPendiente, cantidad, totalMonto }
+  }, [pedidos, fechaSeleccionada])
+
+  // Cargar pedidos según el modo de origen seleccionado (En vivo vs Por fecha)
   useEffect(() => {
     let activo = true
+
+    if (modoOrigen === 'en_vivo') {
+      // Usar los pedidos activos en vivo en pantalla sin archivar
+      setPedidosDelDia(pedidos.filter(p => !p.archivado))
+      setCargando(false)
+      return
+    }
+
     async function cargar() {
       setCargando(true)
       const data = await obtenerPedidosPorFecha(fechaSeleccionada)
@@ -61,7 +86,7 @@ export default function PaginaCierreCaja() {
     return () => {
       activo = false
     }
-  }, [fechaSeleccionada, obtenerPedidosPorFecha, pedidos])
+  }, [modoOrigen, fechaSeleccionada, obtenerPedidosPorFecha, pedidos])
 
   // Filtrar pedidos por tipo de turno seleccionado (mediodía vs noche)
   const pedidosFiltradosPorTurno = useMemo(() => {
@@ -289,15 +314,46 @@ _Generado automáticamente desde Chefsy_`.trim()
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 border border-slate-200 dark:border-[#4d4d4d] rounded-lg px-3 py-1.5 bg-slate-50 dark:bg-[#2f2f2f]">
-            <Calendar size={16} className="text-slate-400 dark:text-[#686868]" />
-            <input
-              type="date"
-              value={fechaSeleccionada}
-              onChange={(e) => setFechaSeleccionada(e.target.value)}
-              className="bg-transparent border-none text-sm outline-none text-slate-700 dark:text-[#e6e6e6] font-semibold cursor-pointer"
-            />
+          {/* Selector Modo Origen de Datos */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2f2f2f] p-1 rounded-xl border border-slate-200 dark:border-[#4d4d4d] text-xs">
+            <button
+              onClick={() => setModoOrigen('en_vivo')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5",
+                modoOrigen === 'en_vivo'
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-800"
+              )}
+            >
+              <Zap size={14} />
+              <span>⚡ En Vivo ({pedidos.filter(p => !p.archivado).length})</span>
+            </button>
+            <button
+              onClick={() => setModoOrigen('fecha')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5",
+                modoOrigen === 'fecha'
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-800"
+              )}
+            >
+              <Calendar size={14} />
+              <span>Por Fecha</span>
+            </button>
           </div>
+
+          {modoOrigen === 'fecha' && (
+            <div className="flex items-center gap-2 border border-slate-200 dark:border-[#4d4d4d] rounded-lg px-3 py-1.5 bg-slate-50 dark:bg-[#2f2f2f]">
+              <Calendar size={16} className="text-slate-400 dark:text-[#686868]" />
+              <input
+                type="date"
+                value={fechaSeleccionada}
+                onChange={(e) => setFechaSeleccionada(e.target.value)}
+                className="bg-transparent border-none text-sm outline-none text-slate-700 dark:text-[#e6e6e6] font-semibold cursor-pointer"
+              />
+            </div>
+          )}
+
           <button
             onClick={() => setModalInicioAbierto(true)}
             disabled={estadoTurno.activo}
@@ -323,6 +379,44 @@ _Generado automáticamente desde Chefsy_`.trim()
           </button>
         </div>
       </div>
+
+      {/* Alerta de Turno Pendiente de Fecha Anterior */}
+      {infoTurnoPendiente && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 mt-0.5 sm:mt-0 shadow-sm">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-900 dark:text-amber-300">
+                ⚠️ Turno anterior sin finalizar ({infoTurnoPendiente.fechaPendiente})
+              </h4>
+              <p className="text-xs text-amber-800/90 dark:text-amber-400/90 mt-0.5 font-medium">
+                Tenés <strong className="text-amber-950 dark:text-amber-200">{infoTurnoPendiente.cantidad} pedidos en vivo</strong> sin archivar por <strong className="text-amber-950 dark:text-amber-200">{formatearPrecio(infoTurnoPendiente.totalMonto)}</strong> pertenecientes a una fecha previa.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
+            <button
+              onClick={() => {
+                setFechaSeleccionada(infoTurnoPendiente.fechaPendiente)
+                setModoOrigen('fecha')
+              }}
+              className="px-3 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <Calendar size={14} />
+              Ver Cierre de esa Fecha ({infoTurnoPendiente.fechaPendiente})
+            </button>
+            <button
+              onClick={manejarFinalizarTurno}
+              className="px-3 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              🏁 Finalizar Turno Anterior
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Selector de Tabs y Filtro de Turno */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-[#3d3d3d] pb-1">

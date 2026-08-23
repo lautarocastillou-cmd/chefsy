@@ -71,6 +71,7 @@ export interface Pedido {
   montoTarjeta?: number
   push_subscription?: any | null
   turno_tipo?: TipoTurno
+  archivado?: boolean
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'
