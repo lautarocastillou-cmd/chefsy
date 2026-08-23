@@ -258,7 +258,7 @@ _Generado automáticamente desde Chefsy_`.trim()
   const pctTransf = totalMetodos > 0 ? (transferenciaTotal / totalMetodos) * 100 : 0
 
   return (
-    <div className="space-y-6 max-w-3xl pb-10">
+    <div className="space-y-6 w-full pb-10">
       
       {/* Selector de fecha, cabecera y botón de finalizar turno */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#252525] p-5 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm">
