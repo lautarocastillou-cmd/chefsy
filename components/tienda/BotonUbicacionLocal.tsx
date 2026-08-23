@@ -67,14 +67,16 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
       {/* Ventana flotante superpuesta */}
       {abierto && (
         <div 
-          className="fixed left-1/2 -translate-x-1/2 mt-2 z-[9999] w-[calc(100vw-32px)] max-w-sm bg-[#161618]/95 backdrop-blur-xl border border-white/15 text-white rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+          className="fixed left-1/2 -translate-x-1/2 md:absolute md:left-0 md:translate-x-0 md:top-full mt-2 z-[9999] w-[calc(100vw-32px)] max-w-sm md:w-80 bg-[#161618]/95 backdrop-blur-xl border border-white/15 text-white rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
           style={{ 
-            top: containerRef.current ? (containerRef.current.getBoundingClientRect().bottom + 8) : 60,
+            top: typeof window !== 'undefined' && window.innerWidth < 768 && containerRef.current
+              ? (containerRef.current.getBoundingClientRect().bottom + 8) 
+              : undefined,
             filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))' 
           }}
         >
-          {/* Triángulo indicador superior centrado */}
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#161618] border-t border-l border-white/15 rotate-45" />
+          {/* Triángulo indicador superior */}
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 w-4 h-4 bg-[#161618] border-t border-l border-white/15 rotate-45" />
 
           {/* Encabezado modal */}
           <div className="flex items-center justify-between pb-3 border-b border-white/10 relative z-10">
