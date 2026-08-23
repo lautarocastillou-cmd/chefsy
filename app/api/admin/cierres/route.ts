@@ -13,13 +13,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
     }
 
-    // Obtener los últimos 30 cierres ordenados por fecha ascendente para que el gráfico fluya hacia adelante
+    // Obtener los cierres ordenados por fecha ascendente para análisis histórico
     const supabaseAdmin = obtenerSupabaseAdmin()
     const { data, error } = await supabaseAdmin
       .from('cierres_diarios')
       .select('*')
       .order('fecha', { ascending: true })
-      .limit(30)
 
     if (error) {
       throw error
