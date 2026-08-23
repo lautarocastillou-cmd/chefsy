@@ -40,12 +40,13 @@ export function useTurno({ agregarNotificacion, isAdmin = false }: UseTurnoProps
     cargarTurno()
   }, [isAdmin])
 
-  const iniciarTurno = async (cajaInicial: number): Promise<boolean> => {
+  const iniciarTurno = async (cajaInicial: number, tipoTurno: 'mediodia' | 'noche' = 'noche'): Promise<boolean> => {
     try {
       const nuevoTurno = {
         activo: true,
         cajaInicial,
         fechaInicio: new Date().toISOString(),
+        tipoTurno,
       }
       const res = await fetch('/api/admin/turno', {
         method: 'POST',

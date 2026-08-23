@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio, cn } from '@/lib/utils'
-import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { obtenerFechaNegocio, detectarTipoTurnoActual, obtenerEtiquetaTurno } from '@/lib/tiempo'
 import { useState, useMemo, useEffect } from 'react'
 import {
   Calendar,
@@ -21,9 +21,12 @@ import {
   Play,
   X,
   BarChart3,
-  Wallet
+  Wallet,
+  Sun,
+  Moon,
+  Clock
 } from 'lucide-react'
-import { Pedido } from '@/tipos'
+import { Pedido, TipoTurno } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 
 export default function PaginaCierreCaja() {
@@ -34,12 +37,14 @@ export default function PaginaCierreCaja() {
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
+  const [filtroTurno, setFiltroTurno] = useState<'todos' | 'mediodia' | 'noche'>('todos')
 
   const montoBaseCadete = (configuracionOperativa as any)?.montoBaseCadete ?? 4000
 
   // Estado para el modal de Iniciar Turno
   const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
   const [cajaInicialInput, setCajaInicialInput] = useState('')
+  const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>(() => detectarTipoTurnoActual())
 
   // Cargar pedidos de la fecha seleccionada en Supabase (históricos + activos)
   useEffect(() => {
@@ -58,10 +63,22 @@ export default function PaginaCierreCaja() {
     }
   }, [fechaSeleccionada, obtenerPedidosPorFecha, pedidos])
 
+  // Filtrar pedidos por tipo de turno seleccionado (mediodía vs noche)
+  const pedidosFiltradosPorTurno = useMemo(() => {
+    if (filtroTurno === 'todos') return pedidosDelDia
+    return pedidosDelDia.filter((p) => {
+      if (p.turno_tipo) return p.turno_tipo === filtroTurno
+      // Fallback por hora si no fue etiquetado
+      const horaNum = Number((p.hora || '').split(':')[0]) || 20
+      const esMediodia = horaNum >= 10 && horaNum < 16
+      return filtroTurno === 'mediodia' ? esMediodia : !esMediodia
+    })
+  }, [pedidosDelDia, filtroTurno])
+
   // Pedidos válidos (no cancelados) para estadísticas de caja
   const pedidosValidos = useMemo(() => {
-    return pedidosDelDia.filter((p) => p.estado !== 'cancelado')
-  }, [pedidosDelDia])
+    return pedidosFiltradosPorTurno.filter((p) => p.estado !== 'cancelado')
+  }, [pedidosFiltradosPorTurno])
 
   // ── Desglose y Liquidación por Cadete ───────────────
   const resumenCadetes = useMemo(() => {
@@ -244,7 +261,7 @@ _Generado automáticamente desde Chefsy_`.trim()
     e.preventDefault()
     const monto = Number(cajaInicialInput)
     if (isNaN(monto) || monto < 0) return
-    const exito = await iniciarTurno(monto)
+    const exito = await iniciarTurno(monto, tipoTurnoInput)
     if (exito) {
       setModalInicioAbierto(false)
       setCajaInicialInput('')
@@ -287,12 +304,14 @@ _Generado automáticamente desde Chefsy_`.trim()
             className={cn(
               "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5",
               estadoTurno.activo
-                ? "bg-slate-100 text-slate-400 dark:bg-[#333] dark:text-[#666] cursor-not-allowed"
+                ? "bg-slate-100 text-slate-500 dark:bg-[#333] dark:text-[#888] cursor-not-allowed border border-slate-200 dark:border-slate-800"
                 : "bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 active:scale-95"
             )}
           >
             <Play size={16} />
-            {estadoTurno.activo ? 'Turno en curso' : 'Iniciar Turno'}
+            {estadoTurno.activo
+              ? (estadoTurno.tipoTurno === 'mediodia' ? '☀️ Turno Mediodía activo' : '🌙 Turno Noche activo')
+              : 'Iniciar Turno'}
           </button>
           <button
             onClick={manejarFinalizarTurno}
@@ -305,31 +324,74 @@ _Generado automáticamente desde Chefsy_`.trim()
         </div>
       </div>
 
-      {/* Selector de Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-[#3d3d3d]">
-        <button
-          onClick={() => setTabActual('calculadora')}
-          className={cn(
-            "px-4 py-3 text-sm font-bold transition-all border-b-2",
-            tabActual === 'calculadora' 
-              ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-          )}
-        >
-          Calculadora en Vivo
-        </button>
-        <button
-          onClick={() => setTabActual('metricas')}
-          className={cn(
-            "px-4 py-3 text-sm font-bold transition-all border-b-2 flex items-center gap-2",
-            tabActual === 'metricas' 
-              ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-          )}
-        >
-          <BarChart3 size={16} />
-          Métricas Históricas
-        </button>
+      {/* Selector de Tabs y Filtro de Turno */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-[#3d3d3d] pb-1">
+        <div className="flex">
+          <button
+            onClick={() => setTabActual('calculadora')}
+            className={cn(
+              "px-4 py-3 text-sm font-bold transition-all border-b-2",
+              tabActual === 'calculadora' 
+                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+            )}
+          >
+            Calculadora en Vivo
+          </button>
+          <button
+            onClick={() => setTabActual('metricas')}
+            className={cn(
+              "px-4 py-3 text-sm font-bold transition-all border-b-2 flex items-center gap-2",
+              tabActual === 'metricas' 
+                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" 
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+            )}
+          >
+            <BarChart3 size={16} />
+            Métricas Históricas
+          </button>
+        </div>
+
+        {/* Filtro por Turno (solo visible en Calculadora) */}
+        {tabActual === 'calculadora' && (
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#282828] p-1 rounded-xl border border-slate-200 dark:border-[#3d3d3d] text-xs self-start sm:self-auto mb-2 sm:mb-0">
+            <button
+              onClick={() => setFiltroTurno('todos')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-bold transition-all",
+                filtroTurno === 'todos'
+                  ? "bg-white dark:bg-[#383838] text-slate-800 dark:text-slate-100 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              )}
+            >
+              ☀️/🌙 Ambos Turnos
+            </button>
+            <button
+              onClick={() => setFiltroTurno('mediodia')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
+                filtroTurno === 'mediodia'
+                  ? "bg-amber-500 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              )}
+            >
+              <Sun size={13} />
+              Mediodía
+            </button>
+            <button
+              onClick={() => setFiltroTurno('noche')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
+                filtroTurno === 'noche'
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              )}
+            >
+              <Moon size={13} />
+              Noche
+            </button>
+          </div>
+        )}
       </div>
 
       {tabActual === 'metricas' ? (
@@ -585,6 +647,43 @@ _Generado automáticamente desde Chefsy_`.trim()
             </div>
             
             <form onSubmit={manejarIniciarTurno} className="p-5 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                  Tipo de Turno
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTipoTurnoInput('mediodia')}
+                    className={cn(
+                      "p-3 rounded-xl border font-bold text-xs flex flex-col items-center gap-1.5 transition-all",
+                      tipoTurnoInput === 'mediodia'
+                        ? "bg-amber-500 text-white border-amber-600 shadow-md scale-[1.02]"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <Sun size={18} />
+                    <span>☀️ Mediodía</span>
+                    <span className="text-[10px] font-normal opacity-80">11:30 a 14:00</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTipoTurnoInput('noche')}
+                    className={cn(
+                      "p-3 rounded-xl border font-bold text-xs flex flex-col items-center gap-1.5 transition-all",
+                      tipoTurnoInput === 'noche'
+                        ? "bg-indigo-600 text-white border-indigo-700 shadow-md scale-[1.02]"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <Moon size={18} />
+                    <span>🌙 Noche</span>
+                    <span className="text-[10px] font-normal opacity-80">20:30 a 01:00</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
                   Plata en caja (Cambio Inicial)

@@ -291,10 +291,13 @@ export async function POST(request: Request) {
           const argTime = new Date(now.getTime() + utcOffset * 3600000)
           const fechaStr = argTime.toISOString().split('T')[0]
 
+          const turnoTipo = snapshot.turno_tipo || 'noche'
+
           const { error: errorSnapshot } = await supabaseAdmin
             .from('cierres_diarios')
             .upsert({
               fecha: fechaStr,
+              turno_tipo: turnoTipo,
               facturacion_neta: snapshot.facturacion_neta,
               efectivo_ventas: snapshot.efectivo_ventas,
               caja_inicial: snapshot.caja_inicial,
@@ -309,7 +312,7 @@ export async function POST(request: Request) {
               ticket_promedio: snapshot.ticket_promedio,
               pedidos_cancelados: snapshot.pedidos_cancelados,
               monto_cancelados: snapshot.monto_cancelados
-            }, { onConflict: 'fecha' })
+            }, { onConflict: 'fecha, turno_tipo' })
 
           if (errorSnapshot) console.error('Error insertando snapshot:', errorSnapshot)
         }

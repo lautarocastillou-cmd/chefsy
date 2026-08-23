@@ -30,7 +30,8 @@ export async function GET() {
     return NextResponse.json({
       activo: data.activo,
       cajaInicial: data.caja_inicial,
-      fechaInicio: data.fecha_inicio
+      fechaInicio: data.fecha_inicio,
+      tipoTurno: data.tipo_turno || 'noche'
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { activo, cajaInicial, fechaInicio } = body
+    const { activo, cajaInicial, fechaInicio, tipoTurno } = body
 
     if (activo === undefined) {
       return NextResponse.json({ error: 'Datos incompletos.' }, { status: 400 })
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
         id: 1, 
         activo, 
         caja_inicial: cajaInicial, 
-        fecha_inicio: fechaInicio 
+        fecha_inicio: fechaInicio,
+        tipo_turno: tipoTurno || 'noche'
       })
 
     if (error) throw error

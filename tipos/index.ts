@@ -18,6 +18,9 @@ export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto' | 's
 /** Forma en que el cliente recibe el pedido */
 export type TipoEntrega = 'delivery' | 'retiro' | 'consumo_local'
 
+/** Tipo de turno operativo: mediodía vs noche */
+export type TipoTurno = 'mediodia' | 'noche'
+
 /** Coordenadas geográficas de entrega */
 export interface Coordenadas {
   latitud: number
@@ -67,6 +70,7 @@ export interface Pedido {
   montoTransferencia?: number
   montoTarjeta?: number
   push_subscription?: any | null
+  turno_tipo?: TipoTurno
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

@@ -23,6 +23,28 @@ export function obtenerFechaNegocio(fechaReferencia: Date = new Date()): string 
 }
 
 /**
+ * Detecta automáticamente si el turno actual es Mediodía o Noche según la hora local.
+ * - 10:00 a 16:00 hs: Mediodía (11:30 a 14:00)
+ * - Resto del tiempo: Noche (20:30 a 01:00)
+ */
+export function detectarTipoTurnoActual(fechaReferencia: Date = new Date()): 'mediodia' | 'noche' {
+  const hora = fechaReferencia.getHours()
+  if (hora >= 10 && hora < 16) {
+    return 'mediodia'
+  }
+  return 'noche'
+}
+
+/**
+ * Devuelve una etiqueta legible con ícono para un tipo de turno.
+ */
+export function obtenerEtiquetaTurno(tipo?: string | null): string {
+  if (tipo === 'mediodia') return '☀️ Mediodía'
+  if (tipo === 'noche') return '🌙 Noche'
+  return '☀️/🌙 General'
+}
+
+/**
  * Parsea una fecha en formato "YYYY-MM-DD" y hora en formato 12h o 24h a un objeto Date local.
  * Soporta formatos de hora como "17:35", "17:35:12", "05:35 p. m.", "05:35 PM", etc.
  * Resuelve el bug del NaN al ignorar caracteres no numéricos tras separar horas/minutos/segundos.

@@ -27,7 +27,7 @@ import React, {
   useRef,
   ReactNode,
 } from 'react'
-import { Pedido, EstadoPedido } from '@/tipos'
+import { Pedido, EstadoPedido, TipoTurno } from '@/tipos'
 import { Cadete } from '@/lib/entrega'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
@@ -143,6 +143,7 @@ export interface EstadoTurno {
   activo: boolean
   cajaInicial: number
   fechaInicio: string | null
+  tipoTurno?: TipoTurno
 }
 
 interface ValorContextoPedidosInterno {
@@ -164,7 +165,7 @@ interface ValorContextoPedidosInterno {
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
-  iniciarTurno: (cajaInicial: number) => Promise<boolean>
+  iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -668,6 +669,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           accion: 'finalizar_turno',
           ids: idsActivos,
           snapshot: {
+            turno_tipo: estadoTurno?.tipoTurno || 'noche',
             facturacion_neta,
             efectivo_ventas,
             caja_inicial,
@@ -797,7 +799,7 @@ interface ValorContextoPedidos {
   guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
-  iniciarTurno: (cajaInicial: number) => Promise<boolean>
+  iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
 }
 
 export function usarPedidos(): ValorContextoPedidos {

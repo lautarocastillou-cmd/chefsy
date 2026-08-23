@@ -430,6 +430,7 @@ export default function MetricasHistoricas() {
             <thead className="bg-slate-50 dark:bg-[#2f2f2f] text-slate-600 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Turno</th>
                 <th className="px-4 py-3 font-semibold">Pedidos</th>
                 <th className="px-4 py-3 font-semibold">Facturación Neta</th>
                 <th className="px-4 py-3 font-semibold">Caja Inicial</th>
@@ -438,18 +439,30 @@ export default function MetricasHistoricas() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-[#3d3d3d]">
-              {[...datosActuales].reverse().map((row) => (
-                <tr key={row.id || row.fecha} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{row.fecha}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.pedidos}</td>
-                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-500 font-semibold">{formatearPrecio(row.ingresos)}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatearPrecio(row.caja_inicial || 0)}</td>
-                  <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50/50 dark:bg-emerald-900/10">
-                    {formatearPrecio(row.efectivo_rendir || 0)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.total_envios_delivery || 0} envíos</td>
-                </tr>
-              ))}
+              {[...datosActuales].reverse().map((row) => {
+                const esMediodia = row.turno_tipo === 'mediodia'
+                return (
+                  <tr key={row.id || `${row.fecha}_${row.turno_tipo}`} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{row.fecha}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                        esMediodia
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                          : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                      }`}>
+                        {esMediodia ? '☀️ Mediodía' : '🌙 Noche'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.pedidos}</td>
+                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-500 font-semibold">{formatearPrecio(row.ingresos)}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatearPrecio(row.caja_inicial || 0)}</td>
+                    <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50/50 dark:bg-emerald-900/10">
+                      {formatearPrecio(row.efectivo_rendir || 0)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{row.total_envios_delivery || 0} envíos</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

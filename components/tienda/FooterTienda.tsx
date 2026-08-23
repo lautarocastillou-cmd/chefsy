@@ -22,7 +22,7 @@ export default function FooterTienda() {
               ¿Dónde estamos ubicados?
             </h4>
             <p className="text-slate-400 text-xs font-semibold leading-relaxed">
-              Nuestro local está ubicado en Rivadavia 195, antes de almagro. Atendemos de 20:30hs a 01:00hs de Lunes a Sábado, domingo cerrado!
+              Nuestro local está ubicado en Rivadavia 195, antes de Almagro. Atendemos de Lunes a Sábado de 11:30hs a 14:00hs y 20:30hs a 01:00hs. ¡Domingo cerrado!
             </p>
             <a
               href={googleMapsUrl}
