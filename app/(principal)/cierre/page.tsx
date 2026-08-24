@@ -47,6 +47,7 @@ export default function PaginaCierreCaja() {
   const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
   const [cajaInicialInput, setCajaInicialInput] = useState('')
   const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>(() => detectarTipoTurnoActual())
+  const [guardandoTurno, setGuardandoTurno] = useState(false)
 
   // Detectar si hay pedidos activos de un turno anterior sin archivar
   const infoTurnoPendiente = useMemo(() => {
@@ -284,12 +285,18 @@ _Generado automáticamente desde Chefsy_`.trim()
 
   const manejarIniciarTurno = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (guardandoTurno) return
     const monto = Number(cajaInicialInput)
     if (isNaN(monto) || monto < 0) return
-    const exito = await iniciarTurno(monto, tipoTurnoInput)
-    if (exito) {
-      setModalInicioAbierto(false)
-      setCajaInicialInput('')
+    setGuardandoTurno(true)
+    try {
+      const exito = await iniciarTurno(monto, tipoTurnoInput)
+      if (exito) {
+        setModalInicioAbierto(false)
+        setCajaInicialInput('')
+      }
+    } finally {
+      setGuardandoTurno(false)
     }
   }
 
@@ -802,15 +809,17 @@ _Generado automáticamente desde Chefsy_`.trim()
                 <button
                   type="button"
                   onClick={() => setModalInicioAbierto(false)}
-                  className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  disabled={guardandoTurno}
+                  className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-sm shadow-emerald-500/20"
+                  disabled={guardandoTurno}
+                  className="px-4 py-2 text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-sm shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
                 >
-                  Confirmar e Iniciar
+                  {guardandoTurno ? 'Iniciando...' : 'Confirmar e Iniciar'}
                 </button>
               </div>
             </form>

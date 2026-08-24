@@ -111,11 +111,17 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
     tipo: 'info' | 'success' | 'warning' = 'success',
     accion?: { etiqueta: string; alHacerClick: () => void }
   ) => {
-    const id = Date.now().toString()
-    setNotificaciones((prev) => [...prev, { id, mensaje, tipo, accion }])
-    setTimeout(() => {
-      setNotificaciones((prev) => prev.filter((n) => n.id !== id))
-    }, 6000)
+    setNotificaciones((prev) => {
+      // Evitar notificaciones duplicadas idénticas activas en pantalla
+      if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
+        return prev
+      }
+      const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+      setTimeout(() => {
+        setNotificaciones((p) => p.filter((n) => n.id !== id))
+      }, 6000)
+      return [...prev, { id, mensaje, tipo, accion }]
+    })
   }
 
   const eliminarNotificacion = (id: string) => {
