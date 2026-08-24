@@ -64,6 +64,22 @@ export async function POST(request: Request) {
     }
 
     const supabaseAdmin = obtenerSupabaseAdmin()
+
+    // ── Verificar que el turno / local esté realmente activo ───────────────
+    const { data: turnoData } = await supabaseAdmin
+      .from('turnos')
+      .select('activo')
+      .eq('id', 1)
+      .single()
+
+    if (!turnoData || !turnoData.activo) {
+      console.warn(`[API Pedido] Intento de compra con local cerrado desde IP: ${ip}`)
+      return NextResponse.json(
+        { error: 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábado de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.' },
+        { status: 400 }
+      )
+    }
+
     const telefono = String(body.telefono).trim()
 
     // ── Límite de 3 pedidos activos por teléfono ─────────────────────────────

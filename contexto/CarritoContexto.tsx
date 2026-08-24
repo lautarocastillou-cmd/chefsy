@@ -369,19 +369,22 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         const dataTurno = await resTurno.json()
         if (!dataTurno.activo) {
           setTurnoActivo(false)
-          alert('Nuestro horario de atención es de 20:30 a 01:00hs.')
+          alert('El local se encuentra cerrado en este momento. Horarios: Lunes a Sábado de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
           return
         }
       }
     } catch (e) {
       console.error('Error verificando turno en compra:', e)
+      alert('No pudimos verificar si el local está abierto. Por favor comprobá tu conexión a internet o intentá de nuevo.')
+      return
     }
 
     try {
       await insertarPedidoLocal({ ...nuevoPedido, archivado: false })
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error enviando pedido', err)
-      alert('Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.')
+      const mensajeError = err?.message || 'Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.'
+      alert(mensajeError)
       return
     }
 
