@@ -58,7 +58,16 @@ export function useTurno({ agregarNotificacion, isAdmin = false }: UseTurnoProps
         agregarNotificacion('Turno iniciado correctamente.', 'success')
         return true
       }
-      agregarNotificacion('Error al iniciar el turno.', 'warning')
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401) {
+        agregarNotificacion('Tu sesión expiró. Por favor volvé a iniciar sesión.', 'warning')
+        return false
+      }
+      if (res.status === 403) {
+        agregarNotificacion('Acceso denegado. Se requieren permisos de administrador.', 'warning')
+        return false
+      }
+      agregarNotificacion(data.error || 'Error al iniciar el turno.', 'warning')
       return false
     } catch (err) {
       console.error('Error iniciando turno:', err)
