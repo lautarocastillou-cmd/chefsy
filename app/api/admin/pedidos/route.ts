@@ -293,7 +293,7 @@ export async function POST(request: Request) {
 
           const turnoTipo = snapshot.turno_tipo || 'noche'
 
-          const { error: errorSnapshot } = await supabaseAdmin
+          let { error: errorSnapshot } = await supabaseAdmin
             .from('cierres_diarios')
             .upsert({
               fecha: fechaStr,
@@ -313,6 +313,29 @@ export async function POST(request: Request) {
               pedidos_cancelados: snapshot.pedidos_cancelados,
               monto_cancelados: snapshot.monto_cancelados
             }, { onConflict: 'fecha, turno_tipo' })
+
+          if (errorSnapshot && (errorSnapshot.message?.includes('turno_tipo') || errorSnapshot.code === 'PGRST204')) {
+            const reintento = await supabaseAdmin
+              .from('cierres_diarios')
+              .upsert({
+                fecha: fechaStr,
+                facturacion_neta: snapshot.facturacion_neta,
+                efectivo_ventas: snapshot.efectivo_ventas,
+                caja_inicial: snapshot.caja_inicial,
+                efectivo_rendir: snapshot.efectivo_rendir,
+                tarjeta_total: snapshot.tarjeta_total,
+                transferencia_total: snapshot.transferencia_total,
+                total_pedidos: snapshot.total_pedidos,
+                total_envios_delivery: snapshot.total_envios_delivery,
+                costo_envios_cadetes: snapshot.costo_envios_cadetes,
+                total_retiros: snapshot.total_retiros,
+                total_consumo_local: snapshot.total_consumo_local,
+                ticket_promedio: snapshot.ticket_promedio,
+                pedidos_cancelados: snapshot.pedidos_cancelados,
+                monto_cancelados: snapshot.monto_cancelados
+              }, { onConflict: 'fecha' })
+            errorSnapshot = reintento.error
+          }
 
           if (errorSnapshot) console.error('Error insertando snapshot:', errorSnapshot)
         }

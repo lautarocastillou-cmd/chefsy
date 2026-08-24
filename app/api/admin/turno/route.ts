@@ -65,16 +65,28 @@ export async function POST(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
     
-    // Upsert a la fila con ID 1
-    const { error } = await supabase
-      .from('turnos')
-      .upsert({ 
-        id: 1, 
-        activo, 
-        caja_inicial: cajaInicial, 
-        fecha_inicio: fechaInicio,
-        tipo_turno: tipoTurno || 'noche'
-      })
+    // 1. Intentar upsert con tipo_turno
+    const payloadConTipo: any = { 
+      id: 1, 
+      activo, 
+      caja_inicial: cajaInicial, 
+      fecha_inicio: fechaInicio,
+      tipo_turno: tipoTurno || 'noche'
+    }
+
+    let { error } = await supabase.from('turnos').upsert(payloadConTipo)
+
+    // 2. Si la columna tipo_turno no existe en Supabase (PGRST204), reintentar sin ese campo
+    if (error && (error.message?.includes('tipo_turno') || error.code === 'PGRST204')) {
+      const payloadSinTipo = {
+        id: 1,
+        activo,
+        caja_inicial: cajaInicial,
+        fecha_inicio: fechaInicio
+      }
+      const reintento = await supabase.from('turnos').upsert(payloadSinTipo)
+      error = reintento.error
+    }
 
     if (error) throw error
 
@@ -82,7 +94,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[API Turno] Error al escribir estado del turno:', error)
     return NextResponse.json(
-      { error: 'Error al guardar el turno en Supabase.' },
+      { error: error?.message || 'Error al guardar el turno en Supabase.' },
       { status: 500 }
     )
   }
