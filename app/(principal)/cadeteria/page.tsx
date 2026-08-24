@@ -36,7 +36,7 @@ function redireccionarWhatsApp(telefono: string, cliente: string) {
     numeroCompleto = numeros.slice(2)
   }
   
-  const mensaje = encodeURIComponent(`¡Hola ${cliente}! Soy el repartidor de Chefsy, estoy en camino con tu pedido. 🛵`)
+  const mensaje = encodeURIComponent('Hola, estoy en camino!')
   return `https://wa.me/${numeroCompleto}?text=${mensaje}`
 }
 
