@@ -10,8 +10,9 @@ import { ProductoCatalogo } from '@/tipos/catalogo'
 import { calcularTotalFilas } from '@/lib/catalogo'
 import { formatearPrecio, generarIdProducto } from '@/lib/utils'
 import FilaProductoPedidoComponente from './FilaProductoPedido'
+import ModalPromoMixta from './ModalPromoMixta'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { Search, X, Plus } from 'lucide-react'
+import { Search, X, Plus, Sparkles } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 interface PropsSeccionProductosPedido {
@@ -38,6 +39,7 @@ export default function SeccionProductosPedido({
 
   const [mostrarBuscador, setMostrarBuscador] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  const [modalPromoAbierto, setModalPromoAbierto] = useState(false)
   const inputBuscadorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -110,6 +112,15 @@ export default function SeccionProductosPedido({
     setMostrarBuscador(false)
   }
 
+  const manejarInsertarPromo = (filasNuevas: FilaProductoPedido[]) => {
+    // Si solo había 1 fila vacía, la reemplazamos
+    if (filas.length === 1 && !filas[0].idProductoCatalogo) {
+      onFilasChange(filasNuevas)
+    } else {
+      onFilasChange([...filas, ...filasNuevas])
+    }
+  }
+
   const productosFiltrados = busqueda.trim() === '' 
     ? [] 
     : productos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) && p.activo).slice(0, 6)
@@ -135,17 +146,32 @@ export default function SeccionProductosPedido({
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
           Productos
         </h3>
-        <button
-          type="button"
-          onClick={() => {
-            setMostrarBuscador(!mostrarBuscador)
-            if (mostrarBuscador) setBusqueda('')
-          }}
-          className="text-gray-400 hover:text-chefsy focus:outline-none p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-          title="Buscar producto"
-        >
-          {mostrarBuscador ? <X size={16} /> : <Search size={16} />}
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Botón Acceso Rápido Promo Mixta */}
+          <button
+            type="button"
+            onClick={() => setModalPromoAbierto(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white rounded-xl text-xs font-black transition-all shadow-sm shadow-amber-500/20"
+            title="Armar y agregar combo/promo mixta con descuento de stock automático"
+          >
+            <Sparkles size={14} />
+            <span>🎁 Promo Mixta ($23k)</span>
+          </button>
+
+          {/* Botón Buscador */}
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarBuscador(!mostrarBuscador)
+              if (mostrarBuscador) setBusqueda('')
+            }}
+            className="text-gray-400 hover:text-chefsy focus:outline-none p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            title="Buscar producto"
+          >
+            {mostrarBuscador ? <X size={16} /> : <Search size={16} />}
+          </button>
+        </div>
 
         {/* Buscador Desplegable */}
         {mostrarBuscador && (
@@ -215,18 +241,39 @@ export default function SeccionProductosPedido({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={agregarFila}
-        className="mt-2 w-full text-sm text-gray-500 border border-dashed border-gray-300 rounded-md py-2 hover:bg-gray-50 hover:border-gray-400"
-      >
-        + Agregar producto
-      </button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+        <button
+          type="button"
+          onClick={agregarFila}
+          className="w-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <Plus size={15} />
+          <span>Agregar producto</span>
+        </button>
 
-      <div className="flex items-center justify-between bg-chefsy-50 border border-chefsy-200 rounded-md px-4 py-3 mt-4">
-        <span className="text-sm font-medium text-chefsy-700">Total</span>
-        <span className="text-lg font-bold text-chefsy-800">{formatearPrecio(total)}</span>
+        <button
+          type="button"
+          onClick={() => setModalPromoAbierto(true)}
+          className="w-full text-xs font-bold text-amber-700 dark:text-amber-300 border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl py-2.5 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <Sparkles size={15} className="text-amber-500" />
+          <span>Armar Promo Mixta (1-Click)</span>
+        </button>
       </div>
+
+      <div className="flex items-center justify-between bg-chefsy-50 dark:bg-slate-800/60 border border-chefsy-200 dark:border-slate-700 rounded-xl px-4 py-3 mt-4">
+        <span className="text-sm font-semibold text-chefsy-700 dark:text-slate-300">Subtotal Productos</span>
+        <span className="text-lg font-black text-chefsy-800 dark:text-white">{formatearPrecio(total)}</span>
+      </div>
+
+      {/* Modal de Promo Mixta */}
+      <ModalPromoMixta
+        abierto={modalPromoAbierto}
+        onClose={() => setModalPromoAbierto(false)}
+        onInsertarPromo={manejarInsertarPromo}
+        productos={productos}
+        categorias={categorias}
+      />
     </section>
   )
 }
