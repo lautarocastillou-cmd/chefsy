@@ -9,6 +9,7 @@ export interface Insumo {
   categoria_id: string
   stock_actual: number
   unidad_medida: string // 'unidades', 'litros', 'kg', etc.
+  activo?: boolean
 }
 
 export interface RecetaInsumo {

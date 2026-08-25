@@ -125,7 +125,14 @@ export default function PaginaStock() {
           <TabCategorias categorias={categorias} onUpdate={cargarDatos} />
         )}
         {tabActivo === 'insumos' && (
-          <TabInsumos insumos={insumos} categorias={categorias} onUpdate={cargarDatos} />
+          <TabInsumos
+            insumos={insumos}
+            categorias={categorias}
+            recetas={recetas}
+            productos={productosCatalogo || []}
+            categoriasCatalogo={categoriasCatalogo || []}
+            onUpdate={cargarDatos}
+          />
         )}
         {tabActivo === 'recetas' && (
           <TabRecetas recetas={recetas} insumos={insumos} productos={productosCatalogo || []} categorias={categoriasCatalogo || []} onUpdate={cargarDatos} />
