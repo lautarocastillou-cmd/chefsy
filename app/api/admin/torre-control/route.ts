@@ -32,10 +32,12 @@ export async function GET() {
     if (usuariosError) throw usuariosError
 
     // 3. Obtener pedidos activos para saber en qué andan
+    // Solo 'en_camino' significa que el cadete está EN VIAJE.
+    // 'en_cocina' y 'listo' significan que el pedido está esperando en el local.
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
       .select('id, cliente, estado, cadete_id')
-      .in('estado', ['en_cocina', 'listo', 'en_camino'])
+      .eq('estado', 'en_camino')
       .eq('archivado', false)
 
     if (pedidosError) throw pedidosError

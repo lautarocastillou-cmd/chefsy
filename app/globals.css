@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet (Torre de Control) */
+@import 'leaflet/dist/leaflet.css';
+
 /* ─── Tipografía base y bloqueo de scroll lateral/zoom ──────────────── */
 html {
   font-size: 17px;
