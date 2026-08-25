@@ -17,13 +17,12 @@ export default function PaginaStock() {
   const [categorias, setCategorias] = useState<CategoriaInsumo[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [recetas, setRecetas] = useState<RecetaProducto[]>([])
-  const [cargando, setCargando] = useState(true)
+  const [cargandoInicial, setCargandoInicial] = useState(true)
 
   const { productos: productosCatalogo, categorias: categoriasCatalogo } = usarCatalogo()
 
   const cargarDatos = async () => {
     try {
-      setCargando(true)
       const [cats, ins, rec] = await Promise.all([
         obtenerStockCategorias(),
         obtenerStockInsumos(),
@@ -35,7 +34,7 @@ export default function PaginaStock() {
     } catch (error: any) {
       toast.error('Error al cargar datos de stock: ' + error.message)
     } finally {
-      setCargando(false)
+      setCargandoInicial(false)
     }
   }
 
@@ -63,7 +62,7 @@ export default function PaginaStock() {
     }
   }
 
-  if (cargando) {
+  if (cargandoInicial && insumos.length === 0 && categorias.length === 0) {
     return <div className="p-8 text-center text-gray-400">Cargando sistema de stock...</div>
   }
 

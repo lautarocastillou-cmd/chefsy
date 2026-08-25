@@ -77,6 +77,7 @@ export function TabInsumos({
 
   // Para actualización rápida de stock inline
   const [stockRapido, setStockRapido] = useState<Record<string, number>>({})
+  const [guardandoStockId, setGuardandoStockId] = useState<string | null>(null)
 
   // ── Helper: Obtener productos del catálogo asociados al insumo ─────────────
   const obtenerProductosAsociados = (insumo: Insumo): ProductoCatalogo[] => {
@@ -269,6 +270,7 @@ export function TabInsumos({
   const guardarStockRapido = async (id: string) => {
     const nuevoStock = stockRapido[id]
     if (nuevoStock === undefined) return
+    setGuardandoStockId(id)
     try {
       const res = await fetch('/api/admin/stock', {
         method: 'POST',
@@ -276,7 +278,7 @@ export function TabInsumos({
         body: JSON.stringify({ accion: 'update_stock', payload: { id, stock_actual: nuevoStock } })
       })
       if (!res.ok) throw new Error(await res.text())
-      toast.success('Stock actualizado')
+      toast.success('Stock actualizado', { id: `stock-${id}`, duration: 2000 })
       setStockRapido(prev => {
         const next = { ...prev }
         delete next[id]
@@ -285,6 +287,8 @@ export function TabInsumos({
       onUpdate()
     } catch (error: any) {
       toast.error('Error: ' + error.message)
+    } finally {
+      setGuardandoStockId(null)
     }
   }
 
@@ -710,25 +714,44 @@ export function TabInsumos({
                     {/* Stock Actual y Edición Inline */}
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <input 
-                          type="number"
-                          className={`w-20 rounded-xl p-1.5 text-center font-black text-sm border transition-all ${
-                            esCritico
-                              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 text-rose-700 dark:text-rose-300'
-                              : 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-emerald-500'
-                          }`}
-                          value={stockEdit}
-                          onChange={(e) => setStockRapido({ ...stockRapido, [ins.id]: Number(e.target.value) })}
-                        />
+                        <div className="relative">
+                          <input 
+                            type="number"
+                            className={`w-20 rounded-xl p-1.5 text-center font-black text-sm border transition-all ${
+                              esCritico
+                                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 text-rose-700 dark:text-rose-300'
+                                : 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-emerald-500'
+                            }`}
+                            value={stockEdit}
+                            onChange={(e) => setStockRapido({ ...stockRapido, [ins.id]: Number(e.target.value) })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur()
+                                guardarStockRapido(ins.id)
+                              }
+                            }}
+                            onBlur={() => {
+                              if (isModified) {
+                                guardarStockRapido(ins.id)
+                              }
+                            }}
+                            title="Modificá el número y presioná Enter para guardar"
+                          />
+                          {guardandoStockId === ins.id && (
+                            <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                              <Loader2 size={12} className="animate-spin text-emerald-500" />
+                            </div>
+                          )}
+                        </div>
                         <span className="text-xs text-slate-500 font-medium">{ins.unidad_medida}</span>
 
-                        {isModified && (
+                        {isModified && guardandoStockId !== ins.id && (
                           <button 
                             onClick={() => guardarStockRapido(ins.id)} 
-                            className="text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 p-2 hover:bg-emerald-200 rounded-xl transition-all shadow-sm flex items-center gap-1 font-bold text-xs"
-                            title="Guardar nuevo valor"
+                            className="text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 p-1.5 hover:bg-emerald-200 rounded-xl transition-all shadow-sm flex items-center gap-1 font-bold text-xs"
+                            title="Guardar nuevo valor (o presioná Enter)"
                           >
-                            <Save size={14} />
+                            <Save size={13} />
                             <span>Guardar</span>
                           </button>
                         )}
