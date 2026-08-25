@@ -32,7 +32,7 @@ export default function FilaProductoPedido({
   onCambio,
   onEliminar,
 }: PropsFilaProductoPedido) {
-  const { modificadores, categorias } = usarPedidos()
+  const { modificadores, categorias, productos } = usarPedidos()
 
   const actualizar = (parcial: Partial<FilaProducto>) => {
     onCambio(indice, { ...fila, ...parcial })
@@ -51,10 +51,26 @@ export default function FilaProductoPedido({
     })
   }
 
-  const manejarProducto = (idProductoCatalogo: string) => {
-    const producto = obtenerProductoCatalogoPorId(idProductoCatalogo)
+  const manejarProducto = (idProductoCatalogo: string, categoriaIdOpt?: string) => {
+    if (!idProductoCatalogo) {
+      onCambio(indice, {
+        ...fila,
+        idProductoCatalogo: '',
+        nombreProducto: undefined,
+        precio: 0,
+        modificadoresSeleccionadosIds: [],
+      })
+      return
+    }
+
+    const producto = productos.find(p => p.id === idProductoCatalogo) || obtenerProductoCatalogoPorId(idProductoCatalogo)
+    const targetCatId = categoriaIdOpt || producto?.categoriaId || fila.idCategoria
+    const cat = categorias.find(c => c.id === targetCatId)
+
     onCambio(indice, {
       ...fila,
+      idCategoria: targetCatId,
+      nombreCategoria: cat?.nombre,
       idProductoCatalogo,
       nombreProducto: producto?.nombre,
       precio: producto?.precio ?? 0,
@@ -100,7 +116,7 @@ export default function FilaProductoPedido({
   return (
     <div className="flex flex-col gap-2 border border-slate-200 dark:border-slate-800/80 p-3.5 rounded-2xl bg-white dark:bg-slate-900/40 sm:border-0 sm:p-0 sm:bg-transparent transition-colors">
       {/* Grid de Controles */}
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_64px_96px_32px] gap-2 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.3fr_64px_96px_32px] gap-2 items-center">
         <SelectorCategoria
           valor={fila.idCategoria}
           onCambio={manejarCategoria}
