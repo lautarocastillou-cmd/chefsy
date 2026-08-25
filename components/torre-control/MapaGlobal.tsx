@@ -1,45 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-
+import { useEffect, useRef } from 'react'
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
+import 'leaflet/dist/leaflet.css'
 
 // Coordenadas del local Chefsy
 const LOCAL_LAT = UBICACION_LOCAL.latitud
 const LOCAL_LNG = UBICACION_LOCAL.longitud
-
-// Icono del Local
-const storeIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-})
-
-// Icono del Cadete Ocupado
-const cadeteOcupadoIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-})
-
-// Icono del Cadete Libre
-const cadeteLibreIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-})
 
 export interface CadeteData {
   id: string
@@ -61,95 +28,167 @@ interface MapaGlobalProps {
 }
 
 export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
-  const [mounted, setMounted] = useState(false)
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const markersRef = useRef<{ local?: any; cadetes: Record<string, any> }>({ cadetes: {} })
 
-  // Arreglo para el error de iconos de Leaflet en SSR
+  // 1. Inicializar Mapa (1 sola vez al montar)
   useEffect(() => {
-    delete (L.Icon.Default.prototype as any)._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    if (typeof window === 'undefined' || !mapContainerRef.current || mapInstanceRef.current) return
+
+    const L = require('leaflet')
+
+    // Evitar errores de re-inicialización
+    if ((mapContainerRef.current as any)._leaflet_id) {
+      delete (mapContainerRef.current as any)._leaflet_id
+    }
+
+    const map = L.map(mapContainerRef.current, {
+      center: [LOCAL_LAT, LOCAL_LNG],
+      zoom: 14,
+      zoomControl: true,
     })
-    setMounted(true)
+
+    // Usar Google Maps tiles (alta disponibilidad, ultra rápido y sin bloqueos de tiles)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+      attribution: '&copy; Google Maps',
+      maxZoom: 20,
+    }).addTo(map)
+
+    mapInstanceRef.current = map
+
+    // Marcador del Local Chefsy
+    const localIcon = L.divIcon({
+      html: `
+        <div style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;background:#DC2626;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(0,0,0,0.35);font-size:22px;user-select:none;">
+          🏪
+        </div>
+      `,
+      className: 'custom-local-icon',
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
+      popupAnchor: [0, -24],
+    })
+
+    markersRef.current.local = L.marker([LOCAL_LAT, LOCAL_LNG], { icon: localIcon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="text-align:center;padding:4px;font-family:sans-serif;">
+          <b style="font-size:14px;color:#1e293b;">🏪 Local Chefsy</b>
+          <p style="margin:4px 0 0;font-size:11px;color:#64748b;">Punto de retiro y cocina</p>
+        </div>
+      `)
+
+    // Invalidate size para asegurar renderizado perfecto tras el montaje del DOM
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+    }, 150)
+
+    const timer2 = setTimeout(() => {
+      map.invalidateSize()
+    }, 500)
+
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(timer2)
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+        markersRef.current = { cadetes: {} }
+      }
+    }
   }, [])
 
-  if (!mounted) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50/50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-      </div>
-    )
-  }
+  // 2. Actualizar marcadores de cadetes reactivamente
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+    const L = require('leaflet')
+    const map = mapInstanceRef.current
 
-  // Filtrar cadetes que tienen coordenadas válidas
-  const cadetesConUbicacion = cadetes.filter((c) => c.lat != null && c.lng != null && c.gps_activo)
+    const cadetesConUbicacion = cadetes.filter((c) => c.lat != null && c.lng != null && c.gps_activo)
+    const currentCadeteIds = new Set(cadetesConUbicacion.map((c) => c.id))
+
+    // Remover marcadores de cadetes que ya no están activos o apagaron GPS
+    Object.keys(markersRef.current.cadetes).forEach((id) => {
+      if (!currentCadeteIds.has(id)) {
+        markersRef.current.cadetes[id].remove()
+        delete markersRef.current.cadetes[id]
+      }
+    })
+
+    // Actualizar o crear marcadores
+    cadetesConUbicacion.forEach((cadete) => {
+      const esEnViaje = !!cadete.pedidoActivo
+      const colorBg = esEnViaje ? '#F97316' : '#10B981'
+      const sombraColor = esEnViaje ? 'rgba(249,115,22,0.45)' : 'rgba(16,185,129,0.45)'
+      const batBadge =
+        cadete.bateria != null
+          ? `<div style="position:absolute;top:-6px;right:-8px;background:${
+              cadete.bateria > 20 ? '#10B981' : '#EF4444'
+            };color:#fff;font-size:9px;font-weight:900;padding:1px 4px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.2);">${Math.round(
+              cadete.bateria
+            )}%</div>`
+          : ''
+
+      const cadeteIcon = L.divIcon({
+        html: `
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;width:42px;height:42px;background:${colorBg};border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px ${sombraColor};font-size:22px;cursor:pointer;user-select:none;">
+            🛵
+            ${batBadge}
+          </div>
+        `,
+        className: 'custom-cadete-icon',
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+        popupAnchor: [0, -24],
+      })
+
+      const popupContent = `
+        <div style="min-width:170px;padding:4px;font-family:sans-serif;">
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:6px;">
+            <b style="font-size:13px;color:#0f172a;">🛵 ${cadete.nombre}</b>
+            ${
+              cadete.bateria != null
+                ? `<span style="font-size:10px;font-weight:bold;color:${
+                    cadete.bateria > 20 ? '#16a34a' : '#dc2626'
+                  };background:${
+                    cadete.bateria > 20 ? '#dcfce7' : '#fee2e2'
+                  };padding:2px 6px;border-radius:6px;">${Math.round(cadete.bateria)}%</span>`
+                : ''
+            }
+          </div>
+          <div style="font-size:12px;margin-bottom:6px;">
+            ${
+              cadete.pedidoActivo
+                ? `<span style="color:#ea580c;font-weight:bold;">📦 EN VIAJE</span><div style="color:#475569;font-size:11px;margin-top:2px;">Hacia: <b>${cadete.pedidoActivo.cliente}</b></div>`
+                : `<span style="color:#16a34a;font-weight:bold;">✨ LIBRE</span><div style="color:#64748b;font-size:11px;margin-top:2px;">Buscando pedidos...</div>`
+            }
+          </div>
+          <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:4px;">
+            GPS: ${new Date(cadete.updated_at).toLocaleTimeString()}
+          </div>
+        </div>
+      `
+
+      if (markersRef.current.cadetes[cadete.id]) {
+        // Actualizar posición y popup
+        markersRef.current.cadetes[cadete.id].setLatLng([cadete.lat, cadete.lng])
+        markersRef.current.cadetes[cadete.id].setIcon(cadeteIcon)
+        markersRef.current.cadetes[cadete.id].setPopupContent(popupContent)
+      } else {
+        // Crear nuevo marcador
+        markersRef.current.cadetes[cadete.id] = L.marker([cadete.lat, cadete.lng], { icon: cadeteIcon })
+          .addTo(map)
+          .bindPopup(popupContent)
+      }
+    })
+  }, [cadetes])
 
   return (
-    <MapContainer
-      center={[LOCAL_LAT, LOCAL_LNG]}
-      zoom={14}
-      scrollWheelZoom={true}
-      className="w-full h-full z-0"
-      style={{ height: '100%', width: '100%', minHeight: '400px' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      {/* Marcador del Local */}
-      <Marker position={[LOCAL_LAT, LOCAL_LNG]} icon={storeIcon}>
-        <Popup>
-          <div className="font-semibold text-gray-900">🏪 Local Chefsy</div>
-        </Popup>
-      </Marker>
-
-      {/* Marcadores de los Cadetes */}
-      {cadetesConUbicacion.map((cadete) => (
-        <Marker
-          key={cadete.id}
-          position={[cadete.lat, cadete.lng]}
-          icon={cadete.pedidoActivo ? cadeteOcupadoIcon : cadeteLibreIcon}
-        >
-          <Popup>
-            <div className="p-1 min-w-[150px]">
-              <div className="font-bold text-gray-900 flex items-center justify-between">
-                <span>🛵 {cadete.nombre}</span>
-                {cadete.bateria !== undefined && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                    cadete.bateria > 20 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {Math.round(cadete.bateria)}%
-                  </span>
-                )}
-              </div>
-              
-              <div className="mt-2 text-sm">
-                {cadete.pedidoActivo ? (
-                  <div className="text-orange-600 font-medium">
-                    En viaje 📦
-                    <div className="text-gray-500 text-xs mt-0.5 font-normal">
-                      Hacia: {cadete.pedidoActivo.cliente}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-emerald-600 font-medium">
-                    Libre ✨
-                    <div className="text-gray-500 text-xs mt-0.5 font-normal">
-                      Buscando pedidos
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-gray-400">
-                GPS: {new Date(cadete.updated_at).toLocaleTimeString()}
-              </div>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
+    <div
+      ref={mapContainerRef}
+      className="w-full h-full min-h-[400px] z-0"
+      style={{ width: '100%', height: '100%', minHeight: '400px' }}
+    />
   )
 }

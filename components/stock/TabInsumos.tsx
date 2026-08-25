@@ -192,7 +192,7 @@ export function TabInsumos({
 
   // ── Filtrado en Tiempo Real ────────────────────────────────────────────────
   const insumosFiltrados = useMemo(() => {
-    return insumos.filter(i => {
+    const filtrados = insumos.filter(i => {
       // 1. Filtro por texto de búsqueda
       const coincideBusqueda = !busqueda.trim() || i.nombre.toLowerCase().includes(busqueda.toLowerCase())
 
@@ -207,6 +207,16 @@ export function TabInsumos({
       if (filtroEstado === 'ocultos') coincideEstado = estaPausadoEnTienda(i)
 
       return coincideBusqueda && coincideCat && coincideEstado
+    })
+
+    // Ordenar: productos activos/visibles arriba, productos pausados/ocultos al fondo
+    return [...filtrados].sort((a, b) => {
+      const aPausado = estaPausadoEnTienda(a)
+      const bPausado = estaPausadoEnTienda(b)
+      if (aPausado !== bPausado) {
+        return aPausado ? 1 : -1 // Pausados al fondo
+      }
+      return a.nombre.localeCompare(b.nombre)
     })
   }, [insumos, busqueda, filtroCat, filtroEstado, productos, recetas])
 
