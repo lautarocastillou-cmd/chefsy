@@ -77,40 +77,46 @@ export default function PaginaStock() {
       </div>
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-        <div className="flex gap-2 overflow-x-auto bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl w-full md:w-fit shrink-0">
-          <button
-            onClick={() => setTabActivo('categorias')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-              tabActivo === 'categorias' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
-            }`}
-          >
-            Categorías
-          </button>
+        <div className="flex gap-2 overflow-x-auto bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-2xl w-full md:w-fit shrink-0 border border-slate-200 dark:border-slate-700/60">
           <button
             onClick={() => setTabActivo('insumos')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-              tabActivo === 'insumos' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
+            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              tabActivo === 'insumos'
+                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Insumos y Stock
+            📦 Insumos y Stock
           </button>
           <button
             onClick={() => setTabActivo('recetas')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-              tabActivo === 'recetas' ? 'bg-chefsy text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/50'
+            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              tabActivo === 'recetas'
+                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Asignar Recetas
+            📋 Asignar Recetas
+          </button>
+          <button
+            onClick={() => setTabActivo('categorias')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              tabActivo === 'categorias'
+                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            🏷️ Categorías
           </button>
         </div>
 
         <button
           onClick={verificarRecetas}
-          className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm shrink-0"
+          className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm shrink-0"
           title="Analiza si a tus productos activos les falta configuración de receta"
         >
-          <CheckCircle size={18} className="text-emerald-500 dark:text-emerald-400" />
-          Verificar Integridad
+          <CheckCircle size={16} className="text-emerald-500" />
+          <span>Verificar Integridad de Recetas</span>
         </button>
       </div>
 

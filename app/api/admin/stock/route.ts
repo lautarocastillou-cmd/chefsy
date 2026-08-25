@@ -34,9 +34,26 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
       case 'update_stock': {
-        // Actualización manual de stock rápido
-        const { id, stock_actual } = payload
-        const { error } = await supabaseAdmin.from('stock_insumos').update({ stock_actual, updated_at: new Date().toISOString() }).eq('id', id)
+        // Actualización manual de stock rápido (directo o por delta)
+        const { id, stock_actual, delta } = payload
+        if (delta !== undefined && Number(delta) !== 0) {
+          const { data: insumo } = await supabaseAdmin
+            .from('stock_insumos')
+            .select('stock_actual')
+            .eq('id', id)
+            .single()
+          const nuevoStock = (insumo?.stock_actual || 0) + Number(delta)
+          const { error } = await supabaseAdmin
+            .from('stock_insumos')
+            .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
+            .eq('id', id)
+          if (error) throw error
+          return NextResponse.json({ ok: true, stock_actual: nuevoStock })
+        }
+        const { error } = await supabaseAdmin
+          .from('stock_insumos')
+          .update({ stock_actual, updated_at: new Date().toISOString() })
+          .eq('id', id)
         if (error) throw error
         return NextResponse.json({ ok: true })
       }
