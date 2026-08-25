@@ -68,8 +68,13 @@ export default function MetricasHistoricas() {
             const date = new Date(item.fecha + 'T00:00:00')
             let diaSemana = date.toLocaleDateString('es-AR', { weekday: 'short' }).replace(/\./g, '')
             diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)
+
+            const diaSemanaLargo = date.toLocaleDateString('es-AR', { weekday: 'long' })
+            const diaSemanaLargoCap = diaSemanaLargo.charAt(0).toUpperCase() + diaSemanaLargo.slice(1)
+
             const diaNum = date.getDate()
             const mes = date.toLocaleDateString('es-AR', { month: 'short' }).replace(/\./g, '')
+            const mesCap = mes.charAt(0).toUpperCase() + mes.slice(1)
 
             const fechaCompleta = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
             const fechaCompletaCap = fechaCompleta.charAt(0).toUpperCase() + fechaCompleta.slice(1)
@@ -90,6 +95,7 @@ export default function MetricasHistoricas() {
               id: item.id || `${item.fecha}_${esMediodia ? 'mediodia' : 'noche'}`,
               turno_tipo: esMediodia ? 'mediodia' : 'noche',
               fechaCompleta: fechaCompletaCap,
+              fechaConDia: `${diaSemanaLargoCap}, ${diaNum} ${mesCap}`,
               fechaCortada: `${diaSemana}, ${diaNum} ${mes}`,
               fechaCortaNum: `${diaNum} ${mes}`,
               ingresos: Number(item.facturacion_neta || 0),
@@ -993,7 +999,14 @@ export default function MetricasHistoricas() {
                 return (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
-                      {row.fecha}
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 dark:text-slate-100">
+                          {row.fechaConDia || row.fechaCortada}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {row.fecha}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
