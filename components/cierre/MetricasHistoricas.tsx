@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  BarChart, Bar, LabelList, Cell
 } from 'recharts'
 import { formatearPrecio } from '@/lib/utils'
 import {
@@ -149,6 +149,11 @@ export default function MetricasHistoricas() {
     const promedioDiario = datosActuales.length > 0 ? totalIngresos / datosActuales.length : 0
 
     return { totalIngresos, totalPedidos, ticketPromedio, promedioDiario, dias: datosActuales.length }
+  }, [datosActuales])
+
+  const maxPedidos = useMemo(() => {
+    if (datosActuales.length === 0) return 0
+    return Math.max(...datosActuales.map((d) => d.pedidos), 0)
   }, [datosActuales])
 
   // ── Cálculo de KPIs Previos y Porcentajes de Crecimiento ──────────────────
@@ -338,86 +343,161 @@ export default function MetricasHistoricas() {
 
       </div>
 
-      {/* ── GRÁFICO 1: EVOLUCIÓN DE INGRESOS (AREA) ──────────────────────────── */}
-      <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">📈 Crecimiento de Ingresos</h2>
-          <span className="text-xs font-medium text-slate-400">
-            {datosActuales.length > 0
-              ? `${datosActuales[0].fecha} → ${datosActuales[datosActuales.length - 1].fecha}`
-              : ''}
-          </span>
-        </div>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={datosActuales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.2} />
-              <XAxis 
-                dataKey="fechaCortada" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#888' }} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#888' }}
-                tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
-                dx={-10}
-              />
-              <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                formatter={(value: any) => [formatearPrecio(Number(value)), 'Ingresos Netos']}
-                labelStyle={{ fontWeight: 'bold', color: '#666', marginBottom: '4px' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="ingresos" 
-                stroke="#10b981" 
-                strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorIngresos)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {/* ── GRÁFICOS ANALÍTICOS (EN CUADRÍCULA DE 2 COLUMNAS) ────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      {/* ── GRÁFICO 2: VOLUMEN DE PEDIDOS (BARRAS) ────────────────────────────── */}
-      <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6] mb-6">📊 Volumen de Pedidos por Turno</h2>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={datosActuales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.2} />
-              <XAxis 
-                dataKey="fechaCortada" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#888' }} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#888' }}
-              />
-              <Tooltip 
-                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                formatter={(value: any) => [value, 'Pedidos']}
-              />
-              <Bar dataKey="pedidos" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* ── GRÁFICO 1: EVOLUCIÓN DE INGRESOS (AREA) ──────────────────────────── */}
+        <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <div>
+              <h2 className="text-base font-bold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
+                📈 Crecimiento de Ingresos
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">Facturación neta acumulada por turno</p>
+            </div>
+            <span className="self-start sm:self-auto text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+              {formatearPrecio(kpisActuales.totalIngresos)}
+            </span>
+          </div>
+
+          <div className="h-[270px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={datosActuales} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
+                <XAxis 
+                  dataKey="fechaCortada" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#888' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#888' }}
+                  tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">{label}</p>
+                          <p className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                            {formatearPrecio(Number(payload[0].value))}
+                          </p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="ingresos" 
+                  stroke="#10b981" 
+                  strokeWidth={2.5}
+                  fillOpacity={1} 
+                  fill="url(#colorIngresos)" 
+                  dot={{ r: 3, fill: '#10b981', strokeWidth: 1.5, stroke: '#fff' }}
+                  activeDot={{ r: 5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
+
+        {/* ── GRÁFICO 2: VOLUMEN DE PEDIDOS (BARRAS) ────────────────────────────── */}
+        <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <div>
+              <h2 className="text-base font-bold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
+                📊 Volumen de Pedidos por Turno
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">Cantidad de comandas despachadas</p>
+            </div>
+            <span className="self-start sm:self-auto text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60">
+              {kpisActuales.totalPedidos} pedidos
+            </span>
+          </div>
+
+          <div className="h-[270px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={datosActuales} margin={{ top: 25, right: 15, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorBarPedidos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.95}/>
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0.65}/>
+                  </linearGradient>
+                  <linearGradient id="colorBarMax" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={1}/>
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.8}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
+                <XAxis 
+                  dataKey="fechaCortada" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#888' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#888' }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.05)', radius: 8 }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">{label}</p>
+                          <p className="text-blue-600 dark:text-blue-400 font-extrabold text-sm">
+                            {payload[0].value} {Number(payload[0].value) === 1 ? 'pedido' : 'pedidos'}
+                          </p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
+                />
+                <Bar 
+                  dataKey="pedidos" 
+                  radius={[8, 8, 4, 4]} 
+                  maxBarSize={38}
+                >
+                  {datosActuales.map((entry, index) => {
+                    const esPico = maxPedidos > 0 && entry.pedidos === maxPedidos
+                    return (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={esPico ? 'url(#colorBarMax)' : 'url(#colorBarPedidos)'} 
+                      />
+                    )
+                  })}
+                  <LabelList 
+                    dataKey="pedidos" 
+                    position="top" 
+                    fill="#64748b" 
+                    fontSize={11} 
+                    fontWeight={700} 
+                    offset={8} 
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
       </div>
 
       {/* ── TABLA DE HISTORIAL DE SNAPSHOTS INMUTABLES ────────────────────────── */}
@@ -440,9 +520,17 @@ export default function MetricasHistoricas() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-[#3d3d3d]">
               {[...datosActuales].reverse().map((row) => {
-                const esMediodia = row.turno_tipo === 'mediodia'
+                const esMediodia = row.turno_tipo
+                  ? row.turno_tipo === 'mediodia'
+                  : (() => {
+                      const ts = row.creado_el || row.created_at
+                      if (!ts) return false
+                      const d = new Date(ts)
+                      const hora = d.getHours()
+                      return hora >= 10 && hora < 17
+                    })()
                 return (
-                  <tr key={row.id || `${row.fecha}_${row.turno_tipo}`} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
+                  <tr key={row.id || `${row.fecha}_${row.turno_tipo || (esMediodia ? 'mediodia' : 'noche')}`} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{row.fecha}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${

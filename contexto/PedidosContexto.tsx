@@ -41,6 +41,7 @@ import {
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
 import configuracionOperativaInicial from '../config/operacion.json'
 import { actualizarConfiguracionLocal } from '../lib/problemas'
+import { detectarTipoTurnoActual } from '@/lib/tiempo'
 import { usePathname } from 'next/navigation'
 
 // Hooks especializados
@@ -669,7 +670,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           accion: 'finalizar_turno',
           ids: idsActivos,
           snapshot: {
-            turno_tipo: estadoTurno?.tipoTurno || 'noche',
+            turno_tipo: estadoTurno?.tipoTurno || detectarTipoTurnoActual(),
             facturacion_neta,
             efectivo_ventas,
             caja_inicial,

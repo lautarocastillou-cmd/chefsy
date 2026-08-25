@@ -291,7 +291,9 @@ export async function POST(request: Request) {
           const argTime = new Date(now.getTime() + utcOffset * 3600000)
           const fechaStr = argTime.toISOString().split('T')[0]
 
-          const turnoTipo = snapshot.turno_tipo || 'noche'
+          const argHora = argTime.getHours()
+          const fallbackTipo = argHora >= 10 && argHora < 17 ? 'mediodia' : 'noche'
+          const turnoTipo = snapshot.turno_tipo || fallbackTipo
 
           let { error: errorSnapshot } = await supabaseAdmin
             .from('cierres_diarios')

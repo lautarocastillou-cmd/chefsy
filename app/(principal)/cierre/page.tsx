@@ -49,6 +49,11 @@ export default function PaginaCierreCaja() {
   const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>(() => detectarTipoTurnoActual())
   const [guardandoTurno, setGuardandoTurno] = useState(false)
 
+  const abrirModalIniciarTurno = () => {
+    setTipoTurnoInput(detectarTipoTurnoActual())
+    setModalInicioAbierto(true)
+  }
+
   // Detectar si hay pedidos activos de un turno anterior sin archivar
   const infoTurnoPendiente = useMemo(() => {
     const activosNoArchivados = pedidos.filter(p => !p.archivado)
@@ -362,7 +367,7 @@ _Generado automáticamente desde Chefsy_`.trim()
           )}
 
           <button
-            onClick={() => setModalInicioAbierto(true)}
+            onClick={abrirModalIniciarTurno}
             disabled={estadoTurno.activo}
             className={cn(
               "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5",

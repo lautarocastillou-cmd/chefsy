@@ -27,11 +27,18 @@ export async function GET() {
       })
     }
     
+    let tipoTurnoCalculado = data.tipo_turno
+    if (!tipoTurnoCalculado && data.fecha_inicio) {
+      const fechaInicio = new Date(data.fecha_inicio)
+      const horaArg = (fechaInicio.getUTCHours() - 3 + 24) % 24
+      tipoTurnoCalculado = horaArg >= 10 && horaArg < 16 ? 'mediodia' : 'noche'
+    }
+
     return NextResponse.json({
       activo: data.activo,
       cajaInicial: data.caja_inicial,
       fechaInicio: data.fecha_inicio,
-      tipoTurno: data.tipo_turno || 'noche'
+      tipoTurno: tipoTurnoCalculado || 'noche'
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
