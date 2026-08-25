@@ -123,6 +123,37 @@ export default function SeccionProductosPedido({
           )
           .slice(0, 8)
 
+  const listaParaMostrar =
+    busqueda.trim() === ''
+      ? productos.filter((p) => p.activo).slice(0, 8)
+      : productosFiltrados
+
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState(0)
+
+  // Resetear índice al cambiar búsqueda o abrir buscador
+  useEffect(() => {
+    setIndiceSeleccionado(0)
+  }, [busqueda, mostrarBuscador])
+
+  const manejarKeyDownBuscador = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setIndiceSeleccionado((prev) =>
+        prev < listaParaMostrar.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setIndiceSeleccionado((prev) =>
+        prev > 0 ? prev - 1 : listaParaMostrar.length - 1
+      )
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (listaParaMostrar[indiceSeleccionado]) {
+        agregarProductoRapido(listaParaMostrar[indiceSeleccionado])
+      }
+    }
+  }
+
   const manejarCambioFila = (indice: number, fila: FilaProductoPedido) => {
     const copia = [...filas]
     copia[indice] = fila
@@ -176,21 +207,25 @@ export default function SeccionProductosPedido({
                 placeholder="Escribí para buscar (ej: lomo, coca, mila)..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
+                onKeyDown={manejarKeyDownBuscador}
                 className="w-full bg-transparent border-none focus:ring-0 text-sm p-1 outline-none text-slate-900 dark:text-white placeholder:text-gray-400"
               />
               {busqueda && (
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => setBusqueda('')}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white rounded-full"
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white rounded-full cursor-pointer"
+                  title="Borrar texto"
                 >
                   <X size={14} />
                 </button>
               )}
               <button
                 type="button"
+                tabIndex={-1}
                 onClick={() => setMostrarBuscador(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white rounded-full ml-1"
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white rounded-full ml-1 cursor-pointer"
                 title="Cerrar (Esc)"
               >
                 <kbd className="text-[10px] font-black text-slate-400 bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
@@ -205,20 +240,23 @@ export default function SeccionProductosPedido({
                   No se encontraron productos con "{busqueda}".
                 </div>
               ) : (
-                (busqueda.trim() === ''
-                  ? productos.filter((p) => p.activo).slice(0, 8)
-                  : productosFiltrados
-                ).map((prod) => {
+                listaParaMostrar.map((prod, idx) => {
                   const catNombre = categorias.find((c) => c.id === prod.categoriaId)?.nombre
+                  const esActivo = idx === indiceSeleccionado
                   return (
                     <button
                       key={prod.id}
                       type="button"
                       onClick={() => agregarProductoRapido(prod)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-chefsy-50/50 dark:hover:bg-slate-800 flex items-center justify-between group transition-colors cursor-pointer"
+                      onMouseEnter={() => setIndiceSeleccionado(idx)}
+                      className={`w-full text-left px-4 py-2.5 flex items-center justify-between group transition-colors cursor-pointer focus:outline-none ${
+                        esActivo
+                          ? 'bg-chefsy-50 dark:bg-slate-800 ring-1 ring-inset ring-chefsy/30'
+                          : 'hover:bg-chefsy-50/50 dark:hover:bg-slate-800'
+                      }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-chefsy truncate">
+                        <div className={`text-sm font-bold truncate ${esActivo ? 'text-chefsy' : 'text-slate-800 dark:text-slate-200 group-hover:text-chefsy'}`}>
                           {prod.nombre}
                         </div>
                         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -229,7 +267,7 @@ export default function SeccionProductosPedido({
                         <span className="text-xs font-black text-slate-700 dark:text-slate-300">
                           {formatearPrecio(prod.precio)}
                         </span>
-                        <span className="p-1 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-400 group-hover:bg-chefsy group-hover:text-white transition-colors">
+                        <span className={`p-1 rounded-lg transition-colors ${esActivo ? 'bg-chefsy text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 group-hover:bg-chefsy group-hover:text-white'}`}>
                           <Plus size={13} />
                         </span>
                       </div>
