@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio, cn } from '@/lib/utils'
-import { obtenerFechaNegocio, detectarTipoTurnoActual, obtenerEtiquetaTurno } from '@/lib/tiempo'
+import { obtenerFechaNegocio, detectarTipoTurnoActual, obtenerEtiquetaTurno, parsearFechaHora } from '@/lib/tiempo'
 import { useState, useMemo, useEffect } from 'react'
 import {
   Calendar,
@@ -76,8 +76,10 @@ export default function PaginaCierreCaja() {
     const tipoActivo = estadoTurno.tipoTurno || detectarTipoTurnoActual()
     const deOtroTurno = activosNoArchivados.filter(p => {
       if (p.turno_tipo) return p.turno_tipo !== tipoActivo
-      // Fallback por hora
-      const horaNum = Number((p.hora || '').split(':')[0]) || 20
+      // Fallback por hora — usar parsearFechaHora para manejar 12h y 24h
+      const fechaRef = p.fecha || obtenerFechaNegocio()
+      const horaRef = p.hora || ''
+      const horaNum = horaRef ? parsearFechaHora(fechaRef, horaRef).getHours() : 20
       const esMediodia = horaNum >= 10 && horaNum < 16
       return tipoActivo === 'mediodia' ? !esMediodia : esMediodia
     })
@@ -137,11 +139,17 @@ export default function PaginaCierreCaja() {
     return pedidosDelDia.filter((p) => {
       if (p.turno_tipo) return p.turno_tipo === filtroTurno
       // Fallback por hora si no fue etiquetado (pedidos pre-fix)
-      const horaNum = Number((p.hora || '').split(':')[0]) || 20
+      // Usamos parsearFechaHora para manejar formatos 12h ("01:18 p. m.") y 24h ("13:18")
+      const fechaRef = p.fecha || obtenerFechaNegocio()
+      const horaRef = p.hora || ''
+      const horaNum = horaRef
+        ? parsearFechaHora(fechaRef, horaRef).getHours()
+        : 20 // fallback a noche solo si no hay hora alguna
       const esMediodia = horaNum >= 10 && horaNum < 16
       return filtroTurno === 'mediodia' ? esMediodia : !esMediodia
     })
   }, [pedidosDelDia, filtroTurno])
+
 
   // Pedidos válidos (no cancelados) para estadísticas de caja
   const pedidosValidos = useMemo(() => {
