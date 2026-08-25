@@ -288,9 +288,17 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'IDs de pedidos no provistos o vacíos.' }, { status: 400 })
         }
 
-        // 1. Guardar el snapshot en la nueva tabla segura cierres_diarios
-        if (snapshot) {
-          // Obtener fecha local de Argentina usando la misma lógica de negocio (YYYY-MM-DD)
+        // 1. Archivar los pedidos inmediatamente (limpiar panel)
+        const { error: errorArchivar } = await supabaseAdmin
+          .from('pedidos')
+          .update({ archivado: true })
+          .in('id', ids)
+
+        if (errorArchivar) throw errorArchivar
+
+        // 2. FUSIONAR Y CONSOLIDAR EL CIERRE COMPLETO DEL TURNO EN CIERRES_DIARIOS
+        try {
+          // Obtener fecha local de Argentina (YYYY-MM-DD)
           const now = new Date()
           const utcOffset = -3 // ARG
           const argTime = new Date(now.getTime() + utcOffset * 3600000)
@@ -298,62 +306,96 @@ export async function POST(request: Request) {
 
           const argHora = argTime.getHours()
           const fallbackTipo = argHora >= 10 && argHora < 17 ? 'mediodia' : 'noche'
-          const turnoTipo = snapshot.turno_tipo || fallbackTipo
+          const turnoTipo = snapshot?.turno_tipo || fallbackTipo
 
-          let { error: errorSnapshot } = await supabaseAdmin
-            .from('cierres_diarios')
-            .upsert({
+          // Consultar TODOS los pedidos de hoy en la base de datos para consolidar
+          const { data: pedidosDelDia } = await supabaseAdmin
+            .from('pedidos')
+            .select('*')
+            .eq('fecha', fechaStr)
+
+          if (pedidosDelDia && pedidosDelDia.length > 0) {
+            // Filtrar todos los pedidos que pertenecen a este turno
+            const pedidosDelTurno = pedidosDelDia.filter((p: any) => {
+              if (p.turno_tipo) return p.turno_tipo === turnoTipo
+              let horaNum = 20
+              if (p.hora) {
+                const esPM = /p\.?\s*m\.?|pm/i.test(p.hora)
+                const esAM = /a\.?\s*m\.?|am/i.test(p.hora)
+                const numStr = p.hora.replace(/[^0-9:]/g, '').split(':')[0]
+                let h = Number(numStr) || 0
+                if (esPM && h < 12) h += 12
+                else if (esAM && h === 12) h = 0
+                horaNum = h
+              }
+              const esMediodia = horaNum >= 10 && horaNum < 16
+              return turnoTipo === 'mediodia' ? esMediodia : !esMediodia
+            })
+
+            const validos = pedidosDelTurno.filter((p: any) => p.estado !== 'cancelado')
+            const facturacion_neta = validos.reduce((acc: number, p: any) => acc + (p.total - (p.costoEnvio || 0)), 0)
+            const efectivo_ventas = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'efectivo' ? p.total : 0), 0)
+            const tarjeta_total = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'tarjeta' ? p.total : 0), 0)
+            const transferencia_total = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'transferencia' ? p.total : 0), 0)
+
+            const caja_inicial = snapshot?.caja_inicial || 0
+            const efectivo_rendir = caja_inicial + efectivo_ventas
+            const total_pedidos = validos.length
+            const ticket_promedio = total_pedidos > 0 ? facturacion_neta / total_pedidos : 0
+
+            const total_envios_delivery = validos.filter((p: any) => p.tipoEntrega === 'delivery').length
+            const costo_envios_cadetes = validos
+              .filter((p: any) => p.tipoEntrega === 'delivery')
+              .reduce((acc: number, p: any) => acc + (p.costoEnvio || 0), 0)
+            const total_retiros = validos.filter((p: any) => p.tipoEntrega === 'retiro').length
+            const total_consumo_local = validos.filter((p: any) => p.tipoEntrega === 'consumo_local').length
+
+            const cancelados = pedidosDelTurno.filter((p: any) => p.estado === 'cancelado')
+            const pedidos_cancelados = cancelados.length
+            const monto_cancelados = cancelados.reduce((acc: number, p: any) => acc + p.total, 0)
+
+            const snapshotConsolidado = {
               fecha: fechaStr,
               turno_tipo: turnoTipo,
-              facturacion_neta: snapshot.facturacion_neta,
-              efectivo_ventas: snapshot.efectivo_ventas,
-              caja_inicial: snapshot.caja_inicial,
-              efectivo_rendir: snapshot.efectivo_rendir,
-              tarjeta_total: snapshot.tarjeta_total,
-              transferencia_total: snapshot.transferencia_total,
-              total_pedidos: snapshot.total_pedidos,
-              total_envios_delivery: snapshot.total_envios_delivery,
-              costo_envios_cadetes: snapshot.costo_envios_cadetes,
-              total_retiros: snapshot.total_retiros,
-              total_consumo_local: snapshot.total_consumo_local,
-              ticket_promedio: snapshot.ticket_promedio,
-              pedidos_cancelados: snapshot.pedidos_cancelados,
-              monto_cancelados: snapshot.monto_cancelados
-            }, { onConflict: 'fecha, turno_tipo' })
+              facturacion_neta,
+              efectivo_ventas,
+              caja_inicial,
+              efectivo_rendir,
+              tarjeta_total,
+              transferencia_total,
+              total_pedidos,
+              total_envios_delivery,
+              costo_envios_cadetes,
+              total_retiros,
+              total_consumo_local,
+              ticket_promedio,
+              pedidos_cancelados,
+              monto_cancelados,
+            }
 
-          if (errorSnapshot && (errorSnapshot.message?.includes('turno_tipo') || errorSnapshot.code === 'PGRST204')) {
-            const reintento = await supabaseAdmin
+            // Buscar si ya existe un registro de cierre para esta fecha y turno
+            const { data: existingCierres } = await supabaseAdmin
               .from('cierres_diarios')
-              .upsert({
-                fecha: fechaStr,
-                facturacion_neta: snapshot.facturacion_neta,
-                efectivo_ventas: snapshot.efectivo_ventas,
-                caja_inicial: snapshot.caja_inicial,
-                efectivo_rendir: snapshot.efectivo_rendir,
-                tarjeta_total: snapshot.tarjeta_total,
-                transferencia_total: snapshot.transferencia_total,
-                total_pedidos: snapshot.total_pedidos,
-                total_envios_delivery: snapshot.total_envios_delivery,
-                costo_envios_cadetes: snapshot.costo_envios_cadetes,
-                total_retiros: snapshot.total_retiros,
-                total_consumo_local: snapshot.total_consumo_local,
-                ticket_promedio: snapshot.ticket_promedio,
-                pedidos_cancelados: snapshot.pedidos_cancelados,
-                monto_cancelados: snapshot.monto_cancelados
-              }, { onConflict: 'fecha' })
-            errorSnapshot = reintento.error
-          }
+              .select('id')
+              .eq('fecha', fechaStr)
+              .eq('turno_tipo', turnoTipo)
+              .limit(1)
 
-          if (errorSnapshot) console.error('Error insertando snapshot:', errorSnapshot)
+            if (existingCierres && existingCierres.length > 0) {
+              await supabaseAdmin
+                .from('cierres_diarios')
+                .update(snapshotConsolidado)
+                .eq('id', existingCierres[0].id)
+            } else {
+              await supabaseAdmin
+                .from('cierres_diarios')
+                .insert(snapshotConsolidado)
+            }
+          }
+        } catch (errCierre) {
+          console.error('[API Cierre Diario] Error al consolidar snapshot:', errCierre)
         }
 
-        // 2. Archivar los pedidos (limpiar panel)
-        const { error } = await supabaseAdmin
-          .from('pedidos')
-          .update({ archivado: true })
-          .in('id', ids)
-
-        if (error) throw error
         return NextResponse.json({ ok: true })
       }
 
