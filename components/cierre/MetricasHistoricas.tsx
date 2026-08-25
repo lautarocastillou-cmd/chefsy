@@ -45,12 +45,19 @@ export default function MetricasHistoricas() {
           // Formatear las fechas para gráficos y tablas
           const formateados = data.map(item => {
             const date = new Date(item.fecha + 'T00:00:00')
-            let diaStr = date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
-            diaStr = diaStr.charAt(0).toUpperCase() + diaStr.slice(1).replace(/\./g, '')
+            let diaSemana = date.toLocaleDateString('es-AR', { weekday: 'short' }).replace(/\./g, '')
+            diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)
+            const diaNum = date.getDate()
+            const mes = date.toLocaleDateString('es-AR', { month: 'short' }).replace(/\./g, '')
+
+            const fechaCompleta = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+            const fechaCompletaCap = fechaCompleta.charAt(0).toUpperCase() + fechaCompleta.slice(1)
 
             return {
               ...item,
-              fechaCortada: diaStr,
+              fechaCompleta: fechaCompletaCap,
+              fechaCortada: `${diaSemana}, ${diaNum} ${mes}`,
+              fechaCortaNum: `${diaNum} ${mes}`,
               ingresos: Number(item.facturacion_neta || 0),
               pedidos: Number(item.total_pedidos || 0)
             }
@@ -371,10 +378,11 @@ export default function MetricasHistoricas() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
                 <XAxis 
-                  dataKey="fechaCortada" 
+                  dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#888' }} 
+                  interval={0}
+                  tick={{ fontSize: datosActuales.length > 20 ? 9 : 11, fill: '#888' }} 
                   dy={10}
                 />
                 <YAxis 
@@ -386,9 +394,12 @@ export default function MetricasHistoricas() {
                 <Tooltip 
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
+                      const item = payload[0]?.payload
                       return (
                         <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
-                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">{label}</p>
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            {item?.fechaCompleta || label}
+                          </p>
                           <p className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
                             {formatearPrecio(Number(payload[0].value))}
                           </p>
@@ -442,10 +453,11 @@ export default function MetricasHistoricas() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
                 <XAxis 
-                  dataKey="fechaCortada" 
+                  dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#888' }} 
+                  interval={0}
+                  tick={{ fontSize: datosActuales.length > 20 ? 9 : 11, fill: '#888' }} 
                   dy={10}
                 />
                 <YAxis 
@@ -458,9 +470,12 @@ export default function MetricasHistoricas() {
                   cursor={{ fill: 'rgba(59, 130, 246, 0.05)', radius: 8 }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
+                      const item = payload[0]?.payload
                       return (
                         <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
-                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">{label}</p>
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            {item?.fechaCompleta || label}
+                          </p>
                           <p className="text-blue-600 dark:text-blue-400 font-extrabold text-sm">
                             {payload[0].value} {Number(payload[0].value) === 1 ? 'pedido' : 'pedidos'}
                           </p>
