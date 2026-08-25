@@ -116,13 +116,12 @@ export async function POST(request: Request) {
     }
 
     // ── Insertar pedido con service_role (bypasea RLS) ───────────────────────
-    // Etiquetar el pedido con el tipo de turno activo para separación correcta mediodía/noche
     const payload = {
       ...body,
       archivado: false,
-      turno_tipo: turnoData.tipo_turno || 'noche',
     }
     delete payload.envioManual
+    delete payload.turno_tipo
 
     const { error } = await supabaseAdmin
       .from('pedidos')

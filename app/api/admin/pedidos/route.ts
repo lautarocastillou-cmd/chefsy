@@ -48,26 +48,11 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Datos incompletos para crear.' }, { status: 400 })
         }
 
-        // Leer el turno_tipo activo para etiquetar el pedido correctamente
-        let turnoTipoActivo: string = 'noche'
-        try {
-          const { data: turnoActivo } = await supabaseAdmin
-            .from('turnos')
-            .select('tipo_turno')
-            .eq('id', 1)
-            .single()
-          if (turnoActivo?.tipo_turno) turnoTipoActivo = turnoActivo.tipo_turno
-        } catch { /* Si falla, usar 'noche' como fallback */ }
-
-        const payload = {
-          ...pedido,
-          archivado: false,
-          // Solo etiquetar si el pedido no trae turno_tipo ya asignado
-          turno_tipo: pedido.turno_tipo || turnoTipoActivo,
-        }
+        const payload = { ...pedido, archivado: false }
         delete payload.created_at
         delete payload.updated_at
         delete payload.envioManual
+        delete payload.turno_tipo
 
         // 1. Ejecutar transacción de puntos si aplica
         if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
@@ -83,11 +68,14 @@ export async function POST(request: Request) {
           }
         }
 
-        const { error } = await supabaseAdmin
+        let { error } = await supabaseAdmin
           .from('pedidos')
           .insert(payload)
 
-        if (error) throw error
+        if (error) {
+          console.error('[API Pedidos] Error al insertar pedido:', error)
+          throw error
+        }
 
         return NextResponse.json({ ok: true })
       }
@@ -104,11 +92,12 @@ export async function POST(request: Request) {
 
         const payload = { ...pedido }
         
-        // Quitar campos autogenerados de base de datos
+        // Quitar campos autogenerados de base de datos y campos no existentes
         delete payload.id
         delete payload.created_at
         delete payload.updated_at
         delete payload.envioManual
+        delete payload.turno_tipo
 
         const { error } = await supabaseAdmin
           .from('pedidos')
