@@ -41,7 +41,7 @@ import {
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
 import configuracionOperativaInicial from '../config/operacion.json'
 import { actualizarConfiguracionLocal } from '../lib/problemas'
-import { detectarTipoTurnoActual } from '@/lib/tiempo'
+import { detectarTipoTurnoActual, parsearFechaHora, obtenerFechaNegocio } from '@/lib/tiempo'
 import { usePathname } from 'next/navigation'
 
 // Hooks especializados
@@ -639,11 +639,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       const tipoTurnoActual = estadoTurno?.tipoTurno || detectarTipoTurnoActual()
 
       // ── Solo operar sobre los pedidos del turno que se está cerrando ─────────
-      // Fallback por hora para pedidos sin turno_tipo etiquetado (pedidos pre-fix)
+      // Fallback por hora para pedidos sin turno_tipo etiquetado (usando parsearFechaHora para soportar 12h y 24h)
       const pedidosDelTurnoActual = todosPedidosActivos.filter((p) => {
         if (p.turno_tipo) return p.turno_tipo === tipoTurnoActual
-        // Fallback por hora si el pedido no tiene turno_tipo (datos viejos)
-        const horaNum = Number((p.hora || '').split(':')[0]) || 20
+        // Fallback por hora si el pedido no tiene turno_tipo (datos viejos o sin etiquetar)
+        const fechaRef = p.fecha || obtenerFechaNegocio()
+        const horaRef = p.hora || ''
+        const horaNum = horaRef
+          ? parsearFechaHora(fechaRef, horaRef).getHours()
+          : 20
         const esMediodia = horaNum >= 10 && horaNum < 16
         return tipoTurnoActual === 'mediodia' ? esMediodia : !esMediodia
       })
