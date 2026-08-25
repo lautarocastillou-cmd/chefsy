@@ -635,11 +635,23 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   const finalizarTurno = async () => {
     try {
-      const pedidosActivos = estado.pedidos
-      const idsActivos = pedidosActivos.map((p) => p.id)
+      const todosPedidosActivos = estado.pedidos
+      const tipoTurnoActual = estadoTurno?.tipoTurno || detectarTipoTurnoActual()
 
-      if (idsActivos.length > 0) {
-        const validos = pedidosActivos.filter((p) => p.estado !== 'cancelado')
+      // ── Solo operar sobre los pedidos del turno que se está cerrando ─────────
+      // Fallback por hora para pedidos sin turno_tipo etiquetado (pedidos pre-fix)
+      const pedidosDelTurnoActual = todosPedidosActivos.filter((p) => {
+        if (p.turno_tipo) return p.turno_tipo === tipoTurnoActual
+        // Fallback por hora si el pedido no tiene turno_tipo (datos viejos)
+        const horaNum = Number((p.hora || '').split(':')[0]) || 20
+        const esMediodia = horaNum >= 10 && horaNum < 16
+        return tipoTurnoActual === 'mediodia' ? esMediodia : !esMediodia
+      })
+
+      const idsDelTurno = pedidosDelTurnoActual.map((p) => p.id)
+
+      if (idsDelTurno.length > 0) {
+        const validos = pedidosDelTurnoActual.filter((p) => p.estado !== 'cancelado')
         const facturacion_neta = validos.reduce((acc, p) => acc + (p.total - (p.costoEnvio || 0)), 0)
 
         const obtenerMontoMetodo = (p: Pedido, m: string) => (p.metodoPago === m ? p.total : 0)
@@ -662,15 +674,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         const total_retiros = validos.filter((p) => p.tipoEntrega === 'retiro').length
         const total_consumo_local = validos.filter((p) => p.tipoEntrega === 'consumo_local').length
 
-        const cancelados = pedidosActivos.filter((p) => p.estado === 'cancelado')
+        const cancelados = pedidosDelTurnoActual.filter((p) => p.estado === 'cancelado')
         const pedidos_cancelados = cancelados.length
         const monto_cancelados = cancelados.reduce((acc, p) => acc + p.total, 0)
 
         await enviarAccionPedido({
           accion: 'finalizar_turno',
-          ids: idsActivos,
+          ids: idsDelTurno,
           snapshot: {
-            turno_tipo: estadoTurno?.tipoTurno || detectarTipoTurnoActual(),
+            turno_tipo: tipoTurnoActual,
             facturacion_neta,
             efectivo_ventas,
             caja_inicial,
@@ -689,9 +701,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         })
       }
 
-      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: [] })
-      prevPedidosRef.current = []
-      import('swr').then((mod) => mod.mutate('pedidosActivos', [], false))
+      // Solo eliminar del contexto los pedidos del turno que se cerró
+      // Los pedidos del otro turno (si los hubiera) permanecen activos
+      const pedidosRestantes = todosPedidosActivos.filter((p) => !idsDelTurno.includes(p.id))
+      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosRestantes })
+      prevPedidosRef.current = pedidosRestantes
+      import('swr').then((mod) => mod.mutate('pedidosActivos', pedidosRestantes, false))
 
       const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null }
       await fetch('/api/admin/turno', {
@@ -701,7 +716,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       })
       setEstadoTurno(turnoCerrado)
 
-      agregarNotificacion('Turno finalizado. El panel quedó limpio para el próximo turno.', 'success')
+      const etiquetaTurno = tipoTurnoActual === 'mediodia' ? '☀️ Mediodía' : '🌙 Noche'
+      agregarNotificacion(`Turno ${etiquetaTurno} finalizado. Panel limpio para el próximo turno.`, 'success')
     } catch (err) {
       console.error('[Servidor/Supabase] Error al finalizar turno:', err)
       agregarNotificacion('Error al finalizar el turno en la nube. Intente nuevamente.', 'warning')

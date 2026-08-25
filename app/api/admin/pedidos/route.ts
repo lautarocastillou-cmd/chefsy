@@ -48,7 +48,23 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Datos incompletos para crear.' }, { status: 400 })
         }
 
-        const payload = { ...pedido, archivado: false }
+        // Leer el turno_tipo activo para etiquetar el pedido correctamente
+        let turnoTipoActivo: string = 'noche'
+        try {
+          const { data: turnoActivo } = await supabaseAdmin
+            .from('turnos')
+            .select('tipo_turno')
+            .eq('id', 1)
+            .single()
+          if (turnoActivo?.tipo_turno) turnoTipoActivo = turnoActivo.tipo_turno
+        } catch { /* Si falla, usar 'noche' como fallback */ }
+
+        const payload = {
+          ...pedido,
+          archivado: false,
+          // Solo etiquetar si el pedido no trae turno_tipo ya asignado
+          turno_tipo: pedido.turno_tipo || turnoTipoActivo,
+        }
         delete payload.created_at
         delete payload.updated_at
         delete payload.envioManual

@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     // ── Verificar que el turno / local esté realmente activo ───────────────
     const { data: turnoData } = await supabaseAdmin
       .from('turnos')
-      .select('activo')
+      .select('activo, tipo_turno')
       .eq('id', 1)
       .single()
 
@@ -116,7 +116,12 @@ export async function POST(request: Request) {
     }
 
     // ── Insertar pedido con service_role (bypasea RLS) ───────────────────────
-    const payload = { ...body, archivado: false }
+    // Etiquetar el pedido con el tipo de turno activo para separación correcta mediodía/noche
+    const payload = {
+      ...body,
+      archivado: false,
+      turno_tipo: turnoData.tipo_turno || 'noche',
+    }
     delete payload.envioManual
 
     const { error } = await supabaseAdmin

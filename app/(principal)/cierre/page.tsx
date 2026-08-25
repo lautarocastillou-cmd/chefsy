@@ -39,7 +39,12 @@ export default function PaginaCierreCaja() {
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
-  const [filtroTurno, setFiltroTurno] = useState<'todos' | 'mediodia' | 'noche'>('todos')
+  const [filtroTurno, setFiltroTurno] = useState<'todos' | 'mediodia' | 'noche'>(() =>
+    // Por defecto, filtrar por el turno que detectamos según la hora actual
+    detectarTipoTurnoActual()
+  )
+  // cajaInicial del snapshot histórico (cuando se ve "Por Fecha" de un turno ya cerrado)
+  const [cajaInicialHistorica, setCajaInicialHistorica] = useState<number | null>(null)
 
   const montoBaseCadete = (configuracionOperativa as any)?.montoBaseCadete ?? 4000
 
@@ -54,20 +59,50 @@ export default function PaginaCierreCaja() {
     setModalInicioAbierto(true)
   }
 
-  // Detectar si hay pedidos activos de un turno anterior sin archivar
+  // Sincronizar filtroTurno con el turno activo cuando el modo es En Vivo
+  // Esto garantiza que al entrar en modo En Vivo nunca se vean turnos mezclados
+  useEffect(() => {
+    if (modoOrigen === 'en_vivo' && estadoTurno.tipoTurno) {
+      setFiltroTurno(estadoTurno.tipoTurno)
+    }
+  }, [modoOrigen, estadoTurno.tipoTurno])
+
+  // Detectar si hay pedidos activos de un turno distinto al activo (aviso de mezcla)
   const infoTurnoPendiente = useMemo(() => {
     const activosNoArchivados = pedidos.filter(p => !p.archivado)
     if (activosNoArchivados.length === 0) return null
 
-    const distintos = activosNoArchivados.filter(p => p.fecha && p.fecha !== fechaSeleccionada)
-    if (distintos.length === 0) return null
+    // Detectar pedidos de un tipo de turno diferente al activo
+    const tipoActivo = estadoTurno.tipoTurno || detectarTipoTurnoActual()
+    const deOtroTurno = activosNoArchivados.filter(p => {
+      if (p.turno_tipo) return p.turno_tipo !== tipoActivo
+      // Fallback por hora
+      const horaNum = Number((p.hora || '').split(':')[0]) || 20
+      const esMediodia = horaNum >= 10 && horaNum < 16
+      return tipoActivo === 'mediodia' ? !esMediodia : esMediodia
+    })
 
-    const fechaPendiente = distintos[0].fecha
-    const cantidad = distintos.length
-    const totalMonto = distintos.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0)
+    if (deOtroTurno.length === 0) {
+      // Fallback: detectar por fecha diferente (comportamiento anterior)
+      const distintos = activosNoArchivados.filter(p => p.fecha && p.fecha !== fechaSeleccionada)
+      if (distintos.length === 0) return null
+      const fechaPendiente = distintos[0].fecha
+      return {
+        fechaPendiente,
+        cantidad: distintos.length,
+        totalMonto: distintos.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0),
+        tipoOtroTurno: null as TipoTurno | null,
+      }
+    }
 
-    return { fechaPendiente, cantidad, totalMonto }
-  }, [pedidos, fechaSeleccionada])
+    const tipoOtroTurno = (tipoActivo === 'mediodia' ? 'noche' : 'mediodia') as TipoTurno
+    return {
+      fechaPendiente: deOtroTurno[0].fecha || null,
+      cantidad: deOtroTurno.length,
+      totalMonto: deOtroTurno.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0),
+      tipoOtroTurno,
+    }
+  }, [pedidos, fechaSeleccionada, estadoTurno.tipoTurno])
 
   // Cargar pedidos según el modo de origen seleccionado (En vivo vs Por fecha)
   useEffect(() => {
@@ -76,12 +111,14 @@ export default function PaginaCierreCaja() {
     if (modoOrigen === 'en_vivo') {
       // Usar los pedidos activos en vivo en pantalla sin archivar
       setPedidosDelDia(pedidos.filter(p => !p.archivado))
+      setCajaInicialHistorica(null) // En vivo siempre usa estadoTurno.cajaInicial
       setCargando(false)
       return
     }
 
     async function cargar() {
       setCargando(true)
+      setCajaInicialHistorica(null)
       const data = await obtenerPedidosPorFecha(fechaSeleccionada)
       if (activo) {
         setPedidosDelDia(data)
@@ -99,7 +136,7 @@ export default function PaginaCierreCaja() {
     if (filtroTurno === 'todos') return pedidosDelDia
     return pedidosDelDia.filter((p) => {
       if (p.turno_tipo) return p.turno_tipo === filtroTurno
-      // Fallback por hora si no fue etiquetado
+      // Fallback por hora si no fue etiquetado (pedidos pre-fix)
       const horaNum = Number((p.hora || '').split(':')[0]) || 20
       const esMediodia = horaNum >= 10 && horaNum < 16
       return filtroTurno === 'mediodia' ? esMediodia : !esMediodia
@@ -220,8 +257,10 @@ export default function PaginaCierreCaja() {
   // Cantidad de envíos delivery (para la sección cadetes)
   const enviosDelivery = pedidosValidos.filter((p) => p.tipoEntrega === 'delivery' && (p.costoEnvio || 0) > 0)
 
-  // Efectivo a rendir al final de la noche (Caja Inicial + Efectivo Entrante)
-  const efectivoARendir = (estadoTurno?.cajaInicial || 0) + efectivoTotal
+  // Efectivo a rendir: usa la caja inicial histórica del snapshot si se ve un turno pasado,
+  // o la caja inicial del turno activo actual si se está en modo En Vivo.
+  const cajaInicialEfectiva = cajaInicialHistorica !== null ? cajaInicialHistorica : (estadoTurno?.cajaInicial || 0)
+  const efectivoARendir = cajaInicialEfectiva + efectivoTotal
 
   // Copiar reporte al portapapeles
   const copiarReporteAlPortapapeles = () => {
@@ -244,7 +283,7 @@ export default function PaginaCierreCaja() {
 🎫 *Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
 
 *Estado de la Caja:*
-- 📥 Caja Inicial: ${formatearPrecio(estadoTurno?.cajaInicial || 0)}
+- 📥 Caja Inicial: ${formatearPrecio(cajaInicialEfectiva)}
 - 💵 Efectivo Ventas: ${formatearPrecio(efectivoTotal)}
 - 💰 *Físico a Rendir:* ${formatearPrecio(efectivoARendir)}
 
@@ -412,13 +451,13 @@ _Generado automáticamente desde Chefsy_`.trim()
           <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
             <button
               onClick={() => {
-                setFechaSeleccionada(infoTurnoPendiente.fechaPendiente)
+                if (infoTurnoPendiente.fechaPendiente) setFechaSeleccionada(infoTurnoPendiente.fechaPendiente)
                 setModoOrigen('fecha')
               }}
               className="px-3 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
             >
               <Calendar size={14} />
-              Ver Cierre de esa Fecha ({infoTurnoPendiente.fechaPendiente})
+              Ver Cierre de esa Fecha {infoTurnoPendiente.fechaPendiente ? `(${infoTurnoPendiente.fechaPendiente})` : ''}
             </button>
             <button
               onClick={manejarFinalizarTurno}
@@ -545,7 +584,7 @@ _Generado automáticamente desde Chefsy_`.trim()
             <p className="text-2xl font-black text-emerald-900 dark:text-emerald-400">{formatearPrecio(efectivoARendir)}</p>
           </div>
           <div className="text-right text-xs text-emerald-700 dark:text-emerald-600 font-medium">
-            <p>Caja Inicial: {formatearPrecio(estadoTurno?.cajaInicial || 0)}</p>
+            <p>Caja Inicial: {formatearPrecio(cajaInicialEfectiva)}</p>
             <p>Efectivo Ventas: {formatearPrecio(efectivoTotal)}</p>
           </div>
         </div>
