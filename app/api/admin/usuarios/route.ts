@@ -62,6 +62,15 @@ export async function POST(request: Request) {
       throw error
     }
 
+    // Si el usuario es un cadete, asegurar que esté en la tabla cadetes para seguimiento GPS y asignación
+    if (rol === 'cadete') {
+      await supabase.from('cadetes').upsert({
+        id: uLimpio,
+        nombre: nombre,
+        activo: true
+      }).catch((err) => console.error('[API Usuarios] Error creando cadete en tabla cadetes:', err))
+    }
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[API Usuarios] Error POST:', error)
@@ -95,6 +104,13 @@ export async function DELETE(request: Request) {
       .eq('usuario', usuarioId)
 
     if (error) throw error
+
+    // Eliminar también de la tabla cadetes si correspondía
+    await supabase
+      .from('cadetes')
+      .delete()
+      .eq('id', usuarioId)
+      .catch(() => {})
 
     return NextResponse.json({ ok: true })
   } catch (error) {

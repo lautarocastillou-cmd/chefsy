@@ -401,21 +401,22 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
         }
 
-        const { data: pedidoAct, error } = await supabaseAdmin
+        const { data: updateData, error } = await supabaseAdmin
           .from('pedidos')
           .update({ cadete_id: cadete_id || null, cadete_nombre: cadete_nombre || null })
           .eq('id', id)
           .select('cliente')
-          .single()
 
         if (error) throw error
 
-        if (cadete_id) {
-          await enviarNotificacionCadete(
+        const pedidoAct = updateData && updateData.length > 0 ? updateData[0] : null
+
+        if (cadete_id && pedidoAct) {
+          enviarNotificacionCadete(
             cadete_id,
             '🛵 Nuevo Pedido Asignado',
-            `Se te ha asignado el pedido de ${pedidoAct?.cliente || 'un cliente'}.`
-          )
+            `Se te ha asignado el pedido de ${pedidoAct.cliente || 'un cliente'}.`
+          ).catch((err) => console.error('[Push Cadete] Error enviando notificación:', err))
         }
 
         return NextResponse.json({ ok: true })
