@@ -1,6 +1,7 @@
 ﻿'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { QRCodeCanvas } from 'qrcode.react'
 import { 
   Printer, 
@@ -29,7 +30,6 @@ interface PlantillaPromo {
   icono: string
   titulo: string
   mensaje: string
-  codigoCupon: string
   incluirQr: boolean
   qrUrl: string
   qrTexto: string
@@ -42,8 +42,7 @@ const PLANTILLAS: PlantillaPromo[] = [
     nombre: '15% OFF Próxima Compra',
     icono: '🎁',
     titulo: '¡REGALO EXCLUSIVO!',
-    mensaje: 'Mostrá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
-    codigoCupon: 'CHEFSY15',
+    mensaje: 'Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
     incluirQr: true,
     qrUrl: 'https://chefsy.app',
     qrTexto: 'Escaneá para pedir online',
@@ -55,7 +54,6 @@ const PLANTILLAS: PlantillaPromo[] = [
     icono: '📸',
     titulo: 'SEGUINOS EN INSTAGRAM',
     mensaje: 'Subí una foto de tu pedido, etiquetanos en tus historias y participá por cenas gratis cada semana.',
-    codigoCupon: '',
     incluirQr: true,
     qrUrl: 'https://instagram.com',
     qrTexto: '@tu_local · Escaneá para seguirnos',
@@ -66,8 +64,7 @@ const PLANTILLAS: PlantillaPromo[] = [
     nombre: 'Reseña Google Maps',
     icono: '⭐',
     titulo: '¿TE GUSTÓ NUESTRA COMIDA?',
-    mensaje: 'Dejanos una reseña de 5 estrellas en Google Maps y te regalamos una porción de papas en tu próxima visita.',
-    codigoCupon: 'PAPAS-GRATIS',
+    mensaje: 'Dejanos una reseña de 5 estrellas en Google Maps y presentá este cupón para canjear una porción de papas gratis.',
     incluirQr: true,
     qrUrl: 'https://maps.google.com',
     qrTexto: 'Escaneá para opinar en Google',
@@ -79,7 +76,6 @@ const PLANTILLAS: PlantillaPromo[] = [
     icono: '💬',
     titulo: 'PEDÍ MÁS RÁPIDO',
     mensaje: 'Agendá nuestro contacto para acceder a promociones relámpago y menú diario exclusivo.',
-    codigoCupon: '',
     incluirQr: true,
     qrUrl: 'https://wa.me',
     qrTexto: 'Escaneá para chatear directo',
@@ -91,7 +87,6 @@ const PLANTILLAS: PlantillaPromo[] = [
     icono: '📶',
     titulo: 'WIFI PARA CLIENTES',
     mensaje: 'Red: Chefsy_Clientes\nContraseña: Bienvenidos123',
-    codigoCupon: '',
     incluirQr: false,
     qrUrl: '',
     qrTexto: '',
@@ -103,7 +98,6 @@ const PLANTILLAS: PlantillaPromo[] = [
     icono: '✍️',
     titulo: '¡PROMO DEL DÍA!',
     mensaje: '2x1 en postres y bebidas hasta las 23:00 hs.',
-    codigoCupon: '2X1-EXPRESS',
     incluirQr: false,
     qrUrl: '',
     qrTexto: '',
@@ -116,10 +110,10 @@ interface Props {
 }
 
 export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar' }: Props) {
+  const [montado, setMontado] = useState(false)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [titulo, setTitulo] = useState('¡REGALO EXCLUSIVO!')
-  const [mensaje, setMensaje] = useState('Mostrá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.')
-  const [codigoCupon, setCodigoCupon] = useState('CHEFSY15')
+  const [mensaje, setMensaje] = useState('Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.')
   const [incluirQr, setIncluirQr] = useState(true)
   const [qrUrl, setQrUrl] = useState('https://chefsy.app')
   const [qrTexto, setQrTexto] = useState('Escaneá para pedir online')
@@ -128,10 +122,13 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
   const [copias, setCopias] = useState<number>(1)
   const [imprimiendo, setImprimiendo] = useState(false)
 
+  useEffect(() => {
+    setMontado(true)
+  }, [])
+
   const aplicarPlantilla = (p: PlantillaPromo) => {
     setTitulo(p.titulo)
     setMensaje(p.mensaje)
-    setCodigoCupon(p.codigoCupon)
     setIncluirQr(p.incluirQr)
     setQrUrl(p.qrUrl)
     setQrTexto(p.qrTexto)
@@ -171,13 +168,6 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
 
         <div class="mensaje">${mensaje.replace(/\n/g, '<br/>')}</div>
 
-        ${codigoCupon.trim() ? `
-          <div class="cupon-box">
-            <div class="cupon-label">CÓDIGO DE CUPÓN:</div>
-            <div class="cupon-code">${codigoCupon.toUpperCase()}</div>
-          </div>
-        ` : ''}
-
         ${incluirQr && qrDataUrl ? `
           <div class="qr-section">
             <img src="${qrDataUrl}" class="qr-img" alt="QR" />
@@ -191,7 +181,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
         ` : ''}
 
         <div class="sep"></div>
-        <div class="footer">¡Gracias por ser parte de nuestra comunidad!</div>
+        <div class="footer">¡Presentá este ticket para canjear tu beneficio!</div>
         <div class="cut-space"></div>
       </div>
     `
@@ -214,7 +204,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
           font-family: monospace;
-          font-size: ${anchoPapel === '58mm' ? '11px' : '13px'};
+          font-size: ${anchoPapel === '58mm' ? '12px' : '14px'};
           width: ${anchoPapel};
           padding: 6px;
           color: #000;
@@ -248,37 +238,18 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
           margin: 6px 0;
         }
         .titulo-promo {
-          font-size: ${anchoPapel === '58mm' ? '14px' : '16px'};
+          font-size: ${anchoPapel === '58mm' ? '15px' : '17px'};
           font-weight: 900;
           text-align: center;
           margin: 6px 0 4px 0;
           line-height: 1.2;
         }
         .mensaje {
-          font-size: ${anchoPapel === '58mm' ? '11px' : '12px'};
+          font-size: ${anchoPapel === '58mm' ? '12px' : '13px'};
           text-align: center;
           margin: 6px 0;
           line-height: 1.35;
           font-weight: 600;
-        }
-        .cupon-box {
-          border: 2px solid #000;
-          border-radius: 4px;
-          padding: 6px 4px;
-          margin: 8px 0;
-          text-align: center;
-          background: #f9f9f9;
-        }
-        .cupon-label {
-          font-size: 9px;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-        .cupon-code {
-          font-size: ${anchoPapel === '58mm' ? '16px' : '20px'};
-          font-weight: 900;
-          letter-spacing: 2px;
-          margin-top: 2px;
         }
         .qr-section {
           text-align: center;
@@ -291,19 +262,19 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
           display: block;
         }
         .qr-caption {
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: bold;
           margin-top: 4px;
           text-align: center;
         }
         .letra-chica {
-          font-size: 8.5px;
+          font-size: 9px;
           text-align: center;
           color: #333;
           line-height: 1.25;
         }
         .footer {
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: bold;
           text-align: center;
           margin-top: 4px;
@@ -396,7 +367,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-            Imprimí en tu comandera tickets con descuentos, tu Instagram, QR de reseñas de Google o WiFi para las mesas y pedidos.
+            Imprimí en tu comandera tickets con promociones, tu Instagram, QR de reseñas de Google o WiFi para las mesas y pedidos.
           </p>
 
           <button
@@ -409,10 +380,10 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
         </div>
       )}
 
-      {/* Modal Principal de Configuración y Live Preview */}
-      {modalAbierto && (
+      {/* Modal Principal de Configuración y Live Preview (Montado vía Portal en document.body para evitar solapamientos) */}
+      {modalAbierto && montado && createPortal(
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in"
           onClick={() => setModalAbierto(false)}
         >
           <div 
@@ -420,14 +391,14 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header del Modal */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-5 px-6 shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-5 px-6 shrink-0 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   <Printer size={22} />
                 </div>
                 <div>
                   <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <span>Impresora de Promociones & Cupones</span>
+                    <span>Impresora de Promociones & Tickets</span>
                     <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                       Comandera Térmica
                     </span>
@@ -444,7 +415,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
             </div>
 
             {/* Contenido dividido: Editor (Izquierda) + Live Preview (Derecha) */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] overflow-y-auto flex-1 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] overflow-y-auto flex-1 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
               
               {/* Columna Izquierda: Configuración */}
               <div className="p-6 space-y-5">
@@ -474,56 +445,41 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
                 <div className="space-y-3.5 pt-1">
                   <div>
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                      Título Destacado
+                      Título Destacado del Ticket
                     </label>
                     <input
                       type="text"
                       value={titulo}
                       onChange={(e) => setTitulo(e.target.value)}
-                      placeholder="Ej: ¡PROMO EXCLUSIVA!"
+                      placeholder="Ej: ¡REGALO EXCLUSIVO!"
                       className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 uppercase"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                      Mensaje / Descripción de la Promoción
+                      Mensaje / Descripción del Beneficio o Anuncio
                     </label>
                     <textarea
                       rows={3}
                       value={mensaje}
                       onChange={(e) => setMensaje(e.target.value)}
-                      placeholder="Ej: Mostrá este ticket en tu próximo pedido..."
+                      placeholder="Ej: Presentá este ticket en tu próximo pedido y llevate un 15% de descuento..."
                       className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 resize-none font-medium"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                        Código de Cupón (Opcional)
-                      </label>
-                      <input
-                        type="text"
-                        value={codigoCupon}
-                        onChange={(e) => setCodigoCupon(e.target.value)}
-                        placeholder="Ej: CHEFSY15"
-                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 uppercase tracking-wider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                        Letra Chica / Condiciones
-                      </label>
-                      <input
-                        type="text"
-                        value={letraChica}
-                        onChange={(e) => setLetraChica(e.target.value)}
-                        placeholder="Ej: Válido hasta el 31/12"
-                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
-                      />
-                    </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Letra Chica / Condiciones de Canje (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={letraChica}
+                      onChange={(e) => setLetraChica(e.target.value)}
+                      placeholder="Ej: Válido de Martes a Jueves. 1 canje por pedido. Vence en 30 días."
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
+                    />
                   </div>
                 </div>
 
@@ -590,7 +546,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
                         className={cn(
                           "py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer",
                           anchoPapel === '80mm'
-                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:white shadow-xs"
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 hover:text-slate-700"
                         )}
                       >
@@ -653,13 +609,6 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
                       {mensaje || 'Escribí aquí el mensaje o descuento.'}
                     </div>
 
-                    {codigoCupon && (
-                      <div className="border-2 border-black rounded p-1.5 my-2 bg-slate-50">
-                        <div className="text-[8px] font-bold">CÓDIGO:</div>
-                        <div className="font-black text-sm tracking-wider">{codigoCupon.toUpperCase()}</div>
-                      </div>
-                    )}
-
                     {incluirQr && qrUrl && (
                       <div className="my-2 flex flex-col items-center">
                         <div className="p-1 bg-white border border-slate-300 rounded inline-block">
@@ -688,7 +637,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
                     )}
 
                     <div className="border-t border-dashed border-black my-2"></div>
-                    <div className="text-[8px] font-bold">¡Gracias por ser parte!</div>
+                    <div className="text-[8px] font-bold">¡Presentá este ticket para canjear!</div>
                   </div>
                 </div>
 
@@ -712,7 +661,8 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
