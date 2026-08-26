@@ -552,20 +552,6 @@ _Generado automáticamente desde Chefsy_`.trim()
         <MetricasHistoricas />
       ) : (
         <div className={`space-y-6 transition-all duration-300 ${cargando ? 'opacity-40 pointer-events-none' : ''}`}>
-        
-        {/* Comparativa de Turno en Vivo vs Histórico */}
-        <ComparativaTurnoVivo
-          fecha={fechaSeleccionada}
-          turnoTipo={filtroTurno === 'noche' ? 'noche' : 'mediodia'}
-          metricasActuales={{
-            facturacionNeta,
-            totalPedidos,
-            ticketPromedio,
-            efectivoVentas: efectivoTotal,
-            transferenciaTotal,
-            totalDelivery: deliveryTotal,
-          }}
-        />
 
         {/* Tarjeta Principal de Facturación NETA */}
         <div className="bg-gradient-to-br from-chefsy-800 to-chefsy-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -794,6 +780,20 @@ _Generado automáticamente desde Chefsy_`.trim()
             <p className="text-base font-bold text-red-800">-{formatearPrecio(canceladosMonto)}</p>
           </div>
         )}
+
+        {/* Comparativa de Turno en Vivo vs Histórico */}
+        <ComparativaTurnoVivo
+          fecha={fechaSeleccionada}
+          turnoTipo={filtroTurno === 'noche' ? 'noche' : 'mediodia'}
+          metricasActuales={{
+            facturacionNeta,
+            totalPedidos,
+            ticketPromedio,
+            efectivoVentas: efectivoTotal,
+            transferenciaTotal,
+            totalDelivery: deliveryTotal,
+          }}
+        />
         
       </div>
       )}
