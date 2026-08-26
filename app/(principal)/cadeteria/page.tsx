@@ -19,6 +19,8 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
 import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
 import BotonNotificaciones from '@/components/cadeteria/BotonNotificaciones'
+import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
+
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
   const numeros = telefono.replace(/\D/g, '')
@@ -726,6 +728,9 @@ export default function PaginaCadeteria() {
             </div>
           </div>
         )}
+
+        {/* Panel de Diagnóstico GPS Detallado — solo para admins */}
+        {esAdmin && <PanelDiagnosticoGPS />}
 
         {esAdmin || pestaña === 'activos' ? (
           pedidosCadeteria.length === 0 ? (
