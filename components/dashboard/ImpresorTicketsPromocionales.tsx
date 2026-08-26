@@ -8,6 +8,7 @@ import {
   Sparkles, 
   X, 
   QrCode, 
+  Clock,
   FileText
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -22,6 +23,8 @@ interface PlantillaPromo {
   incluirQr: boolean
   qrUrl: string
   qrTexto: string
+  validezTipo: 'sin_vencimiento' | 'hoy' | 'dias'
+  validezDias: number
   letraChica: string
 }
 
@@ -31,6 +34,8 @@ interface ConfigTicketPromo {
   incluirQr: boolean
   qrUrl: string
   qrTexto: string
+  validezTipo: 'sin_vencimiento' | 'hoy' | 'dias'
+  validezDias: number
   letraChica: string
   anchoPapel: '80mm' | '58mm'
   copias: number
@@ -42,22 +47,39 @@ const CONFIG_POR_DEFECTO: ConfigTicketPromo = {
   incluirQr: true,
   qrUrl: 'https://chefsy.xyz/',
   qrTexto: 'Pedí online en chefsy.xyz',
-  letraChica: 'Válido para consumo en el local o delivery. Vence en 30 días.',
+  validezTipo: 'dias',
+  validezDias: 7,
+  letraChica: 'Válido para consumo en el local o delivery.',
   anchoPapel: '80mm',
   copias: 1
 }
 
 const PLANTILLAS: PlantillaPromo[] = [
   {
-    id: 'descuento',
-    nombre: '15% OFF Próxima Compra',
+    id: 'descuento_7dias',
+    nombre: '15% OFF (7 Días)',
     icono: '🎁',
     titulo: '¡REGALO EXCLUSIVO!',
     mensaje: 'Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
     incluirQr: true,
     qrUrl: 'https://chefsy.xyz/',
     qrTexto: 'Pedí online en chefsy.xyz',
-    letraChica: 'Válido para consumo en el local o delivery. Vence en 30 días.'
+    validezTipo: 'dias',
+    validezDias: 7,
+    letraChica: 'Válido para consumo en el local o delivery.'
+  },
+  {
+    id: 'descuento_14dias',
+    nombre: '10% OFF (14 Días)',
+    icono: '🎟️',
+    titulo: '¡10% OFF PROMO!',
+    mensaje: 'Mostrá este ticket en tu próxima visita y disfrutá de un 10% de descuento en tu cuenta.',
+    incluirQr: true,
+    qrUrl: 'https://chefsy.xyz/',
+    qrTexto: 'Pedí online en chefsy.xyz',
+    validezTipo: 'dias',
+    validezDias: 14,
+    letraChica: '1 canje por ticket. No acumulable.'
   },
   {
     id: 'instagram',
@@ -68,6 +90,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     incluirQr: true,
     qrUrl: 'https://instagram.com/chefsy_fastfood_',
     qrTexto: '@chefsy_fastfood_ · Seguinos en Instagram',
+    validezTipo: 'sin_vencimiento',
+    validezDias: 0,
     letraChica: 'Sorteos todos los fines de mes.'
   },
   {
@@ -79,6 +103,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     incluirQr: true,
     qrUrl: 'https://maps.app.goo.gl/By5qrWayRiW2qQu26',
     qrTexto: 'Escaneá para opinar en Google Maps',
+    validezTipo: 'dias',
+    validezDias: 30,
     letraChica: 'Mostrá la reseña al mozo o por WhatsApp para validar.'
   },
   {
@@ -90,6 +116,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     incluirQr: true,
     qrUrl: 'https://wa.me',
     qrTexto: 'Escaneá para chatear directo',
+    validezTipo: 'sin_vencimiento',
+    validezDias: 0,
     letraChica: 'Atención personalizada todos los días.'
   },
   {
@@ -101,20 +129,57 @@ const PLANTILLAS: PlantillaPromo[] = [
     incluirQr: false,
     qrUrl: '',
     qrTexto: '',
+    validezTipo: 'sin_vencimiento',
+    validezDias: 0,
     letraChica: 'Conexión de cortesía de alta velocidad.'
   },
   {
     id: 'personalizado',
-    nombre: 'Mensaje Libre / Promo Express',
-    icono: '✍️',
+    nombre: 'Promo Solo Hoy / Express',
+    icono: '⚡',
     titulo: '¡PROMO DEL DÍA!',
-    mensaje: '2x1 en postres y bebidas hasta las 23:00 hs.',
+    mensaje: '2x1 en postres y bebidas hasta el cierre del servicio.',
     incluirQr: false,
     qrUrl: '',
     qrTexto: '',
-    letraChica: 'Hasta agotar stock.'
+    validezTipo: 'hoy',
+    validezDias: 0,
+    letraChica: 'Hasta agotar stock del día.'
   }
 ]
+
+function obtenerConfigGuardada(): ConfigTicketPromo {
+  if (typeof window === 'undefined') return CONFIG_POR_DEFECTO
+  try {
+    const raw = localStorage.getItem('chefsy_promo_ticket_config')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return { ...CONFIG_POR_DEFECTO, ...parsed }
+    }
+  } catch {
+    // silencioso
+  }
+  return CONFIG_POR_DEFECTO
+}
+
+function calcularTextoValidez(tipo: 'sin_vencimiento' | 'hoy' | 'dias', dias: number): string {
+  if (tipo === 'sin_vencimiento') return ''
+  const hoy = new Date()
+  if (tipo === 'hoy') {
+    const fechaStr = hoy.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+    return `Válido solo por hoy (${fechaStr})`
+  }
+  if (tipo === 'dias') {
+    const fechaVenc = new Date(hoy.getTime() + dias * 24 * 60 * 60 * 1000)
+    const fechaStr = fechaVenc.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+    if (dias === 1) return `Válido por 24 hs (Hasta mañana ${fechaStr})`
+    if (dias === 7) return `Válido por 7 días (Hasta el ${fechaStr})`
+    if (dias === 14) return `Válido por 14 días (Hasta el ${fechaStr})`
+    if (dias === 30) return `Válido por 30 días (Hasta el ${fechaStr})`
+    return `Válido por ${dias} días (Hasta el ${fechaStr})`
+  }
+  return ''
+}
 
 // ── Componente QR Memoizado ultra-eficiente ──
 const QrPreview = memo(function QrPreview({ url, texto }: { url: string; texto: string }) {
@@ -166,54 +231,41 @@ const PlantillasGrid = memo(function PlantillasGrid({ onSelect }: { onSelect: (p
 
 // ── Modal Aislado y Optimizado ──
 function ModalPromociones({ onClose }: { onClose: () => void }) {
-  const [titulo, setTitulo] = useState(CONFIG_POR_DEFECTO.titulo)
-  const [mensaje, setMensaje] = useState(CONFIG_POR_DEFECTO.mensaje)
-  const [incluirQr, setIncluirQr] = useState(CONFIG_POR_DEFECTO.incluirQr)
-  const [qrUrl, setQrUrl] = useState(CONFIG_POR_DEFECTO.qrUrl)
-  const [qrTexto, setQrTexto] = useState(CONFIG_POR_DEFECTO.qrTexto)
-  const [letraChica, setLetraChica] = useState(CONFIG_POR_DEFECTO.letraChica)
-  const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>(CONFIG_POR_DEFECTO.anchoPapel)
-  const [copias, setCopias] = useState<number>(CONFIG_POR_DEFECTO.copias)
+  // Inicialización directa y sincrónica desde localStorage
+  const [configInicial] = useState<ConfigTicketPromo>(obtenerConfigGuardada)
+
+  const [titulo, setTitulo] = useState(configInicial.titulo)
+  const [mensaje, setMensaje] = useState(configInicial.mensaje)
+  const [incluirQr, setIncluirQr] = useState(configInicial.incluirQr)
+  const [qrUrl, setQrUrl] = useState(configInicial.qrUrl)
+  const [qrTexto, setQrTexto] = useState(configInicial.qrTexto)
+  const [validezTipo, setValidezTipo] = useState<'sin_vencimiento' | 'hoy' | 'dias'>(configInicial.validezTipo || 'dias')
+  const [validezDias, setValidezDias] = useState<number>(configInicial.validezDias || 7)
+  const [letraChica, setLetraChica] = useState(configInicial.letraChica)
+  const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>(configInicial.anchoPapel)
+  const [copias, setCopias] = useState<number>(configInicial.copias)
   const [imprimiendo, setImprimiendo] = useState(false)
 
-  // Cargar configuración guardada al montar
+  // Guardar automáticamente en localStorage ante cualquier cambio
   useEffect(() => {
     try {
-      const guardado = localStorage.getItem('chefsy_promo_ticket_config')
-      if (guardado) {
-        const parsed = JSON.parse(guardado)
-        if (parsed.titulo !== undefined) setTitulo(parsed.titulo)
-        if (parsed.mensaje !== undefined) setMensaje(parsed.mensaje)
-        if (parsed.incluirQr !== undefined) setIncluirQr(parsed.incluirQr)
-        if (parsed.qrUrl !== undefined) setQrUrl(parsed.qrUrl)
-        if (parsed.qrTexto !== undefined) setQrTexto(parsed.qrTexto)
-        if (parsed.letraChica !== undefined) setLetraChica(parsed.letraChica)
-        if (parsed.anchoPapel !== undefined) setAnchoPapel(parsed.anchoPapel)
-        if (parsed.copias !== undefined) setCopias(parsed.copias)
-      }
-    } catch {
-      // silencioso
-    }
-  }, [])
-
-  // Guardar automáticamente en localStorage cuando cambia
-  useEffect(() => {
-    try {
-      const config: ConfigTicketPromo = {
+      const nuevaConfig: ConfigTicketPromo = {
         titulo,
         mensaje,
         incluirQr,
         qrUrl,
         qrTexto,
+        validezTipo,
+        validezDias,
         letraChica,
         anchoPapel,
         copias
       }
-      localStorage.setItem('chefsy_promo_ticket_config', JSON.stringify(config))
+      localStorage.setItem('chefsy_promo_ticket_config', JSON.stringify(nuevaConfig))
     } catch {
       // silencioso
     }
-  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, letraChica, anchoPapel, copias])
+  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, validezTipo, validezDias, letraChica, anchoPapel, copias])
 
   // Debounce simple para el QR URL
   const [qrUrlDebounced, setQrUrlDebounced] = useState(qrUrl)
@@ -230,9 +282,13 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
     setIncluirQr(p.incluirQr)
     setQrUrl(p.qrUrl)
     setQrTexto(p.qrTexto)
+    setValidezTipo(p.validezTipo)
+    setValidezDias(p.validezDias)
     setLetraChica(p.letraChica)
     toast.success(`Plantilla "${p.nombre}" cargada`)
   }, [])
+
+  const textoValidez = calcularTextoValidez(validezTipo, validezDias)
 
   const imprimirTicket = () => {
     setImprimiendo(true)
@@ -264,6 +320,10 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         <div class="titulo-promo">${titulo.toUpperCase()}</div>
 
         <div class="mensaje">${mensaje.replace(/\n/g, '<br/>')}</div>
+
+        ${textoValidez ? `
+          <div class="validez-box">⏳ ${textoValidez.toUpperCase()}</div>
+        ` : ''}
 
         ${incluirQr && qrDataUrl ? `
           <div class="qr-section">
@@ -333,6 +393,17 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           margin: 4px 0;
           line-height: 1.35;
           font-weight: 600;
+        }
+        .validez-box {
+          font-size: ${anchoPapel === '58mm' ? '10px' : '11.5px'};
+          font-weight: 900;
+          text-align: center;
+          margin: 5px 0 3px 0;
+          padding: 3px;
+          border: 1.5px solid #000;
+          border-radius: 3px;
+          background: #f4f4f4;
+          text-transform: uppercase;
         }
         .qr-section { text-align: center; margin: 6px 0 3px 0; }
         .qr-img {
@@ -459,6 +530,113 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                   placeholder="Ej: Presentá este ticket en tu próximo pedido y llevate un 15% de descuento..."
                   className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 resize-none font-medium"
                 />
+              </div>
+
+              {/* Tiempo de Validez */}
+              <div className="border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-amber-500" />
+                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Tiempo de Validez del Ticket
+                    </label>
+                  </div>
+                  {textoValidez && (
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md">
+                      {textoValidez}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setValidezTipo('sin_vencimiento')}
+                    className={cn(
+                      "py-1.5 px-2 text-[11px] font-bold rounded-xl border transition-colors text-center cursor-pointer",
+                      validezTipo === 'sin_vencimiento'
+                        ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400"
+                    )}
+                  >
+                    Sin vencimiento
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setValidezTipo('hoy')}
+                    className={cn(
+                      "py-1.5 px-2 text-[11px] font-bold rounded-xl border transition-colors text-center cursor-pointer",
+                      validezTipo === 'hoy'
+                        ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400"
+                    )}
+                  >
+                    Solo por hoy
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setValidezTipo('dias'); setValidezDias(7); }}
+                    className={cn(
+                      "py-1.5 px-2 text-[11px] font-bold rounded-xl border transition-colors text-center cursor-pointer",
+                      validezTipo === 'dias' && validezDias === 7
+                        ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400"
+                    )}
+                  >
+                    7 Días (1 Sem)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setValidezTipo('dias'); setValidezDias(14); }}
+                    className={cn(
+                      "py-1.5 px-2 text-[11px] font-bold rounded-xl border transition-colors text-center cursor-pointer",
+                      validezTipo === 'dias' && validezDias === 14
+                        ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400"
+                    )}
+                  >
+                    14 Días (2 Sem)
+                  </button>
+                </div>
+
+                {validezTipo === 'dias' && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                      O definir días:
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-1">
+                      {[3, 7, 14, 21, 30].map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setValidezDias(d)}
+                          className={cn(
+                            "px-2 py-0.5 text-[10px] font-bold rounded-lg border cursor-pointer",
+                            validezDias === d
+                              ? "bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800 dark:border-slate-200"
+                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                          )}
+                        >
+                          {d}d
+                        </button>
+                      ))}
+                      <div className="flex items-center gap-1 ml-auto">
+                        <input
+                          type="number"
+                          min={1}
+                          max={365}
+                          value={validezDias}
+                          onChange={(e) => setValidezDias(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none text-center"
+                        />
+                        <span className="text-[10px] text-slate-400">días</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -605,6 +783,12 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                 <div className="text-[10px] my-2 leading-tight whitespace-pre-line text-slate-800 font-medium">
                   {mensaje || 'Escribí aquí el mensaje o descuento.'}
                 </div>
+
+                {textoValidez && (
+                  <div className="border border-black rounded px-1.5 py-1 my-1.5 bg-slate-50 font-black text-[9px] uppercase tracking-wide">
+                    ⏳ {textoValidez}
+                  </div>
+                )}
 
                 {incluirQr && (
                   <QrPreview url={qrUrlDebounced} texto={qrTexto} />
