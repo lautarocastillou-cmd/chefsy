@@ -345,10 +345,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
 
     let ticketsHtml = ''
     for (let i = 0; i < copias; i++) {
-      ticketsHtml += ticketSingleHtml
-      if (i < copias - 1) {
-        ticketsHtml += '<div class="ticket-divider">✂ - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>'
-      }
+      ticketsHtml += `<div class="ticket-page">${ticketSingleHtml}</div>`
     }
 
     const fullHtml = `<!DOCTYPE html>
@@ -367,6 +364,16 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           width: ${anchoPapel};
           color: #000;
           background: #fff;
+        }
+        .ticket-page {
+          page-break-after: always !important;
+          break-after: page !important;
+          padding: 0 0 8px 0;
+          margin: 0;
+        }
+        .ticket-page:last-child {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
         }
         .ticket-wrapper { padding: 0; margin: 0; }
         .header { text-align: center; margin: 0 0 4px 0; padding-top: 0; }
@@ -415,16 +422,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         .qr-caption { font-size: 9.5px; font-weight: bold; margin-top: 3px; text-align: center; }
         .letra-chica { font-size: 9px; text-align: center; color: #333; line-height: 1.25; margin-top: 3px; }
         .footer { font-size: 9.5px; font-weight: bold; text-align: center; margin-top: 3px; }
-        .ticket-divider {
-          text-align: center;
-          font-size: 8px;
-          font-weight: bold;
-          margin: 12px 0;
-          border-top: 1px dotted #888;
-          border-bottom: 1px dotted #888;
-          padding: 4px 0;
-        }
-        .cut-space { height: 10px; }
+        .cut-space { height: 8px; }
         @media print {
           @page { margin: 0 !important; size: auto; }
           html, body { margin: 0 !important; padding: 0 2px !important; }
