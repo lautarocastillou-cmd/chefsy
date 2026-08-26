@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
@@ -255,8 +255,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
     const ticketSingleHtml = `
       <div class="ticket-wrapper">
         <div class="header">
-          <div class="brand">CHEFSY</div>
-          <div class="sub-brand">PROMO & BENEFICIOS</div>
+          <img src="${typeof window !== 'undefined' ? window.location.origin : ''}/logo-chefsy.png" class="brand-logo" alt="CHEFSY" />
           <div class="fecha">${fechaHora}</div>
         </div>
 
@@ -309,12 +308,14 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         }
         .ticket-wrapper { padding: 4px 0; }
         .header { text-align: center; margin-bottom: 6px; }
-        .brand {
-          font-size: ${anchoPapel === '58mm' ? '18px' : '22px'};
-          font-weight: 900;
-          letter-spacing: 2px;
+        .brand-logo {
+          width: ${anchoPapel === '58mm' ? '120px' : '150px'};
+          max-width: 80%;
+          height: auto;
+          margin: 0 auto 3px auto;
+          display: block;
+          filter: grayscale(100%) contrast(150%);
         }
-        .sub-brand { font-size: 9px; font-weight: bold; letter-spacing: 1px; margin-top: 1px; }
         .fecha { font-size: 9px; color: #333; margin-top: 2px; }
         .sep { border-top: 1.5px dashed #000; margin: 6px 0; }
         .titulo-promo {
@@ -584,8 +585,14 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
               </p>
 
               <div className="bg-white text-black p-4 rounded-xl shadow-md border border-slate-200 font-mono text-center max-w-[260px] mx-auto text-xs select-none">
-                <div className="font-black text-base tracking-widest">CHEFSY</div>
-                <div className="text-[9px] font-bold text-slate-600">PROMO & BENEFICIOS</div>
+                <div className="flex flex-col items-center justify-center mb-1">
+                  <img
+                    src="/logo-chefsy.png"
+                    alt="Chefsy Fast Food"
+                    className="w-28 h-auto object-contain mx-auto mb-1"
+                  />
+                  <div className="text-[8px] text-slate-500 font-medium">{new Date().toLocaleDateString('es-AR')}</div>
+                </div>
                 
                 <div className="border-t border-dashed border-black my-2"></div>
 
