@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { QrCode, X, Copy, Check } from 'lucide-react'
+import { QrCode, X, Copy, Check, Sparkles, Smartphone, ArrowRight, Loader2 } from 'lucide-react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import toast from 'react-hot-toast'
 
 export default function GeneradorQrCadete() {
   const { cadetes } = usarPedidos()
@@ -29,17 +30,16 @@ export default function GeneradorQrCadete() {
       const data = await res.json()
 
       if (data.token) {
-        // La URL de escaneo debe apuntar a la ruta que configuramos
         const urlOrigen = typeof window !== 'undefined' ? window.location.origin : ''
         const url = `${urlOrigen}/api/auth/qr?token=${data.token}`
         setQrUrl(url)
         setModalAbierto(true)
       } else {
-        alert('Error: ' + (data.error || 'No se pudo generar el token'))
+        toast.error(data.error || 'No se pudo generar el token de acceso.')
       }
     } catch (err) {
       console.error(err)
-      alert('Error de conexión')
+      toast.error('Error de conexión al generar QR.')
     } finally {
       setCargando(false)
     }
@@ -48,71 +48,100 @@ export default function GeneradorQrCadete() {
   const copiarEnlace = () => {
     navigator.clipboard.writeText(qrUrl)
     setCopiado(true)
+    toast.success('Enlace copiado al portapapeles')
     setTimeout(() => setCopiado(false), 2000)
   }
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-2 bg-chefsy-100 dark:bg-chefsy-900/30 text-chefsy-600 rounded-xl">
+      <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
             <QrCode size={20} />
           </div>
-          <h3 className="font-bold text-gray-800 dark:text-gray-100">Acceso Rápido Cadetes</h3>
+          <div>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Acceso Rápido Cadetes</h3>
+            <p className="text-[11px] text-slate-400 font-medium">Login express vía código QR</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Generá un código QR para que un cadete inicie sesión automáticamente por 72hs.
+        
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          Generá un QR para que un cadete inicie sesión automáticamente en la app por 72hs.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="space-y-2.5">
           <select
             value={cadeteSeleccionado}
             onChange={(e) => setCadeteSeleccionado(e.target.value)}
-            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-gray-800 dark:text-gray-100 outline-none"
+            className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all cursor-pointer"
           >
             <option value="">Seleccionar cadete...</option>
             {cadetes.map(c => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
+          
           <button
             onClick={handleGenerarQR}
             disabled={!cadeteSeleccionado || cargando}
-            className="bg-chefsy hover:bg-chefsy-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
           >
-            {cargando ? 'Generando...' : 'Generar QR'}
+            {cargando ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Generando...</span>
+              </>
+            ) : (
+              <>
+                <QrCode size={14} />
+                <span>Generar Código QR</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
       {/* Modal del QR */}
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full text-center relative will-change-transform">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => { setModalAbierto(false); setQrUrl('') }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
             >
               <X size={20} />
             </button>
             
-            <div className="mb-6 mt-2">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Código de Acceso</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Escaneá este código con el celular del cadete. Válido por 72hs.
+            <div className="mb-5 mt-1">
+              <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3">
+                <Smartphone size={24} />
+              </div>
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">Código de Acceso</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Escaneá este código con la App de Cadete. Válido por 72 horas.
               </p>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border-4 border-slate-100 dark:border-slate-800 inline-block mb-6">
-              <QRCodeSVG value={qrUrl} size={220} />
+            <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 shadow-inner inline-block mb-5">
+              <QRCodeSVG value={qrUrl} size={200} />
             </div>
 
             <div className="flex gap-2">
               <button
                 onClick={copiarEnlace}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm"
               >
-                {copiado ? <><Check size={16} className="text-green-500" /> Copiado</> : <><Copy size={16} /> Copiar Link</>}
+                {copiado ? (
+                  <>
+                    <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>¡Enlace Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={15} />
+                    <span>Copiar Enlace Directo</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

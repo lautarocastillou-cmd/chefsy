@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { obtenerProblemasOperativos, AlertaOperativa } from '@/lib/problemas'
 import { obtenerSiguienteEstado, obtenerEtiquetaAccionEstado } from '@/lib/entrega'
-import { AlertTriangle, Clock, ChefHat, Bike, Eye, User, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Clock, ChefHat, Bike, Eye, User, ShieldCheck, ArrowRight } from 'lucide-react'
 
 interface PropsSeccionProblemas {
   alAbrirPedido: (pedido: any) => void
@@ -42,23 +42,36 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
 
   if (alertas.length === 0) {
     return (
-      <div className="bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-150 dark:border-emerald-900/30 rounded-2xl p-4 flex items-center gap-3 text-emerald-800 dark:text-emerald-400">
-        <CheckCircle2 className="text-emerald-500 shrink-0" size={20} />
-        <div>
-          <p className="font-semibold text-sm">Servicio bajo control</p>
-          <p className="text-xs opacity-90">No se detectaron problemas operativos activos en este momento.</p>
+      <div className="bg-gradient-to-r from-emerald-50/80 via-white to-emerald-50/40 dark:from-emerald-950/20 dark:via-slate-900/60 dark:to-emerald-950/10 border border-emerald-200/80 dark:border-emerald-900/40 rounded-3xl p-4 md:p-5 flex items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <ShieldCheck size={22} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-slate-800 dark:text-slate-100">Servicio bajo control</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Óptimo
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+              No se detectaron demoras ni problemas operativos activos en este momento.
+            </p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-[#e6e6e6] flex items-center gap-2">
-          🚨 Problemas Operativos ({alertas.length})
+        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <AlertTriangle size={18} className="text-rose-500 animate-bounce" />
+          <span>Alertas Operativas ({alertas.length})</span>
         </h2>
-        <span className="text-xs bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
+        <span className="text-[11px] bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-900/50 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
           Atención Requerida
         </span>
       </div>
@@ -68,17 +81,15 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
           const pedido = alerta.pedido
           const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
           
-          // Estilos según la prioridad
           const esAlta = alerta.prioridad === 'alta'
-          const clasePrioridad = esAlta
-            ? 'bg-red-50 dark:bg-red-950/15 border-red-200 dark:border-red-900/40 text-red-900 dark:text-red-300'
-            : 'bg-amber-50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/35 text-amber-900 dark:text-amber-300'
+          const claseCard = esAlta
+            ? 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50 text-rose-900 dark:text-rose-200'
+            : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200'
 
           const claseBadge = esAlta
-            ? 'bg-red-200 dark:bg-red-950/50 text-red-800 dark:text-red-400'
-            : 'bg-amber-200 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400'
+            ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+            : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
 
-          // Icono correspondiente según el tipo de alerta
           let Icono = AlertTriangle
           if (alerta.tipo === 'atrasado') Icono = Clock
           if (alerta.tipo === 'cocina_demorado') Icono = ChefHat
@@ -87,44 +98,44 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
           return (
             <div
               key={alerta.id}
-              className={`border rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-sm ${clasePrioridad}`}
+              className={`border rounded-3xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-md ${claseCard}`}
             >
               {/* Información de la Alerta */}
-              <div className="flex items-start gap-3">
-                <div className={`p-2.5 rounded-xl shrink-0 ${claseBadge}`}>
+              <div className="flex items-start gap-3.5">
+                <div className={`p-2.5 rounded-2xl shrink-0 border ${claseBadge}`}>
                   <Icono size={20} />
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center flex-wrap gap-2">
-                    <span className="font-bold text-sm md:text-base">
+                    <span className="font-black text-sm md:text-base">
                       Pedido de {alerta.cliente}
                     </span>
-                    <span className="text-xs font-mono bg-white/60 dark:bg-black/20 px-2 py-0.5 rounded border border-current/10">
+                    <span className="text-xs font-mono font-bold bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
                       #{pedido.id.slice(-4).toUpperCase()}
                     </span>
-                    <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${claseBadge}`}>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${claseBadge}`}>
                       Prioridad {alerta.prioridad}
                     </span>
                   </div>
-                  <p className="text-xs md:text-sm font-medium opacity-90">
-                    ⚠️ {alerta.mensaje}
+                  <p className="text-xs md:text-sm font-semibold opacity-90">
+                    {alerta.mensaje}
                   </p>
                 </div>
               </div>
 
               {/* Acciones Rápidas */}
-              <div className="flex items-center flex-wrap gap-2.5 shrink-0 self-end md:self-center">
+              <div className="flex items-center flex-wrap gap-2 shrink-0 self-end md:self-center">
                 {/* Asignar Cadete Rápido si no tiene y es Delivery */}
                 {pedido.tipoEntrega === 'delivery' && !pedido.cadete_id && (
-                  <div className="flex items-center gap-1 bg-white/50 dark:bg-black/10 p-1 rounded-xl border border-current/10">
-                    <span className="text-[10px] font-bold px-1.5 text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
-                      <User size={10} /> Asignar:
+                  <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <span className="text-[10px] font-bold px-1.5 text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
+                      <User size={11} /> Asignar:
                     </span>
                     {cadetes.map((cadete) => (
                       <button
                         key={cadete.id}
                         onClick={() => asignarCadete(pedido.id, cadete.id, cadete.nombre)}
-                        className="bg-white hover:bg-slate-100 dark:bg-[#333] dark:hover:bg-[#444] text-gray-800 dark:text-[#e6e6e6] text-xs font-semibold py-1 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xs transition-all active:scale-95 cursor-pointer"
+                        className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
                         {cadete.nombre}
                       </button>
@@ -136,16 +147,17 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
                 {siguienteEstado && (
                   <button
                     onClick={() => cambiarEstado(pedido.id, siguienteEstado)}
-                    className="bg-chefsy hover:bg-chefsy-700 text-white text-xs font-bold py-1.5 px-3 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-2 px-3.5 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>{obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)}</span>
+                    <ArrowRight size={13} />
                   </button>
                 )}
 
                 {/* Abrir Detalle del Pedido */}
                 <button
                   onClick={() => alAbrirPedido(pedido)}
-                  className="bg-white hover:bg-slate-100 dark:bg-[#333] dark:hover:bg-[#444] text-gray-700 dark:text-[#e6e6e6] text-xs font-bold py-1.5 px-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                  className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold py-2 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                   title="Abrir detalles de la orden"
                 >
                   <Eye size={14} />
@@ -159,3 +171,4 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
     </section>
   )
 }
+
