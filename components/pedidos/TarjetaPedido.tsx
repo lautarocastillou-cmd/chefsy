@@ -52,6 +52,7 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [verMapa, setVerMapa] = useState(false)
   const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
   const [ticketCopiado, setTicketCopiado] = useState(false)
+  const [modalImpresion, setModalImpresion] = useState(false)
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -237,8 +238,93 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     setTicketCopiado(true)
   }
 
-  const imprimirComanda = () => {
-    window.open(`/imprimir/${pedido.id}`, '_blank', 'width=400,height=600')
+  const imprimirSilencioso = (tipo: 'ticket' | 'cocina') => {
+    const f = formatearPrecio
+    const p = pedido
+
+    const metodoPagoLabel: Record<string, string> = {
+      efectivo: 'Efectivo', tarjeta: 'Tarjeta',
+      transferencia: 'Transferencia', mixto: 'Mixto', sin_especificar: 'Sin especificar',
+    }
+
+    // ── Ticket para el Cliente ────────────────────────────────────────────────
+    const htmlTicket = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:monospace;font-size:12px;width:80mm;padding:6px}
+  h1{font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:2px}
+  .sub{text-align:center;font-size:10px;margin-bottom:4px}
+  .sep{border-top:1px dashed #000;margin:6px 0}
+  .row{display:flex;justify-content:space-between;margin:2px 0}
+  .bold{font-weight:bold}
+  .big{font-size:14px;font-weight:bold}
+  .center{text-align:center}
+  .upper{text-transform:uppercase}
+  table{width:100%;border-collapse:collapse}
+  td{padding:2px 0;vertical-align:top;font-size:11px}
+  td:last-child{text-align:right;white-space:nowrap}
+  .nota{font-size:10px;background:#f5f5f5;padding:3px 5px;border-radius:3px;margin-top:3px}
+  @media print{@page{margin:0}body{padding:4px}}
+</style></head><body>
+<h1>CHEFSY</h1>
+<div class="sub">Ticket de Pedido</div>
+<div class="sub">Pedido #${p.id.slice(0,6).toUpperCase()} &nbsp;·&nbsp; ${p.hora}</div>
+<div class="sep"></div>
+<div class="row"><span><b>Cliente:</b> ${p.cliente}</span></div>
+${p.telefono && p.telefono !== 'Sin especificar' ? `<div class="row"><span><b>Tel:</b> ${p.telefono}</span></div>` : ''}
+<div class="row"><span><b>Entrega:</b> ${p.tipoEntrega === 'delivery' ? 'Delivery' : p.tipoEntrega === 'retiro' ? 'Retiro en local' : 'Consumo en local'}</span></div>
+${p.direccion ? `<div class="row"><span><b>Dir:</b> ${p.direccion}</span></div>` : ''}
+<div class="sep"></div>
+<table>
+${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
+</table>
+<div class="sep"></div>
+${p.costoEnvio ? `<div class="row"><span>Subtotal:</span><span>${f(p.total - (p.costoEnvio ?? 0))}</span></div><div class="row"><span>Envío:</span><span>${f(p.costoEnvio)}</span></div>` : ''}
+<div class="row big"><span>TOTAL:</span><span>${f(p.total)}</span></div>
+<div class="row"><span>Pago:</span><span>${metodoPagoLabel[p.metodoPago ?? 'sin_especificar'] ?? 'Desconocido'}</span></div>
+${p.observaciones ? `<div class="sep"></div><div class="nota bold upper">NOTAS: ${p.observaciones}</div>` : ''}
+<div class="sep"></div>
+<div class="center" style="margin-top:4px;font-size:10px">¡Gracias por su compra! · Sistema Chefsy</div>
+</body></html>`
+
+    // ── Comanda para Cocina ───────────────────────────────────────────────────
+    const htmlCocina = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:monospace;font-size:14px;width:80mm;padding:8px}
+  h1{font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:2px}
+  .sub{text-align:center;font-size:11px;margin-bottom:4px}
+  .sep{border-top:2px dashed #000;margin:8px 0}
+  .prod{display:flex;align-items:baseline;gap:6px;margin:6px 0;font-size:15px;font-weight:bold}
+  .cant{font-size:22px;min-width:28px;text-align:right;line-height:1}
+  .pname{flex:1}
+  .nota{font-size:12px;font-weight:bold;text-transform:uppercase;background:#eee;padding:4px 6px;border-radius:3px;margin-top:8px}
+  .tipo{font-size:13px;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:1px;border:2px solid #000;padding:3px;margin-top:4px}
+  @media print{@page{margin:0}body{padding:4px}}
+</style></head><body>
+<h1>COCINA</h1>
+<div class="sub">Pedido #${p.id.slice(0,6).toUpperCase()} &nbsp;·&nbsp; ${p.hora}</div>
+<div class="sub"><b>${p.cliente}</b></div>
+<div class="sep"></div>
+${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><span class="pname">${prod.nombre}</span></div>`).join('')}
+${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observaciones}</div>` : ''}
+<div class="sep"></div>
+<div class="tipo">${p.tipoEntrega === 'delivery' ? '🛵 DELIVERY' : p.tipoEntrega === 'retiro' ? '🏠 RETIRO EN LOCAL' : '🍽 CONSUMO EN LOCAL'}</div>
+</body></html>`
+
+    const html = tipo === 'ticket' ? htmlTicket : htmlCocina
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0;pointer-events:none'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+    doc.open(); doc.write(html); doc.close()
+    iframe.contentWindow?.focus()
+    setTimeout(() => {
+      iframe.contentWindow?.print()
+      setTimeout(() => document.body.removeChild(iframe), 2000)
+    }, 300)
+    setModalImpresion(false)
   }
 
   return (
@@ -301,9 +387,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} className="dark:text-[#a8a8a8]" />}
             </button>
             <button 
-              onClick={imprimirComanda}
+              onClick={() => setModalImpresion(true)}
               className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
-              title="Imprimir Comanda"
+              title="Imprimir Ticket / Comanda"
             >
               <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
@@ -619,6 +705,74 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       )}
 
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
+
+      {/* Modal de Selección de Impresión */}
+      {modalImpresion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setModalImpresion(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-[#3d3d3d] rounded-2xl shadow-2xl w-80 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-[#3d3d3d]">
+              <div className="flex items-center gap-2">
+                <Printer size={16} className="text-slate-500" />
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">¿Qué querés imprimir?</h3>
+              </div>
+              <button
+                onClick={() => setModalImpresion(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#2f2f2f] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Opciones */}
+            <div className="p-4 space-y-3">
+              {/* Ticket Cliente */}
+              <button
+                onClick={() => imprimirSilencioso('ticket')}
+                className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-chefsy-200 dark:border-chefsy-800/60 hover:border-chefsy hover:bg-chefsy-50/40 dark:hover:bg-chefsy-900/20 transition-all text-left group"
+              >
+                <span className="text-2xl">🧾</span>
+                <div>
+                  <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-chefsy-700 dark:group-hover:text-chefsy-300 transition-colors">
+                    Ticket para el Cliente
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Con precios, total, método de pago y datos del cliente
+                  </p>
+                </div>
+              </button>
+
+              {/* Comanda Cocina */}
+              <button
+                onClick={() => imprimirSilencioso('cocina')}
+                className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800/60 hover:border-orange-500 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 transition-all text-left group"
+              >
+                <span className="text-2xl">🍳</span>
+                <div>
+                  <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
+                    Comanda para Cocina
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Solo productos, cantidades y notas — sin precios
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="px-4 pb-4">
+              <p className="text-[10px] text-slate-400 text-center">
+                Se imprimirá directamente en tu impresora predeterminada
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 })
