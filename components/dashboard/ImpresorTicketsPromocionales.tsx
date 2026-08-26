@@ -25,6 +25,28 @@ interface PlantillaPromo {
   letraChica: string
 }
 
+interface ConfigTicketPromo {
+  titulo: string
+  mensaje: string
+  incluirQr: boolean
+  qrUrl: string
+  qrTexto: string
+  letraChica: string
+  anchoPapel: '80mm' | '58mm'
+  copias: number
+}
+
+const CONFIG_POR_DEFECTO: ConfigTicketPromo = {
+  titulo: '¡REGALO EXCLUSIVO!',
+  mensaje: 'Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
+  incluirQr: true,
+  qrUrl: 'https://chefsy.xyz/',
+  qrTexto: 'Pedí online en chefsy.xyz',
+  letraChica: 'Válido para consumo en el local o delivery. Vence en 30 días.',
+  anchoPapel: '80mm',
+  copias: 1
+}
+
 const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'descuento',
@@ -33,8 +55,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     titulo: '¡REGALO EXCLUSIVO!',
     mensaje: 'Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
     incluirQr: true,
-    qrUrl: 'https://chefsy.app',
-    qrTexto: 'Escaneá para pedir online',
+    qrUrl: 'https://chefsy.xyz/',
+    qrTexto: 'Pedí online en chefsy.xyz',
     letraChica: 'Válido para consumo en el local o delivery. Vence en 30 días.'
   },
   {
@@ -44,8 +66,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     titulo: 'SEGUINOS EN INSTAGRAM',
     mensaje: 'Subí una foto de tu pedido, etiquetanos en tus historias y participá por cenas gratis cada semana.',
     incluirQr: true,
-    qrUrl: 'https://instagram.com',
-    qrTexto: '@tu_local · Escaneá para seguirnos',
+    qrUrl: 'https://instagram.com/chefsy_fastfood_',
+    qrTexto: '@chefsy_fastfood_ · Seguinos en Instagram',
     letraChica: 'Sorteos todos los fines de mes.'
   },
   {
@@ -55,8 +77,8 @@ const PLANTILLAS: PlantillaPromo[] = [
     titulo: '¿TE GUSTÓ NUESTRA COMIDA?',
     mensaje: 'Dejanos una reseña de 5 estrellas en Google Maps y presentá este cupón para canjear una porción de papas gratis.',
     incluirQr: true,
-    qrUrl: 'https://maps.google.com',
-    qrTexto: 'Escaneá para opinar en Google',
+    qrUrl: 'https://maps.app.goo.gl/By5qrWayRiW2qQu26',
+    qrTexto: 'Escaneá para opinar en Google Maps',
     letraChica: 'Mostrá la reseña al mozo o por WhatsApp para validar.'
   },
   {
@@ -144,15 +166,54 @@ const PlantillasGrid = memo(function PlantillasGrid({ onSelect }: { onSelect: (p
 
 // ── Modal Aislado y Optimizado ──
 function ModalPromociones({ onClose }: { onClose: () => void }) {
-  const [titulo, setTitulo] = useState('¡REGALO EXCLUSIVO!')
-  const [mensaje, setMensaje] = useState('Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.')
-  const [incluirQr, setIncluirQr] = useState(true)
-  const [qrUrl, setQrUrl] = useState('https://chefsy.app')
-  const [qrTexto, setQrTexto] = useState('Escaneá para pedir online')
-  const [letraChica, setLetraChica] = useState('Válido para consumo en el local o delivery. Vence en 30 días.')
-  const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>('80mm')
-  const [copias, setCopias] = useState<number>(1)
+  const [titulo, setTitulo] = useState(CONFIG_POR_DEFECTO.titulo)
+  const [mensaje, setMensaje] = useState(CONFIG_POR_DEFECTO.mensaje)
+  const [incluirQr, setIncluirQr] = useState(CONFIG_POR_DEFECTO.incluirQr)
+  const [qrUrl, setQrUrl] = useState(CONFIG_POR_DEFECTO.qrUrl)
+  const [qrTexto, setQrTexto] = useState(CONFIG_POR_DEFECTO.qrTexto)
+  const [letraChica, setLetraChica] = useState(CONFIG_POR_DEFECTO.letraChica)
+  const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>(CONFIG_POR_DEFECTO.anchoPapel)
+  const [copias, setCopias] = useState<number>(CONFIG_POR_DEFECTO.copias)
   const [imprimiendo, setImprimiendo] = useState(false)
+
+  // Cargar configuración guardada al montar
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem('chefsy_promo_ticket_config')
+      if (guardado) {
+        const parsed = JSON.parse(guardado)
+        if (parsed.titulo !== undefined) setTitulo(parsed.titulo)
+        if (parsed.mensaje !== undefined) setMensaje(parsed.mensaje)
+        if (parsed.incluirQr !== undefined) setIncluirQr(parsed.incluirQr)
+        if (parsed.qrUrl !== undefined) setQrUrl(parsed.qrUrl)
+        if (parsed.qrTexto !== undefined) setQrTexto(parsed.qrTexto)
+        if (parsed.letraChica !== undefined) setLetraChica(parsed.letraChica)
+        if (parsed.anchoPapel !== undefined) setAnchoPapel(parsed.anchoPapel)
+        if (parsed.copias !== undefined) setCopias(parsed.copias)
+      }
+    } catch {
+      // silencioso
+    }
+  }, [])
+
+  // Guardar automáticamente en localStorage cuando cambia
+  useEffect(() => {
+    try {
+      const config: ConfigTicketPromo = {
+        titulo,
+        mensaje,
+        incluirQr,
+        qrUrl,
+        qrTexto,
+        letraChica,
+        anchoPapel,
+        copias
+      }
+      localStorage.setItem('chefsy_promo_ticket_config', JSON.stringify(config))
+    } catch {
+      // silencioso
+    }
+  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, letraChica, anchoPapel, copias])
 
   // Debounce simple para el QR URL
   const [qrUrlDebounced, setQrUrlDebounced] = useState(qrUrl)
@@ -441,7 +502,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                       type="text"
                       value={qrUrl}
                       onChange={(e) => setQrUrl(e.target.value)}
-                      placeholder="https://instagram.com/tu_local"
+                      placeholder="https://instagram.com/chefsy_fastfood_"
                       className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 font-mono"
                     />
                   </div>
