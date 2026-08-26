@@ -11,7 +11,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { cadeteId, lat, lng, accuracy, heading, speed, gps_activo, batteryLevel } = body
+    const { cadeteId, lat, lng, accuracy, heading, speed, gps_activo, batteryLevel } = body || {}
+    const idNormalizado = String(cadeteId || '').trim().toLowerCase()
+    if (!idNormalizado) {
+      return NextResponse.json({ error: 'cadeteId inválido' }, { status: 400 })
+    }
 
     const adminClient = obtenerSupabaseAdmin()
 
@@ -21,39 +25,60 @@ export async function POST(request: Request) {
         .from('cadetes')
         .update({
           gps_activo: false,
-          ...(batteryLevel !== undefined && { bateria: batteryLevel }),
+          ...(batteryLevel !== undefined && batteryLevel !== null ? { bateria: batteryLevel } : {}),
           updated_at: new Date().toISOString()
         })
-        .ilike('id', cadeteId)
+        .or(`id.ilike.${idNormalizado},username.ilike.${idNormalizado}`)
 
       return NextResponse.json({ success: true })
     }
 
-    if (!cadeteId || lat === undefined || lng === undefined) {
-      return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+    if (lat === undefined || lng === undefined) {
+      return NextResponse.json({ error: 'Coordenadas incompletas' }, { status: 400 })
     }
 
-    // Actualizar coordenadas y marcar GPS como activo
-    await adminClient
+    // 1. Verificar si ya existe en tabla cadetes
+    const { data: cadeteExistente } = await adminClient
       .from('cadetes')
-      .update({
-        lat,
-        lng,
-        accuracy: accuracy || null,
-        heading: heading || null,
-        speed: speed || null,
-        gps_activo: true,
-        ...(batteryLevel !== undefined && { bateria: batteryLevel }),
-        updated_at: new Date().toISOString()
-      })
-      .or(`id.ilike.${cadeteId},username.ilike.${cadeteId}`)
+      .select('id')
+      .or(`id.ilike.${idNormalizado},username.ilike.${idNormalizado}`)
+      .maybeSingle()
 
-    // Actualizar coordenadas en los pedidos activos del cadete
-    const coords = { latitud: lat, longitud: lng }
+    const camposActualizar: any = {
+      lat: Number(lat),
+      lng: Number(lng),
+      accuracy: accuracy !== undefined && accuracy !== null ? Number(accuracy) : null,
+      heading: heading !== undefined && heading !== null ? Number(heading) : null,
+      speed: speed !== undefined && speed !== null ? Number(speed) : null,
+      gps_activo: true,
+      updated_at: new Date().toISOString()
+    }
+
+    if (batteryLevel !== undefined && batteryLevel !== null) {
+      camposActualizar.bateria = Math.round(Number(batteryLevel))
+    }
+
+    if (cadeteExistente) {
+      await adminClient
+        .from('cadetes')
+        .update(camposActualizar)
+        .eq('id', cadeteExistente.id)
+    } else {
+      await adminClient
+        .from('cadetes')
+        .insert({
+          id: idNormalizado,
+          username: idNormalizado,
+          ...camposActualizar
+        })
+    }
+
+    // 2. Actualizar coordenadas en los pedidos activos del cadete
+    const coords = { latitud: Number(lat), longitud: Number(lng) }
     await adminClient
       .from('pedidos')
       .update({ cadete_coordenadas: coords })
-      .ilike('cadete_id', cadeteId)
+      .ilike('cadete_id', idNormalizado)
       .in('estado', ['en_cocina', 'listo', 'en_camino'])
       .eq('archivado', false)
 

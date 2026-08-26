@@ -42,22 +42,33 @@ export async function GET() {
 
     if (pedidosError) throw pedidosError
 
-    // 4. Combinar datos
-    const torreData = cadetesData.map((cadete: any) => {
-      // Buscar nombre
-      const usuario = usuariosData.find((u: any) => u.usuario === cadete.id)
+    // 4. Combinar datos basados en todos los usuarios cadetes registrados
+    const torreData = (usuariosData || []).map((u: any) => {
+      // Buscar registro en cadetes por id o username (case-insensitive)
+      const cadete = (cadetesData || []).find((c: any) => 
+        String(c.id || '').toLowerCase() === String(u.usuario || '').toLowerCase() ||
+        String(c.username || '').toLowerCase() === String(u.usuario || '').toLowerCase()
+      )
       
       // Buscar pedido activo
-      const pedidoActivo = pedidosData.find((p: any) => p.cadete_id === cadete.id)
+      const pedidoActivo = (pedidosData || []).find((p: any) => 
+        String(p.cadete_id || '').toLowerCase() === String(u.usuario || '').toLowerCase()
+      )
+
+      const updatedAt = cadete?.updated_at ? new Date(cadete.updated_at).getTime() : 0
+      const haceSegundos = updatedAt ? (Date.now() - updatedAt) / 1000 : 999999
+      // Online si reportó en los últimos 3 minutos y gps_activo es true
+      const gpsActivo = Boolean(cadete?.gps_activo && haceSegundos < 180 && cadete?.lat != null)
 
       return {
-        id: cadete.id,
-        nombre: usuario?.nombre || 'Cadete Desconocido',
-        lat: cadete.lat,
-        lng: cadete.lng,
-        gps_activo: cadete.gps_activo,
-        bateria: cadete.bateria,
-        updated_at: cadete.updated_at,
+        id: u.usuario,
+        nombre: u.nombre || u.usuario,
+        lat: cadete?.lat ?? null,
+        lng: cadete?.lng ?? null,
+        gps_activo: gpsActivo,
+        bateria: cadete?.bateria ?? null,
+        updated_at: cadete?.updated_at ?? null,
+        segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
         pedidoActivo: pedidoActivo ? {
           id: pedidoActivo.id,
           cliente: pedidoActivo.cliente,
@@ -66,12 +77,14 @@ export async function GET() {
       }
     })
 
-    // Ordenar por última actualización (los más recientes primero)
+    // Ordenar: primero los que tienen GPS activo, luego por última actualización
     torreData.sort((a: any, b: any) => {
-      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-      return dateB - dateA;
-    });
+      if (a.gps_activo && !b.gps_activo) return -1
+      if (!a.gps_activo && b.gps_activo) return 1
+      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0
+      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0
+      return dateB - dateA
+    })
 
     return NextResponse.json(torreData)
   } catch (error) {
