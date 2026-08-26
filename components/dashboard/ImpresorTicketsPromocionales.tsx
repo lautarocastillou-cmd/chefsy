@@ -298,63 +298,65 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
       <title>Ticket Promocional</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
+        @page { margin: 0 !important; size: auto; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 2px !important;
           font-family: monospace;
           font-size: ${anchoPapel === '58mm' ? '12px' : '14px'};
           width: ${anchoPapel};
-          padding: 6px;
           color: #000;
           background: #fff;
         }
-        .ticket-wrapper { padding: 4px 0; }
-        .header { text-align: center; margin-bottom: 6px; }
+        .ticket-wrapper { padding: 0; margin: 0; }
+        .header { text-align: center; margin: 0 0 4px 0; padding-top: 0; }
         .brand-logo {
           width: ${anchoPapel === '58mm' ? '120px' : '150px'};
           max-width: 80%;
           height: auto;
-          margin: 0 auto 3px auto;
+          margin: 0 auto 2px auto;
           display: block;
           filter: grayscale(100%) contrast(150%);
         }
-        .fecha { font-size: 9px; color: #333; margin-top: 2px; }
-        .sep { border-top: 1.5px dashed #000; margin: 6px 0; }
+        .fecha { font-size: 9px; color: #333; margin-top: 1px; }
+        .sep { border-top: 1.5px dashed #000; margin: 4px 0; }
         .titulo-promo {
           font-size: ${anchoPapel === '58mm' ? '15px' : '17px'};
           font-weight: 900;
           text-align: center;
-          margin: 6px 0 4px 0;
+          margin: 4px 0 3px 0;
           line-height: 1.2;
         }
         .mensaje {
           font-size: ${anchoPapel === '58mm' ? '12px' : '13px'};
           text-align: center;
-          margin: 6px 0;
+          margin: 4px 0;
           line-height: 1.35;
           font-weight: 600;
         }
-        .qr-section { text-align: center; margin: 8px 0 4px 0; }
+        .qr-section { text-align: center; margin: 6px 0 3px 0; }
         .qr-img {
           width: ${anchoPapel === '58mm' ? '110px' : '140px'};
           height: ${anchoPapel === '58mm' ? '110px' : '140px'};
           margin: 0 auto;
           display: block;
         }
-        .qr-caption { font-size: 9.5px; font-weight: bold; margin-top: 4px; text-align: center; }
-        .letra-chica { font-size: 9px; text-align: center; color: #333; line-height: 1.25; }
-        .footer { font-size: 9.5px; font-weight: bold; text-align: center; margin-top: 4px; }
+        .qr-caption { font-size: 9.5px; font-weight: bold; margin-top: 3px; text-align: center; }
+        .letra-chica { font-size: 9px; text-align: center; color: #333; line-height: 1.25; margin-top: 3px; }
+        .footer { font-size: 9.5px; font-weight: bold; text-align: center; margin-top: 3px; }
         .ticket-divider {
           text-align: center;
           font-size: 8px;
           font-weight: bold;
-          margin: 16px 0;
+          margin: 12px 0;
           border-top: 1px dotted #888;
           border-bottom: 1px dotted #888;
           padding: 4px 0;
         }
-        .cut-space { height: 12px; }
+        .cut-space { height: 10px; }
         @media print {
-          @page { margin: 0; }
-          body { padding: 4px; }
+          @page { margin: 0 !important; size: auto; }
+          html, body { margin: 0 !important; padding: 0 2px !important; }
         }
       </style>
     </head>

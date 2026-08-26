@@ -37,21 +37,21 @@ export default function TicketImpresion() {
   }[pedido.metodoPago || 'sin_especificar'] || 'Desconocido'
 
   return (
-    <div className="w-full max-w-[300px] mx-auto text-black font-mono text-sm p-4 print:p-0 print:m-0 print:max-w-none">
+    <div className="w-full max-w-[300px] mx-auto text-black font-mono text-sm p-2 print:p-0 print:m-0 print:max-w-none">
       <style dangerouslySetInnerHTML={{__html: `
+        @page { margin: 0 !important; size: auto; }
         @media print {
-          @page { margin: 0; }
-          body { padding: 0.5cm; width: 80mm; }
-          nav, header, footer { display: none; }
+          html, body { margin: 0 !important; padding: 0 2px !important; width: 80mm; }
+          nav, header, footer { display: none !important; }
         }
       `}} />
       
       {/* Encabezado */}
-      <div className="text-center border-b border-black border-dashed pb-3 mb-3">
-        <h1 className="text-xl font-bold uppercase tracking-wider mb-1">CHEFSY</h1>
+      <div className="text-center border-b border-black border-dashed pb-2 mb-2 pt-0">
+        <h1 className="text-xl font-bold uppercase tracking-wider mb-0.5 mt-0 pt-0">CHEFSY</h1>
         <p className="text-xs">Ticket de Pedido</p>
         <p className="text-xs">{pedido.fecha} {pedido.hora}</p>
-        <p className="text-sm font-bold mt-2">Pedido #{pedido.id.slice(0,5)}</p>
+        <p className="text-sm font-bold mt-1">Pedido #{pedido.id.slice(0,5)}</p>
       </div>
 
       {/* Info Cliente */}
