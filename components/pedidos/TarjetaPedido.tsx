@@ -303,7 +303,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold upper">NOTAS: 
   @media print{@page{margin:0}body{padding:4px}}
 </style></head><body>
 <h1>COCINA</h1>
-<div class="sub">Pedido #${p.id.slice(0,6).toUpperCase()} &nbsp;·&nbsp; ${p.hora}</div>
+<div class="sub">${p.hora}</div>
 <div class="sub"><b>${p.cliente}</b></div>
 <div class="sep"></div>
 ${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><span class="pname">${prod.nombre}</span></div>`).join('')}
