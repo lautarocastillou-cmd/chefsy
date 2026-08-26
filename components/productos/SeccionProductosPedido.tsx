@@ -38,6 +38,7 @@ export default function SeccionProductosPedido({
   const [mostrarBuscador, setMostrarBuscador] = useState(false)
   const [busqueda, setBusqueda] = useState('')
   const inputBuscadorRef = useRef<HTMLInputElement>(null)
+  const listaContainerRef = useRef<HTMLDivElement>(null)
 
   // Autofoco al abrir el buscador
   useEffect(() => {
@@ -135,8 +136,33 @@ export default function SeccionProductosPedido({
     setIndiceSeleccionado(0)
   }, [busqueda, mostrarBuscador])
 
+  // Desplazar automáticamente el elemento seleccionado a la vista
+  useEffect(() => {
+    if (listaContainerRef.current) {
+      const activeEl = listaContainerRef.current.children[indiceSeleccionado] as HTMLElement
+      if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+        activeEl.scrollIntoView({ block: 'nearest' })
+      }
+    }
+  }, [indiceSeleccionado])
+
   const manejarKeyDownBuscador = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      if (listaParaMostrar.length === 0) return
+
+      if (e.shiftKey) {
+        // Shift + Tab: retrocede en la lista
+        setIndiceSeleccionado((prev) =>
+          prev > 0 ? prev - 1 : listaParaMostrar.length - 1
+        )
+      } else {
+        // Tab: avanza al siguiente elemento de la lista
+        setIndiceSeleccionado((prev) =>
+          prev < listaParaMostrar.length - 1 ? prev + 1 : 0
+        )
+      }
+    } else if (e.key === 'ArrowDown') {
       e.preventDefault()
       setIndiceSeleccionado((prev) =>
         prev < listaParaMostrar.length - 1 ? prev + 1 : 0
@@ -151,6 +177,10 @@ export default function SeccionProductosPedido({
       if (listaParaMostrar[indiceSeleccionado]) {
         agregarProductoRapido(listaParaMostrar[indiceSeleccionado])
       }
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setMostrarBuscador(false)
+      setBusqueda('')
     }
   }
 
@@ -234,7 +264,10 @@ export default function SeccionProductosPedido({
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-800/50">
+            <div
+              ref={listaContainerRef}
+              className="max-h-72 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-800/50"
+            >
               {busqueda.trim() !== '' && productosFiltrados.length === 0 ? (
                 <div className="p-5 text-center text-xs text-gray-400">
                   No se encontraron productos con "{busqueda}".
@@ -247,6 +280,7 @@ export default function SeccionProductosPedido({
                     <button
                       key={prod.id}
                       type="button"
+                      tabIndex={-1}
                       onClick={() => agregarProductoRapido(prod)}
                       onMouseEnter={() => setIndiceSeleccionado(idx)}
                       className={`w-full text-left px-4 py-2.5 flex items-center justify-between group transition-colors cursor-pointer focus:outline-none ${
