@@ -149,6 +149,7 @@ export default function SeccionProductosPedido({
   const manejarKeyDownBuscador = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault()
+      e.stopPropagation()
       if (listaParaMostrar.length === 0) return
 
       if (e.shiftKey) {
@@ -164,21 +165,25 @@ export default function SeccionProductosPedido({
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
+      e.stopPropagation()
       setIndiceSeleccionado((prev) =>
         prev < listaParaMostrar.length - 1 ? prev + 1 : 0
       )
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
+      e.stopPropagation()
       setIndiceSeleccionado((prev) =>
         prev > 0 ? prev - 1 : listaParaMostrar.length - 1
       )
     } else if (e.key === 'Enter') {
       e.preventDefault()
+      e.stopPropagation()
       if (listaParaMostrar[indiceSeleccionado]) {
         agregarProductoRapido(listaParaMostrar[indiceSeleccionado])
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
+      e.stopPropagation()
       setMostrarBuscador(false)
       setBusqueda('')
     }
@@ -218,7 +223,7 @@ export default function SeccionProductosPedido({
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors shadow-2xs cursor-pointer"
             title="Buscar producto rápidamente (Ctrl + K)"
           >
-            <Search size={13} className="text-chefsy" />
+            <Search size={13} className="text-emerald-600" />
             <span>Buscador</span>
             <kbd className="text-[10px] font-black bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded">
               Ctrl + K
@@ -230,7 +235,7 @@ export default function SeccionProductosPedido({
         {mostrarBuscador && (
           <div className="absolute top-8 right-0 w-full sm:w-96 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[60] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="p-2.5 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2 bg-slate-50/50 dark:bg-slate-800/40">
-              <Search size={16} className="text-chefsy ml-1 shrink-0" />
+              <Search size={16} className="text-emerald-600 ml-1 shrink-0" />
               <input
                 ref={inputBuscadorRef}
                 type="text"
@@ -282,15 +287,17 @@ export default function SeccionProductosPedido({
                       type="button"
                       tabIndex={-1}
                       onClick={() => agregarProductoRapido(prod)}
-                      onMouseEnter={() => setIndiceSeleccionado(idx)}
-                      className={`w-full text-left px-4 py-2.5 flex items-center justify-between group transition-colors cursor-pointer focus:outline-none ${
+                      onMouseMove={() => {
+                        if (indiceSeleccionado !== idx) setIndiceSeleccionado(idx)
+                      }}
+                      className={`w-full text-left px-4 py-2.5 flex items-center justify-between group transition-all cursor-pointer focus:outline-none ${
                         esActivo
-                          ? 'bg-chefsy-50 dark:bg-slate-800 ring-1 ring-inset ring-chefsy/30'
-                          : 'hover:bg-chefsy-50/50 dark:hover:bg-slate-800'
+                          ? 'bg-emerald-50/90 dark:bg-emerald-950/50 border-l-4 border-emerald-600 dark:border-emerald-400 pl-3 shadow-xs'
+                          : 'border-l-4 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <div className={`text-sm font-bold truncate ${esActivo ? 'text-chefsy' : 'text-slate-800 dark:text-slate-200 group-hover:text-chefsy'}`}>
+                        <div className={`text-sm font-bold truncate ${esActivo ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}`}>
                           {prod.nombre}
                         </div>
                         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -298,10 +305,10 @@ export default function SeccionProductosPedido({
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">
+                        <span className={`text-xs font-black ${esActivo ? 'text-emerald-700 dark:text-emerald-300 font-extrabold' : 'text-slate-700 dark:text-slate-300'}`}>
                           {formatearPrecio(prod.precio)}
                         </span>
-                        <span className={`p-1 rounded-lg transition-colors ${esActivo ? 'bg-chefsy text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 group-hover:bg-chefsy group-hover:text-white'}`}>
+                        <span className={`p-1 rounded-lg transition-all ${esActivo ? 'bg-emerald-600 text-white shadow-sm scale-110' : 'bg-gray-100 dark:bg-slate-800 text-gray-400'}`}>
                           <Plus size={13} />
                         </span>
                       </div>
