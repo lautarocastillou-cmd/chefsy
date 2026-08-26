@@ -291,15 +291,15 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold upper">NOTAS: 
     const htmlCocina = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:monospace;font-size:14px;width:80mm;padding:8px}
-  h1{font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:2px}
-  .sub{text-align:center;font-size:11px;margin-bottom:4px}
+  body{font-family:monospace;font-size:17px;width:80mm;padding:8px}
+  h1{font-size:26px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:2px}
+  .sub{text-align:center;font-size:14px;margin-bottom:4px}
   .sep{border-top:2px dashed #000;margin:8px 0}
-  .prod{display:flex;align-items:baseline;gap:6px;margin:6px 0;font-size:15px;font-weight:bold}
-  .cant{font-size:22px;min-width:28px;text-align:right;line-height:1}
+  .prod{display:flex;align-items:baseline;gap:6px;margin:7px 0;font-size:18px;font-weight:bold}
+  .cant{font-size:26px;min-width:32px;text-align:right;line-height:1}
   .pname{flex:1}
-  .nota{font-size:12px;font-weight:bold;text-transform:uppercase;background:#eee;padding:4px 6px;border-radius:3px;margin-top:8px}
-  .tipo{font-size:13px;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:1px;border:2px solid #000;padding:3px;margin-top:4px}
+  .nota{font-size:15px;font-weight:bold;text-transform:uppercase;background:#eee;padding:5px 7px;border-radius:3px;margin-top:8px}
+  .tipo{font-size:16px;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:1px;border:2px solid #000;padding:4px;margin-top:4px}
   @media print{@page{margin:0}body{padding:4px}}
 </style></head><body>
 <h1>COCINA</h1>
