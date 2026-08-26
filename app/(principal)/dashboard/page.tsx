@@ -11,6 +11,7 @@ import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
 import GeneradorQrCadete from '@/components/dashboard/GeneradorQrCadete'
+import ImpresorTicketsPromocionales from '@/components/dashboard/ImpresorTicketsPromocionales'
 import Link from 'next/link'
 import { 
   Clock, 
@@ -125,7 +126,8 @@ export default function PaginaDashboard() {
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 flex flex-wrap items-center gap-3">
+            <ImpresorTicketsPromocionales botonVariante="banner" />
             <button
               onClick={handleAbrirNuevoPedido}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black px-6 py-3.5 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-98 cursor-pointer border border-emerald-400/30"
@@ -275,8 +277,9 @@ export default function PaginaDashboard() {
             </Link>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-3">
             <GeneradorQrCadete />
+            <ImpresorTicketsPromocionales botonVariante="sidebar" />
           </div>
         </section>
       </div>

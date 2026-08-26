@@ -1,0 +1,719 @@
+﻿'use client'
+
+import React, { useState } from 'react'
+import { QRCodeCanvas } from 'qrcode.react'
+import { 
+  Printer, 
+  Sparkles, 
+  X, 
+  QrCode, 
+  Tag, 
+  Instagram, 
+  Star, 
+  Wifi, 
+  MessageSquare, 
+  Copy, 
+  Check, 
+  FileText,
+  Sliders,
+  ChevronRight,
+  Flame,
+  Gift
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+import { cn } from '@/lib/utils'
+
+interface PlantillaPromo {
+  id: string
+  nombre: string
+  icono: string
+  titulo: string
+  mensaje: string
+  codigoCupon: string
+  incluirQr: boolean
+  qrUrl: string
+  qrTexto: string
+  letraChica: string
+}
+
+const PLANTILLAS: PlantillaPromo[] = [
+  {
+    id: 'descuento',
+    nombre: '15% OFF Próxima Compra',
+    icono: '🎁',
+    titulo: '¡REGALO EXCLUSIVO!',
+    mensaje: 'Mostrá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
+    codigoCupon: 'CHEFSY15',
+    incluirQr: true,
+    qrUrl: 'https://chefsy.app',
+    qrTexto: 'Escaneá para pedir online',
+    letraChica: 'Válido para consumo en el local o delivery. Vence en 30 días.'
+  },
+  {
+    id: 'instagram',
+    nombre: 'Seguinos en Instagram',
+    icono: '📸',
+    titulo: 'SEGUINOS EN INSTAGRAM',
+    mensaje: 'Subí una foto de tu pedido, etiquetanos en tus historias y participá por cenas gratis cada semana.',
+    codigoCupon: '',
+    incluirQr: true,
+    qrUrl: 'https://instagram.com',
+    qrTexto: '@tu_local · Escaneá para seguirnos',
+    letraChica: 'Sorteos todos los fines de mes.'
+  },
+  {
+    id: 'resena',
+    nombre: 'Reseña Google Maps',
+    icono: '⭐',
+    titulo: '¿TE GUSTÓ NUESTRA COMIDA?',
+    mensaje: 'Dejanos una reseña de 5 estrellas en Google Maps y te regalamos una porción de papas en tu próxima visita.',
+    codigoCupon: 'PAPAS-GRATIS',
+    incluirQr: true,
+    qrUrl: 'https://maps.google.com',
+    qrTexto: 'Escaneá para opinar en Google',
+    letraChica: 'Mostrá la reseña al mozo o por WhatsApp para validar.'
+  },
+  {
+    id: 'whatsapp',
+    nombre: 'WhatsApp Directo',
+    icono: '💬',
+    titulo: 'PEDÍ MÁS RÁPIDO',
+    mensaje: 'Agendá nuestro contacto para acceder a promociones relámpago y menú diario exclusivo.',
+    codigoCupon: '',
+    incluirQr: true,
+    qrUrl: 'https://wa.me',
+    qrTexto: 'Escaneá para chatear directo',
+    letraChica: 'Atención personalizada todos los días.'
+  },
+  {
+    id: 'wifi',
+    nombre: 'Clave WiFi Clientes',
+    icono: '📶',
+    titulo: 'WIFI PARA CLIENTES',
+    mensaje: 'Red: Chefsy_Clientes\nContraseña: Bienvenidos123',
+    codigoCupon: '',
+    incluirQr: false,
+    qrUrl: '',
+    qrTexto: '',
+    letraChica: 'Conexión de cortesía de alta velocidad.'
+  },
+  {
+    id: 'personalizado',
+    nombre: 'Mensaje Libre / Promo Express',
+    icono: '✍️',
+    titulo: '¡PROMO DEL DÍA!',
+    mensaje: '2x1 en postres y bebidas hasta las 23:00 hs.',
+    codigoCupon: '2X1-EXPRESS',
+    incluirQr: false,
+    qrUrl: '',
+    qrTexto: '',
+    letraChica: 'Hasta agotar stock.'
+  }
+]
+
+interface Props {
+  botonVariante?: 'sidebar' | 'banner' | 'flotante'
+}
+
+export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar' }: Props) {
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [titulo, setTitulo] = useState('¡REGALO EXCLUSIVO!')
+  const [mensaje, setMensaje] = useState('Mostrá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.')
+  const [codigoCupon, setCodigoCupon] = useState('CHEFSY15')
+  const [incluirQr, setIncluirQr] = useState(true)
+  const [qrUrl, setQrUrl] = useState('https://chefsy.app')
+  const [qrTexto, setQrTexto] = useState('Escaneá para pedir online')
+  const [letraChica, setLetraChica] = useState('Válido para consumo en el local o delivery. Vence en 30 días.')
+  const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>('80mm')
+  const [copias, setCopias] = useState<number>(1)
+  const [imprimiendo, setImprimiendo] = useState(false)
+
+  const aplicarPlantilla = (p: PlantillaPromo) => {
+    setTitulo(p.titulo)
+    setMensaje(p.mensaje)
+    setCodigoCupon(p.codigoCupon)
+    setIncluirQr(p.incluirQr)
+    setQrUrl(p.qrUrl)
+    setQrTexto(p.qrTexto)
+    setLetraChica(p.letraChica)
+    toast.success(`Plantilla "${p.nombre}" cargada`)
+  }
+
+  const imprimirTicketPromocional = () => {
+    setImprimiendo(true)
+
+    // Obtener imagen PNG del canvas QR si está activado
+    let qrDataUrl = ''
+    if (incluirQr && qrUrl.trim()) {
+      const canvas = document.getElementById('qr-promo-canvas') as HTMLCanvasElement
+      if (canvas) {
+        qrDataUrl = canvas.toDataURL('image/png')
+      }
+    }
+
+    const fechaHora = new Date().toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }) + ' ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+
+    const ticketSingleHtml = `
+      <div class="ticket-wrapper">
+        <div class="header">
+          <div class="brand">CHEFSY</div>
+          <div class="sub-brand">PROMO & BENEFICIOS</div>
+          <div class="fecha">${fechaHora}</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="titulo-promo">${titulo.toUpperCase()}</div>
+
+        <div class="mensaje">${mensaje.replace(/\n/g, '<br/>')}</div>
+
+        ${codigoCupon.trim() ? `
+          <div class="cupon-box">
+            <div class="cupon-label">CÓDIGO DE CUPÓN:</div>
+            <div class="cupon-code">${codigoCupon.toUpperCase()}</div>
+          </div>
+        ` : ''}
+
+        ${incluirQr && qrDataUrl ? `
+          <div class="qr-section">
+            <img src="${qrDataUrl}" class="qr-img" alt="QR" />
+            ${qrTexto ? `<div class="qr-caption">${qrTexto}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${letraChica.trim() ? `
+          <div class="sep"></div>
+          <div class="letra-chica">${letraChica}</div>
+        ` : ''}
+
+        <div class="sep"></div>
+        <div class="footer">¡Gracias por ser parte de nuestra comunidad!</div>
+        <div class="cut-space"></div>
+      </div>
+    `
+
+    // Multiplicar por cantidad de copias
+    let ticketsHtml = ''
+    for (let i = 0; i < copias; i++) {
+      ticketsHtml += ticketSingleHtml
+      if (i < copias - 1) {
+        ticketsHtml += '<div class="ticket-divider">✂ - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>'
+      }
+    }
+
+    const fullHtml = `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Ticket Promocional</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: monospace;
+          font-size: ${anchoPapel === '58mm' ? '11px' : '13px'};
+          width: ${anchoPapel};
+          padding: 6px;
+          color: #000;
+          background: #fff;
+        }
+        .ticket-wrapper {
+          padding: 4px 0;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 6px;
+        }
+        .brand {
+          font-size: ${anchoPapel === '58mm' ? '18px' : '22px'};
+          font-weight: 900;
+          letter-spacing: 2px;
+        }
+        .sub-brand {
+          font-size: 9px;
+          font-weight: bold;
+          letter-spacing: 1px;
+          margin-top: 1px;
+        }
+        .fecha {
+          font-size: 9px;
+          color: #333;
+          margin-top: 2px;
+        }
+        .sep {
+          border-top: 1.5px dashed #000;
+          margin: 6px 0;
+        }
+        .titulo-promo {
+          font-size: ${anchoPapel === '58mm' ? '14px' : '16px'};
+          font-weight: 900;
+          text-align: center;
+          margin: 6px 0 4px 0;
+          line-height: 1.2;
+        }
+        .mensaje {
+          font-size: ${anchoPapel === '58mm' ? '11px' : '12px'};
+          text-align: center;
+          margin: 6px 0;
+          line-height: 1.35;
+          font-weight: 600;
+        }
+        .cupon-box {
+          border: 2px solid #000;
+          border-radius: 4px;
+          padding: 6px 4px;
+          margin: 8px 0;
+          text-align: center;
+          background: #f9f9f9;
+        }
+        .cupon-label {
+          font-size: 9px;
+          font-weight: bold;
+          letter-spacing: 1px;
+        }
+        .cupon-code {
+          font-size: ${anchoPapel === '58mm' ? '16px' : '20px'};
+          font-weight: 900;
+          letter-spacing: 2px;
+          margin-top: 2px;
+        }
+        .qr-section {
+          text-align: center;
+          margin: 8px 0 4px 0;
+        }
+        .qr-img {
+          width: ${anchoPapel === '58mm' ? '110px' : '140px'};
+          height: ${anchoPapel === '58mm' ? '110px' : '140px'};
+          margin: 0 auto;
+          display: block;
+        }
+        .qr-caption {
+          font-size: 9px;
+          font-weight: bold;
+          margin-top: 4px;
+          text-align: center;
+        }
+        .letra-chica {
+          font-size: 8.5px;
+          text-align: center;
+          color: #333;
+          line-height: 1.25;
+        }
+        .footer {
+          font-size: 9px;
+          font-weight: bold;
+          text-align: center;
+          margin-top: 4px;
+        }
+        .ticket-divider {
+          text-align: center;
+          font-size: 8px;
+          font-weight: bold;
+          margin: 16px 0;
+          border-top: 1px dotted #888;
+          border-bottom: 1px dotted #888;
+          padding: 4px 0;
+        }
+        .cut-space {
+          height: 12px;
+        }
+        @media print {
+          @page { margin: 0; }
+          body { padding: 4px; }
+        }
+      </style>
+    </head>
+    <body>
+      ${ticketsHtml}
+    </body>
+    </html>`
+
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0;pointer-events:none'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) {
+      setImprimiendo(false)
+      return
+    }
+
+    doc.open()
+    doc.write(fullHtml)
+    doc.close()
+
+    iframe.contentWindow?.focus()
+    setTimeout(() => {
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe)
+        }
+        setImprimiendo(false)
+        toast.success(`Ticket impreso con éxito (${copias} copia${copias > 1 ? 's' : ''})`)
+      }, 1500)
+    }, 400)
+  }
+
+  return (
+    <>
+      {/* Canvas invisible o escondido para renderizar el QR si está activo */}
+      <div className="hidden">
+        {incluirQr && qrUrl && (
+          <QRCodeCanvas
+            id="qr-promo-canvas"
+            value={qrUrl}
+            size={300}
+            level="M"
+            marginSize={1}
+          />
+        )}
+      </div>
+
+      {/* Renderizado de botón según variante */}
+      {botonVariante === 'banner' && (
+        <button
+          onClick={() => setModalAbierto(true)}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold px-4 py-3.5 rounded-2xl text-xs sm:text-sm transition-all duration-200 backdrop-blur-md border border-emerald-400/30 hover:scale-[1.02] active:scale-98 cursor-pointer shadow-sm"
+        >
+          <Sparkles size={16} className="text-amber-300 animate-pulse" />
+          <span>Imprimir Promo / QR</span>
+        </button>
+      )}
+
+      {botonVariante === 'sidebar' && (
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl">
+              <Printer size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Promociones & QR</h3>
+              <p className="text-[11px] text-slate-400 font-medium">Impresión de cupones y mensajes</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+            Imprimí en tu comandera tickets con descuentos, tu Instagram, QR de reseñas de Google o WiFi para las mesas y pedidos.
+          </p>
+
+          <button
+            onClick={() => setModalAbierto(true)}
+            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-all shadow-sm shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+          >
+            <Sparkles size={14} className="text-amber-200" />
+            <span>Crear Ticket Promocional</span>
+          </button>
+        </div>
+      )}
+
+      {/* Modal Principal de Configuración y Live Preview */}
+      {modalAbierto && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in"
+          onClick={() => setModalAbierto(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-5 px-6 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <Printer size={22} />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <span>Impresora de Promociones & Cupones</span>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      Comandera Térmica
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">Diseñá e imprimí cupones, códigos QR y mensajes en segundos</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalAbierto(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Contenido dividido: Editor (Izquierda) + Live Preview (Derecha) */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] overflow-y-auto flex-1 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
+              
+              {/* Columna Izquierda: Configuración */}
+              <div className="p-6 space-y-5">
+                
+                {/* 1. Plantillas Rápidas */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-500" />
+                    <span>Plantillas Rápidas (1 Clic)</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PLANTILLAS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => aplicarPlantilla(p)}
+                        className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-all text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 group cursor-pointer"
+                      >
+                        <span className="text-base shrink-0 group-hover:scale-110 transition-transform">{p.icono}</span>
+                        <span className="truncate leading-tight text-[11px]">{p.nombre}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Textos del Ticket */}
+                <div className="space-y-3.5 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Título Destacado
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ej: ¡PROMO EXCLUSIVA!"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Mensaje / Descripción de la Promoción
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={mensaje}
+                      onChange={(e) => setMensaje(e.target.value)}
+                      placeholder="Ej: Mostrá este ticket en tu próximo pedido..."
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 resize-none font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                        Código de Cupón (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={codigoCupon}
+                        onChange={(e) => setCodigoCupon(e.target.value)}
+                        placeholder="Ej: CHEFSY15"
+                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 uppercase tracking-wider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                        Letra Chica / Condiciones
+                      </label>
+                      <input
+                        type="text"
+                        value={letraChica}
+                        onChange={(e) => setLetraChica(e.target.value)}
+                        placeholder="Ej: Válido hasta el 31/12"
+                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Configuración del Código QR */}
+                <div className="border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <QrCode size={18} className="text-emerald-500" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Código QR Escaneable
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={incluirQr}
+                        onChange={(e) => setIncluirQr(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+
+                  {incluirQr && (
+                    <div className="space-y-2.5 pt-1 animate-in fade-in duration-150">
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                          Enlace o Destino del QR
+                        </label>
+                        <input
+                          type="text"
+                          value={qrUrl}
+                          onChange={(e) => setQrUrl(e.target.value)}
+                          placeholder="https://instagram.com/tu_local"
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/30 font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                          Texto debajo del QR
+                        </label>
+                        <input
+                          type="text"
+                          value={qrTexto}
+                          onChange={(e) => setQrTexto(e.target.value)}
+                          placeholder="Escaneá con tu celular"
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Opciones de Impresión */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Ancho de Papel
+                    </label>
+                    <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setAnchoPapel('80mm')}
+                        className={cn(
+                          "py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer",
+                          anchoPapel === '80mm'
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:white shadow-xs"
+                            : "text-slate-500 hover:text-slate-700"
+                        )}
+                      >
+                        80 mm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAnchoPapel('58mm')}
+                        className={cn(
+                          "py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer",
+                          anchoPapel === '58mm'
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                            : "text-slate-500 hover:text-slate-700"
+                        )}
+                      >
+                        58 mm
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Cantidad de Copias
+                    </label>
+                    <select
+                      value={copias}
+                      onChange={(e) => setCopias(Number(e.target.value))}
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
+                    >
+                      <option value={1}>1 Copia</option>
+                      <option value={2}>2 Copias</option>
+                      <option value={3}>3 Copias</option>
+                      <option value={5}>5 Copias (Lote)</option>
+                      <option value={10}>10 Copias (Tirada grande)</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Columna Derecha: Live Preview del Ticket */}
+              <div className="p-6 bg-slate-100/70 dark:bg-slate-950/40 flex flex-col justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2.5 text-center">
+                    Vista Previa en Vivo (Comandera)
+                  </p>
+
+                  {/* Tarjeta simulada de ticket térmico */}
+                  <div className="bg-white text-black p-4 rounded-xl shadow-md border border-slate-200 font-mono text-center max-w-[260px] mx-auto text-xs select-none">
+                    <div className="font-black text-base tracking-widest">CHEFSY</div>
+                    <div className="text-[9px] font-bold text-slate-600">PROMO & BENEFICIOS</div>
+                    
+                    <div className="border-t border-dashed border-black my-2"></div>
+
+                    <div className="font-black text-xs uppercase leading-tight my-1">
+                      {titulo || 'TÍTULO DE LA PROMO'}
+                    </div>
+
+                    <div className="text-[10px] my-2 leading-tight whitespace-pre-line text-slate-800 font-medium">
+                      {mensaje || 'Escribí aquí el mensaje o descuento.'}
+                    </div>
+
+                    {codigoCupon && (
+                      <div className="border-2 border-black rounded p-1.5 my-2 bg-slate-50">
+                        <div className="text-[8px] font-bold">CÓDIGO:</div>
+                        <div className="font-black text-sm tracking-wider">{codigoCupon.toUpperCase()}</div>
+                      </div>
+                    )}
+
+                    {incluirQr && qrUrl && (
+                      <div className="my-2 flex flex-col items-center">
+                        <div className="p-1 bg-white border border-slate-300 rounded inline-block">
+                          <QRCodeCanvas
+                            value={qrUrl}
+                            size={100}
+                            level="M"
+                            marginSize={1}
+                          />
+                        </div>
+                        {qrTexto && (
+                          <div className="text-[8px] font-bold mt-1 text-slate-700">
+                            {qrTexto}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {letraChica && (
+                      <>
+                        <div className="border-t border-dashed border-black my-2"></div>
+                        <div className="text-[8px] text-slate-600 leading-tight">
+                          {letraChica}
+                        </div>
+                      </>
+                    )}
+
+                    <div className="border-t border-dashed border-black my-2"></div>
+                    <div className="text-[8px] font-bold">¡Gracias por ser parte!</div>
+                  </div>
+                </div>
+
+                {/* Botón de Impresión Directa */}
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={imprimirTicketPromocional}
+                    disabled={imprimiendo}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    <Printer size={16} />
+                    <span>{imprimiendo ? 'Imprimiendo...' : `Imprimir ${copias > 1 ? `(${copias} Copias)` : 'Ticket'}`}</span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center font-medium">
+                    Se enviará a la impresora térmica seleccionada
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
