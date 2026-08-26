@@ -19,6 +19,7 @@ import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
+import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
 
 export default function PaginaDashboard() {
   const { pedidos, cadetes, estadoTurno } = usarPedidos()
@@ -135,6 +136,9 @@ export default function PaginaDashboard() {
           </TarjetaMetrica>
         </div>
       </section>
+
+      {/* ── Rutas y Grupos Inteligentes (Smart Batching) ── */}
+      <BannerSugerenciasRuta />
 
       {/* ── Accesos y Pedidos Recientes ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-8">

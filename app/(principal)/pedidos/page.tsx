@@ -18,6 +18,7 @@ import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
+import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -258,6 +259,9 @@ export default function PaginaPedidos() {
           </div>
         </>
       )}
+
+      {/* ── Rutas y Grupos Inteligentes (Smart Batching) ── */}
+      {vista === 'activos' && <BannerSugerenciasRuta />}
 
       {/* ── Vista principal ── */}
       {vista === 'historial' && cargandoHistorial ? (

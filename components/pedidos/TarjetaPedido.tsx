@@ -18,6 +18,7 @@ import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
+import BadgeSmartBatch from './BadgeSmartBatch'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -339,6 +340,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
       {/* Tipo de entrega e info geográfica */}
       <InfoEntregaPedido pedido={pedido} />
+      {pedido.tipoEntrega === 'delivery' && <BadgeSmartBatch pedido={pedido} />}
 
       {/* Lista de productos (muy compacta) */}
       <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 space-y-0.5">
