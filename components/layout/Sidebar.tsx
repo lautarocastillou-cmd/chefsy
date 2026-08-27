@@ -98,25 +98,17 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
       )}
 
       {/* Marca y Estado */}
-      <div className={cn("px-4 py-6 border-b border-chefsy-800 flex flex-col items-center gap-3 transition-all", colapsado && !isMobile ? "px-2" : "")}>
+      <div className={cn("px-4 py-5 border-b border-chefsy-800 flex flex-col items-center gap-2.5 transition-all", colapsado && !isMobile ? "px-2" : "")}>
         <div className="relative group">
           <img 
             src="/logo.jpg" 
             alt="Chefsy Logo" 
             className={cn(
               "object-contain bg-white shadow-lg transition-all duration-300 group-hover:scale-105",
-              colapsado && !isMobile ? "w-11 h-11 rounded-xl p-1" : "w-24 h-24 rounded-2xl p-1.5 border border-chefsy-600"
+              colapsado && !isMobile ? "w-11 h-11 rounded-xl p-1" : "w-28 h-28 sm:w-32 sm:h-32 rounded-2xl p-1.5 border border-chefsy-600"
             )} 
           />
         </div>
-        
-        {(!colapsado || isMobile) && (
-          <div className="text-center animate-in fade-in duration-300">
-            <span className="text-xs font-bold text-chefsy-200 uppercase tracking-widest">
-              Sistema de Pedidos
-            </span>
-          </div>
-        )}
         
         {/* Supabase Status Indicator */}
         <div className={cn(

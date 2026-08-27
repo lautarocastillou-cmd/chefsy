@@ -104,12 +104,12 @@ export default function PaginaDashboard() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2.5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 dark:bg-black/30 backdrop-blur-md border border-white/15 text-emerald-100 text-xs font-semibold tracking-wide">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 dark:bg-black/30 border border-white/15 text-emerald-100 text-xs font-semibold tracking-wide">
                 <Calendar size={13} className="text-emerald-300" />
                 <span className="capitalize">{fechaActual}</span>
               </div>
               
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-emerald-200 text-xs font-bold">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
                 <span className="relative flex h-2 w-2">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${estadoTurno.activo ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${estadoTurno.activo ? 'bg-emerald-400' : 'bg-amber-400'}`} />
@@ -121,9 +121,6 @@ export default function PaginaDashboard() {
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
               ¡Hola Lauta! <span className="text-emerald-300 font-medium text-2xl sm:text-3xl block sm:inline">¿Listo para el servicio?</span>
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/80 font-medium">
-              Control centralizado de órdenes, cocina en vivo y despacho rápido de delivery.
-            </p>
           </div>
 
           <div className="shrink-0 flex flex-wrap items-center gap-3">
@@ -295,10 +292,14 @@ export default function PaginaDashboard() {
 
       {/* ── Modal de Nuevo Pedido ── */}
       {modalNuevoPedidoAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 transition-opacity duration-150 animate-in fade-in"
+          onClick={() => setModalNuevoPedidoAbierto(false)}
+        >
           <div 
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative will-change-transform" 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-150 relative" 
             data-lenis-prevent="true"
+            onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
           >
@@ -332,10 +333,14 @@ export default function PaginaDashboard() {
 
       {/* ── Modal de Editar Pedido (Alertas Operativas) ── */}
       {pedidoSeleccionadoParaEditar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 transition-opacity duration-150 animate-in fade-in"
+          onClick={() => setPedidoSeleccionadoParaEditar(null)}
+        >
           <div 
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative will-change-transform" 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-150 relative" 
             data-lenis-prevent="true"
+            onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
           >

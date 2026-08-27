@@ -622,8 +622,14 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
 
       {/* Modal del Mapa */}
       {verMapa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out]">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          onClick={() => setVerMapa(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <MapPin className="text-indigo-500" /> Seguimiento: {pedido.cliente}
@@ -713,7 +719,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
       {/* Modal de Selección de Impresión */}
       {modalImpresion && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
           onClick={() => setModalImpresion(false)}
         >
           <div

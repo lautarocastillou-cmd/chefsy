@@ -480,13 +480,9 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
               <Printer size={22} />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Impresora de Promociones & Tickets</span>
-                <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  Comandera Térmica
-                </span>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-wide">
+                IMPRESIÓN DE PROMOCIONES Y TICKETS
               </h2>
-              <p className="text-xs text-slate-400 font-medium">Diseñá e imprimí cupones, códigos QR y mensajes en segundos</p>
             </div>
           </div>
           <button
