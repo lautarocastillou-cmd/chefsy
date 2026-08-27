@@ -45,6 +45,20 @@ const nextConfig = {
       }
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/whatsapp',
+        destination: 'https://wa.me/5493834225445',
+        permanent: false,
+      },
+      {
+        source: '/wa',
+        destination: 'https://wa.me/5493834225445',
+        permanent: false,
+      },
+    ]
+  },
 }
 
 export default nextConfig

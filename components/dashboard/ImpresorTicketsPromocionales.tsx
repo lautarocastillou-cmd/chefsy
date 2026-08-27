@@ -9,7 +9,8 @@ import {
   X, 
   QrCode, 
   Clock,
-  FileText
+  FileText,
+  Type
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -39,6 +40,7 @@ interface ConfigTicketPromo {
   letraChica: string
   anchoPapel: '80mm' | '58mm'
   copias: number
+  tamanoFuente?: 'normal' | 'grande' | 'extra_grande'
 }
 
 const CONFIG_POR_DEFECTO: ConfigTicketPromo = {
@@ -51,7 +53,8 @@ const CONFIG_POR_DEFECTO: ConfigTicketPromo = {
   validezDias: 7,
   letraChica: 'Válido para consumo en el local o delivery.',
   anchoPapel: '80mm',
-  copias: 1
+  copias: 1,
+  tamanoFuente: 'normal'
 }
 
 const PLANTILLAS: PlantillaPromo[] = [
@@ -112,26 +115,13 @@ const PLANTILLAS: PlantillaPromo[] = [
     nombre: 'WhatsApp Directo',
     icono: '💬',
     titulo: 'PEDÍ MÁS RÁPIDO',
-    mensaje: 'Agendá nuestro contacto para acceder a promociones relámpago y menú diario exclusivo.',
+    mensaje: 'Agendá nuestro WhatsApp para acceder a promociones relámpago y menú diario exclusivo.',
     incluirQr: true,
-    qrUrl: 'https://wa.me',
+    qrUrl: 'https://chefsy.xyz/whatsapp',
     qrTexto: 'Escaneá para chatear directo',
     validezTipo: 'sin_vencimiento',
     validezDias: 0,
     letraChica: 'Atención personalizada todos los días.'
-  },
-  {
-    id: 'wifi',
-    nombre: 'Clave WiFi Clientes',
-    icono: '📶',
-    titulo: 'WIFI PARA CLIENTES',
-    mensaje: 'Red: Chefsy_Clientes\nContraseña: Bienvenidos123',
-    incluirQr: false,
-    qrUrl: '',
-    qrTexto: '',
-    validezTipo: 'sin_vencimiento',
-    validezDias: 0,
-    letraChica: 'Conexión de cortesía de alta velocidad.'
   },
   {
     id: 'personalizado',
@@ -244,6 +234,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
   const [letraChica, setLetraChica] = useState(configInicial.letraChica)
   const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>(configInicial.anchoPapel)
   const [copias, setCopias] = useState<number>(configInicial.copias)
+  const [tamanoFuente, setTamanoFuente] = useState<'normal' | 'grande' | 'extra_grande'>(configInicial.tamanoFuente || 'normal')
   const [imprimiendo, setImprimiendo] = useState(false)
 
   // Guardar automáticamente en localStorage ante cualquier cambio
@@ -259,13 +250,14 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         validezDias,
         letraChica,
         anchoPapel,
-        copias
+        copias,
+        tamanoFuente
       }
       localStorage.setItem('chefsy_promo_ticket_config', JSON.stringify(nuevaConfig))
     } catch {
       // silencioso
     }
-  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, validezTipo, validezDias, letraChica, anchoPapel, copias])
+  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, validezTipo, validezDias, letraChica, anchoPapel, copias, tamanoFuente])
 
   // Debounce simple para el QR URL
   const [qrUrlDebounced, setQrUrlDebounced] = useState(qrUrl)
@@ -307,6 +299,18 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
       month: '2-digit',
       year: 'numeric',
     }) + ' ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+
+    // Escalar tamaños de fuente según selección
+    const factorEscala = tamanoFuente === 'extra_grande' ? 1.4 : tamanoFuente === 'grande' ? 1.2 : 1.0
+
+    const fBase = anchoPapel === '58mm' ? Math.round(12 * factorEscala) : Math.round(14 * factorEscala)
+    const fTitulo = anchoPapel === '58mm' ? Math.round(15 * factorEscala) : Math.round(17 * factorEscala)
+    const fMensaje = anchoPapel === '58mm' ? Math.round(12 * factorEscala) : Math.round(13.5 * factorEscala)
+    const fValidez = anchoPapel === '58mm' ? Math.round(10 * factorEscala) : Math.round(11.5 * factorEscala)
+    const fQrCaption = anchoPapel === '58mm' ? Math.round(9.5 * factorEscala) : Math.round(10.5 * factorEscala)
+    const fLetraChica = anchoPapel === '58mm' ? Math.round(9 * factorEscala) : Math.round(9.5 * factorEscala)
+    const fFooter = anchoPapel === '58mm' ? Math.round(9.5 * factorEscala) : Math.round(10.5 * factorEscala)
+    const fFecha = anchoPapel === '58mm' ? Math.round(9 * factorEscala) : Math.round(9.5 * factorEscala)
 
     const ticketSingleHtml = `
       <div class="ticket-wrapper">
@@ -360,7 +364,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           margin: 0 !important;
           padding: 0 2px !important;
           font-family: monospace;
-          font-size: ${anchoPapel === '58mm' ? '12px' : '14px'};
+          font-size: ${fBase}px;
           width: ${anchoPapel};
           color: #000;
           background: #fff;
@@ -385,24 +389,24 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           display: block;
           filter: grayscale(100%) contrast(150%);
         }
-        .fecha { font-size: 9px; color: #333; margin-top: 1px; }
+        .fecha { font-size: ${fFecha}px; color: #333; margin-top: 1px; }
         .sep { border-top: 1.5px dashed #000; margin: 4px 0; }
         .titulo-promo {
-          font-size: ${anchoPapel === '58mm' ? '15px' : '17px'};
+          font-size: ${fTitulo}px;
           font-weight: 900;
           text-align: center;
           margin: 4px 0 3px 0;
           line-height: 1.2;
         }
         .mensaje {
-          font-size: ${anchoPapel === '58mm' ? '12px' : '13px'};
+          font-size: ${fMensaje}px;
           text-align: center;
           margin: 4px 0;
           line-height: 1.35;
           font-weight: 600;
         }
         .validez-box {
-          font-size: ${anchoPapel === '58mm' ? '10px' : '11.5px'};
+          font-size: ${fValidez}px;
           font-weight: 900;
           text-align: center;
           margin: 5px 0 3px 0;
@@ -419,9 +423,9 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           margin: 0 auto;
           display: block;
         }
-        .qr-caption { font-size: 9.5px; font-weight: bold; margin-top: 3px; text-align: center; }
-        .letra-chica { font-size: 9px; text-align: center; color: #333; line-height: 1.25; margin-top: 3px; }
-        .footer { font-size: 9.5px; font-weight: bold; text-align: center; margin-top: 3px; }
+        .qr-caption { font-size: ${fQrCaption}px; font-weight: bold; margin-top: 3px; text-align: center; }
+        .letra-chica { font-size: ${fLetraChica}px; text-align: center; color: #333; line-height: 1.25; margin-top: 3px; }
+        .footer { font-size: ${fFooter}px; font-weight: bold; text-align: center; margin-top: 3px; }
         .cut-space { height: 8px; }
         @media print {
           @page { margin: 0 !important; size: auto; }
@@ -681,7 +685,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                       type="text"
                       value={qrUrl}
                       onChange={(e) => setQrUrl(e.target.value)}
-                      placeholder="https://instagram.com/chefsy_fastfood_"
+                      placeholder="https://chefsy.xyz/whatsapp"
                       className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 font-mono"
                     />
                   </div>
@@ -693,7 +697,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                       type="text"
                       value={qrTexto}
                       onChange={(e) => setQrTexto(e.target.value)}
-                      placeholder="Escaneá con tu celular"
+                      placeholder="Escaneá para chatear directo"
                       className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -701,55 +705,102 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
               )}
             </div>
 
-            {/* Opciones Impresión */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* Opciones Impresión (Tamaño Fuente, Ancho Papel, Copias) */}
+            <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Ancho de Papel
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <Type size={14} className="text-amber-500" />
+                  <span>Tamaño de Letra / Fuente del Ticket</span>
                 </label>
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl">
                   <button
                     type="button"
-                    onClick={() => setAnchoPapel('80mm')}
+                    onClick={() => setTamanoFuente('normal')}
                     className={cn(
-                      "py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer",
-                      anchoPapel === '80mm'
-                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-700"
+                      "py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center",
+                      tamanoFuente === 'normal'
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-600"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     )}
                   >
-                    80 mm
+                    Normal (100%)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAnchoPapel('58mm')}
+                    onClick={() => setTamanoFuente('grande')}
                     className={cn(
-                      "py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer",
-                      anchoPapel === '58mm'
-                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-700"
+                      "py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center",
+                      tamanoFuente === 'grande'
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-600"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     )}
                   >
-                    58 mm
+                    Grande (120%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTamanoFuente('extra_grande')}
+                    className={cn(
+                      "py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center",
+                      tamanoFuente === 'extra_grande'
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-600"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    )}
+                  >
+                    Extra Grande (140%)
                   </button>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Cantidad de Copias
-                </label>
-                <select
-                  value={copias}
-                  onChange={(e) => setCopias(Number(e.target.value))}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
-                >
-                  <option value={1}>1 Copia</option>
-                  <option value={2}>2 Copias</option>
-                  <option value={3}>3 Copias</option>
-                  <option value={5}>5 Copias (Lote)</option>
-                  <option value={10}>10 Copias (Tirada grande)</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Ancho de Papel
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setAnchoPapel('80mm')}
+                      className={cn(
+                        "py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer",
+                        anchoPapel === '80mm'
+                          ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                          : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      )}
+                    >
+                      80 mm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnchoPapel('58mm')}
+                      className={cn(
+                        "py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer",
+                        anchoPapel === '58mm'
+                          ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                          : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      )}
+                    >
+                      58 mm
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Cantidad de Copias
+                  </label>
+                  <select
+                    value={copias}
+                    onChange={(e) => setCopias(Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
+                  >
+                    <option value={1}>1 Copia</option>
+                    <option value={2}>2 Copias</option>
+                    <option value={3}>3 Copias</option>
+                    <option value={5}>5 Copias (Lote)</option>
+                    <option value={10}>10 Copias (Tirada grande)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -762,7 +813,12 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                 Vista Previa en Vivo (Comandera)
               </p>
 
-              <div className="bg-white text-black p-4 rounded-xl shadow-md border border-slate-200 font-mono text-center max-w-[260px] mx-auto text-xs select-none">
+              <div 
+                className="bg-white text-black p-4 rounded-xl shadow-md border border-slate-200 font-mono text-center max-w-[260px] mx-auto select-none transition-all"
+                style={{
+                  fontSize: tamanoFuente === 'extra_grande' ? '14px' : tamanoFuente === 'grande' ? '12.5px' : '11px'
+                }}
+              >
                 <div className="flex flex-col items-center justify-center mb-1">
                   <img
                     src="/logo-chefsy.png"
@@ -774,16 +830,31 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                 
                 <div className="border-t border-dashed border-black my-2"></div>
 
-                <div className="font-black text-xs uppercase leading-tight my-1">
+                <div 
+                  className="font-black uppercase leading-tight my-1"
+                  style={{
+                    fontSize: tamanoFuente === 'extra_grande' ? '15px' : tamanoFuente === 'grande' ? '13px' : '11px'
+                  }}
+                >
                   {titulo || 'TÍTULO DE LA PROMO'}
                 </div>
 
-                <div className="text-[10px] my-2 leading-tight whitespace-pre-line text-slate-800 font-medium">
+                <div 
+                  className="my-2 leading-tight whitespace-pre-line text-slate-800 font-medium"
+                  style={{
+                    fontSize: tamanoFuente === 'extra_grande' ? '13px' : tamanoFuente === 'grande' ? '11.5px' : '10px'
+                  }}
+                >
                   {mensaje || 'Escribí aquí el mensaje o descuento.'}
                 </div>
 
                 {textoValidez && (
-                  <div className="border border-black rounded px-1.5 py-1 my-1.5 bg-slate-50 font-black text-[9px] uppercase tracking-wide">
+                  <div 
+                    className="border border-black rounded px-1.5 py-1 my-1.5 bg-slate-50 font-black uppercase tracking-wide"
+                    style={{
+                      fontSize: tamanoFuente === 'extra_grande' ? '11px' : tamanoFuente === 'grande' ? '10px' : '9px'
+                    }}
+                  >
                     ⏳ {textoValidez}
                   </div>
                 )}
@@ -795,14 +866,26 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
                 {letraChica && (
                   <>
                     <div className="border-t border-dashed border-black my-2"></div>
-                    <div className="text-[8px] text-slate-600 leading-tight">
+                    <div 
+                      className="text-slate-600 leading-tight"
+                      style={{
+                        fontSize: tamanoFuente === 'extra_grande' ? '10px' : tamanoFuente === 'grande' ? '9px' : '8px'
+                      }}
+                    >
                       {letraChica}
                     </div>
                   </>
                 )}
 
                 <div className="border-t border-dashed border-black my-2"></div>
-                <div className="text-[8px] font-bold">¡Presentá este ticket para canjear!</div>
+                <div 
+                  className="font-bold"
+                  style={{
+                    fontSize: tamanoFuente === 'extra_grande' ? '10px' : tamanoFuente === 'grande' ? '9px' : '8px'
+                  }}
+                >
+                  ¡Presentá este ticket para canjear!
+                </div>
               </div>
             </div>
 
@@ -871,7 +954,7 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-            Imprimí en tu comandera tickets con promociones, tu Instagram, QR de reseñas de Google o WiFi para las mesas y pedidos.
+            Imprimí en tu comandera tickets con promociones, tu Instagram, QR de WhatsApp directo o reseñas de Google para tus clientes.
           </p>
 
           <button
