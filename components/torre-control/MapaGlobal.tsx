@@ -153,18 +153,23 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
             )}%</div>`
           : ''
 
-      // A) Marcador del Cadete
+      // A) Marcador del Cadete (con nombre visible para el administrador)
       if (tieneGps && cadete.lat != null && cadete.lng != null) {
         const cadeteIcon = L.divIcon({
           html: `
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:${colorBg};border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px ${sombraColor};font-size:24px;cursor:pointer;user-select:none;">
-              🛵
-              ${batBadge}
+            <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:${colorBg};border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px ${sombraColor};font-size:22px;">
+                🛵
+                ${batBadge}
+              </div>
+              <div style="margin-top:2px;background:rgba(15,23,42,0.92);color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
+                ${cadete.nombre}
+              </div>
             </div>
           `,
           className: 'custom-cadete-icon',
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
+          iconSize: [120, 72],
+          iconAnchor: [60, 22],
           popupAnchor: [0, -24],
         })
 
@@ -212,7 +217,7 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         }
       }
 
-      // B) Marcador del Cliente de Entrega
+      // B) Marcador del Cliente de Entrega (con nombre del cliente siempre visible)
       const coords = cadete.pedidoActivo?.coordenadas
       if (cadete.pedidoActivo && coords && coords.latitud != null && coords.longitud != null) {
         const pedido = cadete.pedidoActivo
@@ -224,13 +229,18 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
 
         const clienteIcon = L.divIcon({
           html: `
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#2563EB;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);font-size:20px;cursor:pointer;user-select:none;">
-              🏠
+            <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:42px;height:42px;background:#2563EB;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);font-size:20px;">
+                🏠
+              </div>
+              <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
+                ${pedido.cliente}
+              </div>
             </div>
           `,
           className: 'custom-cliente-icon',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
+          iconSize: [120, 70],
+          iconAnchor: [60, 21],
           popupAnchor: [0, -22],
         })
 

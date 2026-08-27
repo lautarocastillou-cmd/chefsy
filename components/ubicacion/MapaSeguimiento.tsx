@@ -65,12 +65,29 @@ export default function MapaSeguimiento({ pedido }: Props) {
       zIndexOffset: 100
     }).addTo(leafletMapRef.current).bindPopup('Chefsy (Local)')
 
-    // Cliente
+    // Cliente (con nombre siempre visible)
     if (pedido.coordenadas) {
+      const clienteIcon = L.divIcon({
+        html: `
+          <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+            <div style="font-size:20px;background:#2563EB;color:#fff;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+              🏠
+            </div>
+            <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
+              ${pedido.cliente}
+            </div>
+          </div>
+        `,
+        className: 'custom-cliente-tracking-icon',
+        iconSize: [120, 68],
+        iconAnchor: [60, 19],
+        popupAnchor: [0, -22]
+      })
+
       markersRef.current.cliente = L.marker([pedido.coordenadas.latitud, pedido.coordenadas.longitud], {
-        icon: crearIcono('🏠'),
+        icon: clienteIcon,
         zIndexOffset: 200
-      }).addTo(leafletMapRef.current).bindPopup(`Cliente: ${pedido.cliente}`)
+      }).addTo(leafletMapRef.current).bindPopup(`Entrega: ${pedido.cliente}`)
     }
 
     return () => {
