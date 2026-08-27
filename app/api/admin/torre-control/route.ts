@@ -30,10 +30,10 @@ export async function GET() {
       
     if (usuariosError) throw usuariosError
 
-    // 3. Obtener pedidos activos para saber en qué andan
+    // 3. Obtener pedidos activos para saber en qué andan y ubicar a los clientes en el mapa
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
-      .select('id, cliente, estado, cadete_id')
+      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id')
       .in('estado', ['listo', 'en_camino'])
       .eq('archivado', false)
 
@@ -75,6 +75,16 @@ export async function GET() {
         String(p.cadete_id || '').toLowerCase() === idLower
       )
 
+      let coordsCliente: { latitud: number; longitud: number } | null = null
+      if (pedidoActivo?.coordenadas) {
+        if (typeof pedidoActivo.coordenadas === 'object' && pedidoActivo.coordenadas.latitud && pedidoActivo.coordenadas.longitud) {
+          coordsCliente = {
+            latitud: Number(pedidoActivo.coordenadas.latitud),
+            longitud: Number(pedidoActivo.coordenadas.longitud),
+          }
+        }
+      }
+
       const updatedAt = cadete?.updated_at ? new Date(cadete.updated_at).getTime() : 0
       const haceSegundos = updatedAt ? (ahora - updatedAt) / 1000 : 999999
       // Online si reportó en los últimos 3 minutos y gps_activo es true
@@ -92,7 +102,10 @@ export async function GET() {
         pedidoActivo: pedidoActivo ? {
           id: pedidoActivo.id,
           cliente: pedidoActivo.cliente,
-          estado: pedidoActivo.estado
+          direccion: pedidoActivo.direccion || null,
+          coordenadas: coordsCliente,
+          estado: pedidoActivo.estado,
+          total: pedidoActivo.total ?? null,
         } : null
       }
     })

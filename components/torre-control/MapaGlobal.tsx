@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
+import { formatearPrecio } from '@/lib/utils'
 import 'leaflet/dist/leaflet.css'
 
 // Coordenadas del local Chefsy
@@ -11,26 +12,36 @@ const LOCAL_LNG = UBICACION_LOCAL.longitud
 export interface CadeteData {
   id: string
   nombre: string
-  lat: number
-  lng: number
+  lat: number | null
+  lng: number | null
   gps_activo: boolean
-  bateria?: number
-  updated_at: string
+  bateria?: number | null
+  updated_at: string | null
+  segundos_offline?: number | null
   pedidoActivo?: {
     id: string
     cliente: string
+    direccion?: string | null
+    coordenadas?: { latitud: number; longitud: number } | null
     estado: string
+    total?: number | null
   } | null
 }
 
 interface MapaGlobalProps {
   cadetes: CadeteData[]
+  focusedId?: string | null
 }
 
-export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
+export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<{ local?: any; cadetes: Record<string, any> }>({ cadetes: {} })
+  const markersRef = useRef<{
+    local?: any
+    cadetes: Record<string, any>
+    clientes: Record<string, any>
+    rutas: Record<string, any>
+  }>({ cadetes: {}, clientes: {}, rutas: {} })
 
   // 1. Inicializar Mapa (1 sola vez al montar)
   useEffect(() => {
@@ -49,7 +60,7 @@ export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
       zoomControl: true,
     })
 
-    // Usar Google Maps tiles (alta disponibilidad, ultra rápido y sin bloqueos de tiles)
+    // Tiles de Google Maps (alta definición, ultra rápido y sin bloqueos de tiles)
     L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
       attribution: '&copy; Google Maps',
       maxZoom: 20,
@@ -60,17 +71,17 @@ export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
     // Marcador del Local Chefsy
     const localIcon = L.divIcon({
       html: `
-        <div style="display:flex;align-items:center;justify-content:center;width:42px;height:42px;background:#DC2626;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(0,0,0,0.35);font-size:22px;user-select:none;">
+        <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:#DC2626;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(220,38,38,0.45);font-size:24px;user-select:none;">
           🏪
         </div>
       `,
       className: 'custom-local-icon',
-      iconSize: [42, 42],
-      iconAnchor: [21, 21],
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
       popupAnchor: [0, -24],
     })
 
-    markersRef.current.local = L.marker([LOCAL_LAT, LOCAL_LNG], { icon: localIcon })
+    markersRef.current.local = L.marker([LOCAL_LAT, LOCAL_LNG], { icon: localIcon, zIndexOffset: 500 })
       .addTo(map)
       .bindPopup(`
         <div style="text-align:center;padding:4px;font-family:sans-serif;">
@@ -79,36 +90,31 @@ export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
         </div>
       `)
 
-    // Invalidate size para asegurar renderizado perfecto tras el montaje del DOM
     const timer = setTimeout(() => {
       map.invalidateSize()
-    }, 150)
-
-    const timer2 = setTimeout(() => {
-      map.invalidateSize()
-    }, 500)
+    }, 200)
 
     return () => {
       clearTimeout(timer)
-      clearTimeout(timer2)
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
-        markersRef.current = { cadetes: {} }
+        markersRef.current = { cadetes: {}, clientes: {}, rutas: {} }
       }
     }
   }, [])
 
-  // 2. Actualizar marcadores de cadetes reactivamente
+  // 2. Actualizar marcadores de cadetes, clientes y rutas
   useEffect(() => {
     if (!mapInstanceRef.current) return
     const L = require('leaflet')
     const map = mapInstanceRef.current
 
+    // Cadetes con ubicación válida
     const cadetesConUbicacion = cadetes.filter((c) => c.lat != null && c.lng != null && c.gps_activo)
     const currentCadeteIds = new Set(cadetesConUbicacion.map((c) => c.id))
 
-    // Remover marcadores de cadetes que ya no están activos o apagaron GPS
+    // Limpiar marcadores de cadetes viejos/inactivos
     Object.keys(markersRef.current.cadetes).forEach((id) => {
       if (!currentCadeteIds.has(id)) {
         markersRef.current.cadetes[id].remove()
@@ -116,73 +122,185 @@ export default function MapaGlobal({ cadetes }: MapaGlobalProps) {
       }
     })
 
-    // Actualizar o crear marcadores
-    cadetesConUbicacion.forEach((cadete) => {
+    // Clientes con pedidos activos y coordenadas
+    const activeClientOrderIds = new Set<string>()
+
+    // Dibujar o actualizar cadetes y sus clientes
+    cadetes.forEach((cadete) => {
+      const tieneGps = cadete.lat != null && cadete.lng != null && cadete.gps_activo
       const esEnViaje = !!cadete.pedidoActivo
-      const colorBg = esEnViaje ? '#F97316' : '#10B981'
-      const sombraColor = esEnViaje ? 'rgba(249,115,22,0.45)' : 'rgba(16,185,129,0.45)'
+      const colorBg = esEnViaje ? '#EA580C' : '#10B981'
+      const sombraColor = esEnViaje ? 'rgba(234,88,12,0.45)' : 'rgba(16,185,129,0.45)'
+      
       const batBadge =
         cadete.bateria != null
           ? `<div style="position:absolute;top:-6px;right:-8px;background:${
               cadete.bateria > 20 ? '#10B981' : '#EF4444'
-            };color:#fff;font-size:9px;font-weight:900;padding:1px 4px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.2);">${Math.round(
+            };color:#fff;font-size:9px;font-weight:900;padding:1px 4px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.25);">${Math.round(
               cadete.bateria
             )}%</div>`
           : ''
 
-      const cadeteIcon = L.divIcon({
-        html: `
-          <div style="position:relative;display:flex;align-items:center;justify-content:center;width:42px;height:42px;background:${colorBg};border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px ${sombraColor};font-size:22px;cursor:pointer;user-select:none;">
-            🛵
-            ${batBadge}
-          </div>
-        `,
-        className: 'custom-cadete-icon',
-        iconSize: [42, 42],
-        iconAnchor: [21, 21],
-        popupAnchor: [0, -24],
-      })
+      // A) Marcador del Cadete
+      if (tieneGps && cadete.lat != null && cadete.lng != null) {
+        const cadeteIcon = L.divIcon({
+          html: `
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:${colorBg};border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px ${sombraColor};font-size:24px;cursor:pointer;user-select:none;">
+              🛵
+              ${batBadge}
+            </div>
+          `,
+          className: 'custom-cadete-icon',
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+          popupAnchor: [0, -24],
+        })
 
-      const popupContent = `
-        <div style="min-width:170px;padding:4px;font-family:sans-serif;">
-          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:6px;">
-            <b style="font-size:13px;color:#0f172a;">🛵 ${cadete.nombre}</b>
-            ${
-              cadete.bateria != null
-                ? `<span style="font-size:10px;font-weight:bold;color:${
-                    cadete.bateria > 20 ? '#16a34a' : '#dc2626'
-                  };background:${
-                    cadete.bateria > 20 ? '#dcfce7' : '#fee2e2'
-                  };padding:2px 6px;border-radius:6px;">${Math.round(cadete.bateria)}%</span>`
-                : ''
-            }
+        const popupContent = `
+          <div style="min-width:180px;padding:4px;font-family:sans-serif;">
+            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:6px;">
+              <b style="font-size:14px;color:#0f172a;">🛵 ${cadete.nombre}</b>
+              ${
+                cadete.bateria != null
+                  ? `<span style="font-size:11px;font-weight:bold;color:${
+                      cadete.bateria > 20 ? '#16a34a' : '#dc2626'
+                    };background:${
+                      cadete.bateria > 20 ? '#dcfce7' : '#fee2e2'
+                    };padding:2px 6px;border-radius:6px;">${Math.round(cadete.bateria)}%</span>`
+                  : ''
+              }
+            </div>
+            <div style="font-size:12px;margin-bottom:6px;">
+              ${
+                cadete.pedidoActivo
+                  ? `<span style="color:#ea580c;font-weight:bold;">📦 EN VIAJE</span>
+                     <div style="color:#334155;font-size:12px;margin-top:2px;">Cliente: <b>${cadete.pedidoActivo.cliente}</b></div>
+                     ${cadete.pedidoActivo.direccion ? `<div style="color:#64748b;font-size:11px;margin-top:1px;">📍 ${cadete.pedidoActivo.direccion}</div>` : ''}`
+                  : `<span style="color:#16a34a;font-weight:bold;">🟢 DISPONIBLE</span>
+                     <div style="color:#64748b;font-size:11px;margin-top:2px;">En espera en el local</div>`
+              }
+            </div>
+            <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:4px;">
+              Última señal: ${cadete.updated_at ? new Date(cadete.updated_at).toLocaleTimeString() : 'Hace instantes'}
+            </div>
           </div>
-          <div style="font-size:12px;margin-bottom:6px;">
-            ${
-              cadete.pedidoActivo
-                ? `<span style="color:#ea580c;font-weight:bold;">📦 EN VIAJE</span><div style="color:#475569;font-size:11px;margin-top:2px;">Hacia: <b>${cadete.pedidoActivo.cliente}</b></div>`
-                : `<span style="color:#16a34a;font-weight:bold;">✨ LIBRE</span><div style="color:#64748b;font-size:11px;margin-top:2px;">Buscando pedidos...</div>`
-            }
-          </div>
-          <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:4px;">
-            GPS: ${new Date(cadete.updated_at).toLocaleTimeString()}
-          </div>
-        </div>
-      `
+        `
 
-      if (markersRef.current.cadetes[cadete.id]) {
-        // Actualizar posición y popup
-        markersRef.current.cadetes[cadete.id].setLatLng([cadete.lat, cadete.lng])
-        markersRef.current.cadetes[cadete.id].setIcon(cadeteIcon)
-        markersRef.current.cadetes[cadete.id].setPopupContent(popupContent)
-      } else {
-        // Crear nuevo marcador
-        markersRef.current.cadetes[cadete.id] = L.marker([cadete.lat, cadete.lng], { icon: cadeteIcon })
-          .addTo(map)
-          .bindPopup(popupContent)
+        if (markersRef.current.cadetes[cadete.id]) {
+          markersRef.current.cadetes[cadete.id].setLatLng([cadete.lat, cadete.lng])
+          markersRef.current.cadetes[cadete.id].setIcon(cadeteIcon)
+          markersRef.current.cadetes[cadete.id].setPopupContent(popupContent)
+        } else {
+          markersRef.current.cadetes[cadete.id] = L.marker([cadete.lat, cadete.lng], {
+            icon: cadeteIcon,
+            zIndexOffset: 300,
+          })
+            .addTo(map)
+            .bindPopup(popupContent)
+        }
+      }
+
+      // B) Marcador del Cliente de Entrega
+      const coords = cadete.pedidoActivo?.coordenadas
+      if (cadete.pedidoActivo && coords && coords.latitud != null && coords.longitud != null) {
+        const pedido = cadete.pedidoActivo
+        const clientKey = `cliente_${pedido.id}`
+        activeClientOrderIds.add(clientKey)
+
+        const clientLat = coords.latitud
+        const clientLng = coords.longitud
+
+        const clienteIcon = L.divIcon({
+          html: `
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#2563EB;border:3px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);font-size:20px;cursor:pointer;user-select:none;">
+              🏠
+            </div>
+          `,
+          className: 'custom-cliente-icon',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+          popupAnchor: [0, -22],
+        })
+
+        const clientPopup = `
+          <div style="min-width:180px;padding:4px;font-family:sans-serif;">
+            <div style="border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:6px;">
+              <b style="font-size:13px;color:#1e40af;">🏠 Entrega: ${pedido.cliente}</b>
+            </div>
+            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">📍 ${pedido.direccion}</div>` : ''}
+            <div style="font-size:11px;color:#64748b;">Cadete: <b>🛵 ${cadete.nombre}</b></div>
+            ${pedido.total ? `<div style="font-size:11px;font-weight:bold;color:#0f172a;margin-top:2px;">Total: ${formatearPrecio(pedido.total)}</div>` : ''}
+          </div>
+        `
+
+        if (markersRef.current.clientes[clientKey]) {
+          markersRef.current.clientes[clientKey].setLatLng([clientLat, clientLng])
+          markersRef.current.clientes[clientKey].setPopupContent(clientPopup)
+        } else {
+          markersRef.current.clientes[clientKey] = L.marker([clientLat, clientLng], {
+            icon: clienteIcon,
+            zIndexOffset: 200,
+          })
+            .addTo(map)
+            .bindPopup(clientPopup)
+        }
+
+        // C) Línea de trayecto (Polyline): Cadete -> Cliente
+        const startPoint: [number, number] = tieneGps && cadete.lat != null && cadete.lng != null
+          ? [cadete.lat, cadete.lng]
+          : [LOCAL_LAT, LOCAL_LNG]
+        const endPoint: [number, number] = [clientLat, clientLng]
+        const rutaCoords: [number, number][] = [startPoint, endPoint]
+
+        if (markersRef.current.rutas[clientKey]) {
+          markersRef.current.rutas[clientKey].setLatLngs(rutaCoords)
+        } else {
+          markersRef.current.rutas[clientKey] = L.polyline(rutaCoords, {
+            color: '#2563EB',
+            weight: 3.5,
+            dashArray: '6, 8',
+            opacity: 0.75,
+          }).addTo(map)
+        }
+      }
+    })
+
+    // Limpiar clientes y rutas que ya fueron entregados
+    Object.keys(markersRef.current.clientes).forEach((key) => {
+      if (!activeClientOrderIds.has(key)) {
+        markersRef.current.clientes[key].remove()
+        delete markersRef.current.clientes[key]
+      }
+    })
+    Object.keys(markersRef.current.rutas).forEach((key) => {
+      if (!activeClientOrderIds.has(key)) {
+        markersRef.current.rutas[key].remove()
+        delete markersRef.current.rutas[key]
       }
     })
   }, [cadetes])
+
+  // 3. Efecto de enfoque cuando el usuario selecciona un cadete en la lista lateral
+  useEffect(() => {
+    if (!focusedId || !mapInstanceRef.current) return
+    const map = mapInstanceRef.current
+
+    // Buscar marcador de cadete
+    const cadeteMarker = markersRef.current.cadetes[focusedId]
+    if (cadeteMarker) {
+      map.flyTo(cadeteMarker.getLatLng(), 16, { animate: true, duration: 1 })
+      cadeteMarker.openPopup()
+      return
+    }
+
+    // O marcador de cliente
+    const clientKey = `cliente_${focusedId}`
+    const clientMarker = markersRef.current.clientes[clientKey]
+    if (clientMarker) {
+      map.flyTo(clientMarker.getLatLng(), 16, { animate: true, duration: 1 })
+      clientMarker.openPopup()
+    }
+  }, [focusedId])
 
   return (
     <div

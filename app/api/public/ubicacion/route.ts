@@ -25,10 +25,10 @@ export async function POST(request: Request) {
         .from('cadetes')
         .update({
           gps_activo: false,
-          ...(batteryLevel !== undefined && batteryLevel !== null ? { bateria: batteryLevel } : {}),
+          ...(batteryLevel !== undefined && batteryLevel !== null ? { bateria: Math.round(Number(batteryLevel)) } : {}),
           updated_at: new Date().toISOString()
         })
-        .or(`id.ilike.${idNormalizado},username.ilike.${idNormalizado}`)
+        .ilike('id', idNormalizado)
 
       return NextResponse.json({ success: true })
     }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const { data: cadeteExistente } = await adminClient
       .from('cadetes')
       .select('id')
-      .or(`id.ilike.${idNormalizado},username.ilike.${idNormalizado}`)
+      .ilike('id', idNormalizado)
       .maybeSingle()
 
     const camposActualizar: any = {
@@ -59,18 +59,27 @@ export async function POST(request: Request) {
     }
 
     if (cadeteExistente) {
-      await adminClient
+      const { error: updateError } = await adminClient
         .from('cadetes')
         .update(camposActualizar)
         .eq('id', cadeteExistente.id)
+      
+      if (updateError) {
+        console.error('[API Ubicacion] Error actualizando cadete:', updateError)
+      }
     } else {
-      await adminClient
+      const { error: insertError } = await adminClient
         .from('cadetes')
         .insert({
           id: idNormalizado,
-          username: idNormalizado,
+          nombre: idNormalizado,
+          activo: true,
           ...camposActualizar
         })
+      
+      if (insertError) {
+        console.error('[API Ubicacion] Error insertando cadete:', insertError)
+      }
     }
 
     // 2. Actualizar coordenadas en los pedidos activos del cadete
