@@ -54,7 +54,7 @@ export async function GET() {
     }
 
     // Agregar o enriquecer con todos los registros de la tabla cadetes
-    for (const c of cadetesData || []) {
+    for (const c of (cadetesData || []) as any[]) {
       const idLower = String(c.id || '').toLowerCase()
       const u = (usuariosData || []).find((usr: any) => String(usr.usuario || '').toLowerCase() === idLower)
       const entry = cadetesMap.get(idLower) || {
