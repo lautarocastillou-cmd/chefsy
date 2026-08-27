@@ -90,12 +90,24 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         </div>
       `)
 
-    const timer = setTimeout(() => {
-      map.invalidateSize()
-    }, 200)
+    // Múltiples invalidaciones para garantizar renderizado inmediato del mapa
+    const t1 = setTimeout(() => map.invalidateSize(), 100)
+    const t2 = setTimeout(() => map.invalidateSize(), 400)
+    const t3 = setTimeout(() => map.invalidateSize(), 1000)
+
+    let resizeObserver: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize()
+      })
+      resizeObserver.observe(mapContainerRef.current)
+    }
 
     return () => {
-      clearTimeout(timer)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      if (resizeObserver) resizeObserver.disconnect()
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null

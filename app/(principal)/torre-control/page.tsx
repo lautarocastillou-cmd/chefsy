@@ -48,9 +48,9 @@ export default function TorreControlPage() {
   }, [])
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] md:h-screen w-full flex-col md:flex-row overflow-hidden bg-white">
+    <div className="flex flex-col md:flex-row w-full h-[calc(100vh-7rem)] min-h-[550px] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Sidebar: Lista de Cadetes */}
-      <div className="w-full md:w-84 border-r border-gray-200 flex flex-col bg-gray-50/40">
+      <div className="w-full md:w-80 lg:w-96 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/40">
         <div className="p-4 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
