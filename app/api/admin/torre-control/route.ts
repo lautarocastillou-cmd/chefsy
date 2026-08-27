@@ -23,46 +23,66 @@ export async function GET() {
 
     if (cadetesError) throw cadetesError
 
-    // 2. Obtener nombres de los cadetes (de la tabla usuarios)
+    // 2. Obtener usuarios para cruzar nombres
     const { data: usuariosData, error: usuariosError } = await supabase
       .from('usuarios')
-      .select('usuario, nombre')
-      .eq('rol', 'cadete')
+      .select('usuario, nombre, rol')
       
     if (usuariosError) throw usuariosError
 
     // 3. Obtener pedidos activos para saber en qué andan
-    // Solo 'en_camino' significa que el cadete está EN VIAJE.
-    // 'en_cocina' y 'listo' significan que el pedido está esperando en el local.
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
       .select('id, cliente, estado, cadete_id')
-      .eq('estado', 'en_camino')
+      .in('estado', ['listo', 'en_camino'])
       .eq('archivado', false)
 
     if (pedidosError) throw pedidosError
 
-    // 4. Combinar datos basados en todos los usuarios cadetes registrados
-    const torreData = (usuariosData || []).map((u: any) => {
-      // Buscar registro en cadetes por id o username (case-insensitive)
-      const cadete = (cadetesData || []).find((c: any) => 
-        String(c.id || '').toLowerCase() === String(u.usuario || '').toLowerCase() ||
-        String(c.username || '').toLowerCase() === String(u.usuario || '').toLowerCase()
-      )
+    // 4. Combinar datos: Todos los usuarios cadetes + cualquier registro en tabla cadetes
+    const cadetesMap = new Map<string, any>()
+
+    // Agregar todos los usuarios con rol cadete
+    for (const u of usuariosData || []) {
+      if (u.rol === 'cadete') {
+        const idLower = String(u.usuario || '').toLowerCase()
+        cadetesMap.set(idLower, {
+          id: u.usuario,
+          nombre: u.nombre || u.usuario,
+        })
+      }
+    }
+
+    // Agregar o enriquecer con todos los registros de la tabla cadetes
+    for (const c of cadetesData || []) {
+      const idLower = String(c.id || '').toLowerCase()
+      const u = (usuariosData || []).find((usr: any) => String(usr.usuario || '').toLowerCase() === idLower)
+      const entry = cadetesMap.get(idLower) || {
+        id: c.id,
+        nombre: u?.nombre || c.nombre || c.id,
+      }
+      entry.cadeteDb = c
+      cadetesMap.set(idLower, entry)
+    }
+
+    const ahora = Date.now()
+    const torreData = Array.from(cadetesMap.values()).map((entry) => {
+      const cadete = entry.cadeteDb
+      const idLower = String(entry.id || '').toLowerCase()
       
       // Buscar pedido activo
       const pedidoActivo = (pedidosData || []).find((p: any) => 
-        String(p.cadete_id || '').toLowerCase() === String(u.usuario || '').toLowerCase()
+        String(p.cadete_id || '').toLowerCase() === idLower
       )
 
       const updatedAt = cadete?.updated_at ? new Date(cadete.updated_at).getTime() : 0
-      const haceSegundos = updatedAt ? (Date.now() - updatedAt) / 1000 : 999999
+      const haceSegundos = updatedAt ? (ahora - updatedAt) / 1000 : 999999
       // Online si reportó en los últimos 3 minutos y gps_activo es true
       const gpsActivo = Boolean(cadete?.gps_activo && haceSegundos < 180 && cadete?.lat != null)
 
       return {
-        id: u.usuario,
-        nombre: u.nombre || u.usuario,
+        id: entry.id,
+        nombre: entry.nombre,
         lat: cadete?.lat ?? null,
         lng: cadete?.lng ?? null,
         gps_activo: gpsActivo,
