@@ -135,10 +135,9 @@ export default function SeccionProblemas({ alAbrirPedido }: PropsSeccionProblema
                       <button
                         key={cadete.id}
                         onClick={() => asignarCadete(pedido.id, cadete.id, cadete.nombre)}
-                        className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                        className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        <span>{cadete.nombre}</span>
+                        {cadete.nombre}
                       </button>
                     ))}
                   </div>
