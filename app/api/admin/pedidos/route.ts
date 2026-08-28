@@ -432,6 +432,21 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
         }
 
+        // Si se asigna un cadete, verificar que tenga el turno iniciado (GPS activo)
+        if (cadete_id) {
+          const { data: cadeteGPS } = await supabaseAdmin
+            .from('cadetes')
+            .select('gps_activo')
+            .ilike('id', cadete_id)
+            .maybeSingle()
+
+          if (!cadeteGPS || !cadeteGPS.gps_activo) {
+            return NextResponse.json({
+              error: `El repartidor ${cadete_nombre || cadete_id} no inició turno (GPS inactivo). Debe activar el GPS en su app para recibir pedidos.`
+            }, { status: 400 })
+          }
+        }
+
         const { data: updateData, error } = await supabaseAdmin
           .from('pedidos')
           .update({ cadete_id: cadete_id || null, cadete_nombre: cadete_nombre || null })

@@ -109,13 +109,14 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
               Asignar todos a:
             </p>
             <div className="grid grid-cols-2 gap-1.5">
-              {cadetes.map((c) => (
+              {cadetes.filter((c) => c.gps_activo).map((c) => (
                 <button
                   key={c.id}
                   disabled={asignando}
                   onClick={() => unificarCadete(c.id, c.nombre)}
-                  className="px-2 py-1.5 text-left text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 transition-colors truncate flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  className="px-2 py-1.5 text-left text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 transition-colors truncate flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                   <Bike size={12} className="shrink-0" />
                   <span className="truncate">{c.nombre}</span>
                 </button>

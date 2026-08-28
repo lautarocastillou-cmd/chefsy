@@ -605,12 +605,14 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
+      const pedidoAnterior = { ...pedido }
       despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, cadete_id, cadete_nombre } })
       try {
         await enviarAccionPedido({ accion: 'asignar_cadete', id, cadete_id, cadete_nombre })
-      } catch (e) {
+      } catch (e: any) {
         console.error('[Servidor/Supabase] Error al asignar cadete', e)
-        agregarNotificacion('Error al asignar el cadete en el servidor.', 'warning')
+        despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoAnterior })
+        agregarNotificacion(e.message || 'Error al asignar el cadete en el servidor.', 'warning')
       }
     }
   }

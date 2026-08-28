@@ -122,4 +122,9 @@ export interface Cadete {
   id: string
   nombre: string
   bateria?: number
+  gps_activo?: boolean
+  online?: boolean
+  lat?: number
+  lng?: number
+  updated_at?: string
 }

@@ -75,7 +75,7 @@ export default function BannerSugerenciasRuta() {
                 Asignar ruta a:
               </span>
               <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                {cadetes.map((c) => {
+                {cadetes.filter((c) => c.gps_activo).map((c) => {
                   const esAsignado = c.id === grupo.cadeteId
                   return (
                     <button
@@ -88,6 +88,7 @@ export default function BannerSugerenciasRuta() {
                           : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-slate-700'
                       }`}
                     >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                       <Bike size={13} />
                       <span>{c.nombre}</span>
                       {esAsignado && <Check size={12} />}

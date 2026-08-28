@@ -496,7 +496,9 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
             >
               <option value="">🛵 Sin Cadete</option>
               {cadetes.map(c => (
-                <option key={c.id} value={c.id}>🛵 {c.nombre}</option>
+                <option key={c.id} value={c.id} disabled={!c.gps_activo && c.id !== pedido.cadete_id}>
+                  {c.gps_activo ? `🟢 🛵 ${c.nombre} (En turno)` : `🔴 🛵 ${c.nombre} (GPS inactivo)`}
+                </option>
               ))}
             </select>
           )}
