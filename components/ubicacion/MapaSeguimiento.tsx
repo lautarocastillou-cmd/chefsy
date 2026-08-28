@@ -54,15 +54,11 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const mapa = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
-        zoomSnap: 0.5,
-        fadeAnimation: true,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+        attribution: '&copy; Google Maps',
         maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        keepBuffer: 4,
-        updateWhenIdle: false,
       }).addTo(mapa)
 
       L.control.zoom({ position: 'bottomright' }).addTo(mapa)
@@ -84,28 +80,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
       setMapaListo(true)
     }
 
-    // ResizeObserver para adaptar el mapa en tiempo real a cualquier resolución
-    let resizeObserver: ResizeObserver | null = null
-    if (typeof ResizeObserver !== 'undefined' && mapRef.current) {
-      resizeObserver = new ResizeObserver(() => {
-        if (leafletMapRef.current) {
-          leafletMapRef.current.invalidateSize({ pan: false })
-        }
-      })
-      resizeObserver.observe(mapRef.current)
-    }
-
+    // Invalidate size para asegurar render completo
     const timer1 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 100)
+    }, 150)
 
     const timer2 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 400)
-
-    const timer3 = setTimeout(() => {
-      if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 1000)
+    }, 600)
 
     const handleResize = () => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
@@ -115,11 +97,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     return () => {
       clearTimeout(timer1)
       clearTimeout(timer2)
-      clearTimeout(timer3)
       window.removeEventListener('resize', handleResize)
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
@@ -165,7 +143,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }).addTo(leafletMapRef.current).bindPopup(`Entrega: ${pedido.cliente}`)
     }
 
-    // Auto-encuadre inicial entre Local y Cliente con padding para HUD superior e inferior
+    // Auto-encuadre entre Local y Cliente
     const bounds = L.latLngBounds([
       [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
       [latitud, longitud],
@@ -173,11 +151,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     if (pedido.cadete_coordenadas) {
       bounds.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
     }
-    leafletMapRef.current.fitBounds(bounds, {
-      paddingTopLeft: [30, 60],
-      paddingBottomRight: [30, 60],
-      maxZoom: 16,
-    })
+    leafletMapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
     leafletMapRef.current.invalidateSize()
   }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente])
 
@@ -211,38 +185,24 @@ export default function MapaSeguimiento({ pedido }: Props) {
         bounds.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
       }
       bounds.extend([latitud, longitud])
-      leafletMapRef.current.fitBounds(bounds, {
-        paddingTopLeft: [30, 60],
-        paddingBottomRight: [30, 60],
-        maxZoom: 16,
-      })
+      leafletMapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
     }
   }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud])
 
   const esperandoGps = !pedido.cadete_coordenadas
 
   return (
-    <div className="w-full h-full absolute inset-0 rounded-2xl overflow-hidden z-0 bg-slate-100 dark:bg-slate-900">
+    <div className="w-full h-full relative rounded-2xl overflow-hidden z-0 bg-slate-100">
       <style dangerouslySetInnerHTML={{
         __html: `
         .animated-marker {
           transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        .leaflet-container {
-          width: 100% !important;
-          height: 100% !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          background-color: #e2e8f0;
-        }
       `,
       }} />
 
-      {/* Contenedor del Mapa Leaflet (100% de ancho y alto) */}
-      <div ref={mapRef} className="w-full h-full absolute inset-0 z-0" />
+      {/* Contenedor del Mapa Leaflet */}
+      <div ref={mapRef} className="w-full h-full" style={{ minHeight: '380px', height: '100%', width: '100%' }} />
 
       {/* HUD Superior con ETA */}
       {etaText && !esperandoGps && (
