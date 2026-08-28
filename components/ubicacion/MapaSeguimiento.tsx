@@ -54,10 +54,15 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const mapa = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
+        zoomSnap: 0.5,
+        fadeAnimation: true,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
-      L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        keepBuffer: 4,
+        updateWhenIdle: false,
       }).addTo(mapa)
 
       L.control.zoom({ position: 'bottomright' }).addTo(mapa)
@@ -79,13 +84,28 @@ export default function MapaSeguimiento({ pedido }: Props) {
       setMapaListo(true)
     }
 
+    // ResizeObserver para adaptar el mapa en tiempo real a cualquier resolución
+    let resizeObserver: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && mapRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (leafletMapRef.current) {
+          leafletMapRef.current.invalidateSize({ pan: false })
+        }
+      })
+      resizeObserver.observe(mapRef.current)
+    }
+
     const timer1 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 150)
+    }, 100)
 
     const timer2 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 600)
+    }, 400)
+
+    const timer3 = setTimeout(() => {
+      if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
+    }, 1000)
 
     const handleResize = () => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
@@ -95,7 +115,11 @@ export default function MapaSeguimiento({ pedido }: Props) {
     return () => {
       clearTimeout(timer1)
       clearTimeout(timer2)
+      clearTimeout(timer3)
       window.removeEventListener('resize', handleResize)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
@@ -141,7 +165,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }).addTo(leafletMapRef.current).bindPopup(`Entrega: ${pedido.cliente}`)
     }
 
-    // Auto-encuadre inicial entre Local y Cliente
+    // Auto-encuadre inicial entre Local y Cliente con padding para HUD superior e inferior
     const bounds = L.latLngBounds([
       [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
       [latitud, longitud],
@@ -149,7 +173,11 @@ export default function MapaSeguimiento({ pedido }: Props) {
     if (pedido.cadete_coordenadas) {
       bounds.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
     }
-    leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+    leafletMapRef.current.fitBounds(bounds, {
+      paddingTopLeft: [30, 60],
+      paddingBottomRight: [30, 60],
+      maxZoom: 16,
+    })
     leafletMapRef.current.invalidateSize()
   }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente])
 
@@ -183,35 +211,44 @@ export default function MapaSeguimiento({ pedido }: Props) {
         bounds.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
       }
       bounds.extend([latitud, longitud])
-      leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+      leafletMapRef.current.fitBounds(bounds, {
+        paddingTopLeft: [30, 60],
+        paddingBottomRight: [30, 60],
+        maxZoom: 16,
+      })
     }
   }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud])
 
   const esperandoGps = !pedido.cadete_coordenadas
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden relative z-0 min-h-[380px] bg-slate-100 dark:bg-slate-900">
+    <div className="w-full h-full absolute inset-0 rounded-2xl overflow-hidden z-0 bg-slate-100 dark:bg-slate-900">
       <style dangerouslySetInnerHTML={{
         __html: `
         .animated-marker {
-          transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .leaflet-container {
           width: 100% !important;
           height: 100% !important;
-          background-color: #f1f5f9;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          background-color: #e2e8f0;
         }
       `,
       }} />
 
-      {/* Contenedor del Mapa Leaflet */}
+      {/* Contenedor del Mapa Leaflet (100% de ancho y alto) */}
       <div ref={mapRef} className="w-full h-full absolute inset-0 z-0" />
 
       {/* HUD Superior con ETA */}
       {etaText && !esperandoGps && (
-        <div className="absolute top-4 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-emerald-600 text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-4 border border-emerald-400/30">
-            <span className="text-xl">🛵</span>
+        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
+          <div className="bg-emerald-600/95 backdrop-blur-md text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-4 border border-emerald-400/40">
+            <span className="text-lg">🛵</span>
             <span className="text-xs sm:text-sm font-black tracking-wide">{etaText}</span>
           </div>
         </div>

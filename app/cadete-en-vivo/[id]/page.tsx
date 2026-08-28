@@ -161,8 +161,20 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, fetchPrincipal)
       .subscribe()
 
-    const intervalo = setInterval(fetchPrincipal, 15000)
-    return () => { clearInterval(intervalo); supabaseAnon.removeChannel(canal) }
+    // Polling inteligente cada 5 segundos
+    const intervalo = setInterval(fetchPrincipal, 5000)
+
+    // Re-sincronizar al volver a la pestaña o recuperar conexión a internet
+    const onReconectar = () => fetchPrincipal()
+    window.addEventListener('online', onReconectar)
+    window.addEventListener('focus', onReconectar)
+
+    return () => {
+      clearInterval(intervalo)
+      window.removeEventListener('online', onReconectar)
+      window.removeEventListener('focus', onReconectar)
+      supabaseAnon.removeChannel(canal)
+    }
   }, [pedidoId])
 
   // ── Fetch de los pedidos adicionales (desde localStorage) ───────────────────
@@ -372,15 +384,15 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   )
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 md:py-10" style={{ background: BG }}>
-      <div className="w-full max-w-xl flex flex-col gap-4 sm:gap-5 flex-1 justify-between">
+    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 md:py-8" style={{ background: BG }}>
+      <div className="w-full max-w-xl flex flex-col gap-3 sm:gap-4 flex-1 h-full justify-between">
         {/* Tarjetas de información y estado */}
         <div className="z-20 w-full pt-1 sm:pt-0">
           {headerConStack}
         </div>
 
-        {/* Contenedor ÚNICO del Mapa interactivo para Mobile y Desktop */}
-        <div className="w-full flex-1 min-h-[420px] sm:min-h-[480px] h-[55vh] sm:h-[500px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 relative">
+        {/* Contenedor adaptativo del Mapa interactivo (ocupa 100% del espacio) */}
+        <div className="w-full flex-1 min-h-[380px] sm:min-h-[460px] h-[52vh] sm:h-[500px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 relative">
           {bloqueContenido}
         </div>
 
