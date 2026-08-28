@@ -280,7 +280,10 @@ function PestanaParametros() {
       portalCadeteriaHabilitado: nuevoValor,
     }
 
-    await guardarConfiguracionOperativa(nuevaConfig as any)
+    await guardarConfiguracionOperativa(
+      nuevaConfig as any,
+      nuevoValor ? '✅ Acceso web a cadetería habilitado.' : '🔒 Acceso web a cadetería bloqueado (obligando App móvil).'
+    )
   }
 
   // Guardar configuración modificada en el archivo del servidor
@@ -305,7 +308,7 @@ function PestanaParametros() {
       portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
     }
 
-    await guardarConfiguracionOperativa(nuevaConfig as any)
+    await guardarConfiguracionOperativa(nuevaConfig as any, 'Configuración operativa guardada exitosamente.')
     setGuardando(false)
   }
 

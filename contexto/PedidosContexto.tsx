@@ -163,7 +163,7 @@ interface ValorContextoPedidosInterno {
   finalizarTurno: () => Promise<void>
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
   configuracionOperativa: typeof configuracionOperativaInicial
-  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
+  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial, mensajeExito?: string) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
@@ -277,7 +277,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }, [usuarioActivo])
 
   const guardarConfiguracionOperativa = async (
-    nuevaConfig: typeof configuracionOperativaInicial
+    nuevaConfig: typeof configuracionOperativaInicial,
+    mensajeExito?: string
   ): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/configuracion', {
@@ -288,7 +289,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       if (res.ok) {
         setConfiguracionOperativa(nuevaConfig)
         actualizarConfiguracionLocal(nuevaConfig)
-        agregarNotificacion('Configuración de alertas guardada exitosamente.', 'success')
+        agregarNotificacion(mensajeExito || 'Configuración guardada exitosamente.', 'success')
         return true
       } else {
         const errorData = await res.json().catch(() => ({}))
@@ -817,7 +818,7 @@ interface ValorContextoPedidos {
   finalizarTurno: () => Promise<void>
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
   configuracionOperativa: typeof configuracionOperativaInicial
-  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial) => Promise<boolean>
+  guardarConfiguracionOperativa: (nuevaConfig: typeof configuracionOperativaInicial, mensajeExito?: string) => Promise<boolean>
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
