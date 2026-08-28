@@ -39,6 +39,7 @@ import {
   reproducirSonidoCampanaCocina,
 } from './TemaNotificacionContexto'
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
+import { ProveedorConsumosPersonal } from './ConsumosPersonalContexto'
 import configuracionOperativaInicial from '../config/operacion.json'
 import { actualizarConfiguracionLocal } from '../lib/problemas'
 import { detectarTipoTurnoActual, parsearFechaHora, obtenerFechaNegocio } from '@/lib/tiempo'
@@ -786,7 +787,9 @@ export function ProveedorPedidos({ children }: { children: ReactNode }) {
   return (
     <ProveedorTemaNotificacion>
       <ProveedorCatalogo>
-        <ProveedorPedidosInterno>{children}</ProveedorPedidosInterno>
+        <ProveedorConsumosPersonal>
+          <ProveedorPedidosInterno>{children}</ProveedorPedidosInterno>
+        </ProveedorConsumosPersonal>
       </ProveedorCatalogo>
     </ProveedorTemaNotificacion>
   )
@@ -809,13 +812,6 @@ interface ValorContextoPedidos {
   asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
   cambiarMetodoPago: (id: string, metodoPago: string) => void
   eliminarPedido: (id: string) => void
-  actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
-  actualizarProductos: (productos: ProductoCatalogo[]) => void
-  actualizarModificadores: (modificadores: ModificadorCatalogo[]) => void
-  notificaciones: import('./TemaNotificacionContexto').Notificacion[]
-  eliminarNotificacion: (id: string) => void
-  modoOscuro: boolean
-  alternarModoOscuro: () => void
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>
   obtenerPedidosPorFecha: (fecha: string) => Promise<Pedido[]>
@@ -824,6 +820,14 @@ interface ValorContextoPedidos {
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
+  actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
+  actualizarProductos: (productos: ProductoCatalogo[]) => void
+  actualizarModificadores: (modificadores: ModificadorCatalogo[]) => void
+  descontarStockProducto: (productoId: string, cantidad: number) => void
+  notificaciones: import('./TemaNotificacionContexto').Notificacion[]
+  eliminarNotificacion: (id: string) => void
+  modoOscuro: boolean
+  alternarModoOscuro: () => void
 }
 
 export function usarPedidos(): ValorContextoPedidos {
@@ -836,7 +840,7 @@ export function usarPedidos(): ValorContextoPedidos {
   }
 
   return {
-    // Pedidos
+    // Pedidos & Operación
     pedidos: contextoPedidos.pedidos,
     cadetes: contextoPedidos.cadetes,
     estaListo: contextoPedidos.estaListo && contextoCatalogo.estaListoCatalogo,
@@ -864,6 +868,7 @@ export function usarPedidos(): ValorContextoPedidos {
     actualizarCategorias: contextoCatalogo.actualizarCategorias,
     actualizarProductos: contextoCatalogo.actualizarProductos,
     actualizarModificadores: contextoCatalogo.actualizarModificadores,
+    descontarStockProducto: contextoCatalogo.descontarStockProducto,
 
     // UI & Tema
     notificaciones: contextoUI.notificaciones,
