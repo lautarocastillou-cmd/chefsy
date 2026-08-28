@@ -80,14 +80,24 @@ export default function MapaSeguimiento({ pedido }: Props) {
       setMapaListo(true)
     }
 
-    // Invalidate size para asegurar render completo
+    // ResizeObserver para adaptar el mapa en tiempo real a cualquier resolución sin márgenes
+    let resizeObserver: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && mapRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (leafletMapRef.current) {
+          leafletMapRef.current.invalidateSize({ pan: false })
+        }
+      })
+      resizeObserver.observe(mapRef.current)
+    }
+
     const timer1 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 150)
+    }, 100)
 
     const timer2 = setTimeout(() => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
-    }, 600)
+    }, 400)
 
     const handleResize = () => {
       if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
@@ -98,6 +108,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
       clearTimeout(timer1)
       clearTimeout(timer2)
       window.removeEventListener('resize', handleResize)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
@@ -143,7 +156,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }).addTo(leafletMapRef.current).bindPopup(`Entrega: ${pedido.cliente}`)
     }
 
-    // Auto-encuadre entre Local y Cliente
+    // Auto-encuadre entre Local y Cliente con padding seguro
     const bounds = L.latLngBounds([
       [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
       [latitud, longitud],
@@ -192,17 +205,22 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const esperandoGps = !pedido.cadete_coordenadas
 
   return (
-    <div className="w-full h-full relative rounded-2xl overflow-hidden z-0 bg-slate-100">
+    <div className="absolute inset-0 w-full h-full overflow-hidden z-0 bg-slate-100">
       <style dangerouslySetInnerHTML={{
         __html: `
         .animated-marker {
           transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
+        .leaflet-container {
+          width: 100% !important;
+          height: 100% !important;
+          background-color: #e2e8f0;
+        }
       `,
       }} />
 
-      {/* Contenedor del Mapa Leaflet */}
-      <div ref={mapRef} className="w-full h-full" style={{ minHeight: '380px', height: '100%', width: '100%' }} />
+      {/* Contenedor del Mapa Leaflet (ocupa el 100% absoluto) */}
+      <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
 
       {/* HUD Superior con ETA */}
       {etaText && !esperandoGps && (

@@ -238,8 +238,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   // ── Mapa interactivo + Overlays contextuales en tiempo real ─────────────────
   const bloqueContenido = (
-    <div className="w-full h-full relative overflow-hidden">
-      {/* El mapa siempre está presente y activo */}
+    <div className="absolute inset-0 w-full h-full overflow-hidden">
+      {/* El mapa siempre está presente y activo ocupando el 100% */}
       <MapaSeguimiento pedido={pedido} />
 
       {/* Overlay: Señal GPS pausada */}
@@ -387,17 +387,19 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 md:py-8" style={{ background: BG }}>
       <div className="w-full max-w-xl flex flex-col gap-3 sm:gap-4 flex-1 h-full justify-between">
         {/* Tarjetas de información y estado */}
-        <div className="z-20 w-full pt-1 sm:pt-0">
+        <div className="z-20 w-full pt-1 sm:pt-0 shrink-0">
           {headerConStack}
         </div>
 
-        {/* Contenedor adaptativo del Mapa interactivo (ocupa 100% del espacio) */}
-        <div className="w-full flex-1 min-h-[380px] sm:min-h-[460px] h-[52vh] sm:h-[500px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 relative">
+        {/* Contenedor adaptativo del Mapa interactivo (100% de alto y ancho) */}
+        <div className="w-full flex-1 relative min-h-[360px] sm:min-h-[440px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-100 dark:bg-slate-900">
           {bloqueContenido}
         </div>
 
         {/* Footer */}
-        {footerBloque}
+        <div className="shrink-0">
+          {footerBloque}
+        </div>
       </div>
     </div>
   )
