@@ -372,28 +372,21 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   )
 
   return (
-    <>
-      {/* ══ MOBILE ══════════════════════════════════════════════════════════ */}
-      <div className="md:hidden min-h-screen flex flex-col" style={{ background: BG }}>
-        <div className="z-50 px-4 pt-5 pb-3">{headerConStack}</div>
-        <div className="flex-1 px-4 pb-4 flex flex-col">
-          <div className="flex-1 relative w-full min-h-[420px] h-[55vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
-            {bloqueContenido}
-          </div>
-        </div>
-        {footerBloque}
-      </div>
-
-      {/* ══ DESKTOP ═════════════════════════════════════════════════════════ */}
-      <div className="hidden md:flex min-h-screen flex-col items-center justify-center px-8 py-10 gap-6" style={{ background: BG }}>
-        <div className="w-full max-w-xl flex flex-col gap-5">
+    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 md:py-10" style={{ background: BG }}>
+      <div className="w-full max-w-xl flex flex-col gap-4 sm:gap-5 flex-1 justify-between">
+        {/* Tarjetas de información y estado */}
+        <div className="z-20 w-full pt-1 sm:pt-0">
           {headerConStack}
-          <div className="w-full rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20" style={{ height: '480px' }}>
-            {bloqueContenido}
-          </div>
         </div>
+
+        {/* Contenedor ÚNICO del Mapa interactivo para Mobile y Desktop */}
+        <div className="w-full flex-1 min-h-[420px] sm:min-h-[480px] h-[55vh] sm:h-[500px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 relative">
+          {bloqueContenido}
+        </div>
+
+        {/* Footer */}
         {footerBloque}
       </div>
-    </>
+    </div>
   )
 }
