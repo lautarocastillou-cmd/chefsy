@@ -99,16 +99,16 @@ const PLANTILLAS: PlantillaPromo[] = [
   },
   {
     id: 'resena',
-    nombre: 'Reseña Google Maps',
+    nombre: 'Reseña Google (Calificar)',
     icono: '⭐',
     titulo: '¿TE GUSTÓ NUESTRA COMIDA?',
-    mensaje: 'Dejanos una reseña de 5 estrellas en Google Maps y presentá este cupón para canjear una porción de papas gratis.',
+    mensaje: 'Dejanos tu opinión y 5 estrellas en Google para ayudarnos a seguir mejorando. ¡Tu valoración nos ayuda un montón!',
     incluirQr: true,
-    qrUrl: 'https://maps.app.goo.gl/By5qrWayRiW2qQu26',
-    qrTexto: 'Escaneá para opinar en Google Maps',
-    validezTipo: 'dias',
-    validezDias: 30,
-    letraChica: 'Mostrá la reseña al mozo o por WhatsApp para validar.'
+    qrUrl: 'https://g.page/r/CX3HGjUZlNvzEBM/review',
+    qrTexto: 'Escaneá para calificar en Google',
+    validezTipo: 'sin_vencimiento',
+    validezDias: 0,
+    letraChica: '¡Gracias por elegir Chefsy!'
   },
   {
     id: 'whatsapp',

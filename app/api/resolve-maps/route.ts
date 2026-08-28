@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'URL o coordenadas no provistas.' }, { status: 400 })
   }
 
-  const DOMINIOS_PERMITIDOS = ['maps.google.com', 'goo.gl', 'maps.app.goo.gl', 'www.google.com']
+  const DOMINIOS_PERMITIDOS = ['maps.google.com', 'goo.gl', 'maps.app.goo.gl', 'www.google.com', 'g.page']
   try {
     const parsedUrl = new URL(urlParam)
     if (!DOMINIOS_PERMITIDOS.includes(parsedUrl.hostname)) {
