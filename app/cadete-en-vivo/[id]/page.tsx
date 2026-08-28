@@ -224,53 +224,70 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
   const cadeteNombre    = pedido.cadete_nombre || 'El cadete'
 
-  // ── Mapa / estado visual ────────────────────────────────────────────────────
-  const bloqueContenido = gpsApagado ? (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
-      <div className="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center mb-4 shadow-lg">
-        <WifiOff size={40} className="text-red-500" />
-      </div>
-      <h2 className="text-lg font-black text-gray-800 mb-2">Señal GPS perdida</h2>
-      <p className="text-gray-500 text-sm max-w-[220px] leading-relaxed">
-        {cadeteNombre} está con GPS apagado, pero tu pedido sigue en camino.
-      </p>
-    </div>
-  ) : (cadeteOcupadoEnOtroViaje && !isEnCamino) ? (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6 animate-in fade-in duration-300">
-      <div className="w-24 h-24 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-4 shadow-lg relative">
-        <Bike size={44} className="text-amber-600 animate-bounce" />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
-        </span>
-      </div>
-      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full mb-2 border border-amber-200">
-        🛵 Viaje previo en curso
-      </span>
-      <h2 className="text-xl font-black text-gray-900 mb-2 leading-tight">
-        ¡{cadeteNombre} está en otro viaje!
-      </h2>
-      <p className="text-gray-500 text-xs sm:text-sm max-w-xs leading-relaxed font-medium">
-        Tu pedido ya está listo. <span className="font-bold text-gray-800">{cadeteNombre}</span> está entregando una orden cercana en este momento. Apenas la complete, saldrá en camino a tu dirección.
-      </p>
-    </div>
-  ) : isEnCamino ? (
-    <MapaSeguimiento pedido={pedido} />
-  ) : (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-white text-center p-6">
-      <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-lg ${isTerminado ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-        {isTerminado
-          ? <ShoppingBag size={42} className="text-emerald-600" />
-          : <Flame size={42} className="text-amber-500 animate-pulse" />}
-      </div>
-      <h2 className="text-lg font-black text-gray-800 mb-2">
-        {isTerminado ? '¡Que lo disfrutes!' : 'Cocinando con amor'}
-      </h2>
-      <p className="text-gray-400 text-sm max-w-[220px] leading-relaxed">
-        {isTerminado
-          ? 'El pedido fue entregado. ¡Gracias por elegir Chefsy!'
-          : 'Te avisamos cuando el cadete salga a entregar.'}
-      </p>
+  // ── Mapa interactivo + Overlays contextuales en tiempo real ─────────────────
+  const bloqueContenido = (
+    <div className="w-full h-full relative overflow-hidden">
+      {/* El mapa siempre está presente y activo */}
+      <MapaSeguimiento pedido={pedido} />
+
+      {/* Overlay: Señal GPS pausada */}
+      {gpsApagado && (
+        <div className="absolute inset-x-3 top-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-red-200 dark:border-red-900/50 flex items-center gap-2.5 animate-in slide-in-from-top-4">
+          <WifiOff size={18} className="text-red-500 shrink-0" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            {cadeteNombre} está en camino (señal GPS momentáneamente pausada).
+          </span>
+        </div>
+      )}
+
+      {/* Overlay: Cadete en viaje previo antes de salir con este pedido */}
+      {cadeteOcupadoEnOtroViaje && !isEnCamino && (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+            <Bike size={22} className="animate-bounce" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black text-amber-900 dark:text-amber-200">
+              ¡{cadeteNombre} está completando una entrega cercana!
+            </h3>
+            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+              Tu pedido ya está listo. Apenas termine ese reparto, sale directo hacia tu casa.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay: Cocina / Preparación */}
+      {isEnPreparacion && !cadeteOcupadoEnOtroViaje && (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+            <Flame size={22} className="animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">
+              {pedido.estado === 'listo' ? '¡Tu pedido ya está listo!' : 'Preparando tu pedido en cocina'}
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {pedido.estado === 'listo' 
+                ? (pedido.cadete_nombre ? `${pedido.cadete_nombre} lo retirará en breve para el reparto.` : 'Esperando asignación de cadete para el despacho.')
+                : 'Te avisaremos en vivo cuando el repartidor salga hacia tu domicilio.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay: Pedido Entregado */}
+      {isTerminado && (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black">¡Pedido entregado con éxito!</h3>
+            <p className="text-[11px] text-emerald-100">¡Muchas gracias por elegir Chefsy! Que lo disfrutes.</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -360,7 +377,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       <div className="md:hidden min-h-screen flex flex-col" style={{ background: BG }}>
         <div className="z-50 px-4 pt-5 pb-3">{headerConStack}</div>
         <div className="flex-1 px-4 pb-4 flex flex-col">
-          <div className="flex-1 relative w-full min-h-[60vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
+          <div className="flex-1 relative w-full min-h-[420px] h-[55vh] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
             {bloqueContenido}
           </div>
         </div>

@@ -90,7 +90,35 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }).addTo(leafletMapRef.current).bindPopup(`Entrega: ${pedido.cliente}`)
     }
 
+    // Ajustar zoom inicial considerando local y destino
+    const boundsInicial = L.latLngBounds([
+      [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud]
+    ])
+    if (pedido.coordenadas) {
+      boundsInicial.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
+    }
+    if (pedido.cadete_coordenadas) {
+      boundsInicial.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
+    }
+    leafletMapRef.current.fitBounds(boundsInicial, { padding: [40, 40], maxZoom: 16 })
+
+    // Garantizar que Leaflet renderice todas las capas en pantallas móviles al terminar transiciones
+    const timer1 = setTimeout(() => {
+      if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
+    }, 200)
+    const timer2 = setTimeout(() => {
+      if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
+    }, 700)
+
+    const handleResize = () => {
+      if (leafletMapRef.current) leafletMapRef.current.invalidateSize()
+    }
+    window.addEventListener('resize', handleResize)
+
     return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      window.removeEventListener('resize', handleResize)
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
         leafletMapRef.current = null
