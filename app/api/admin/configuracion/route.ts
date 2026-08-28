@@ -29,10 +29,13 @@ export async function GET() {
       return NextResponse.json(configuracionFallback)
     }
 
+    const portalCadeteriaHabilitado = data.portal_cadeteria_habilitado ?? data.prioridades?.portalCadeteriaHabilitado ?? (configuracionFallback as any).portalCadeteriaHabilitado ?? true
+
     return NextResponse.json({
       limites: data.limites,
       prioridades: data.prioridades,
       montoBaseCadete: data.monto_base_cadete ?? data.prioridades?.montoBaseCadete ?? configuracionFallback.montoBaseCadete ?? 4000,
+      portalCadeteriaHabilitado,
     })
   } catch (error: any) {
     console.error('[API Config] Error al leer la configuración:', error)
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { limites, prioridades, montoBaseCadete } = body
+    const { limites, prioridades, montoBaseCadete, portalCadeteriaHabilitado } = body
 
     if (!limites || !prioridades) {
       return NextResponse.json(
@@ -62,9 +65,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // Guardar también dentro de prioridades por si la columna física monto_base_cadete no existe aún en Postgres
+    const habilitado = portalCadeteriaHabilitado !== undefined ? Boolean(portalCadeteriaHabilitado) : true
+
+    // Guardar también dentro de prioridades por si la columna física no existe aún en Postgres
     const prioridadesActualizadas = typeof prioridades === 'object' && prioridades !== null
-      ? { ...prioridades, montoBaseCadete: Number(montoBaseCadete ?? 4000) }
+      ? { ...prioridades, montoBaseCadete: Number(montoBaseCadete ?? 4000), portalCadeteriaHabilitado: habilitado }
       : prioridades
 
     const supabase = obtenerSupabaseAdmin()
@@ -77,6 +82,7 @@ export async function POST(request: Request) {
           limites,
           prioridades: prioridadesActualizadas,
           monto_base_cadete: Number(montoBaseCadete ?? 4000),
+          portal_cadeteria_habilitado: habilitado,
           updated_at: new Date().toISOString()
         },
         { onConflict: 'id' }

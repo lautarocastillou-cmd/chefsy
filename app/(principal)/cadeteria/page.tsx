@@ -503,6 +503,42 @@ export default function PaginaCadeteria() {
   }
 
   const esAdmin = usuarioActivo.rol === 'admin'
+  const portalHabilitado = (configuracionOperativa as any)?.portalCadeteriaHabilitado ?? true
+
+  if (!portalHabilitado && !esAdmin) {
+    return (
+      <div className="min-h-screen bg-chefsy-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl mx-auto border border-amber-500/20 shadow-inner">
+            🔒
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
+              Acceso Web Deshabilitado
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              El portal web se encuentra cerrado. Los repartos y el rastreo deben gestionarse desde la <strong>App Oficial de Chefsy</strong>.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2.5">
+            <a
+              href="/api/cadeteria/descargar-apk"
+              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-950/20 active:scale-95 cursor-pointer"
+            >
+              <Download size={16} />
+              <span>Descargar App de Cadete (APK)</span>
+            </a>
+            <button
+              onClick={() => cerrarSesion()}
+              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-2 cursor-pointer font-medium"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={esAdmin ? "min-h-full pb-8" : "min-h-screen bg-chefsy-50"}>

@@ -236,6 +236,9 @@ function PestanaParametros() {
   // Estado local para el pago base a cadetes
   const [montoBaseCadete, setMontoBaseCadete] = useState(4000)
 
+  // Estado local para habilitar/deshabilitar el portal web de cadetería
+  const [portalCadeteriaHabilitado, setPortalCadeteriaHabilitado] = useState(true)
+
   const [guardando, setGuardando] = useState(false)
 
   // Cargar valores iniciales desde la configuración centralizada
@@ -252,6 +255,7 @@ function PestanaParametros() {
       setCocinaDemoradoAltaMinutos(configuracionOperativa.prioridades.cocinaDemoradoAltaMinutos)
 
       setMontoBaseCadete((configuracionOperativa as any).montoBaseCadete ?? 4000)
+      setPortalCadeteriaHabilitado((configuracionOperativa as any).portalCadeteriaHabilitado ?? true)
     }
   }, [configuracionOperativa])
 
@@ -274,9 +278,10 @@ function PestanaParametros() {
         cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
       },
       montoBaseCadete: Number(montoBaseCadete),
+      portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
     }
 
-    await guardarConfiguracionOperativa(nuevaConfig)
+    await guardarConfiguracionOperativa(nuevaConfig as any)
     setGuardando(false)
   }
 
@@ -293,11 +298,33 @@ function PestanaParametros() {
       setSinCadeteAltaMinutos(15)
       setCocinaDemoradoAltaMinutos(30)
       setMontoBaseCadete(4000)
+      setPortalCadeteriaHabilitado(true)
     }
   }
 
   return (
     <form onSubmit={manejarGuardar} className="space-y-6">
+      {/* Interruptor Minimalista: Acceso Web de Cadetería */}
+      <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-colors">
+        <div>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+            Acceso a la página web de cadetería
+          </span>
+          <span className="text-[11px] text-slate-400">
+            {portalCadeteriaHabilitado ? 'Habilitado (portal web activo)' : 'Deshabilitado (obliga a usar la App móvil)'}
+          </span>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={portalCadeteriaHabilitado}
+            onChange={(e) => setPortalCadeteriaHabilitado(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+        </label>
+      </div>
+
       {/* Tarjeta de Pago Base a Cadetes */}
       <div className="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 shadow-sm space-y-4">
         <h3 className="text-sm font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2 border-b border-emerald-100 dark:border-emerald-900/30 pb-3">

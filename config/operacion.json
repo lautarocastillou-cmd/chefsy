@@ -11,5 +11,6 @@
     "sinCadeteAltaMinutos": 15,
     "cocinaDemoradoAltaMinutos": 30
   },
-  "montoBaseCadete": 4000
+  "montoBaseCadete": 4000,
+  "portalCadeteriaHabilitado": true
 }
