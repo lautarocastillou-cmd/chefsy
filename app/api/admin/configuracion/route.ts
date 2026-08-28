@@ -29,12 +29,19 @@ export async function GET() {
       return NextResponse.json(configuracionFallback)
     }
 
-    const portalCadeteriaHabilitado = data.portal_cadeteria_habilitado ?? data.prioridades?.portalCadeteriaHabilitado ?? (configuracionFallback as any).portalCadeteriaHabilitado ?? true
+    const prioridades = data.prioridades || {}
+    const portalCadeteriaHabilitado = prioridades.portalCadeteriaHabilitado !== undefined 
+      ? Boolean(prioridades.portalCadeteriaHabilitado) 
+      : (configuracionFallback as any).portalCadeteriaHabilitado ?? true
+
+    const montoBaseCadete = prioridades.montoBaseCadete !== undefined
+      ? Number(prioridades.montoBaseCadete)
+      : (configuracionFallback as any).montoBaseCadete ?? 4000
 
     return NextResponse.json({
-      limites: data.limites,
-      prioridades: data.prioridades,
-      montoBaseCadete: data.monto_base_cadete ?? data.prioridades?.montoBaseCadete ?? configuracionFallback.montoBaseCadete ?? 4000,
+      limites: data.limites || configuracionFallback.limites,
+      prioridades,
+      montoBaseCadete,
       portalCadeteriaHabilitado,
     })
   } catch (error: any) {
@@ -66,11 +73,12 @@ export async function POST(request: Request) {
     }
 
     const habilitado = portalCadeteriaHabilitado !== undefined ? Boolean(portalCadeteriaHabilitado) : true
+    const monto = Number(montoBaseCadete ?? 4000)
 
-    // Guardar también dentro de prioridades por si la columna física no existe aún en Postgres
+    // Guardar dentro de JSONB prioridades (compatible 100% con Postgres sin columnas extra)
     const prioridadesActualizadas = typeof prioridades === 'object' && prioridades !== null
-      ? { ...prioridades, montoBaseCadete: Number(montoBaseCadete ?? 4000), portalCadeteriaHabilitado: habilitado }
-      : prioridades
+      ? { ...prioridades, montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado }
+      : { montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado }
 
     const supabase = obtenerSupabaseAdmin()
 
@@ -81,8 +89,6 @@ export async function POST(request: Request) {
           id: 1,
           limites,
           prioridades: prioridadesActualizadas,
-          monto_base_cadete: Number(montoBaseCadete ?? 4000),
-          portal_cadeteria_habilitado: habilitado,
           updated_at: new Date().toISOString()
         },
         { onConflict: 'id' }
@@ -91,12 +97,12 @@ export async function POST(request: Request) {
     if (error) {
       console.error('[API Config] Error al guardar en Supabase:', error)
       return NextResponse.json(
-        { error: 'Error al guardar la configuración en la base de datos.' },
+        { error: 'Error al guardar la configuración en la base de datos: ' + error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, portalCadeteriaHabilitado: habilitado, montoBaseCadete: monto })
   } catch (error: any) {
     console.error('[API Config] Error al procesar la solicitud:', error)
     return NextResponse.json(

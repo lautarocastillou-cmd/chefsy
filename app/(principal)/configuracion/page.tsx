@@ -259,6 +259,30 @@ function PestanaParametros() {
     }
   }, [configuracionOperativa])
 
+  // Guardar inmediatamente al cambiar el switch
+  const manejarCambioSwitchCadeteria = async (nuevoValor: boolean) => {
+    setPortalCadeteriaHabilitado(nuevoValor)
+    
+    const nuevaConfig = {
+      limites: {
+        pedidoAtrasadoMinutos: Number(pedidoAtrasadoMinutos),
+        listoDemoradoMinutos: Number(listoDemoradoMinutos),
+        cocinaDemoradoMinutos: Number(cocinaDemoradoMinutos),
+        pedidoOlvidadoMinutos: Number(pedidoOlvidadoMinutos),
+      },
+      prioridades: {
+        pedidoAtrasadoAltaMinutos: Number(pedidoAtrasadoAltaMinutos),
+        listoDemoradoAltaMinutos: Number(listoDemoradoAltaMinutos),
+        sinCadeteAltaMinutos: Number(sinCadeteAltaMinutos),
+        cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
+      },
+      montoBaseCadete: Number(montoBaseCadete),
+      portalCadeteriaHabilitado: nuevoValor,
+    }
+
+    await guardarConfiguracionOperativa(nuevaConfig as any)
+  }
+
   // Guardar configuración modificada en el archivo del servidor
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -318,7 +342,7 @@ function PestanaParametros() {
           <input
             type="checkbox"
             checked={portalCadeteriaHabilitado}
-            onChange={(e) => setPortalCadeteriaHabilitado(e.target.checked)}
+            onChange={(e) => manejarCambioSwitchCadeteria(e.target.checked)}
             className="sr-only peer"
           />
           <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
