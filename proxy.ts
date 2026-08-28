@@ -22,6 +22,7 @@ const REGLAS_ACCESO = [
   { prefijo: '/configuracion',      roles: ['admin'] },
   { prefijo: '/cadeteria',          roles: ['admin', 'cadete'] },
   { prefijo: '/api/admin/pedidos',  roles: ['admin', 'cadete'] },
+  { prefijo: '/api/admin/configuracion', roles: ['admin', 'cadete'] },
   { prefijo: '/api/admin',          roles: ['admin'] },
 ]
 

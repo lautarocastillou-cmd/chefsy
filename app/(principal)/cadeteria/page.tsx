@@ -250,6 +250,23 @@ export default function PaginaCadeteria() {
   const { pedidos, cambiarEstado, dbEstado, configuracionOperativa } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
+  const [configCargada, setConfigCargada] = useState(false)
+  const [portalHabilitadoLocal, setPortalHabilitadoLocal] = useState(true)
+
+  useEffect(() => {
+    async function verificarAcceso() {
+      try {
+        const res = await fetch('/api/admin/configuracion')
+        if (res.ok) {
+          const data = await res.json()
+          const habilitado = data?.portalCadeteriaHabilitado ?? data?.prioridades?.portalCadeteriaHabilitado ?? true
+          setPortalHabilitadoLocal(habilitado)
+        }
+      } catch (_) {}
+      setConfigCargada(true)
+    }
+    verificarAcceso()
+  }, [])
 
   // Estado GPS de los cadetes activos (para el admin)
   const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
@@ -503,7 +520,9 @@ export default function PaginaCadeteria() {
   }
 
   const esAdmin = usuarioActivo.rol === 'admin'
-  const portalHabilitado = (configuracionOperativa as any)?.portalCadeteriaHabilitado ?? true
+  const portalHabilitado = configCargada
+    ? portalHabilitadoLocal
+    : ((configuracionOperativa as any)?.portalCadeteriaHabilitado ?? true)
   const [bypassAdmin, setBypassAdmin] = useState(false)
 
   if (!portalHabilitado && (!esAdmin || !bypassAdmin)) {
