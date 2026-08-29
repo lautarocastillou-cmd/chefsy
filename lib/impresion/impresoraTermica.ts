@@ -14,7 +14,7 @@ import {
 } from './escpos'
 import { formatearPrecio } from '@/lib/utils'
 
-export type TipoDriverImpresora = 'serial' | 'hid' | 'bluetooth' | 'ninguna'
+export type TipoDriverImpresora = 'usb' | 'serial' | 'hid' | 'bluetooth' | 'ninguna'
 
 export interface ConfiguracionImpresora {
   anchoMm: 80 | 58
@@ -31,10 +31,13 @@ const CONFIG_POR_DEFECTO: ConfiguracionImpresora = {
   cortarPapel: true,
   sonarAlarmaComanda: true,
   impresionSilenciosaActiva: true,
-  baudRate: 9600, // Estándar para Xprinter, POS-80, Epson, etc.
+  baudRate: 9600, // Estándar para Xprinter, POS-80, Unnion TP85, Epson, etc.
 }
 
 class GestorImpresoraTermica {
+  private dispositivoUsb: any = null
+  private usbEndpointOut: number = 1
+  private usbInterfaceNumber: number = 0
   private puertoSerial: any = null
   private dispositivoHid: any = null
   private dispositivoBluetooth: any = null
@@ -79,6 +82,7 @@ class GestorImpresoraTermica {
   }
 
   public estaConectada(): boolean {
+    if (this.dispositivoUsb && this.dispositivoUsb.opened) return true
     if (this.puertoSerial && this.puertoSerial.writable) return true
     if (this.dispositivoHid && this.dispositivoHid.opened) return true
     if (this.dispositivoBluetooth && this.dispositivoBluetooth.gatt?.connected) return true
@@ -89,16 +93,19 @@ class GestorImpresoraTermica {
     conectada: boolean
     nombre: string
     tipo: TipoDriverImpresora
+    soporteWebUsb: boolean
     soporteWebSerial: boolean
     soporteWebHid: boolean
     soporteWebBluetooth: boolean
   } {
+    const soporteWebUsb = typeof navigator !== 'undefined' && 'usb' in navigator
     const soporteWebSerial = typeof navigator !== 'undefined' && 'serial' in navigator
     const soporteWebHid = typeof navigator !== 'undefined' && 'hid' in navigator
     const soporteWebBluetooth = typeof navigator !== 'undefined' && 'bluetooth' in navigator
 
     let tipo: TipoDriverImpresora = 'ninguna'
-    if (this.puertoSerial) tipo = 'serial'
+    if (this.dispositivoUsb) tipo = 'usb'
+    else if (this.puertoSerial) tipo = 'serial'
     else if (this.dispositivoHid) tipo = 'hid'
     else if (this.dispositivoBluetooth) tipo = 'bluetooth'
 
@@ -106,6 +113,7 @@ class GestorImpresoraTermica {
       conectada: this.estaConectada(),
       nombre: this.nombreDispositivo || (this.estaConectada() ? 'Impresora Térmica POS' : 'Sin conexión directa'),
       tipo,
+      soporteWebUsb,
       soporteWebSerial,
       soporteWebHid,
       soporteWebBluetooth,
@@ -138,11 +146,56 @@ class GestorImpresoraTermica {
   /**
    * Abre el selector nativo del navegador para que el usuario vincule su impresora
    */
-  public async conectar(tipo: 'serial' | 'hid' | 'bluetooth' = 'serial'): Promise<{
+  public async conectar(tipo: 'usb' | 'serial' | 'hid' | 'bluetooth' = 'usb'): Promise<{
     exito: boolean
     mensaje?: string
   }> {
     try {
+      if (tipo === 'usb') {
+        if (!('usb' in navigator)) {
+          return { exito: false, mensaje: 'Tu navegador no soporta WebUSB (usá Google Chrome o Microsoft Edge).' }
+        }
+        // Solicitar dispositivo USB (filtro vacío para mostrar todos los dispositivos USB conectados)
+        const device = await (navigator as any).usb.requestDevice({ filters: [] })
+        if (!device) return { exito: false, mensaje: 'No se seleccionó ningún dispositivo USB.' }
+
+        await device.open()
+        if (!device.configuration) {
+          await device.selectConfiguration(1)
+        }
+
+        // Buscar interfaz con endpoint OUT para envío bulk de ESC/POS
+        let interfaceNum = 0
+        let endpointOutNum = 1
+
+        if (device.configuration?.interfaces) {
+          for (const iface of device.configuration.interfaces) {
+            for (const alt of iface.alternates) {
+              for (const ep of alt.endpoints) {
+                if (ep.direction === 'out') {
+                  interfaceNum = iface.interfaceNumber
+                  endpointOutNum = ep.endpointNumber
+                  break
+                }
+              }
+            }
+          }
+        }
+
+        try {
+          await device.claimInterface(interfaceNum)
+        } catch (claimErr) {
+          console.warn('[Impresora USB] Advertencia al reclamar interfaz:', claimErr)
+        }
+
+        this.dispositivoUsb = device
+        this.usbInterfaceNumber = interfaceNum
+        this.usbEndpointOut = endpointOutNum
+        this.nombreDispositivo = device.productName || 'Impresora Térmica USB'
+        this.guardarConfiguracion({ impresionSilenciosaActiva: true })
+        return { exito: true, mensaje: `¡${this.nombreDispositivo} conectada por USB directo!` }
+      }
+
       if (tipo === 'serial') {
         if (!('serial' in navigator)) {
           return { exito: false, mensaje: 'Tu navegador no soporta Web Serial (usá Chrome o Edge).' }
@@ -150,9 +203,9 @@ class GestorImpresoraTermica {
         const port = await (navigator as any).serial.requestPort()
         await port.open({ baudRate: this.config.baudRate })
         this.puertoSerial = port
-        this.nombreDispositivo = 'Impresora Térmica USB'
+        this.nombreDispositivo = 'Impresora Térmica USB (Serial)'
         this.guardarConfiguracion({ impresionSilenciosaActiva: true })
-        return { exito: true, mensaje: '¡Impresora USB vinculada con éxito!' }
+        return { exito: true, mensaje: '¡Impresora Serial vinculada con éxito!' }
       }
 
       if (tipo === 'hid') {
@@ -196,6 +249,12 @@ class GestorImpresoraTermica {
 
   public async desconectar(): Promise<void> {
     try {
+      if (this.dispositivoUsb) {
+        try {
+          await this.dispositivoUsb.close()
+        } catch {}
+        this.dispositivoUsb = null
+      }
       if (this.puertoSerial) {
         await this.puertoSerial.close()
         this.puertoSerial = null
@@ -219,7 +278,17 @@ class GestorImpresoraTermica {
    * Envía bytes crudos ESC/POS a la impresora vinculada
    */
   public async enviarRaw(bytes: Uint8Array): Promise<boolean> {
-    // 1. Intentar Serial
+    // 1. Intentar WebUSB Directo
+    if (this.dispositivoUsb && this.dispositivoUsb.opened) {
+      try {
+        await this.dispositivoUsb.transferOut(this.usbEndpointOut || 1, bytes)
+        return true
+      } catch (err) {
+        console.error('Error escribiendo en WebUSB:', err)
+      }
+    }
+
+    // 2. Intentar Serial
     if (this.puertoSerial && this.puertoSerial.writable) {
       try {
         const writer = this.puertoSerial.writable.getWriter()
@@ -231,10 +300,9 @@ class GestorImpresoraTermica {
       }
     }
 
-    // 2. Intentar HID
+    // 3. Intentar HID
     if (this.dispositivoHid && this.dispositivoHid.opened) {
       try {
-        // Enviar paquetes en bloques de 64 bytes
         const chunkSize = 64
         for (let i = 0; i < bytes.length; i += chunkSize) {
           const chunk = bytes.slice(i, i + chunkSize)
@@ -246,7 +314,7 @@ class GestorImpresoraTermica {
       }
     }
 
-    // 3. Intentar Bluetooth
+    // 4. Intentar Bluetooth
     if (this.caracteristicaBluetooth) {
       try {
         const chunkSize = 128

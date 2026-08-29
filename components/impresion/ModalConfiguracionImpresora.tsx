@@ -45,7 +45,7 @@ export default function ModalConfiguracionImpresora({
 
   if (!abierto) return null
 
-  const handleConectar = async (tipo: 'serial' | 'hid' | 'bluetooth') => {
+  const handleConectar = async (tipo: 'usb' | 'serial' | 'hid' | 'bluetooth') => {
     setConectando(true)
     setMensajeFeedback(null)
     try {
@@ -160,7 +160,7 @@ export default function ModalConfiguracionImpresora({
               ) : (
                 <span className="inline-flex items-center gap-1.5 bg-slate-800 text-slate-400 border border-slate-700 text-xs font-bold px-2.5 py-1 rounded-xl">
                   <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-                  <span>Modo Navegador (Diálogo Windows)</span>
+                  <span>Modo Navegador / Windows</span>
                 </span>
               )}
             </div>
@@ -168,32 +168,47 @@ export default function ModalConfiguracionImpresora({
             <p className="text-xs text-slate-300">
               {info.conectada
                 ? `Dispositivo: ${info.nombre} (${info.tipo.toUpperCase()})`
-                : 'Para imprimir en 0.1s sin el cartel de Windows, conectá tu impresora térmica por USB o Bluetooth:'}
+                : 'Conectá tu impresora térmica para imprimir comandas en 0.1s sin carteles ni demoras:'}
             </p>
 
             {/* Botones de Conexión */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <div className="space-y-2 pt-1">
               {!info.conectada ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => handleConectar('serial')}
-                    disabled={conectando}
-                    className="flex-1 py-3 px-3 bg-chefsy-600 hover:bg-chefsy-500 text-white font-black rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs"
-                  >
-                    {conectando ? <Loader2 size={16} className="animate-spin" /> : <Usb size={16} />}
-                    <span>Conectar USB (Serial)</span>
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleConectar('usb')}
+                      disabled={conectando}
+                      className="py-3 px-3 bg-chefsy-600 hover:bg-chefsy-500 text-white font-black rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs"
+                      title="Muestra todos los dispositivos USB conectados a la PC"
+                    >
+                      {conectando ? <Loader2 size={16} className="animate-spin" /> : <Usb size={16} />}
+                      <span>Conectar por USB</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleConectar('bluetooth')}
-                    disabled={conectando}
-                    className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs border border-slate-700"
-                  >
-                    <Bluetooth size={16} />
-                    <span>Bluetooth</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConectar('serial')}
+                      disabled={conectando}
+                      className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs border border-slate-700"
+                      title="Para impresoras con puerto virtual COM"
+                    >
+                      <span>📟 Puerto COM / Serie</span>
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleConectar('bluetooth')}
+                      disabled={conectando}
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs border border-slate-800"
+                    >
+                      <Bluetooth size={15} />
+                      <span>Conectar por Bluetooth</span>
+                    </button>
+                  </div>
                 </>
               ) : (
                 <button
@@ -206,6 +221,13 @@ export default function ModalConfiguracionImpresora({
                 </button>
               )}
             </div>
+
+            {/* Guía para impresoras de Windows */}
+            {!info.conectada && (
+              <div className="p-2.5 bg-slate-900/80 border border-slate-800/80 rounded-xl text-[11px] text-slate-400 leading-relaxed">
+                💡 <strong>Tip para Unnion TP85:</strong> Si tu impresora ya está instalada en Windows, no hace falta vincularla; Chefsy imprimirá automáticamente tus tickets de 80mm usando el controlador de Windows.
+              </div>
+            )}
           </div>
 
           {/* Ajustes de Impresión */}
