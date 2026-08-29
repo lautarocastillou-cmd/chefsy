@@ -78,7 +78,7 @@ function parsearFotosDeUrl(imagenUrl?: string | null): string[] {
 export default function DevToolsPage() {
   const router = useRouter()
   const { usuarioActivo, estaListoAuth } = usarAuth()
-  const { productos, categorias } = usarPedidos()
+  const { productos, categorias, actualizarProductos } = usarPedidos()
 
   const [metadata, setMetadata] = useState<Record<string, TiendaMetadata>>({})
   const [cargandoMetadata, setCargandoMetadata] = useState(true)
@@ -89,8 +89,9 @@ export default function DevToolsPage() {
 
   // Filtros y Búsqueda
   const [busqueda, setBusqueda] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'sin_foto' | 'con_foto' | 'sin_desc'>('todos')
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'pausados' | 'sin_foto' | 'con_foto' | 'sin_desc'>('todos')
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas')
+  const [pausandoProductoId, setPausandoProductoId] = useState<string | null>(null)
 
   // Banco de Fotos de la Casa
   const [mostrarBancoModal, setMostrarBancoModal] = useState(false)
@@ -339,6 +340,37 @@ export default function DevToolsPage() {
     }
   }
 
+  // Alternar Visibilidad / Pausa en Tienda Pública (1-Clic)
+  const alternarVisibilidadTienda = async (productoId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+    }
+    const prod = productos.find(p => p.id === productoId)
+    if (!prod) return
+
+    const nuevoEstado = prod.activo === false ? true : false
+    setPausandoProductoId(productoId)
+
+    try {
+      const nuevosProductos = productos.map(p =>
+        p.id === productoId ? { ...p, activo: nuevoEstado } : p
+      )
+      actualizarProductos(nuevosProductos)
+
+      mostrarToast(
+        nuevoEstado
+          ? `"${prod.nombre}" ahora está VISIBLE en la tienda pública 👁️`
+          : `"${prod.nombre}" fue PAUSADO/OCULTADO de la tienda pública ⏸️`,
+        'success'
+      )
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al cambiar visibilidad: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setPausandoProductoId(null)
+    }
+  }
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
@@ -536,8 +568,16 @@ export default function DevToolsPage() {
     let sinFoto = 0
     let conFoto = 0
     let sinDesc = 0
+    let pausados = 0
+    let activos = 0
 
     productos.forEach(p => {
+      if (p.activo === false) {
+        pausados++
+      } else {
+        activos++
+      }
+
       const meta = metadata[p.id]
       const fotos = parsearFotosDeUrl(meta?.imagen_url)
       const tieneFotoPropia = fotos.length > 0 && !esImagenPlaceholder(fotos[0])
@@ -554,7 +594,7 @@ export default function DevToolsPage() {
       }
     })
 
-    return { total: productos.length, sinFoto, conFoto, sinDesc }
+    return { total: productos.length, sinFoto, conFoto, sinDesc, pausados, activos }
   }, [productos, metadata])
 
   const productosFiltrados = useMemo(() => {
@@ -581,6 +621,8 @@ export default function DevToolsPage() {
       if (filtroEstado === 'sin_foto' && tieneFotoPropia) return false
       if (filtroEstado === 'con_foto' && !tieneFotoPropia) return false
       if (filtroEstado === 'sin_desc' && tieneDesc) return false
+      if (filtroEstado === 'pausados' && p.activo !== false) return false
+      if (filtroEstado === 'activos' && p.activo === false) return false
 
       return true
     })
@@ -803,7 +845,7 @@ export default function DevToolsPage() {
 
         {/* Barra de Estadísticas y Diagnóstico Rápido */}
         {tabActive === 'visual' && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="bg-slate-900/60 border border-slate-800/80 p-3.5 rounded-2xl flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black">
                 {stats.total}
@@ -813,6 +855,29 @@ export default function DevToolsPage() {
                 <p className="text-sm font-black text-slate-200 truncate">Productos</p>
               </div>
             </div>
+
+            <button
+              onClick={() => setFiltroEstado(filtroEstado === 'pausados' ? 'todos' : 'pausados')}
+              className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
+                filtroEstado === 'pausados'
+                  ? 'bg-rose-950/60 border-rose-500/50 ring-2 ring-rose-500/20'
+                  : stats.pausados > 0
+                  ? 'bg-slate-900/60 border-rose-900/40 hover:border-rose-700'
+                  : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black ${
+                stats.pausados > 0
+                  ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
+                  : 'bg-slate-800 border-slate-700 text-slate-400'
+              }`}>
+                {stats.pausados}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Pausados</p>
+                <p className="text-sm font-black text-slate-200 truncate">Ocultos Tienda</p>
+              </div>
+            </button>
 
             <button
               onClick={() => setFiltroEstado(filtroEstado === 'con_foto' ? 'todos' : 'con_foto')}
@@ -949,6 +1014,8 @@ export default function DevToolsPage() {
 
                   const estaSiendoArrastrada = tarjetaArrastradaId === prod.id
                   const estaSubiendoFoto = subiendoFotoTarjetaId === prod.id
+                  const estaActivo = prod.activo !== false
+                  const estaPausando = pausandoProductoId === prod.id
 
                   return (
                     <div
@@ -1072,6 +1139,47 @@ export default function DevToolsPage() {
                             Sin descripción cargada en el menú.
                           </p>
                         )}
+
+                        {/* Switch de Visibilidad / Pausa en Tienda */}
+                        <div
+                          className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all ${
+                            estaActivo
+                              ? 'bg-slate-950/60 border-slate-800'
+                              : 'bg-rose-950/40 border-rose-900/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                estaActivo ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                              }`}
+                            ></span>
+                            <div>
+                              <p className="text-[11px] font-black text-white leading-none">
+                                {estaActivo ? 'Visible en Tienda' : 'Pausado / Oculto'}
+                              </p>
+                              <p className="text-[9px] text-slate-400 mt-0.5">
+                                {estaActivo ? 'Disponible para compra' : 'Oculto para los clientes'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={e => alternarVisibilidadTienda(prod.id, e)}
+                            disabled={estaPausando}
+                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              estaActivo ? 'bg-chefsy-600' : 'bg-slate-700'
+                            }`}
+                            title={estaActivo ? 'Pausar/Ocultar de la tienda' : 'Activar/Mostrar en la tienda'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                estaActivo ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Botón de Edición */}
@@ -1352,6 +1460,49 @@ export default function DevToolsPage() {
               {/* Columna Izquierda: Formulario y Galería */}
               <form onSubmit={handleSave} className="lg:col-span-7 p-5 sm:p-6 space-y-6">
                 
+                {/* Switch de Visibilidad / Pausa en Tienda */}
+                {productoActualEditando && (
+                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                          productoActualEditando.activo !== false
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }`}
+                      >
+                        <Eye size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">
+                          {productoActualEditando.activo !== false ? 'Producto Activo y Visible' : 'Producto Pausado / Oculto'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {productoActualEditando.activo !== false
+                            ? 'Los clientes pueden ver y ordenar este plato en la tienda online'
+                            : 'Oculto de la tienda pública por falta de stock o temporada'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={e => alternarVisibilidadTienda(productoActualEditando.id, e)}
+                      disabled={pausandoProductoId === productoActualEditando.id}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        productoActualEditando.activo !== false ? 'bg-chefsy-600' : 'bg-slate-700'
+                      }`}
+                      title="Alternar visibilidad"
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          productoActualEditando.activo !== false ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+
                 {/* 1. Nombre Público */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
