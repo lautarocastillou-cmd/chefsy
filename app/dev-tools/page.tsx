@@ -104,6 +104,10 @@ export default function DevToolsPage() {
   const [vistaPreview, setVistaPreview] = useState<'mobile' | 'desktop'>('mobile')
   const [guardando, setGuardando] = useState(false)
 
+  // Drag & Drop directo sobre tarjeta en la grilla
+  const [tarjetaArrastradaId, setTarjetaArrastradaId] = useState<string | null>(null)
+  const [subiendoFotoTarjetaId, setSubiendoFotoTarjetaId] = useState<string | null>(null)
+
   // Toasts
   const [toasts, setToasts] = useState<ToastInfo[]>([])
 
@@ -250,6 +254,82 @@ export default function DevToolsPage() {
     } catch (err) {
       console.error('Error procesando fotos:', err)
       mostrarToast('Error al leer o comprimir una de las imágenes.', 'error')
+    }
+  }
+
+  // Subida instantánea por Drag & Drop directo sobre la tarjeta de la grilla (sin abrir modal)
+  const handleDropDirectoEnTarjeta = async (e: React.DragEvent, prod: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setTarjetaArrastradaId(null)
+
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    if (files.length === 0) {
+      mostrarToast('Por favor arrastrá un archivo de imagen válido (JPG, PNG o WebP).', 'info')
+      return
+    }
+
+    setSubiendoFotoTarjetaId(prod.id)
+    try {
+      mostrarToast(`Comprimiendo y subiendo ${files.length === 1 ? 'la foto' : `${files.length} fotos`} de "${prod.nombre}"...`, 'info')
+
+      const urlsNuevas: string[] = []
+      for (const file of files) {
+        const base64 = await comprimirImagen(file)
+        const uploadRes = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, nombreOriginal: file.name }),
+        })
+        const uploadData = await uploadRes.json()
+        if (!uploadRes.ok || uploadData.error) {
+          throw new Error(uploadData.error || 'Error al subir una de las imágenes')
+        }
+        urlsNuevas.push(uploadData.urlTransformada || uploadData.urlOriginal)
+      }
+
+      // Obtener metadatos actuales y preservar fotos existentes que no sean placeholder
+      const metaActual = metadata[prod.id] || {
+        producto_id: prod.id,
+        nombre_publico: prod.nombre,
+        descripcion_publica: '',
+        imagen_url: '',
+      }
+
+      const fotosExistentes = parsearFotosDeUrl(metaActual.imagen_url).filter(u => !esImagenPlaceholder(u))
+      // Las fotos recién arrastradas pasan a estar primero (la primera es portada)
+      const todasLasFotos = [...urlsNuevas, ...fotosExistentes]
+      const imagen_url_final = todasLasFotos.join(' | ')
+
+      // Guardar en tienda_metadata
+      const metaRes = await fetch('/api/admin/tienda-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          producto_id: prod.id,
+          nombre_publico: metaActual.nombre_publico || prod.nombre,
+          descripcion_publica: metaActual.descripcion_publica || '',
+          imagen_url: imagen_url_final,
+        }),
+      })
+
+      const metaData = await metaRes.json()
+      if (!metaRes.ok || metaData.error) {
+        throw new Error(metaData.error || 'Error al guardar metadatos')
+      }
+
+      // Actualizar estado local
+      setMetadata(prev => ({
+        ...prev,
+        [prod.id]: metaData.data,
+      }))
+
+      mostrarToast(`¡${files.length === 1 ? 'Foto' : `${files.length} fotos`} de "${prod.nombre}" actualizada${files.length === 1 ? '' : 's'} con éxito! 📸`, 'success')
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al subir foto: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setSubiendoFotoTarjetaId(null)
     }
   }
 
@@ -724,6 +804,16 @@ export default function DevToolsPage() {
         {/* Grilla Diseño Visual */}
         {tabActive === 'visual' && (
           <div>
+            {/* Banner de Tip Rápido */}
+            <div className="mb-4 p-3 bg-chefsy-950/40 border border-chefsy-800/40 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-chefsy-300">
+                <Sparkles size={16} className="text-chefsy-400 shrink-0" />
+                <span>
+                  <strong>Tip de Alta Velocidad:</strong> Podés arrastrar imágenes directamente desde tu computadora sobre la tarjeta de cualquier plato para actualizar su foto en 1 clic.
+                </span>
+              </div>
+            </div>
+
             {productosFiltrados.length === 0 ? (
               <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-3">
                 <AlertTriangle className="mx-auto text-slate-500 w-12 h-12" />
@@ -743,11 +833,47 @@ export default function DevToolsPage() {
                   const nombreAMostrar = meta?.nombre_publico || prod.nombre
                   const esNombreModificado = Boolean(meta?.nombre_publico && meta.nombre_publico !== prod.nombre)
 
+                  const estaSiendoArrastrada = tarjetaArrastradaId === prod.id
+                  const estaSubiendoFoto = subiendoFotoTarjetaId === prod.id
+
                   return (
                     <div
                       key={prod.id}
-                      className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 hover:-translate-y-0.5"
+                      onDragOver={e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (tarjetaArrastradaId !== prod.id) setTarjetaArrastradaId(prod.id)
+                      }}
+                      onDragLeave={e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (tarjetaArrastradaId === prod.id) setTarjetaArrastradaId(null)
+                      }}
+                      onDrop={e => handleDropDirectoEnTarjeta(e, prod)}
+                      className={`bg-slate-900/80 border p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 relative overflow-hidden ${
+                        estaSiendoArrastrada
+                          ? 'border-chefsy-400 bg-chefsy-950/60 ring-4 ring-chefsy-500/30 scale-[1.02]'
+                          : 'border-slate-800 hover:border-slate-700 hover:-translate-y-0.5'
+                      }`}
                     >
+                      {/* Overlay de Subida */}
+                      {estaSubiendoFoto && (
+                        <div className="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
+                          <Loader2 className="animate-spin text-chefsy-400 w-8 h-8" />
+                          <p className="text-xs font-black text-white">Comprimiendo y subiendo foto...</p>
+                          <p className="text-[10px] text-slate-400">Asignando a "{nombreAMostrar}"</p>
+                        </div>
+                      )}
+
+                      {/* Overlay de Drop Target */}
+                      {estaSiendoArrastrada && !estaSubiendoFoto && (
+                        <div className="absolute inset-0 z-20 bg-chefsy-950/95 border-2 border-dashed border-chefsy-400 rounded-3xl backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
+                          <UploadCloud className="w-10 h-10 text-chefsy-400 animate-bounce" />
+                          <p className="text-xs font-black text-white">Soltá la foto acá</p>
+                          <p className="text-[10px] text-chefsy-200">Se establecerá como portada de "{nombreAMostrar}"</p>
+                        </div>
+                      )}
+
                       <div className="space-y-3">
                         {/* Cabecera de la tarjeta con imagen y datos */}
                         <div className="flex items-start gap-3.5">
