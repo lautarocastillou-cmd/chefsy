@@ -17,7 +17,6 @@ export interface ValorContextoCatalogo {
   actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
   actualizarProductos: (productos: ProductoCatalogo[]) => void
   actualizarModificadores: (modificadores: ModificadorCatalogo[]) => void
-  descontarStockProducto: (productoId: string, cantidad: number) => void
   sincronizarCatalogoCompleto: () => Promise<void>
   estaListoCatalogo: boolean
 }
@@ -177,17 +176,6 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
     sincronizarCatalogoCompleto()
   }
 
-  const descontarStockProducto = (productoId: string, cantidad: number) => {
-    const nuevosProductos = productosRef.current.map((p) => {
-      if (p.id === productoId && typeof p.stock === 'number') {
-        const nuevoStock = Math.max(0, p.stock - cantidad)
-        return { ...p, stock: nuevoStock }
-      }
-      return p
-    })
-    actualizarProductos(nuevosProductos)
-  }
-
   return (
     <ContextoCatalogo.Provider
       value={{
@@ -197,7 +185,6 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
         actualizarCategorias,
         actualizarProductos,
         actualizarModificadores,
-        descontarStockProducto,
         sincronizarCatalogoCompleto,
         estaListoCatalogo,
       }}
