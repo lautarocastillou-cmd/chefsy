@@ -37,6 +37,7 @@ import {
   LayoutGrid,
   Table as TableIcon
 } from 'lucide-react'
+import ModalImportarGoogleDrive from '@/components/admin/ModalImportarGoogleDrive'
 
 interface TiendaMetadata {
   producto_id: string
@@ -116,6 +117,7 @@ export default function DevToolsPage() {
   const [fotoZoomUrl, setFotoZoomUrl] = useState<string | null>(null)
   const [urlDirectaInput, setUrlDirectaInput] = useState('')
   const [mostrarInputUrl, setMostrarInputUrl] = useState(false)
+  const [mostrarModalGDrive, setMostrarModalGDrive] = useState(false)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [vistaPreview, setVistaPreview] = useState<'mobile' | 'desktop'>('mobile')
   const [guardando, setGuardando] = useState(false)
@@ -521,6 +523,23 @@ export default function DevToolsPage() {
     setUrlDirectaInput('')
     setMostrarInputUrl(false)
     mostrarToast('Imagen por enlace añadida a la galería', 'success')
+  }
+
+  // Importar Fotos desde Google Drive
+  const handleFotosImportadasGoogleDrive = (urls: string[]) => {
+    if (productoEditandoId) {
+      setGaleriaFotos(prev => [
+        ...prev,
+        ...urls.map((u, i) => ({
+          id: `gdrive-${Date.now()}-${i}`,
+          url: u,
+          esNueva: false,
+        })),
+      ])
+      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive añadida${urls.length === 1 ? '' : 's'} a la galería! 📸`, 'success')
+    } else {
+      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive subida${urls.length === 1 ? '' : 's'} al almacenamiento! 📸`, 'success')
+    }
   }
 
   // Guardar Metadatos y subir imágenes pendientes
@@ -1664,8 +1683,22 @@ export default function DevToolsPage() {
                   </button>
                 )}
               </div>
-              <div className="text-xs font-bold text-slate-400 shrink-0">
-                <span>Total disponible: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong> fotos</span>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="text-xs font-bold text-slate-400 shrink-0">
+                  <span>Total: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong> fotos</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalGDrive(true)}
+                  className="px-3.5 py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 hover:border-blue-500 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                  title="Importar fotos desde Google Drive"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.71 3.5L1.15 15l3.43 6l6.55-11.5L7.71 3.5zm8.58 0l-6.56 11.5l3.43 6l6.56-11.5l-3.43-6zm-5.15 9l-3.43 6h13.14l3.43-6H11.14z" />
+                  </svg>
+                  <span>Google Drive</span>
+                </button>
               </div>
             </div>
 
@@ -1996,6 +2029,18 @@ export default function DevToolsPage() {
                     </label>
 
                     <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarModalGDrive(true)}
+                        className="text-[11px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 cursor-pointer"
+                        title="Importar fotos desde Google Drive"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M7.71 3.5L1.15 15l3.43 6l6.55-11.5L7.71 3.5zm8.58 0l-6.56 11.5l3.43 6l6.56-11.5l-3.43-6zm-5.15 9l-3.43 6h13.14l3.43-6H11.14z" />
+                        </svg>
+                        <span>Google Drive</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setMostrarBancoModal(!mostrarBancoModal)}
@@ -2418,6 +2463,18 @@ export default function DevToolsPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Importación desde Google Drive */}
+      <ModalImportarGoogleDrive
+        abierto={mostrarModalGDrive}
+        onCerrar={() => setMostrarModalGDrive(false)}
+        onFotosImportadas={handleFotosImportadasGoogleDrive}
+        titulo={
+          productoEditandoId
+            ? `Importar Fotos a "${productoActualEditando?.nombre || 'Plato'}"`
+            : 'Importar Fotos al Banco de la Casa'
+        }
+      />
 
     </div>
   )

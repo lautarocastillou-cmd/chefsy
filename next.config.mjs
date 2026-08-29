@@ -13,7 +13,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'geolocation=(self), camera=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://bdwgglizirgyuxfwssvc.supabase.co https://unpkg.com https://mt1.google.com; media-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co wss://bdwgglizirgyuxfwssvc.supabase.co https://nominatim.openstreetmap.org" }
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://bdwgglizirgyuxfwssvc.supabase.co https://unpkg.com https://mt1.google.com https://lh3.googleusercontent.com https://drive.google.com; media-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https://bdwgglizirgyuxfwssvc.supabase.co wss://bdwgglizirgyuxfwssvc.supabase.co https://nominatim.openstreetmap.org https://apis.google.com https://www.googleapis.com" }
         ]
       },
       {
@@ -42,6 +42,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'bdwgglizirgyuxfwssvc.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
       }
     ],
   },
