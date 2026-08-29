@@ -142,6 +142,10 @@ export default function DevToolsPage() {
   const [procesandoMultiplesFotos, setProcesandoMultiplesFotos] = useState(false)
   const [progresoMultiplesFotos, setProgresoMultiplesFotos] = useState('')
 
+  // Eliminación de fotos del Banco
+  const [confirmandoEliminarFoto, setConfirmandoEliminarFoto] = useState<FotoBancoItem | null>(null)
+  const [eliminandoFoto, setEliminandoFoto] = useState(false)
+
   // Toasts
   const [toasts, setToasts] = useState<ToastInfo[]>([])
 
@@ -567,6 +571,54 @@ export default function DevToolsPage() {
   const eliminarFotoDeGaleria = (id: string) => {
     setGaleriaFotos(prev => prev.filter(f => f.id !== id))
     mostrarToast('Foto removida de la galería', 'info')
+  }
+
+  // Eliminar foto del Banco de la Casa y de la nube (Storage)
+  const handleEliminarFotoDelBanco = async () => {
+    if (!confirmandoEliminarFoto) return
+    setEliminandoFoto(true)
+    const fotoUrl = confirmandoEliminarFoto.url
+
+    try {
+      const res = await fetch('/api/admin/banco-fotos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: fotoUrl }),
+      })
+
+      if (!res.ok) {
+        throw new Error('No se pudo eliminar la imagen del servidor')
+      }
+
+      // 1. Quitar de fotosLibresBanco
+      setFotosLibresBanco(prev => prev.filter(u => u !== fotoUrl))
+
+      // 2. Limpiar metadata local en memoria si algún producto la usaba
+      setMetadata(prev => {
+        const next = { ...prev }
+        Object.keys(next).forEach(prodId => {
+          const item = next[prodId]
+          if (item?.imagen_url) {
+            const fotos = parsearFotosDeUrl(item.imagen_url)
+            if (fotos.includes(fotoUrl)) {
+              const nuevas = fotos.filter(u => u !== fotoUrl)
+              next[prodId] = {
+                ...item,
+                imagen_url: nuevas.join(' | '),
+              }
+            }
+          }
+        })
+        return next
+      })
+
+      mostrarToast('Foto eliminada del banco de fotos y de la nube', 'success')
+      setConfirmandoEliminarFoto(null)
+    } catch (err: any) {
+      mostrarToast('Error al eliminar foto: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setEliminandoFoto(false)
+    }
   }
 
   // Mover foto para hacerla portada (posición 0)
@@ -1976,14 +2028,24 @@ export default function DevToolsPage() {
                         alt="Foto de la casa"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setFotoZoomUrl(item.url)}
-                        className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        title="Ver en grande"
-                      >
-                        <Eye size={14} />
-                      </button>
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => setFotoZoomUrl(item.url)}
+                          className="p-1.5 bg-black/70 hover:bg-black text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer"
+                          title="Ver en grande"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmandoEliminarFoto(item)}
+                          className="p-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer"
+                          title="Eliminar foto del banco y de la nube"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
@@ -2058,7 +2120,7 @@ export default function DevToolsPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -2080,6 +2142,14 @@ export default function DevToolsPage() {
                               title="Copiar Enlace Directo"
                             >
                               <Link2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmandoEliminarFoto(item)}
+                              className="p-2 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-rose-500 rounded-xl transition-all cursor-pointer"
+                              title="Eliminar foto del banco y de la nube"
+                            >
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         )}
@@ -2246,6 +2316,79 @@ export default function DevToolsPage() {
         )}
 
       </div>
+
+      {/* Modal de Confirmación de Eliminación de Foto del Banco */}
+      {confirmandoEliminarFoto && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">¿Eliminar foto del banco?</h3>
+                <p className="text-xs text-slate-400">Esta acción borrará la imagen de la nube.</p>
+              </div>
+            </div>
+
+            {/* Vista previa de la imagen a eliminar */}
+            <div className="relative aspect-video bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+              <img
+                src={confirmandoEliminarFoto.url}
+                alt="Foto a eliminar"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Advertencia si está en uso */}
+            {confirmandoEliminarFoto.productosUsados.length > 0 ? (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-1">
+                <p className="font-bold text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle size={14} />
+                  <span>En uso en {confirmandoEliminarFoto.productosUsados.length} plato(s):</span>
+                </p>
+                <p className="text-slate-300 text-[11px]">
+                  {confirmandoEliminarFoto.productosUsados.map(p => p.nombre).join(', ')}. Al eliminarla se desasignará de estos platos.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Esta foto no está asignada a ningún plato. Se eliminará del servidor y liberará espacio en Supabase Storage.
+              </p>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmandoEliminarFoto(null)}
+                disabled={eliminandoFoto}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleEliminarFotoDelBanco}
+                disabled={eliminandoFoto}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {eliminandoFoto ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={15} />
+                    <span>Sí, Eliminar de la Nube</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Edición Integral con Live Preview */}
       {productoEditandoId && (
