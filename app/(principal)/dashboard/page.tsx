@@ -7,12 +7,12 @@
 
 import { useState } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import dynamic from 'next/dynamic'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
-import GeneradorQrCadete from '@/components/dashboard/GeneradorQrCadete'
-import ImpresorTicketsPromocionales from '@/components/dashboard/ImpresorTicketsPromocionales'
 import Link from 'next/link'
+
 import { 
   Clock, 
   Clock3, 
@@ -30,7 +30,13 @@ import {
   FileText 
 } from 'lucide-react'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
-import FormularioPedido from '@/components/pedidos/FormularioPedido'
+
+const GeneradorQrCadete = dynamic(() => import('@/components/dashboard/GeneradorQrCadete'), { ssr: false })
+const ImpresorTicketsPromocionales = dynamic(() => import('@/components/dashboard/ImpresorTicketsPromocionales'), { ssr: false })
+const FormularioPedido = dynamic(() => import('@/components/pedidos/FormularioPedido'), {
+  loading: () => <div className="p-8 text-center text-slate-400">Cargando formulario...</div>,
+  ssr: false,
+})
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'

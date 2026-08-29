@@ -8,12 +8,14 @@ import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
-import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
-import ModalLogout from '@/components/auth/ModalLogout'
-import ModalHistorialPedidos from '@/components/tienda/ModalHistorialPedidos'
-import ModalPerfilCliente from '@/components/tienda/ModalPerfilCliente'
+import dynamic from 'next/dynamic'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import BotonWhatsAppHeader from '@/components/tienda/BotonWhatsAppHeader'
+
+const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
+const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr: false })
+const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHistorialPedidos'), { ssr: false })
+const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfilCliente'), { ssr: false })
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -195,19 +197,23 @@ export default function HeroSection({
         />
       )}
 
-      <ModalHistorialPedidos
-        abierto={mostrarHistorial}
-        onCerrar={() => setMostrarHistorial(false)}
-      />
+      {mostrarHistorial && (
+        <ModalHistorialPedidos
+          abierto={mostrarHistorial}
+          onCerrar={() => setMostrarHistorial(false)}
+        />
+      )}
 
-      <ModalPerfilCliente
-        abierto={mostrarPerfil}
-        onCerrar={() => setMostrarPerfil(false)}
-        onAbrirHistorial={() => {
-          setMostrarPerfil(false)
-          setMostrarHistorial(true)
-        }}
-      />
+      {mostrarPerfil && (
+        <ModalPerfilCliente
+          abierto={mostrarPerfil}
+          onCerrar={() => setMostrarPerfil(false)}
+          onAbrirHistorial={() => {
+            setMostrarPerfil(false)
+            setMostrarHistorial(true)
+          }}
+        />
+      )}
     </>
   )
 }

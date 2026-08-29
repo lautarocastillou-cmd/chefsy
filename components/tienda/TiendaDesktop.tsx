@@ -21,10 +21,12 @@ import CatalogoProductos from '@/components/tienda/CatalogoProductos'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 
-// Componentes lazy
-const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
-const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
-const PantallaExito = lazy(() => import('@/components/tienda/PantallaExito'))
+import dynamic from 'next/dynamic'
+
+// Componentes dynamic (code splitting)
+const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
+const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
+const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
 
 export default function TiendaDesktop() {
   const { productos, categorias, modificadores } = usarCatalogo()

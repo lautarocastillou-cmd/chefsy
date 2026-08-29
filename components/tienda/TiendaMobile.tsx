@@ -30,9 +30,9 @@ const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginClie
 const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr: false })
 const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHistorialPedidos'), { ssr: false })
 
-const CartDrawer = lazy(() => import('@/components/tienda/CartDrawer'))
-const ModalPersonalizacion = lazy(() => import('@/components/tienda/ModalPersonalizacion'))
-const PantallaExito = lazy(() => import('@/components/tienda/PantallaExito'))
+const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
+const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
+const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
 
 export default function TiendaMobile() {
   const { productos, categorias, modificadores } = usarCatalogo()
@@ -409,10 +409,12 @@ export default function TiendaMobile() {
         />
       )}
 
-      <ModalHistorialPedidos
-        abierto={mostrarHistorial}
-        onCerrar={() => setMostrarHistorial(false)}
-      />
+      {mostrarHistorial && (
+        <ModalHistorialPedidos
+          abierto={mostrarHistorial}
+          onCerrar={() => setMostrarHistorial(false)}
+        />
+      )}
       <BotonPedidoFlotante />
     </div>
   )
