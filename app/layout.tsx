@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import 'leaflet/dist/leaflet.css'
 import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
 import { ProveedorClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
-import { Playfair_Display, Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
+import { Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 
@@ -32,12 +31,6 @@ const anton = Anton({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-anton',
-  display: 'swap',
-})
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-serif',
   display: 'swap',
 })
 
@@ -77,7 +70,7 @@ export const metadata: Metadata = {
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased overflow-x-clip ${playfair.variable} ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
+      <body className={`font-sans antialiased overflow-x-clip ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorClienteAuth>

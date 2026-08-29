@@ -1,6 +1,3 @@
-/* Leaflet (Torre de Control) - debe ir antes de @tailwind */
-@import 'leaflet/dist/leaflet.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -109,10 +106,6 @@ input,
 /* ─── Scrollbar oculta ─────────────────────────────── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-.font-serif-elegant {
-  font-family: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
-}
 
 /* ─── Scrollbars Luxury Estilizadas ────────────────── */
 ::-webkit-scrollbar {
