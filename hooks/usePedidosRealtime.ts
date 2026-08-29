@@ -126,5 +126,5 @@ export function usePedidosRealtime({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estaListo])
 
-  return { estaListo, dbEstado, setDbEstado }
+  return { estaListo, dbEstado, setDbEstado, mutate }
 }

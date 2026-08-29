@@ -236,7 +236,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   // ── Hooks especializados ──────────────────────────────
 
-  const { estaListo, dbEstado, setDbEstado } = usePedidosRealtime({
+  const { estaListo, dbEstado, setDbEstado, mutate: mutateSWR } = usePedidosRealtime({
     despachar,
     prevPedidosRef,
     cambiosLocalesRef,
@@ -449,6 +449,11 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const agregarPedido = async (pedido: Pedido) => {
     cambiosLocalesRef.current[pedido.id] = Date.now()
     despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
+    mutateSWR((current) => {
+      const arr = current || []
+      const existe = arr.some((p) => p.id === pedido.id)
+      return existe ? arr.map((p) => (p.id === pedido.id ? pedido : p)) : [pedido, ...arr]
+    }, false)
     reproducirSonidoCampanaCocina()
     try {
       await enviarAccionPedido({ accion: 'crear', pedido })
@@ -461,6 +466,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const editarPedido = async (pedido: Pedido) => {
     cambiosLocalesRef.current[pedido.id] = Date.now()
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
+    mutateSWR((current) => {
+      if (!current) return [pedido]
+      return current.map((p) => (p.id === pedido.id ? pedido : p))
+    }, false)
     try {
       await enviarAccionPedido({ accion: 'editar', id: pedido.id, pedido })
     } catch (e: any) {
@@ -481,6 +490,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
       const updates = obtenerCamposDeTiempoParaEstado(nuevoEstado, pedido)
       despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
+      mutateSWR((current) => {
+        if (!current) return current
+        return current.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      }, false)
 
       const nombresEstados: Record<EstadoPedido, string> = {
         nuevo: 'Nuevo',
@@ -502,6 +515,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
                 cambiosLocalesRef.current[id] = Date.now()
                 const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
                 despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
+                mutateSWR((current) => {
+                  if (!current) return current
+                  return current.map((p) => (p.id === id ? { ...p, ...updatesAnteriores } : p))
+                }, false)
                 try {
                   await enviarAccionPedido({
                     accion: 'actualizar_estado',
@@ -512,9 +529,14 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
                   // Si falla, volvemos atrás silenciosamente y mostramos error
                   if (e.message && e.message.includes('no existe en la base de datos')) {
                     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+                    mutateSWR((current) => (current ? current.filter((p) => p.id !== id) : []), false)
                     agregarNotificacion('Se eliminó un pedido "fantasma" que no existía en la base de datos.', 'info')
                   } else {
                     despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
+                    mutateSWR((current) => {
+                      if (!current) return current
+                      return current.map((p) => (p.id === id ? { ...p, ...updatesAnteriores } : p))
+                    }, false)
                     agregarNotificacion(`Error: ${e.message || 'No se pudo cambiar el estado'}`, 'warning')
                   }
                 }
@@ -563,6 +585,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[id] = Date.now()
     updates.estado = estadoAnterior
     despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updates })
+    mutateSWR((current) => {
+      if (!current) return current
+      return current.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    }, false)
 
     try {
       await enviarAccionPedido({ accion: 'actualizar_estado', id, ...updates })
@@ -577,7 +603,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
-      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, pago_confirmado: confirmado } })
+      const pedidoActualizado = { ...pedido, pago_confirmado: confirmado }
+      despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoActualizado })
+      mutateSWR((current) => {
+        if (!current) return [pedidoActualizado]
+        return current.map((p) => (p.id === id ? pedidoActualizado : p))
+      }, false)
       try {
         await enviarAccionPedido({ accion: 'confirmar_pago', id, pago_confirmado: confirmado })
       } catch (e) {
@@ -590,6 +621,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const eliminarPedido = async (id: string) => {
     cambiosLocalesRef.current[id] = Date.now()
     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+    mutateSWR((current) => {
+      if (!current) return []
+      return current.filter((p) => p.id !== id)
+    }, false)
     try {
       await enviarAccionPedido({ accion: 'eliminar', id })
     } catch (e) {
@@ -607,12 +642,21 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
       const pedidoAnterior = { ...pedido }
-      despachar({ tipo: 'EDITAR_PEDIDO', pedido: { ...pedido, cadete_id, cadete_nombre } })
+      const pedidoActualizado = { ...pedido, cadete_id, cadete_nombre }
+      despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoActualizado })
+      mutateSWR((current) => {
+        if (!current) return [pedidoActualizado]
+        return current.map((p) => (p.id === id ? pedidoActualizado : p))
+      }, false)
       try {
         await enviarAccionPedido({ accion: 'asignar_cadete', id, cadete_id, cadete_nombre })
       } catch (e: any) {
         console.error('[Servidor/Supabase] Error al asignar cadete', e)
         despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoAnterior })
+        mutateSWR((current) => {
+          if (!current) return [pedidoAnterior]
+          return current.map((p) => (p.id === id ? pedidoAnterior : p))
+        }, false)
         agregarNotificacion(e.message || 'Error al asignar el cadete en el servidor.', 'warning')
       }
     }
@@ -622,10 +666,15 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
+      const pedidoActualizado = { ...pedido, metodoPago: metodoPago as any }
       despachar({
         tipo: 'EDITAR_PEDIDO',
-        pedido: { ...pedido, metodoPago: metodoPago as any },
+        pedido: pedidoActualizado,
       })
+      mutateSWR((current) => {
+        if (!current) return [pedidoActualizado]
+        return current.map((p) => (p.id === id ? pedidoActualizado : p))
+      }, false)
       try {
         await enviarAccionPedido({ accion: 'cambiar_metodo_pago', id, metodoPago })
       } catch (e) {
