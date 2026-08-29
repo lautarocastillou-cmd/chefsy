@@ -128,6 +128,15 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
 
   // Guardar catálogo completo en Supabase a través del servidor seguro
   const sincronizarCatalogoCompleto = async () => {
+    if (!estaListoCatalogo) {
+      console.warn('[Catalogo] Sincronización cancelada: el catálogo aún no terminó su carga inicial.')
+      return
+    }
+    if (productosRef.current.length === 0 || categoriasRef.current.length === 0) {
+      console.warn('[Catalogo] Sincronización cancelada: listas de catálogo vacías.')
+      return
+    }
+
     try {
       esCambioCatalogoLocalRef.current = true
       
