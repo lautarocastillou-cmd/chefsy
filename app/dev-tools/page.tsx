@@ -33,7 +33,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Scissors
+  Scissors,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react'
 
 interface TiendaMetadata {
@@ -93,6 +95,12 @@ export default function DevToolsPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'pausados' | 'sin_foto' | 'con_foto' | 'sin_desc'>('todos')
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas')
   const [pausandoProductoId, setPausandoProductoId] = useState<string | null>(null)
+
+  // Modo de Visualización (Tarjetas vs Tabla Rápida Excel)
+  const [modoVista, setModoVista] = useState<'grid' | 'tabla'>('grid')
+  const [edicionesTabla, setEdicionesTabla] = useState<Record<string, { nombre_publico: string; descripcion_publica: string }>>({})
+  const [guardandoMasivo, setGuardandoMasivo] = useState(false)
+  const [guardandoFilaId, setGuardandoFilaId] = useState<string | null>(null)
 
   // Banco de Fotos de la Casa
   const [mostrarBancoModal, setMostrarBancoModal] = useState(false)
@@ -597,6 +605,150 @@ export default function DevToolsPage() {
     }
   }
 
+  // ── Helpers y Lógica para Edición Rápida en Tabla (Estilo Excel) ──
+  const getValoresFila = useCallback((prodId: string) => {
+    const meta = metadata[prodId]
+    const edicion = edicionesTabla[prodId]
+    return {
+      nombre_publico: edicion !== undefined ? edicion.nombre_publico : (meta?.nombre_publico ?? ''),
+      descripcion_publica: edicion !== undefined ? edicion.descripcion_publica : (meta?.descripcion_publica ?? '')
+    }
+  }, [metadata, edicionesTabla])
+
+  const handleCambioFila = (prodId: string, campo: 'nombre_publico' | 'descripcion_publica', valor: string) => {
+    setEdicionesTabla(prev => {
+      const actual = getValoresFila(prodId)
+      return {
+        ...prev,
+        [prodId]: {
+          ...actual,
+          [campo]: valor
+        }
+      }
+    })
+  }
+
+  const filasConCambios = useMemo(() => {
+    return Object.keys(edicionesTabla).filter(prodId => {
+      const meta = metadata[prodId]
+      const edicion = edicionesTabla[prodId]
+      const nombreOriginal = meta?.nombre_publico ?? ''
+      const descOriginal = meta?.descripcion_publica ?? ''
+      return edicion.nombre_publico !== nombreOriginal || edicion.descripcion_publica !== descOriginal
+    })
+  }, [edicionesTabla, metadata])
+
+  const guardarTodosLosCambiosTabla = async () => {
+    if (filasConCambios.length === 0) {
+      mostrarToast('No hay cambios pendientes por guardar', 'info')
+      return
+    }
+
+    setGuardandoMasivo(true)
+    try {
+      const itemsAGuardar = filasConCambios.map(prodId => {
+        const vals = getValoresFila(prodId)
+        const meta = metadata[prodId]
+        return {
+          producto_id: prodId,
+          nombre_publico: vals.nombre_publico.trim() || null,
+          descripcion_publica: vals.descripcion_publica.trim() || null,
+          imagen_url: meta?.imagen_url || null
+        }
+      })
+
+      const res = await fetch('/api/admin/tienda-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: itemsAGuardar })
+      })
+
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al guardar cambios masivos')
+
+      setMetadata(prev => {
+        const nuevo = { ...prev }
+        itemsAGuardar.forEach(item => {
+          nuevo[item.producto_id] = {
+            producto_id: item.producto_id,
+            nombre_publico: item.nombre_publico || '',
+            descripcion_publica: item.descripcion_publica || '',
+            imagen_url: item.imagen_url || ''
+          }
+        })
+        return nuevo
+      })
+
+      setEdicionesTabla({})
+      mostrarToast(`¡Se guardaron los textos de ${itemsAGuardar.length} platos con éxito! ⚡`, 'success')
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al guardar: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setGuardandoMasivo(false)
+    }
+  }
+
+  const guardarFilaIndividual = async (prodId: string) => {
+    const vals = getValoresFila(prodId)
+    const meta = metadata[prodId]
+    setGuardandoFilaId(prodId)
+
+    try {
+      const res = await fetch('/api/admin/tienda-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          producto_id: prodId,
+          nombre_publico: vals.nombre_publico.trim() || null,
+          descripcion_publica: vals.descripcion_publica.trim() || null,
+          imagen_url: meta?.imagen_url || null
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al guardar fila')
+
+      setMetadata(prev => ({
+        ...prev,
+        [prodId]: data.data
+      }))
+
+      setEdicionesTabla(prev => {
+        const copia = { ...prev }
+        delete copia[prodId]
+        return copia
+      })
+
+      mostrarToast('Plato guardado con éxito ⚡', 'success')
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al guardar: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setGuardandoFilaId(null)
+    }
+  }
+
+  const descartarCambiosTabla = () => {
+    setEdicionesTabla({})
+    mostrarToast('Cambios descartados', 'info')
+  }
+
+  // Atajo de Teclado Ctrl+S para Guardar en Modo Tabla
+  useEffect(() => {
+    if (tabActive !== 'visual' || modoVista !== 'tabla') return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        guardarTodosLosCambiosTabla()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tabActive, modoVista, filasConCambios, edicionesTabla, metadata])
+
   // Estadísticas y filtrado dinámico
   const productoActualEditando = useMemo(() => {
     return productos.find(p => p.id === productoEditandoId)
@@ -992,6 +1144,36 @@ export default function DevToolsPage() {
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+            {/* Selector de Modo de Vista (Tarjetas vs Tabla Rápida) */}
+            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-2xl shrink-0">
+              <button
+                type="button"
+                onClick={() => setModoVista('grid')}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  modoVista === 'grid'
+                    ? 'bg-chefsy-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Vista en Cuadrícula de Tarjetas"
+              >
+                <LayoutGrid size={15} />
+                <span className="hidden sm:inline">Tarjetas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoVista('tabla')}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  modoVista === 'tabla'
+                    ? 'bg-chefsy-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Modo Edición Rápida en Tabla (Estilo Excel)"
+              >
+                <TableIcon size={15} />
+                <span className="hidden sm:inline">Tabla Rápida</span>
+              </button>
+            </div>
+
             <select
               value={filtroCategoria}
               onChange={e => setFiltroCategoria(e.target.value)}
@@ -1018,219 +1200,443 @@ export default function DevToolsPage() {
           </div>
         </div>
 
-        {/* Grilla Diseño Visual */}
+        {/* Sección Diseño Visual (Tarjetas o Tabla Rápida) */}
         {tabActive === 'visual' && (
           <div>
-            {/* Banner de Tip Rápido */}
-            <div className="mb-4 p-3 bg-chefsy-950/40 border border-chefsy-800/40 rounded-2xl flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-chefsy-300">
-                <Sparkles size={16} className="text-chefsy-400 shrink-0" />
-                <span>
-                  <strong>Tip de Alta Velocidad:</strong> Podés arrastrar imágenes directamente desde tu computadora sobre la tarjeta de cualquier plato para actualizar su foto en 1 clic.
-                </span>
-              </div>
-            </div>
+            {/* 1. Vista en Cuadrícula de Tarjetas */}
+            {modoVista === 'grid' && (
+              <div>
+                {/* Banner de Tip Rápido */}
+                <div className="mb-4 p-3 bg-chefsy-950/40 border border-chefsy-800/40 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-chefsy-300">
+                    <Sparkles size={16} className="text-chefsy-400 shrink-0" />
+                    <span>
+                      <strong>Tip de Alta Velocidad:</strong> Podés arrastrar imágenes directamente desde tu computadora sobre la tarjeta de cualquier plato para actualizar su foto en 1 clic.
+                    </span>
+                  </div>
+                </div>
 
-            {productosFiltrados.length === 0 ? (
-              <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-3">
-                <AlertTriangle className="mx-auto text-slate-500 w-12 h-12" />
-                <h3 className="text-lg font-bold text-slate-300">No se encontraron productos</h3>
-                <p className="text-xs text-slate-500">Probá ajustando la búsqueda o los filtros activos.</p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productosFiltrados.map(prod => {
-                  const meta = metadata[prod.id]
-                  const fotos = parsearFotosDeUrl(meta?.imagen_url)
-                  const tieneFotosPropias = fotos.length > 0 && !esImagenPlaceholder(fotos[0])
-                  const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(prod.categoriaId, prod.nombre, prod.id)
-                  const fotoAMostrar = tieneFotosPropias ? fotos[0] : (fotos[0] || fallback.img)
-                  const descripcion = meta?.descripcion_publica || fallback.desc
-                  const tieneDescripcion = Boolean(descripcion && descripcion.trim().length > 0)
-                  const nombreAMostrar = meta?.nombre_publico || prod.nombre
-                  const esNombreModificado = Boolean(meta?.nombre_publico && meta.nombre_publico !== prod.nombre)
+                {productosFiltrados.length === 0 ? (
+                  <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-3">
+                    <AlertTriangle className="mx-auto text-slate-500 w-12 h-12" />
+                    <h3 className="text-lg font-bold text-slate-300">No se encontraron productos</h3>
+                    <p className="text-xs text-slate-500">Probá ajustando la búsqueda o los filtros activos.</p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {productosFiltrados.map(prod => {
+                      const meta = metadata[prod.id]
+                      const fotos = parsearFotosDeUrl(meta?.imagen_url)
+                      const tieneFotosPropias = fotos.length > 0 && !esImagenPlaceholder(fotos[0])
+                      const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(prod.categoriaId, prod.nombre, prod.id)
+                      const fotoAMostrar = tieneFotosPropias ? fotos[0] : (fotos[0] || fallback.img)
+                      const descripcion = meta?.descripcion_publica || fallback.desc
+                      const tieneDescripcion = Boolean(descripcion && descripcion.trim().length > 0)
+                      const nombreAMostrar = meta?.nombre_publico || prod.nombre
+                      const esNombreModificado = Boolean(meta?.nombre_publico && meta.nombre_publico !== prod.nombre)
 
-                  const estaSiendoArrastrada = tarjetaArrastradaId === prod.id
-                  const estaSubiendoFoto = subiendoFotoTarjetaId === prod.id
-                  const estaActivo = prod.activo !== false
-                  const estaPausando = pausandoProductoId === prod.id
+                      const estaSiendoArrastrada = tarjetaArrastradaId === prod.id
+                      const estaSubiendoFoto = subiendoFotoTarjetaId === prod.id
+                      const estaActivo = prod.activo !== false
+                      const estaPausando = pausandoProductoId === prod.id
 
-                  return (
-                    <div
-                      key={prod.id}
-                      onDragOver={e => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        if (tarjetaArrastradaId !== prod.id) setTarjetaArrastradaId(prod.id)
-                      }}
-                      onDragLeave={e => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        if (tarjetaArrastradaId === prod.id) setTarjetaArrastradaId(null)
-                      }}
-                      onDrop={e => handleDropDirectoEnTarjeta(e, prod)}
-                      className={`bg-slate-900/80 border p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 relative overflow-hidden ${
-                        estaSiendoArrastrada
-                          ? 'border-chefsy-400 bg-chefsy-950/60 ring-4 ring-chefsy-500/30 scale-[1.02]'
-                          : 'border-slate-800 hover:border-slate-700 hover:-translate-y-0.5'
-                      }`}
-                    >
-                      {/* Overlay de Subida */}
-                      {estaSubiendoFoto && (
-                        <div className="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
-                          <Loader2 className="animate-spin text-chefsy-400 w-8 h-8" />
-                          <p className="text-xs font-black text-white">Comprimiendo y subiendo foto...</p>
-                          <p className="text-[10px] text-slate-400">Asignando a "{nombreAMostrar}"</p>
-                        </div>
-                      )}
-
-                      {/* Overlay de Drop Target */}
-                      {estaSiendoArrastrada && !estaSubiendoFoto && (
-                        <div className="absolute inset-0 z-20 bg-chefsy-950/95 border-2 border-dashed border-chefsy-400 rounded-3xl backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
-                          <UploadCloud className="w-10 h-10 text-chefsy-400 animate-bounce" />
-                          <p className="text-xs font-black text-white">Soltá la foto acá</p>
-                          <p className="text-[10px] text-chefsy-200">Se establecerá como portada de "{nombreAMostrar}"</p>
-                        </div>
-                      )}
-
-                      <div className="space-y-3">
-                        {/* Cabecera de la tarjeta con imagen y datos */}
-                        <div className="flex items-start gap-3.5">
-                          <div className="relative w-20 h-20 bg-slate-950 rounded-2xl overflow-hidden shrink-0 border border-slate-800 flex items-center justify-center group/img">
-                            {fotoAMostrar ? (
-                              <img
-                                src={fotoAMostrar}
-                                alt={nombreAMostrar}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <ImageIcon className="text-slate-600" />
-                            )}
-                            {fotos.length > 1 && (
-                              <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md text-[9px] font-black text-white px-1.5 py-0.5 rounded-md border border-white/10">
-                                +{fotos.length - 1}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-1">
-                              <h3 className="font-bold text-white text-base leading-tight truncate" title={nombreAMostrar}>
-                                {nombreAMostrar}
-                              </h3>
-                              <span className="text-xs font-black text-chefsy-400 shrink-0">
-                                {formatearPrecio(prod.precio)}
-                              </span>
-                            </div>
-
-                            <p className="text-xs text-slate-400 truncate mt-0.5">
-                              {prod.nombre} <span className="text-[10px] text-slate-500">(Interno)</span>
-                            </p>
-
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
-                              {categorias.find(c => c.id === prod.categoriaId)?.nombre || 'Categoría general'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Badges de Diagnóstico */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {tieneFotosPropias ? (
-                            <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                              <span>📸</span>
-                              <span>{fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                              <span>⚠️</span>
-                              <span>Sin foto</span>
-                            </span>
-                          )}
-
-                          {tieneDescripcion ? (
-                            <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                              <span>📝</span>
-                              <span>Con descripción</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                              <span>✍️</span>
-                              <span>Falta descripción</span>
-                            </span>
-                          )}
-
-                          {esNombreModificado && (
-                            <span className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                              <span>✏️</span>
-                              <span>Nombre personalizado</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Extracto de Descripción */}
-                        {descripcion ? (
-                          <p className="text-xs text-slate-400 line-clamp-2 italic leading-relaxed">
-                            "{descripcion}"
-                          </p>
-                        ) : (
-                          <p className="text-xs text-slate-600 italic">
-                            Sin descripción cargada en el menú.
-                          </p>
-                        )}
-
-                        {/* Switch de Visibilidad / Pausa en Tienda */}
+                      return (
                         <div
-                          className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all ${
-                            estaActivo
-                              ? 'bg-slate-950/60 border-slate-800'
-                              : 'bg-rose-950/40 border-rose-900/60'
+                          key={prod.id}
+                          onDragOver={e => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (tarjetaArrastradaId !== prod.id) setTarjetaArrastradaId(prod.id)
+                          }}
+                          onDragLeave={e => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (tarjetaArrastradaId === prod.id) setTarjetaArrastradaId(null)
+                          }}
+                          onDrop={e => handleDropDirectoEnTarjeta(e, prod)}
+                          className={`bg-slate-900/80 border p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 relative overflow-hidden ${
+                            estaSiendoArrastrada
+                              ? 'border-chefsy-400 bg-chefsy-950/60 ring-4 ring-chefsy-500/30 scale-[1.02]'
+                              : 'border-slate-800 hover:border-slate-700 hover:-translate-y-0.5'
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${
-                                estaActivo ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                          {/* Overlay de Subida */}
+                          {estaSubiendoFoto && (
+                            <div className="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
+                              <Loader2 className="animate-spin text-chefsy-400 w-8 h-8" />
+                              <p className="text-xs font-black text-white">Comprimiendo y subiendo foto...</p>
+                              <p className="text-[10px] text-slate-400">Asignando a "{nombreAMostrar}"</p>
+                            </div>
+                          )}
+
+                          {/* Overlay de Drop Target */}
+                          {estaSiendoArrastrada && !estaSubiendoFoto && (
+                            <div className="absolute inset-0 z-20 bg-chefsy-950/95 border-2 border-dashed border-chefsy-400 rounded-3xl backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
+                              <UploadCloud className="w-10 h-10 text-chefsy-400 animate-bounce" />
+                              <p className="text-xs font-black text-white">Soltá la foto acá</p>
+                              <p className="text-[10px] text-chefsy-200">Se establecerá como portada de "{nombreAMostrar}"</p>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            {/* Cabecera de la tarjeta con imagen y datos */}
+                            <div className="flex items-start gap-3.5">
+                              <div className="relative w-20 h-20 bg-slate-950 rounded-2xl overflow-hidden shrink-0 border border-slate-800 flex items-center justify-center group/img">
+                                {fotoAMostrar ? (
+                                  <img
+                                    src={fotoAMostrar}
+                                    alt={nombreAMostrar}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <ImageIcon className="text-slate-600" />
+                                )}
+                                {fotos.length > 1 && (
+                                  <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md text-[9px] font-black text-white px-1.5 py-0.5 rounded-md border border-white/10">
+                                    +{fotos.length - 1}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-1">
+                                  <h3 className="font-bold text-white text-base leading-tight truncate" title={nombreAMostrar}>
+                                    {nombreAMostrar}
+                                  </h3>
+                                  <span className="text-xs font-black text-chefsy-400 shrink-0">
+                                    {formatearPrecio(prod.precio)}
+                                  </span>
+                                </div>
+
+                                <p className="text-xs text-slate-400 truncate mt-0.5">
+                                  {prod.nombre} <span className="text-[10px] text-slate-500">(Interno)</span>
+                                </p>
+
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                                  {categorias.find(c => c.id === prod.categoriaId)?.nombre || 'Categoría general'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Badges de Diagnóstico */}
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {tieneFotosPropias ? (
+                                <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                  <span>📸</span>
+                                  <span>{fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'}</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                  <span>⚠️</span>
+                                  <span>Sin foto</span>
+                                </span>
+                              )}
+
+                              {tieneDescripcion ? (
+                                <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                  <span>📝</span>
+                                  <span>Con descripción</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                  <span>✍️</span>
+                                  <span>Falta descripción</span>
+                                </span>
+                              )}
+
+                              {esNombreModificado && (
+                                <span className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                  <span>✏️</span>
+                                  <span>Nombre personalizado</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Extracto de Descripción */}
+                            {descripcion ? (
+                              <p className="text-xs text-slate-400 line-clamp-2 italic leading-relaxed">
+                                "{descripcion}"
+                              </p>
+                            ) : (
+                              <p className="text-xs text-slate-600 italic">
+                                Sin descripción cargada en el menú.
+                              </p>
+                            )}
+
+                            {/* Switch de Visibilidad / Pausa en Tienda */}
+                            <div
+                              className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all ${
+                                estaActivo
+                                  ? 'bg-slate-950/60 border-slate-800'
+                                  : 'bg-rose-950/40 border-rose-900/60'
                               }`}
-                            ></span>
-                            <div>
-                              <p className="text-[11px] font-black text-white leading-none">
-                                {estaActivo ? 'Visible en Tienda' : 'Pausado / Oculto'}
-                              </p>
-                              <p className="text-[9px] text-slate-400 mt-0.5">
-                                {estaActivo ? 'Disponible para compra' : 'Oculto para los clientes'}
-                              </p>
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-2 h-2 rounded-full shrink-0 ${
+                                    estaActivo ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                                  }`}
+                                ></span>
+                                <div>
+                                  <p className="text-[11px] font-black text-white leading-none">
+                                    {estaActivo ? 'Visible en Tienda' : 'Pausado / Oculto'}
+                                  </p>
+                                  <p className="text-[9px] text-slate-400 mt-0.5">
+                                    {estaActivo ? 'Disponible para compra' : 'Oculto para los clientes'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={e => alternarVisibilidadTienda(prod.id, e)}
+                                disabled={estaPausando}
+                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  estaActivo ? 'bg-chefsy-600' : 'bg-slate-700'
+                                }`}
+                                title={estaActivo ? 'Pausar/Ocultar de la tienda' : 'Activar/Mostrar en la tienda'}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                    estaActivo ? 'translate-x-5' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
                             </div>
                           </div>
 
+                          {/* Botón de Edición */}
                           <button
-                            type="button"
-                            onClick={e => alternarVisibilidadTienda(prod.id, e)}
-                            disabled={estaPausando}
-                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                              estaActivo ? 'bg-chefsy-600' : 'bg-slate-700'
-                            }`}
-                            title={estaActivo ? 'Pausar/Ocultar de la tienda' : 'Activar/Mostrar en la tienda'}
+                            onClick={() => handleEdit(prod)}
+                            className="w-full py-2.5 bg-slate-800 hover:bg-chefsy-600 text-slate-200 hover:text-white text-xs font-black rounded-2xl transition-all border border-slate-700 hover:border-chefsy-500 cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md"
                           >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                                estaActivo ? 'translate-x-5' : 'translate-x-0'
-                              }`}
-                            />
+                            <Wrench size={14} />
+                            <span>Editar Fotos y Textos</span>
                           </button>
                         </div>
-                      </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                      {/* Botón de Edición */}
+            {/* 2. Vista en Modo Tabla Rápida (Estilo Excel) */}
+            {modoVista === 'tabla' && (
+              <div className="space-y-4">
+                {/* Banner de Ayuda Modo Excel */}
+                <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <div className="w-7 h-7 rounded-xl bg-chefsy-500/10 border border-chefsy-500/20 flex items-center justify-center text-chefsy-400 shrink-0">
+                      <TableIcon size={15} />
+                    </div>
+                    <span>
+                      <strong>Modo Edición Rápida en Tabla:</strong> Editá nombres y descripciones directamente en cada celda. Usá <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-200">Tab</kbd> para avanzar y <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-200">Ctrl+S</kbd> para guardar todo junto.
+                    </span>
+                  </div>
+
+                  {filasConCambios.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={guardarTodosLosCambiosTabla}
+                      disabled={guardandoMasivo}
+                      className="px-4 py-2 bg-chefsy-600 hover:bg-chefsy-500 text-white font-black text-xs rounded-xl shadow-lg shadow-chefsy-600/30 flex items-center gap-2 cursor-pointer transition-all shrink-0"
+                    >
+                      {guardandoMasivo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      <span>Guardar {filasConCambios.length} cambios (Ctrl+S)</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Contenedor de la Tabla */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                      <thead>
+                        <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px] sm:text-[11px]">
+                          <th className="py-3.5 px-4 w-16">Foto</th>
+                          <th className="py-3.5 px-4 w-44">Nombre Interno</th>
+                          <th className="py-3.5 px-4 min-w-[220px]">Nombre Público (Menú)</th>
+                          <th className="py-3.5 px-4 min-w-[320px]">Descripción Pública</th>
+                          <th className="py-3.5 px-3 w-28 text-right">Precio</th>
+                          <th className="py-3.5 px-4 w-28 text-center">Tienda</th>
+                          <th className="py-3.5 px-4 w-28 text-center">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {productosFiltrados.map(prod => {
+                          const meta = metadata[prod.id]
+                          const fotos = parsearFotosDeUrl(meta?.imagen_url)
+                          const tieneFotosPropias = fotos.length > 0 && !esImagenPlaceholder(fotos[0])
+                          const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(prod.categoriaId, prod.nombre, prod.id)
+                          const fotoAMostrar = tieneFotosPropias ? fotos[0] : (fotos[0] || fallback.img)
+                          
+                          const vals = getValoresFila(prod.id)
+                          const tieneCambiosPendientes = edicionesTabla[prod.id] !== undefined &&
+                            (edicionesTabla[prod.id].nombre_publico !== (meta?.nombre_publico ?? '') ||
+                             edicionesTabla[prod.id].descripcion_publica !== (meta?.descripcion_publica ?? ''))
+                          
+                          const estaActivo = prod.activo !== false
+                          const estaPausando = pausandoProductoId === prod.id
+                          const estaGuardandoFila = guardandoFilaId === prod.id
+
+                          return (
+                            <tr
+                              key={`tabla-${prod.id}`}
+                              className={`transition-colors ${
+                                tieneCambiosPendientes
+                                  ? 'bg-amber-500/5 hover:bg-amber-500/10'
+                                  : 'hover:bg-slate-800/40'
+                              } ${!estaActivo ? 'opacity-70' : ''}`}
+                            >
+                              {/* 1. Foto Miniatura */}
+                              <td className="py-2.5 px-4">
+                                <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0 group">
+                                  {fotoAMostrar ? (
+                                    <img src={fotoAMostrar} alt={prod.nombre} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <ImageIcon className="text-slate-600 m-auto mt-2" size={16} />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEdit(prod)}
+                                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                                    title="Editar fotos"
+                                  >
+                                    <Wrench size={13} />
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* 2. Nombre Interno & Categoría */}
+                              <td className="py-2.5 px-4">
+                                <p className="font-bold text-white text-xs truncate max-w-[170px]" title={prod.nombre}>
+                                  {prod.nombre}
+                                </p>
+                                <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block truncate">
+                                  {categorias.find(c => c.id === prod.categoriaId)?.nombre || 'Categoría'}
+                                </span>
+                              </td>
+
+                              {/* 3. Input Nombre Público */}
+                              <td className="py-2.5 px-4">
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    value={vals.nombre_publico}
+                                    onChange={e => handleCambioFila(prod.id, 'nombre_publico', e.target.value)}
+                                    placeholder={prod.nombre}
+                                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-xs text-white font-semibold outline-none focus:ring-2 focus:ring-chefsy-500 transition-all ${
+                                      tieneCambiosPendientes ? 'border-amber-500/60 bg-amber-950/20' : 'border-slate-800'
+                                    }`}
+                                  />
+                                </div>
+                              </td>
+
+                              {/* 4. Input Descripción Pública */}
+                              <td className="py-2.5 px-4">
+                                <div className="relative">
+                                  <textarea
+                                    value={vals.descripcion_publica}
+                                    onChange={e => handleCambioFila(prod.id, 'descripcion_publica', e.target.value)}
+                                    placeholder="Descripción de ingredientes del plato..."
+                                    rows={1}
+                                    className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-xs text-slate-200 font-normal outline-none focus:ring-2 focus:ring-chefsy-500 transition-all resize-y min-h-[36px] ${
+                                      tieneCambiosPendientes ? 'border-amber-500/60 bg-amber-950/20' : 'border-slate-800'
+                                    }`}
+                                  />
+                                </div>
+                              </td>
+
+                              {/* 5. Precio */}
+                              <td className="py-2.5 px-3 text-right">
+                                <span className="font-black text-chefsy-400 text-xs">
+                                  {formatearPrecio(prod.precio)}
+                                </span>
+                              </td>
+
+                              {/* 6. Switch Visibilidad */}
+                              <td className="py-2.5 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={e => alternarVisibilidadTienda(prod.id, e)}
+                                  disabled={estaPausando}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    estaActivo ? 'bg-chefsy-600' : 'bg-slate-700'
+                                  }`}
+                                  title={estaActivo ? 'Pausar/Ocultar de la tienda' : 'Activar/Mostrar en la tienda'}
+                                >
+                                  <span
+                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                      estaActivo ? 'translate-x-4' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+                              </td>
+
+                              {/* 7. Acciones */}
+                              <td className="py-2.5 px-4 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {tieneCambiosPendientes ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => guardarFilaIndividual(prod.id)}
+                                      disabled={estaGuardandoFila}
+                                      className="p-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all shadow-md cursor-pointer"
+                                      title="Guardar fila individual"
+                                    >
+                                      {estaGuardandoFila ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEdit(prod)}
+                                      className="p-2 bg-slate-800 hover:bg-chefsy-600 text-slate-300 hover:text-white rounded-xl text-xs transition-all cursor-pointer"
+                                      title="Editar fotos y detalles completos"
+                                    >
+                                      <Wrench size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Barra Flotante Sticky de Cambios Pendientes */}
+                {filasConCambios.length > 0 && (
+                  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-amber-500/50 shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
+                      <p className="text-xs font-bold text-white">
+                        <strong className="text-amber-400">{filasConCambios.length}</strong> {filasConCambios.length === 1 ? 'plato modificado' : 'platos modificados'} sin guardar
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleEdit(prod)}
-                        className="w-full py-2.5 bg-slate-800 hover:bg-chefsy-600 text-slate-200 hover:text-white text-xs font-black rounded-2xl transition-all border border-slate-700 hover:border-chefsy-500 cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md"
+                        type="button"
+                        onClick={guardarTodosLosCambiosTabla}
+                        disabled={guardandoMasivo}
+                        className="px-4 py-2 bg-chefsy-600 hover:bg-chefsy-500 text-white font-black text-xs rounded-xl shadow-lg shadow-chefsy-600/30 flex items-center gap-2 cursor-pointer transition-all"
                       >
-                        <Wrench size={14} />
-                        <span>Editar Fotos y Textos</span>
+                        {guardandoMasivo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                        <span>Guardar Todo (Ctrl+S)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={descartarCambiosTabla}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      >
+                        Descartar
                       </button>
                     </div>
-                  )
-                })}
+                  </div>
+                )}
               </div>
             )}
           </div>

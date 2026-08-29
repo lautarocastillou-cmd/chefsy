@@ -34,13 +34,34 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
+    const supabase = obtenerSupabaseAdmin()
+
+    // 1. Guardado Masivo (Bulk Upsert para Edición en Tabla)
+    if (Array.isArray(body.items) && body.items.length > 0) {
+      const ahora = new Date().toISOString()
+      const filas = body.items.map((it: any) => ({
+        producto_id: it.producto_id,
+        nombre_publico: it.nombre_publico ?? null,
+        descripcion_publica: it.descripcion_publica ?? null,
+        imagen_url: it.imagen_url ?? null,
+        updated_at: ahora
+      }))
+
+      const { data, error } = await supabase
+        .from('tienda_metadata')
+        .upsert(filas, { onConflict: 'producto_id' })
+        .select()
+
+      if (error) throw error
+      return NextResponse.json({ success: true, count: data?.length || 0, data })
+    }
+
+    // 2. Guardado Individual
     const { producto_id, nombre_publico, descripcion_publica, imagen_url } = body
 
     if (!producto_id) {
       return NextResponse.json({ error: 'producto_id es requerido' }, { status: 400 })
     }
-
-    const supabase = obtenerSupabaseAdmin()
     
     // Upsert (inserta o actualiza)
     const { data, error } = await supabase
