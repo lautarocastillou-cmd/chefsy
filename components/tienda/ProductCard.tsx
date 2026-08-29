@@ -81,11 +81,11 @@ function ProductCard({
           alt={nombreVisible ?? prod.nombre}
           fill
           priority={esPrioritario}
-          loading={esPrioritario ? 'eager' : 'lazy'}
+          loading={esPrioritario ? undefined : 'lazy'}
           unoptimized={isCloudinary}
           placeholder="blur"
           blurDataURL={blurSrc}
-          sizes="(max-width: 768px) 80px, 96px"
+          sizes="(max-width: 768px) 50vw, 250px"
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {prod.esCombo && (

@@ -108,60 +108,63 @@ function CatalogoProductosComponente({
           )}
 
           <div className="flex flex-col gap-10">
-            {categoriasActivas.map(cat => {
-              const productosDeCat = productosFiltrados.filter(p => p.categoriaId === cat.id)
-              if (productosDeCat.length === 0) return null
+            {(() => {
+              let totalCardIndex = 0
+              return categoriasActivas.map(cat => {
+                const productosDeCat = productosFiltrados.filter(p => p.categoriaId === cat.id)
+                if (productosDeCat.length === 0) return null
 
-              return (
-                <div key={cat.id} id={cat.id} className="categoria-seccion flex flex-col gap-4 scroll-mt-36">
-                  {/* Título de Categoría en la lista */}
-                  {(!categoriaSeleccionada || categoriaSeleccionada === 'todos' || busqueda || esCategoriaCombinada) && (
-                    <h3 className="font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2">
-                      {cat.nombre}
-                    </h3>
-                  )}
+                return (
+                  <div key={cat.id} id={cat.id} className="categoria-seccion flex flex-col gap-4 scroll-mt-36">
+                    {/* Título de Categoría en la lista */}
+                    {(!categoriaSeleccionada || categoriaSeleccionada === 'todos' || busqueda || esCategoriaCombinada) && (
+                      <h3 className="font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2">
+                        {cat.nombre}
+                      </h3>
+                    )}
 
-                  {/* Productos normales (excluye medias pizzas en la categoría pizzas) */}
-                  {productosDeCat
-                    .filter(p => !p.esCombo && !(cat.id === 'pizzas' && p.nombre.toLowerCase().includes('media')))
-                    .map((prodOriginal, index) => {
-                      const props = buildCardProps(prodOriginal, metadata, index, onAbrirModal)
-                      return <ProductCard key={props.prod.id} {...props} />
-                    })}
+                    {/* Productos normales (excluye medias pizzas en la categoría pizzas) */}
+                    {productosDeCat
+                      .filter(p => !p.esCombo && !(cat.id === 'pizzas' && p.nombre.toLowerCase().includes('media')))
+                      .map(prodOriginal => {
+                        const props = buildCardProps(prodOriginal, metadata, totalCardIndex++, onAbrirModal)
+                        return <ProductCard key={props.prod.id} {...props} />
+                      })}
 
-                  {/* Medias Pizzas */}
-                  {cat.id === 'pizzas' && productosDeCat.some(p => p.nombre.toLowerCase().includes('media') && !p.esCombo) && (
-                    <div className="mt-4 mb-2">
-                      <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
-                        MEDIAS PIZZAS
-                      </h4>
-                    </div>
-                  )}
+                    {/* Medias Pizzas */}
+                    {cat.id === 'pizzas' && productosDeCat.some(p => p.nombre.toLowerCase().includes('media') && !p.esCombo) && (
+                      <div className="mt-4 mb-2">
+                        <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
+                          MEDIAS PIZZAS
+                        </h4>
+                      </div>
+                    )}
 
-                  {cat.id === 'pizzas' && productosDeCat
-                    .filter(p => p.nombre.toLowerCase().includes('media') && !p.esCombo)
-                    .map((prodOriginal, index) => {
-                      const props = buildCardProps(prodOriginal, metadata, index + 50, onAbrirModal)
-                      return <ProductCard key={props.prod.id} {...props} />
-                    })}
+                    {cat.id === 'pizzas' && productosDeCat
+                      .filter(p => p.nombre.toLowerCase().includes('media') && !p.esCombo)
+                      .map(prodOriginal => {
+                        const props = buildCardProps(prodOriginal, metadata, totalCardIndex++, onAbrirModal)
+                        return <ProductCard key={props.prod.id} {...props} />
+                      })}
 
-                  {productosDeCat.some(p => p.esCombo) && (
-                    <div className="mt-4 mb-2">
-                      <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
-                        PROMOS {cat.nombre.toUpperCase()}
-                      </h4>
-                    </div>
-                  )}
+                    {productosDeCat.some(p => p.esCombo) && (
+                      <div className="mt-4 mb-2">
+                        <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
+                          PROMOS {cat.nombre.toUpperCase()}
+                        </h4>
+                      </div>
+                    )}
 
-                  {productosDeCat
-                    .filter(p => p.esCombo)
-                    .map((prodOriginal, index) => {
-                      const props = buildCardProps(prodOriginal, metadata, index + 100, onAbrirModal)
-                      return <ProductCard key={props.prod.id} {...props} />
-                    })}
-                </div>
-              )
-            })}
+                    {productosDeCat
+                      .filter(p => p.esCombo)
+                      .map(prodOriginal => {
+                        const props = buildCardProps(prodOriginal, metadata, totalCardIndex++, onAbrirModal)
+                        return <ProductCard key={props.prod.id} {...props} />
+                      })}
+                  </div>
+                )
+              })
+            })()}
           </div>
         </>
       )}
