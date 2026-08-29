@@ -393,29 +393,55 @@ export default function DevToolsPage() {
     e.stopPropagation()
     setTarjetaArrastradaId(null)
 
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
-    if (files.length === 0) {
-      mostrarToast('Por favor arrastrá un archivo de imagen válido (JPG, PNG o WebP).', 'info')
+    // 1. Extraer archivos locales (con soporte de MIME y extensiones de imagen)
+    const files = Array.from(e.dataTransfer.files || []).filter(f =>
+      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif)$/i.test(f.name)
+    )
+
+    // 2. Si no hay archivos en dataTransfer.files, verificar si se arrastró una URL desde la web
+    let urlArrastrada = ''
+    if (files.length === 0 && e.dataTransfer.getData) {
+      const uriList = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || ''
+      if (uriList && (uriList.startsWith('http://') || uriList.startsWith('https://'))) {
+        urlArrastrada = uriList.trim()
+      }
+    }
+
+    if (files.length === 0 && !urlArrastrada) {
+      mostrarToast('Por favor arrastrá un archivo de imagen válido (JPG, PNG, WebP) o un enlace.', 'info')
       return
     }
 
     setSubiendoFotoTarjetaId(prod.id)
     try {
-      mostrarToast(`Comprimiendo y subiendo ${files.length === 1 ? 'la foto' : `${files.length} fotos`} de "${prod.nombre}"...`, 'info')
-
       const urlsNuevas: string[] = []
-      for (const file of files) {
-        const base64 = await comprimirImagen(file)
-        const uploadRes = await fetch('/api/admin/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
-        })
-        const uploadData = await uploadRes.json()
-        if (!uploadRes.ok || uploadData.error) {
-          throw new Error(uploadData.error || 'Error al subir una de las imágenes')
+
+      if (urlArrastrada) {
+        urlsNuevas.push(urlArrastrada)
+      } else {
+        mostrarToast(
+          `Comprimiendo y subiendo ${files.length === 1 ? 'la foto' : `${files.length} fotos`} de "${prod.nombre}"...`,
+          'info'
+        )
+
+        for (const file of files) {
+          const base64 = await comprimirImagen(file)
+          const uploadRes = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
+          })
+          const uploadData = await uploadRes.json()
+          if (!uploadRes.ok || uploadData.error) {
+            throw new Error(uploadData.error || 'Error al subir una de las imágenes')
+          }
+          const urlFinal = uploadData.urlTransformada || uploadData.urlOriginal
+          if (urlFinal) urlsNuevas.push(urlFinal)
         }
-        urlsNuevas.push(uploadData.urlTransformada || uploadData.urlOriginal)
+      }
+
+      if (urlsNuevas.length === 0) {
+        throw new Error('No se pudo procesar la imagen')
       }
 
       // Obtener metadatos actuales y preservar fotos existentes que no sean placeholder
@@ -448,13 +474,25 @@ export default function DevToolsPage() {
         throw new Error(metaData.error || 'Error al guardar metadatos')
       }
 
-      // Actualizar estado local
+      // Actualizar estado local reactivo
       setMetadata(prev => ({
         ...prev,
-        [prod.id]: metaData.data,
+        [prod.id]: {
+          producto_id: prod.id,
+          nombre_publico: metaActual.nombre_publico || prod.nombre,
+          descripcion_publica: metaActual.descripcion_publica || '',
+          imagen_url: imagen_url_final,
+          ...(metaData.data || {}),
+        },
       }))
 
-      mostrarToast(`¡${files.length === 1 ? 'Foto' : `${files.length} fotos`} de "${prod.nombre}" actualizada${files.length === 1 ? '' : 's'} con éxito! 📸`, 'success')
+      // Agregar a fotosLibresBanco
+      setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
+
+      mostrarToast(
+        `¡${urlsNuevas.length === 1 ? 'Foto' : `${urlsNuevas.length} fotos`} de "${prod.nombre}" actualizada${urlsNuevas.length === 1 ? '' : 's'} con éxito! 📸`,
+        'success'
+      )
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al subir foto: ' + (err.message || 'Error desconocido'), 'error')
@@ -1485,14 +1523,27 @@ export default function DevToolsPage() {
                           onDragOver={e => {
                             e.preventDefault()
                             e.stopPropagation()
+                            e.dataTransfer.dropEffect = 'copy'
+                            if (tarjetaArrastradaId !== prod.id) setTarjetaArrastradaId(prod.id)
+                          }}
+                          onDragEnter={e => {
+                            e.preventDefault()
+                            e.stopPropagation()
                             if (tarjetaArrastradaId !== prod.id) setTarjetaArrastradaId(prod.id)
                           }}
                           onDragLeave={e => {
                             e.preventDefault()
                             e.stopPropagation()
-                            if (tarjetaArrastradaId === prod.id) setTarjetaArrastradaId(null)
+                            if (e.currentTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
+                              if (tarjetaArrastradaId === prod.id) setTarjetaArrastradaId(null)
+                            }
                           }}
-                          onDrop={e => handleDropDirectoEnTarjeta(e, prod)}
+                          onDrop={e => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setTarjetaArrastradaId(null)
+                            handleDropDirectoEnTarjeta(e, prod)
+                          }}
                           className={`bg-slate-900/80 border p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 transition-all duration-200 relative overflow-hidden ${
                             estaSiendoArrastrada
                               ? 'border-chefsy-400 bg-chefsy-950/60 ring-4 ring-chefsy-500/30 scale-[1.02]'
@@ -1538,14 +1589,9 @@ export default function DevToolsPage() {
                               </div>
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-1">
-                                  <h3 className="font-bold text-white text-base leading-tight truncate" title={nombreAMostrar}>
-                                    {nombreAMostrar}
-                                  </h3>
-                                  <span className="text-xs font-black text-chefsy-400 shrink-0">
-                                    {formatearPrecio(prod.precio)}
-                                  </span>
-                                </div>
+                                <h3 className="text-sm font-black text-white truncate flex items-center gap-1.5">
+                                  <span>{nombreAMostrar}</span>
+                                </h3>
 
                                 <p className="text-xs text-slate-400 truncate mt-0.5">
                                   {prod.nombre} <span className="text-[10px] text-slate-500">(Interno)</span>
@@ -1618,11 +1664,11 @@ export default function DevToolsPage() {
                                 ></span>
                                 <div>
                                   <p className="text-[11px] font-black text-white leading-none">
-                                    {estaActivo ? 'Visible en Tienda' : 'Pausado / Oculto'}
+                                    {estaActivo ? 'Visible en la Tienda' : 'Pausado / Oculto'}
                                   </p>
-                                  <p className="text-[9px] text-slate-400 mt-0.5">
-                                    {estaActivo ? 'Disponible para compra' : 'Oculto para los clientes'}
-                                  </p>
+                                  <span className="text-[10px] text-slate-400">
+                                    {estaActivo ? 'Los clientes pueden pedirlo' : 'Oculto en la carta'}
+                                  </span>
                                 </div>
                               </div>
 
@@ -1644,14 +1690,38 @@ export default function DevToolsPage() {
                             </div>
                           </div>
 
-                          {/* Botón de Edición */}
-                          <button
-                            onClick={() => handleEdit(prod)}
-                            className="w-full py-2.5 bg-slate-800 hover:bg-chefsy-600 text-slate-200 hover:text-white text-xs font-black rounded-2xl transition-all border border-slate-700 hover:border-chefsy-500 cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md"
-                          >
-                            <Wrench size={14} />
-                            <span>Editar Fotos y Textos</span>
-                          </button>
+                          {/* Botones de Acción de la Tarjeta */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEdit(prod)}
+                              className="flex-1 py-2.5 bg-slate-800 hover:bg-chefsy-600 text-slate-200 hover:text-white text-xs font-black rounded-2xl transition-all border border-slate-700 hover:border-chefsy-500 cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md"
+                            >
+                              <Wrench size={14} />
+                              <span>Editar</span>
+                            </button>
+
+                            <label
+                              htmlFor={`upload-direct-${prod.id}`}
+                              className="p-2.5 bg-slate-800/80 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 hover:border-emerald-500 rounded-2xl transition-all cursor-pointer flex items-center justify-center shrink-0 shadow-md"
+                              title="Subir foto directamente a este plato desde tu PC"
+                            >
+                              <UploadCloud size={15} />
+                            </label>
+                            <input
+                              type="file"
+                              id={`upload-direct-${prod.id}`}
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={e => {
+                                const files = Array.from(e.target.files || [])
+                                if (files.length > 0) {
+                                  handleDropDirectoEnTarjeta({ preventDefault: () => {}, stopPropagation: () => {}, dataTransfer: { files } } as any, prod)
+                                  e.target.value = ''
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
                       )
                     })}
