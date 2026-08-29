@@ -83,7 +83,7 @@ export default function DevToolsPage() {
   const [metadata, setMetadata] = useState<Record<string, TiendaMetadata>>({})
   const [cargandoMetadata, setCargandoMetadata] = useState(true)
 
-  const [tabActive, setTabActive] = useState<'visual' | 'chefsitos'>('visual')
+  const [tabActive, setTabActive] = useState<'visual' | 'banco' | 'chefsitos'>('visual')
   const [preciosPuntos, setPreciosPuntos] = useState<Record<string, number>>({})
   const [guardandoPuntosId, setGuardandoPuntosId] = useState<string | null>(null)
 
@@ -91,6 +91,12 @@ export default function DevToolsPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'sin_foto' | 'con_foto' | 'sin_desc'>('todos')
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas')
+
+  // Banco de Fotos de la Casa
+  const [mostrarBancoModal, setMostrarBancoModal] = useState(false)
+  const [busquedaBanco, setBusquedaBanco] = useState('')
+  const [asignandoFotoUrl, setAsignandoFotoUrl] = useState<string | null>(null)
+  const [asignandoProductoId, setAsignandoProductoId] = useState<string>('')
 
   // Estado del Modal de Edición
   const [productoEditandoId, setProductoEditandoId] = useState<string | null>(null)
@@ -593,6 +599,103 @@ export default function DevToolsPage() {
     return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
   }, [galeriaFotos, productoActualEditando])
 
+  // Banco de Fotos Únicas de la Casa
+  interface FotoBancoItem {
+    url: string
+    productosUsados: { id: string; nombre: string; categoriaId: string }[]
+  }
+
+  const bancoFotos = useMemo(() => {
+    const mapa = new Map<string, { id: string; nombre: string; categoriaId: string }[]>()
+
+    productos.forEach(p => {
+      const meta = metadata[p.id]
+      const fotos = parsearFotosDeUrl(meta?.imagen_url)
+      fotos.forEach(url => {
+        if (!esImagenPlaceholder(url)) {
+          if (!mapa.has(url)) {
+            mapa.set(url, [])
+          }
+          const lista = mapa.get(url)!
+          if (!lista.some(item => item.id === p.id)) {
+            lista.push({
+              id: p.id,
+              nombre: meta?.nombre_publico || p.nombre,
+              categoriaId: p.categoriaId,
+            })
+          }
+        }
+      })
+    })
+
+    const resultado: FotoBancoItem[] = []
+    mapa.forEach((productosUsados, url) => {
+      resultado.push({ url, productosUsados })
+    })
+
+    return resultado
+  }, [productos, metadata])
+
+  const bancoFotosFiltradas = useMemo(() => {
+    if (!busquedaBanco.trim()) return bancoFotos
+    const query = busquedaBanco.toLowerCase()
+    return bancoFotos.filter(item =>
+      item.productosUsados.some(p => p.nombre.toLowerCase().includes(query))
+    )
+  }, [bancoFotos, busquedaBanco])
+
+  // Asignar una foto del banco directamente a otro producto
+  const asignarFotoAProductoDirecto = async (fotoUrl: string, productoId: string) => {
+    try {
+      const prod = productos.find(p => p.id === productoId)
+      if (!prod) return
+
+      const metaActual = metadata[productoId] || {
+        producto_id: productoId,
+        nombre_publico: prod.nombre,
+        descripcion_publica: '',
+        imagen_url: '',
+      }
+
+      const fotosExistentes = parsearFotosDeUrl(metaActual.imagen_url).filter(u => !esImagenPlaceholder(u))
+      if (fotosExistentes.includes(fotoUrl)) {
+        mostrarToast(`"${prod.nombre}" ya tiene esta foto asignada`, 'info')
+        return
+      }
+
+      const todasLasFotos = [fotoUrl, ...fotosExistentes]
+      const imagen_url_final = todasLasFotos.join(' | ')
+
+      const metaRes = await fetch('/api/admin/tienda-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          producto_id: productoId,
+          nombre_publico: metaActual.nombre_publico || prod.nombre,
+          descripcion_publica: metaActual.descripcion_publica || '',
+          imagen_url: imagen_url_final,
+        }),
+      })
+
+      const metaData = await metaRes.json()
+      if (!metaRes.ok || metaData.error) {
+        throw new Error(metaData.error || 'Error al guardar')
+      }
+
+      setMetadata(prev => ({
+        ...prev,
+        [productoId]: metaData.data,
+      }))
+
+      setAsignandoFotoUrl(null)
+      setAsignandoProductoId('')
+      mostrarToast(`¡Foto asignada a "${prod.nombre}" con éxito! 📸`, 'success')
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al asignar foto: ' + (err.message || 'Error desconocido'), 'error')
+    }
+  }
+
   if (!estaListoAuth || cargandoMetadata) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-3">
@@ -675,6 +778,17 @@ export default function DevToolsPage() {
             <span>Diseño Visual (Fotos y Textos)</span>
           </button>
           <button
+            onClick={() => setTabActive('banco')}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              tabActive === 'banco'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+            }`}
+          >
+            <span>🖼️</span>
+            <span>Banco de Fotos de la Casa ({bancoFotos.length})</span>
+          </button>
+          <button
             onClick={() => setTabActive('chefsitos')}
             className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
               tabActive === 'chefsitos'
@@ -683,7 +797,7 @@ export default function DevToolsPage() {
             }`}
           >
             <span>🪙</span>
-            <span>Tienda Chefsitos (Precios en Puntos)</span>
+            <span>Tienda Chefsitos</span>
           </button>
         </div>
 
@@ -976,6 +1090,158 @@ export default function DevToolsPage() {
           </div>
         )}
 
+        {/* Pestaña Banco de Fotos de la Casa */}
+        {tabActive === 'banco' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-4 rounded-3xl">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar foto por nombre de producto que la use..."
+                  value={busquedaBanco}
+                  onChange={e => setBusquedaBanco(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm text-white placeholder:text-slate-500"
+                />
+                {busquedaBanco && (
+                  <button
+                    onClick={() => setBusquedaBanco('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="text-xs font-bold text-slate-400 shrink-0">
+                <span>Total disponible: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong> fotos</span>
+              </div>
+            </div>
+
+            {bancoFotosFiltradas.length === 0 ? (
+              <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+                <ImageIcon className="mx-auto text-slate-600 w-12 h-12" />
+                <h3 className="text-base font-bold text-slate-300">No hay fotos en el banco</h3>
+                <p className="text-xs text-slate-500">Subí fotos a los platos del menú para que aparezcan disponibles acá para reutilizar.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {bancoFotosFiltradas.map((item, idx) => (
+                  <div
+                    key={`${item.url}-${idx}`}
+                    className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-lg flex flex-col justify-between group hover:border-slate-700 transition-all"
+                  >
+                    <div className="relative aspect-video sm:aspect-square bg-slate-950 overflow-hidden">
+                      <img
+                        src={item.url}
+                        alt="Foto de la casa"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFotoZoomUrl(item.url)}
+                        className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        title="Ver en grande"
+                      >
+                        <Eye size={14} />
+                      </button>
+                    </div>
+
+                    <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Usada en ({item.productosUsados.length}):
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-1 max-h-16 overflow-y-auto">
+                          {item.productosUsados.map(p => (
+                            <span
+                              key={p.id}
+                              className="bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded-md truncate max-w-full"
+                              title={p.nombre}
+                            >
+                              {p.nombre}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
+                        {asignandoFotoUrl === item.url ? (
+                          <div className="space-y-2 bg-slate-950 p-2.5 rounded-2xl border border-indigo-500/40 animate-in fade-in">
+                            <label className="text-[10px] font-bold text-indigo-300">
+                              Seleccionar plato a asignar:
+                            </label>
+                            <select
+                              value={asignandoProductoId}
+                              onChange={e => setAsignandoProductoId(e.target.value)}
+                              className="w-full p-2 bg-slate-900 border border-slate-700 text-white text-xs rounded-xl outline-none"
+                            >
+                              <option value="">-- Elegir producto --</option>
+                              {productos.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  {p.nombre}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (asignandoProductoId) {
+                                    asignarFotoAProductoDirecto(item.url, asignandoProductoId)
+                                  }
+                                }}
+                                disabled={!asignandoProductoId}
+                                className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer"
+                              >
+                                Asignar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAsignandoFotoUrl(null)
+                                  setAsignandoProductoId('')
+                                }}
+                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg text-xs cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAsignandoFotoUrl(item.url)
+                                setAsignandoProductoId('')
+                              }}
+                              className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 hover:border-indigo-500 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <Plus size={13} />
+                              <span>Asignar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(item.url)
+                                mostrarToast('Enlace de la imagen copiado al portapapeles', 'info')
+                              }}
+                              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer"
+                              title="Copiar Enlace Directo"
+                            >
+                              <Link2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Grilla Tienda Chefsitos */}
         {tabActive === 'chefsitos' && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1126,22 +1392,102 @@ export default function DevToolsPage() {
 
                 {/* 3. Galería de Fotos */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
                       <span>📸 Galería de Fotos</span>
                       <span className="bg-slate-800 text-slate-300 text-[10px] font-black px-2 py-0.5 rounded-md">
                         {galeriaFotos.length} {galeriaFotos.length === 1 ? 'foto' : 'fotos'}
                       </span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarInputUrl(!mostrarInputUrl)}
-                      className="text-[11px] font-bold text-chefsy-400 hover:text-chefsy-300 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Link2 size={13} />
-                      <span>{mostrarInputUrl ? 'Ocultar enlace URL' : 'Pegar enlace URL'}</span>
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarBancoModal(!mostrarBancoModal)}
+                        className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ImageIcon size={13} />
+                        <span>{mostrarBancoModal ? 'Ocultar Banco' : `Banco de Fotos (${bancoFotos.length})`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setMostrarInputUrl(!mostrarInputUrl)}
+                        className="text-[11px] font-bold text-chefsy-400 hover:text-chefsy-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Link2 size={13} />
+                        <span>{mostrarInputUrl ? 'Ocultar enlace' : 'Pegar enlace URL'}</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Selector del Banco de Fotos dentro del Modal */}
+                  {mostrarBancoModal && (
+                    <div className="p-4 bg-slate-950 border border-indigo-500/30 rounded-2xl space-y-3 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon size={16} className="text-indigo-400" />
+                          <span className="text-xs font-black text-white">Elegir foto del Banco de la Casa</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {bancoFotos.length} fotos disponibles
+                        </span>
+                      </div>
+
+                      {bancoFotos.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic py-2">
+                          Aún no hay fotos subidas en otros productos.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1">
+                          {bancoFotos.map((item, i) => {
+                            const yaAgregada = galeriaFotos.some(f => f.url === item.url)
+                            return (
+                              <button
+                                key={`modal-banco-${i}`}
+                                type="button"
+                                onClick={() => {
+                                  if (yaAgregada) {
+                                    mostrarToast('Esta foto ya está en la galería', 'info')
+                                    return
+                                  }
+                                  setGaleriaFotos(prev => [
+                                    ...prev,
+                                    {
+                                      id: `banco-${Date.now()}-${i}`,
+                                      url: item.url,
+                                      esNueva: false,
+                                    },
+                                  ])
+                                  mostrarToast('Foto añadida desde el banco', 'success')
+                                }}
+                                className={`relative aspect-square rounded-xl overflow-hidden border transition-all text-left group/banco cursor-pointer ${
+                                  yaAgregada
+                                    ? 'border-emerald-500 ring-2 ring-emerald-500/30 opacity-70'
+                                    : 'border-slate-800 hover:border-indigo-400 hover:scale-105'
+                                }`}
+                              >
+                                <img
+                                  src={item.url}
+                                  alt="Foto banco"
+                                  className="w-full h-full object-cover"
+                                />
+                                {yaAgregada ? (
+                                  <div className="absolute inset-0 bg-emerald-950/60 flex items-center justify-center text-emerald-400">
+                                    <Check size={16} className="stroke-[3]" />
+                                  </div>
+                                ) : (
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/banco:opacity-100 flex items-center justify-center transition-opacity">
+                                    <Plus size={18} className="text-white" />
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Input opcional para pegar URL directa */}
                   {mostrarInputUrl && (
