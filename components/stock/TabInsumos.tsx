@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { CategoriaInsumo, Insumo, RecetaProducto } from '@/tipos/stock'
+import { CategoriaInsumo, Insumo, RecetaProducto, TipoMovimientoStock } from '@/tipos/stock'
 import { ProductoCatalogo, CategoriaCatalogo } from '@/tipos/catalogo'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import toast from 'react-hot-toast'
+import { ModalKardexInsumo } from './ModalKardexInsumo'
+import { ModalIngresoRemito } from './ModalIngresoRemito'
 import {
   Plus,
   Trash2,
@@ -26,7 +28,9 @@ import {
   TrendingDown,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  History,
+  Truck
 } from 'lucide-react'
 
 type FiltroEstado = 'todos' | 'criticos' | 'bajo' | 'optimo' | 'ocultos'
@@ -65,11 +69,19 @@ export function TabInsumos({
   // Estado de procesamiento de pausa / reactivación en tienda
   const [procesandoPausa, setProcesandoPausa] = useState<Record<string, boolean>>({})
 
-  // Modal de reposición rápida
+  // Modal de reposición rápida individual
   const [insumoReposicion, setInsumoReposicion] = useState<Insumo | null>(null)
   const [cantidadDelta, setCantidadDelta] = useState<number>(12)
   const [tipoOperacion, setTipoOperacion] = useState<'sumar' | 'restar'>('sumar')
+  const [subtipoMovimiento, setSubtipoMovimiento] = useState<TipoMovimientoStock>('ingreso_mercaderia')
+  const [motivoMovimiento, setMotivoMovimiento] = useState('')
   const [guardandoReposicion, setGuardandoReposicion] = useState(false)
+
+  // Modal de Kardex individual
+  const [insumoKardex, setInsumoKardex] = useState<Insumo | null>(null)
+
+  // Modal de Ingreso Masivo de Remito
+  const [modalRemitoAbierto, setModalRemitoAbierto] = useState(false)
 
   // Modal de lista de compras para proveedor
   const [modalComprasAbierto, setModalComprasAbierto] = useState(false)
@@ -302,7 +314,7 @@ export function TabInsumos({
     }
   }
 
-  // ── Aplicar Reposición Rápida (Modal) ───────────────────────────────────────
+  // ── Aplicar Reposición Rápida (Modal con Kardex) ───────────────────────────
   const aplicarReposicion = async () => {
     if (!insumoReposicion || cantidadDelta <= 0) return
     setGuardandoReposicion(true)
@@ -313,16 +325,22 @@ export function TabInsumos({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accion: 'update_stock',
-          payload: { id: insumoReposicion.id, delta: deltaFinal }
+          payload: {
+            id: insumoReposicion.id,
+            delta: deltaFinal,
+            tipo_movimiento: subtipoMovimiento,
+            motivo: motivoMovimiento.trim() || undefined,
+          }
         })
       })
       if (!res.ok) throw new Error(await res.text())
       toast.success(
         tipoOperacion === 'sumar'
           ? `¡Stock reabastecido! (+${cantidadDelta} ${insumoReposicion.unidad_medida})`
-          : `Ajuste aplicado (-${cantidadDelta} ${insumoReposicion.unidad_medida})`
+          : `Ajuste registrado en Kardex (-${cantidadDelta} ${insumoReposicion.unidad_medida})`
       )
       setInsumoReposicion(null)
+      setMotivoMovimiento('')
       onUpdate()
     } catch (error: any) {
       toast.error('Error: ' + error.message)
@@ -510,11 +528,21 @@ export function TabInsumos({
         </div>
 
         {/* Botones de Acción */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Botón Ingreso de Remito / Factura Masivo */}
+          <button
+            onClick={() => setModalRemitoAbierto(true)}
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            title="Carga masiva de mercadería recibida por remito o factura de proveedor"
+          >
+            <Truck size={15} />
+            <span>Ingreso de Remito</span>
+          </button>
+
           {/* Botón Lista de Compras */}
           <button
             onClick={() => setModalComprasAbierto(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
             title="Genera una lista para copiar y enviar al proveedor"
           >
             <ShoppingBag size={15} className="text-amber-500" />
@@ -527,7 +555,7 @@ export function TabInsumos({
               if (editando) resetForm()
               setMostrarFormulario(!mostrarFormulario)
             }}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus size={16} />
             <span>{mostrarFormulario ? 'Ocultar Form' : 'Nuevo Insumo'}</span>
@@ -801,14 +829,26 @@ export function TabInsumos({
                           )}
                         </button>
 
+                        {/* Botón Kardex / Historial */}
+                        <button
+                          onClick={() => setInsumoKardex(ins)}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          title="Ver historial de movimientos y Kardex inmutable de este insumo"
+                        >
+                          <History size={13} />
+                          <span className="hidden sm:inline">Kardex</span>
+                        </button>
+
                         {/* Botón Reponer Mercadería */}
                         <button
                           onClick={() => {
                             setInsumoReposicion(ins)
                             setTipoOperacion('sumar')
+                            setSubtipoMovimiento('ingreso_mercaderia')
+                            setMotivoMovimiento('')
                             setCantidadDelta(12)
                           }}
-                          className="px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1"
+                          className="px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                           title="Sumar stock rápido de mercadería ingresada"
                         >
                           <Zap size={13} />
@@ -889,8 +929,11 @@ export function TabInsumos({
             {/* Selector de Operación (Ingreso / Merma) */}
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
               <button
-                onClick={() => setTipoOperacion('sumar')}
-                className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                onClick={() => {
+                  setTipoOperacion('sumar')
+                  setSubtipoMovimiento('ingreso_mercaderia')
+                }}
+                className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   tipoOperacion === 'sumar'
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -900,8 +943,11 @@ export function TabInsumos({
                 <span>Ingreso de Mercadería (+)</span>
               </button>
               <button
-                onClick={() => setTipoOperacion('restar')}
-                className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                onClick={() => {
+                  setTipoOperacion('restar')
+                  setSubtipoMovimiento('merma_rotura')
+                }}
+                className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   tipoOperacion === 'restar'
                     ? 'bg-rose-500 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -910,6 +956,100 @@ export function TabInsumos({
                 <TrendingDown size={14} />
                 <span>Merma / Descarte (-)</span>
               </button>
+            </div>
+
+            {/* Clasificación de Causa / Subtipo para el Kardex */}
+            <div>
+              <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">
+                Motivo / Clasificación en Kardex:
+              </label>
+              {tipoOperacion === 'sumar' ? (
+                <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('ingreso_mercaderia')}
+                    className={`py-2 px-3 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'ingreso_mercaderia'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    📦 Compra a Proveedor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('ajuste_inventario')}
+                    className={`py-2 px-3 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'ajuste_inventario'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    🔍 Ajuste / Conteo Físico (+)
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('merma_rotura')}
+                    className={`py-2 px-2.5 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'merma_rotura'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    💥 Rotura / Caída
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('merma_vencimiento')}
+                    className={`py-2 px-2.5 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'merma_vencimiento'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    ⏳ Vencimiento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('merma_cocina')}
+                    className={`py-2 px-2.5 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'merma_cocina'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    🍳 Error de Cocina
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubtipoMovimiento('ajuste_inventario')}
+                    className={`py-2 px-2.5 rounded-xl border text-left transition-all ${
+                      subtipoMovimiento === 'ajuste_inventario'
+                        ? 'bg-blue-500/20 border-blue-500 text-blue-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    🔍 Ajuste de Conteo (-)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Input de Nota / Comprobante */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Comprobante / Nota Opcional:
+              </label>
+              <input
+                type="text"
+                placeholder={tipoOperacion === 'sumar' ? "Ej: Factura Distribuidora Quilmes #892" : "Ej: Botella quebrada en depósito"}
+                value={motivoMovimiento}
+                onChange={(e) => setMotivoMovimiento(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
 
             {/* Botones de Packs Rápidos */}
@@ -976,16 +1116,16 @@ export function TabInsumos({
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setInsumoReposicion(null)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={aplicarReposicion}
                 disabled={guardandoReposicion || cantidadDelta <= 0}
-                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {guardandoReposicion ? 'Guardando...' : 'Confirmar Stock'}
+                {guardandoReposicion ? 'Guardando...' : 'Confirmar en Kardex'}
               </button>
             </div>
 
@@ -1016,7 +1156,7 @@ export function TabInsumos({
               </div>
               <button 
                 onClick={() => setModalComprasAbierto(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -1031,13 +1171,13 @@ export function TabInsumos({
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setModalComprasAbierto(false)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all cursor-pointer"
               >
                 Cerrar
               </button>
               <button
                 onClick={copiarListaCompras}
-                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {copiado ? <Check size={18} /> : <Copy size={18} />}
                 <span>{copiado ? '¡Copiado!' : 'Copiar para WhatsApp'}</span>
@@ -1046,6 +1186,24 @@ export function TabInsumos({
 
           </div>
         </div>
+      )}
+
+      {/* ── 7. MODAL DE INGRESO MASIVO DE REMITO / FACTURA ────────────────────── */}
+      {modalRemitoAbierto && (
+        <ModalIngresoRemito
+          insumos={insumos}
+          categorias={categorias}
+          onCerrar={() => setModalRemitoAbierto(false)}
+          onCompletado={onUpdate}
+        />
+      )}
+
+      {/* ── 8. MODAL DE KARDEX Y TRAZABILIDAD POR INSUMO ──────────────────────── */}
+      {insumoKardex && (
+        <ModalKardexInsumo
+          insumo={insumoKardex}
+          onCerrar={() => setInsumoKardex(null)}
+        />
       )}
 
     </div>
