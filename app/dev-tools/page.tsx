@@ -32,7 +32,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Info
+  Info,
+  Scissors
 } from 'lucide-react'
 
 interface TiendaMetadata {
@@ -110,6 +111,10 @@ export default function DevToolsPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [vistaPreview, setVistaPreview] = useState<'mobile' | 'desktop'>('mobile')
   const [guardando, setGuardando] = useState(false)
+
+  // Eliminación de Fondo con IA
+  const [recortandoFotoId, setRecortandoFotoId] = useState<string | null>(null)
+  const [mensajeRecorte, setMensajeRecorte] = useState<string>('')
 
   // Drag & Drop directo sobre tarjeta en la grilla
   const [tarjetaArrastradaId, setTarjetaArrastradaId] = useState<string | null>(null)
@@ -368,6 +373,39 @@ export default function DevToolsPage() {
       mostrarToast('Error al cambiar visibilidad: ' + (err.message || 'Error desconocido'), 'error')
     } finally {
       setPausandoProductoId(null)
+    }
+  }
+
+  // Quitar Fondo de Comida con Inteligencia Artificial
+  const handleQuitarFondoFoto = async (foto: FotoItem, index: number) => {
+    setRecortandoFotoId(foto.id)
+    setMensajeRecorte('Iniciando IA de recorte...')
+
+    try {
+      const { recortarFondoComida } = await import('@/lib/imagen/quitarFondo')
+      const pngTransparente = await recortarFondoComida(foto.url, (_pct, msg) => {
+        setMensajeRecorte(msg)
+      })
+
+      // Actualizar la foto en la galería del producto
+      setGaleriaFotos(prev => {
+        const copia = [...prev]
+        copia[index] = {
+          ...copia[index],
+          url: pngTransparente,
+          base64: pngTransparente,
+          esNueva: true,
+        }
+        return copia
+      })
+
+      mostrarToast('¡Fondo eliminado con IA! El plato quedó recortado transparente. ✨', 'success')
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al recortar fondo: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setRecortandoFotoId(null)
+      setMensajeRecorte('')
     }
   }
 
@@ -1678,9 +1716,17 @@ export default function DevToolsPage() {
                                 esPortada ? 'border-amber-500/60 ring-2 ring-amber-500/20' : 'border-slate-800'
                               }`}
                             >
-                              <div className="relative aspect-video sm:aspect-square w-full rounded-xl overflow-hidden bg-black/40">
-                                <img src={foto.url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                              <div className="relative aspect-video sm:aspect-square w-full rounded-xl overflow-hidden bg-slate-900/80">
+                                <img src={foto.url} alt={`Foto ${index + 1}`} className="w-full h-full object-contain sm:object-cover" />
                                 
+                                {/* Overlay de Recorte IA si está procesando esta foto */}
+                                {recortandoFotoId === foto.id && (
+                                  <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center gap-1.5 animate-in fade-in z-20">
+                                    <Loader2 className="animate-spin text-chefsy-400 w-6 h-6" />
+                                    <p className="text-[10px] font-black text-white">{mensajeRecorte || 'Recortando fondo...'}</p>
+                                  </div>
+                                )}
+
                                 {esPortada && (
                                   <div className="absolute top-1.5 left-1.5 bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow-md">
                                     <Star size={11} className="fill-slate-950" />
@@ -1699,20 +1745,34 @@ export default function DevToolsPage() {
                               </div>
 
                               {/* Acciones de la foto */}
-                              <div className="flex items-center justify-between gap-1 pt-2 px-1">
-                                {!esPortada ? (
+                              <div className="flex flex-wrap items-center justify-between gap-1 pt-2 px-1">
+                                <div className="flex items-center gap-1">
+                                  {!esPortada ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => hacerPortada(index)}
+                                      className="text-[10px] font-black text-amber-400 hover:text-amber-300 flex items-center gap-1 py-1 px-1.5 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                      title="Definir como foto de portada"
+                                    >
+                                      <Star size={12} />
+                                      <span>Portada</span>
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-slate-500 px-1">Principal</span>
+                                  )}
+
+                                  {/* Botón Quitar Fondo con IA */}
                                   <button
                                     type="button"
-                                    onClick={() => hacerPortada(index)}
-                                    className="text-[10px] font-black text-amber-400 hover:text-amber-300 flex items-center gap-1 py-1 px-1.5 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer"
-                                    title="Definir como foto de portada"
+                                    onClick={() => handleQuitarFondoFoto(foto, index)}
+                                    disabled={recortandoFotoId !== null}
+                                    className="text-[10px] font-black text-chefsy-400 hover:text-chefsy-300 flex items-center gap-1 py-1 px-1.5 rounded-lg hover:bg-chefsy-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                                    title="Quitar fondo de la foto con Inteligencia Artificial"
                                   >
-                                    <Star size={12} />
-                                    <span>Hacer Portada</span>
+                                    <Scissors size={12} />
+                                    <span>Quitar fondo</span>
                                   </button>
-                                ) : (
-                                  <span className="text-[10px] font-bold text-slate-500 px-1">Principal</span>
-                                )}
+                                </div>
 
                                 <div className="flex items-center gap-1">
                                   {index > 0 && (
