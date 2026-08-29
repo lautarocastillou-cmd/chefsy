@@ -8,6 +8,7 @@ import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 
 interface PropsTimerPedido {
   pedido: Pedido
+  mostrarFilaCompleta?: boolean
 }
 
 /**
@@ -15,7 +16,7 @@ interface PropsTimerPedido {
  * Muestra múltiples temporizadores (Nuevo, Cocina, Listo) secuencialmente que se frenan
  * a medida que el pedido cambia de estado.
  */
-const TimerPedido = React.memo(function TimerPedido({ pedido }: PropsTimerPedido) {
+const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaCompleta = false }: PropsTimerPedido) {
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const ahora = useRelojGlobal(!esFinal)
 
@@ -95,8 +96,30 @@ const TimerPedido = React.memo(function TimerPedido({ pedido }: PropsTimerPedido
     estaListoTicking = !fechaEntregado && pedido.estado === 'listo'
   }
 
+  // Detección aislada de atraso
+  let esAtrasado = false
+  if (!esFinal) {
+    let fechaInicioAtraso: Date | null = null
+    let limiteSegundos = 0
 
-  return (
+    if (pedido.estado === 'nuevo') {
+      fechaInicioAtraso = fechaCreacion
+      limiteSegundos = 60 // 1 min
+    } else if (pedido.estado === 'en_cocina') {
+      fechaInicioAtraso = fechaCocina || fechaCreacion
+      limiteSegundos = 45 * 60 // 45 min
+    } else if (pedido.estado === 'listo') {
+      fechaInicioAtraso = fechaListo || fechaCocina || fechaCreacion
+      limiteSegundos = 10 * 60 // 10 min
+    }
+
+    if (fechaInicioAtraso) {
+      const segTranscurridos = calcularDiferenciaSegundos(fechaInicioAtraso, ahora)
+      esAtrasado = segTranscurridos >= limiteSegundos
+    }
+  }
+
+  const badgesTemporizadores = (
     <div className="flex items-center gap-1 shrink-0 select-none">
       {/* Nuevo (Verde si está activo, Gris si está frenado) */}
       <span
@@ -140,10 +163,30 @@ const TimerPedido = React.memo(function TimerPedido({ pedido }: PropsTimerPedido
           <span>L: {formatearSegundos(segListo)}</span>
         </span>
       )}
-
-
     </div>
   )
+
+  if (mostrarFilaCompleta) {
+    return (
+      <div className={cn(
+        "bg-slate-50/70 dark:bg-[#2f2f2f] border border-slate-100/50 dark:border-[#3d3d3d] rounded-xl p-2 flex items-center justify-between gap-2 transition-all select-none",
+        esAtrasado && "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
+      )}>
+        <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#686868] tracking-wider flex items-center gap-1.5">
+          {esAtrasado && (
+            <span className="relative flex h-2 w-2" title="Pedido con demora">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+          )}
+          Tiempos
+        </span>
+        {badgesTemporizadores}
+      </div>
+    )
+  }
+
+  return badgesTemporizadores
 })
 
 export default TimerPedido

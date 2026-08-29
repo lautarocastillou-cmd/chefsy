@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
-import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import BadgeSmartBatch from './BadgeSmartBatch'
 
@@ -61,36 +60,10 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   useEffect(() => {
     if (ticketCopiado) {
       const t = setTimeout(() => setTicketCopiado(false), 2000)
-      return () => clearTimeout(t)
     }
   }, [ticketCopiado])
 
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-  const ahoraDate = useRelojGlobal(!esFinal)
-  const ahora = ahoraDate.getTime()
-
-  let esAtrasado = false
-  if (!esFinal) {
-    let fechaInicio: string | null | undefined = null
-    let limiteMs = 0
-
-    if (pedido.estado === 'nuevo') {
-      fechaInicio = pedido.created_at
-      limiteMs = 1 * 60 * 1000 // 1 min
-    } else if (pedido.estado === 'en_cocina') {
-      fechaInicio = pedido.cocina_at || pedido.created_at
-      limiteMs = 45 * 60 * 1000 // 45 min
-    } else if (pedido.estado === 'listo') {
-      fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
-      limiteMs = 10 * 60 * 1000 // 10 min
-    }
-
-    if (fechaInicio) {
-      const startMs = new Date(fechaInicio).getTime()
-      esAtrasado = ahora - startMs >= limiteMs
-    }
-  }
-
   const [procesando, setProcesando] = useState(false)
 
   const manejarAvance = async () => {
@@ -334,8 +307,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
   return (
     <div className={cn(
       "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
-      bordesPorEstado[pedido.estado],
-      esAtrasado && "border-amber-300 dark:border-amber-900 bg-amber-50/20 dark:bg-amber-950/10 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+      bordesPorEstado[pedido.estado]
     )}>
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
@@ -412,21 +384,8 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
         </div>
       </div>
 
-      {/* Línea de Tiempos del Pedido */}
-      <div className={cn(
-        "bg-slate-50/70 dark:bg-[#2f2f2f] border border-slate-100/50 dark:border-[#3d3d3d] rounded-xl p-2 flex items-center justify-between gap-2 transition-all",
-        esAtrasado && "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
-      )}>
-        <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#686868] tracking-wider flex items-center gap-1.5">
-          {esAtrasado && (
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-            </span>
-          )}
-          Tiempos
-        </span>
-        <TimerPedido pedido={pedido} />
-      </div>
+      {/* Línea de Tiempos del Pedido (Aislada reactivamente en subcomponente) */}
+      <TimerPedido pedido={pedido} mostrarFilaCompleta />
 
       {/* Tipo de entrega e info geográfica */}
       <InfoEntregaPedido pedido={pedido} />
