@@ -30,7 +30,8 @@ import {
   EyeOff,
   Loader2,
   History,
-  Truck
+  Truck,
+  ShieldAlert
 } from 'lucide-react'
 
 type FiltroEstado = 'todos' | 'criticos' | 'bajo' | 'optimo' | 'ocultos'
@@ -75,6 +76,7 @@ export function TabInsumos({
   const [tipoOperacion, setTipoOperacion] = useState<'sumar' | 'restar'>('sumar')
   const [subtipoMovimiento, setSubtipoMovimiento] = useState<TipoMovimientoStock>('ingreso_mercaderia')
   const [motivoMovimiento, setMotivoMovimiento] = useState('')
+  const [autoReactivarTienda, setAutoReactivarTienda] = useState(true)
   const [guardandoReposicion, setGuardandoReposicion] = useState(false)
 
   // Modal de Kardex individual
@@ -107,6 +109,48 @@ export function TabInsumos({
     porNombre.forEach(p => mapa.set(p.id, p))
     porReceta.forEach(p => mapa.set(p.id, p))
     return Array.from(mapa.values())
+  }
+
+  // ── Helper: Sincronizar visibilidad de productos vinculados ────────────────
+  const sincronizarVisibilidadProductos = async (insumo: Insumo, hacerActivos: boolean) => {
+    const asociados = obtenerProductosAsociados(insumo)
+    if (asociados.length === 0) return
+
+    const idsAfectados = asociados.map(p => p.id)
+    const nuevosProductos = productos.map(p =>
+      idsAfectados.includes(p.id) ? { ...p, activo: hacerActivos } : p
+    )
+
+    const res = await fetch('/api/admin/catalogo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        categorias: categoriasCatalogo,
+        productos: nuevosProductos,
+        modificadores: modificadoresCatalogo
+      })
+    })
+
+    if (res.ok) {
+      actualizarProductos(nuevosProductos)
+    }
+
+    // Actualizar estado activo en stock_insumos
+    await fetch('/api/admin/stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'upsert_insumo',
+        payload: {
+          id: insumo.id,
+          nombre: insumo.nombre,
+          categoria_id: insumo.categoria_id,
+          unidad_medida: insumo.unidad_medida,
+          stock_actual: insumo.stock_actual,
+          activo: hacerActivos
+        }
+      })
+    })
   }
 
   // ── Helper: Verificar si un insumo o sus productos están pausados/ocultos ──
@@ -237,6 +281,24 @@ export function TabInsumos({
     return insumos.filter(i => i.stock_actual <= 5).sort((a, b) => a.stock_actual - b.stock_actual)
   }, [insumos])
 
+  // Insumos agotados (<=0) que tienen platos vinculados pausados
+  const insumosAgotadosConPlatosPausados = useMemo(() => {
+    return insumos.filter(ins => {
+      if (ins.stock_actual > 0) return false
+      const asociados = obtenerProductosAsociados(ins)
+      return asociados.length > 0 && asociados.some(p => !p.activo)
+    })
+  }, [insumos, productos, recetas])
+
+  const totalPlatosPausadosPorAgotamiento = useMemo(() => {
+    const ids = new Set<string>()
+    insumosAgotadosConPlatosPausados.forEach(ins => {
+      const asociados = obtenerProductosAsociados(ins)
+      asociados.filter(p => !p.activo).forEach(p => ids.add(p.id))
+    })
+    return ids.size
+  }, [insumosAgotadosConPlatosPausados, productos, recetas])
+
   // ── Guardar / Crear Insumo ─────────────────────────────────────────────────
   const guardar = async () => {
     if (!nombre.trim() || !categoriaId) return
@@ -294,12 +356,26 @@ export function TabInsumos({
     if (nuevoStock === undefined) return
     setGuardandoStockId(id)
     try {
+      const ins = insumos.find(i => i.id === id)
       const res = await fetch('/api/admin/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'update_stock', payload: { id, stock_actual: nuevoStock } })
       })
       if (!res.ok) throw new Error(await res.text())
+
+      // Auto-pausado si el stock llega a 0
+      if (ins && nuevoStock <= 0) {
+        const asociados = obtenerProductosAsociados(ins)
+        if (asociados.length > 0) {
+          await sincronizarVisibilidadProductos(ins, false)
+          toast.error(
+            `🛡️ Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por falta de "${ins.nombre}".`,
+            { duration: 4500 }
+          )
+        }
+      }
+
       toast.success('Stock actualizado', { id: `stock-${id}`, duration: 2000 })
       setStockRapido(prev => {
         const next = { ...prev }
@@ -314,12 +390,14 @@ export function TabInsumos({
     }
   }
 
-  // ── Aplicar Reposición Rápida (Modal con Kardex) ───────────────────────────
+  // ── Aplicar Reposición Rápida (Modal con Kardex y Auto-Reactivación) ───────
   const aplicarReposicion = async () => {
     if (!insumoReposicion || cantidadDelta <= 0) return
     setGuardandoReposicion(true)
     try {
       const deltaFinal = tipoOperacion === 'sumar' ? Number(cantidadDelta) : -Number(cantidadDelta)
+      const nuevoStockCalculado = Math.max(0, insumoReposicion.stock_actual + deltaFinal)
+
       const res = await fetch('/api/admin/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -334,11 +412,31 @@ export function TabInsumos({
         })
       })
       if (!res.ok) throw new Error(await res.text())
-      toast.success(
-        tipoOperacion === 'sumar'
-          ? `¡Stock reabastecido! (+${cantidadDelta} ${insumoReposicion.unidad_medida})`
-          : `Ajuste registrado en Kardex (-${cantidadDelta} ${insumoReposicion.unidad_medida})`
-      )
+
+      const asociados = obtenerProductosAsociados(insumoReposicion)
+
+      // Si se sumó stock y se activó la auto-reactivación:
+      if (tipoOperacion === 'sumar' && autoReactivarTienda && asociados.length > 0) {
+        await sincronizarVisibilidadProductos(insumoReposicion, true)
+        toast.success(
+          `¡Stock reabastecido (+${cantidadDelta}) y ${asociados.length} plato(s) reactivados en la tienda online!`,
+          { icon: '🚀', duration: 4000 }
+        )
+      } else if (tipoOperacion === 'restar' && nuevoStockCalculado <= 0 && asociados.length > 0) {
+        // Auto-Pausado si el stock llegó a 0 al restar
+        await sincronizarVisibilidadProductos(insumoReposicion, false)
+        toast.error(
+          `🛡️ Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por quiebre de stock de "${insumoReposicion.nombre}".`,
+          { duration: 5000 }
+        )
+      } else {
+        toast.success(
+          tipoOperacion === 'sumar'
+            ? `¡Stock reabastecido! (+${cantidadDelta} ${insumoReposicion.unidad_medida})`
+            : `Ajuste registrado en Kardex (-${cantidadDelta} ${insumoReposicion.unidad_medida})`
+        )
+      }
+
       setInsumoReposicion(null)
       setMotivoMovimiento('')
       onUpdate()
@@ -492,6 +590,40 @@ export function TabInsumos({
         </div>
 
       </div>
+
+      {/* ── BANNER DE AUTO-PAUSADO INTELIGENTE ───────────────────────────────── */}
+      {totalPlatosPausadosPorAgotamiento > 0 && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 p-4 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-2xl shrink-0 mt-0.5 sm:mt-0">
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
+                <span>🛡️ {totalPlatosPausadosPorAgotamiento} plato(s) pausados automáticamente en la tienda</span>
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Ocultados en la carta online para proteger las ventas debido al quiebre de stock de:{' '}
+                <strong className="text-white">
+                  {insumosAgotadosConPlatosPausados.map(i => i.nombre).slice(0, 3).join(', ')}
+                  {insumosAgotadosConPlatosPausados.length > 3 ? ` y +${insumosAgotadosConPlatosPausados.length - 3}` : ''}
+                </strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={() => setModalRemitoAbierto(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Truck size={14} />
+              <span>Ingresar Mercadería</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 2. BARRA DE HERRAMIENTAS: BUSCADOR, FILTROS Y ACCIONES ───────────── */}
       <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-sm">
@@ -1111,6 +1243,32 @@ export function TabInsumos({
                 </strong>
               </div>
             </div>
+
+            {/* Switch de Auto-Reactivación en Tienda Online */}
+            {tipoOperacion === 'sumar' && (() => {
+              const asociados = obtenerProductosAsociados(insumoReposicion)
+              if (asociados.length === 0) return null
+              return (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <span className="text-lg">🚀</span>
+                    <div>
+                      <strong className="text-emerald-400 block font-bold">Reactivar platos en la tienda online</strong>
+                      <span className="text-[11px] text-slate-400">
+                        Habilitar: {asociados.map(p => p.nombre).slice(0, 2).join(', ')}
+                        {asociados.length > 2 ? ` y +${asociados.length - 2} más` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={autoReactivarTienda}
+                    onChange={e => setAutoReactivarTienda(e.target.checked)}
+                    className="w-5 h-5 rounded-lg text-emerald-600 bg-slate-900 border-slate-700 focus:ring-emerald-500 cursor-pointer shrink-0"
+                  />
+                </div>
+              )
+            })()}
 
             {/* Botones de acción */}
             <div className="flex gap-2 pt-2">
