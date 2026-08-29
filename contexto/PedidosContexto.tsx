@@ -44,6 +44,7 @@ import configuracionOperativaInicial from '../config/operacion.json'
 import { actualizarConfiguracionLocal } from '../lib/problemas'
 import { detectarTipoTurnoActual, parsearFechaHora, obtenerFechaNegocio } from '@/lib/tiempo'
 import { usePathname } from 'next/navigation'
+import useSWR, { mutate as mutateGlobal } from 'swr'
 
 // Hooks especializados
 import { usePedidosRealtime } from '@/hooks/usePedidosRealtime'
@@ -256,28 +257,30 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     agregarNotificacion,
   })
 
-  // ── Configuración operativa ───────────────────────────
+  // ── Configuración operativa (con caché y deduplicación SWR) ───────────────────────────
   const [configuracionOperativa, setConfiguracionOperativa] = React.useState<
     typeof configuracionOperativaInicial
   >(configuracionOperativaInicial)
 
-  useEffect(() => {
-    if (!usuarioActivo) return;
-    
-    async function cargarConfig() {
-      try {
-        const res = await fetch('/api/admin/configuracion')
-        if (res.ok) {
-          const config = await res.json()
-          setConfiguracionOperativa(config)
-          actualizarConfiguracionLocal(config)
-        }
-      } catch (err) {
-        console.error('Error cargando configuración operativa:', err)
-      }
+  const { data: configSWR } = useSWR(
+    usuarioActivo ? '/api/admin/configuracion' : null,
+    async (url: string) => {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Error al cargar configuración operativa')
+      return res.json()
+    },
+    {
+      dedupingInterval: 4000,
+      revalidateOnFocus: false,
     }
-    cargarConfig()
-  }, [usuarioActivo])
+  )
+
+  useEffect(() => {
+    if (configSWR) {
+      setConfiguracionOperativa(configSWR)
+      actualizarConfiguracionLocal(configSWR)
+    }
+  }, [configSWR])
 
   const guardarConfiguracionOperativa = async (
     nuevaConfig: typeof configuracionOperativaInicial,
@@ -292,6 +295,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       if (res.ok) {
         setConfiguracionOperativa(nuevaConfig)
         actualizarConfiguracionLocal(nuevaConfig)
+        mutateGlobal('/api/admin/configuracion', nuevaConfig, false)
         agregarNotificacion(mensajeExito || 'Configuración guardada exitosamente.', 'success')
         return true
       } else {

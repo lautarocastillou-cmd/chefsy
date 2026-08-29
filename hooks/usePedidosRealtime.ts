@@ -42,6 +42,7 @@ export function usePedidosRealtime({
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     refreshInterval: 0,
+    dedupingInterval: 4000,
     fallbackData: [],
   })
 

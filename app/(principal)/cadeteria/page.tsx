@@ -254,19 +254,13 @@ export default function PaginaCadeteria() {
   const [portalHabilitadoLocal, setPortalHabilitadoLocal] = useState(true)
 
   useEffect(() => {
-    async function verificarAcceso() {
-      try {
-        const res = await fetch('/api/admin/configuracion')
-        if (res.ok) {
-          const data = await res.json()
-          const habilitado = data?.portalCadeteriaHabilitado ?? data?.prioridades?.portalCadeteriaHabilitado ?? true
-          setPortalHabilitadoLocal(habilitado)
-        }
-      } catch (_) {}
+    if (configuracionOperativa) {
+      const data = configuracionOperativa as any
+      const habilitado = data?.portalCadeteriaHabilitado ?? data?.prioridades?.portalCadeteriaHabilitado ?? true
+      setPortalHabilitadoLocal(habilitado)
       setConfigCargada(true)
     }
-    verificarAcceso()
-  }, [])
+  }, [configuracionOperativa])
 
   // Estado GPS de los cadetes activos (para el admin)
   const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
