@@ -218,19 +218,19 @@ export default function DevToolsPage() {
         img.src = event.target?.result as string
         img.onload = () => {
           const canvas = document.createElement('canvas')
-          const MAX_WIDTH = 1200
-          const MAX_HEIGHT = 1200
+          const MAX_WIDTH = 900
+          const MAX_HEIGHT = 900
           let width = img.width
           let height = img.height
 
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width
+              height = Math.round(height * (MAX_WIDTH / width))
               width = MAX_WIDTH
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height
+              width = Math.round(width * (MAX_HEIGHT / height))
               height = MAX_HEIGHT
             }
           }
@@ -243,7 +243,12 @@ export default function DevToolsPage() {
             return
           }
           ctx.drawImage(img, 0, 0, width, height)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+          
+          // Exportar en WebP 75% ultraliviano con fallback seguro a JPEG 75%
+          let dataUrl = canvas.toDataURL('image/webp', 0.75)
+          if (!dataUrl.startsWith('data:image/webp')) {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+          }
           resolve(dataUrl)
         }
         img.onerror = err => reject(err)

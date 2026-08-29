@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
 import { extraerGoogleDriveFileIds, obtenerUrlsDirectasGoogleDrive } from '@/lib/gdrive'
+import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,13 +129,16 @@ export async function POST(req: Request) {
 
     for (const id of idsDetectados) {
       try {
-        const { buffer, contentType, ext } = await descargarImagenDeGoogleDrive(id)
-        const fileName = `gdrive_${Date.now()}_${id.substring(0, 10)}.${ext}`
+        const descargada = await descargarImagenDeGoogleDrive(id)
+        
+        // Optimizar a WebP ultraliviano (reduce archivos pesados de Drive a ~35-65KB)
+        const optimizada = await optimizarImagenWebP(descargada.buffer, { maxAncho: 900, maxAlto: 900, calidad: 75 })
+        const fileName = `gdrive_${Date.now()}_${id.substring(0, 10)}.${optimizada.ext}`
 
         const { error: uploadError } = await supabaseAdmin.storage
           .from('images')
-          .upload(fileName, buffer, {
-            contentType,
+          .upload(fileName, optimizada.buffer, {
+            contentType: optimizada.contentType,
             upsert: true,
           })
 

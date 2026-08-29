@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { createClient } from '@supabase/supabase-js'
+import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
 
 export async function POST(request: Request) {
   try {
@@ -60,6 +61,13 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    // Optimizar imagen a WebP ultraliviano (reduce de megabytes a ~35-65KB)
+    const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 900, maxAlto: 900, calidad: 75 })
+    buffer = optimizada.buffer
+    mimeType = optimizada.contentType
+    ext = optimizada.ext
+
     const fileName = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
 
     const supabaseAdmin = createClient(
