@@ -23,6 +23,77 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
+// Helper estático de tipos fuera del ciclo de render
+const TIPO_INFO_MAP: Record<TipoMovimientoStock, { label: string; bg: string; icon: any }> = {
+  ingreso_mercaderia: {
+    label: 'Ingreso / Compra',
+    bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    icon: TrendingUp,
+  },
+  venta_automatica: {
+    label: 'Venta Comanda',
+    bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    icon: ShoppingBag,
+  },
+  consumo_personal: {
+    label: 'Consumo Personal',
+    bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    icon: User,
+  },
+  merma_vencimiento: {
+    label: 'Merma Vencimiento',
+    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    icon: AlertTriangle,
+  },
+  merma_rotura: {
+    label: 'Merma Rotura',
+    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    icon: AlertTriangle,
+  },
+  merma_cocina: {
+    label: 'Merma Cocina',
+    bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    icon: AlertTriangle,
+  },
+  ajuste_inventario: {
+    label: 'Conteo Físico',
+    bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    icon: ShieldCheck,
+  },
+  ajuste_manual: {
+    label: 'Ajuste Manual',
+    bg: 'bg-slate-800 text-slate-300 border-slate-700',
+    icon: RotateCcw,
+  },
+}
+
+function getTipoInfo(tipo: TipoMovimientoStock) {
+  return (
+    TIPO_INFO_MAP[tipo] || {
+      label: 'Ajuste Manual',
+      bg: 'bg-slate-800 text-slate-300 border-slate-700',
+      icon: RotateCcw,
+    }
+  )
+}
+
+const DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+function formatearFecha(fechaStr: string) {
+  try {
+    return DATE_FORMATTER.format(new Date(fechaStr))
+  } catch {
+    return fechaStr
+  }
+}
+
 export function TabKardexAuditoria({
   insumos = [],
 }: {
@@ -73,19 +144,24 @@ export function TabKardexAuditoria({
     cargarMovimientos()
   }, [filtroInsumoId, filtroTipo, filtroPeriodo])
 
-  // Filtrado reactivo en el cliente por búsqueda de texto
+  // Filtrado reactivo en el cliente por búsqueda de texto normalizada
   const movimientosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return movimientos
-    const q = busqueda.toLowerCase().trim()
-    return movimientos.filter(
-      m =>
-        m.insumo_nombre.toLowerCase().includes(q) ||
-        (m.motivo || '').toLowerCase().includes(q) ||
-        m.usuario_nombre.toLowerCase().includes(q)
-    )
+    const q = busqueda
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+
+    return movimientos.filter(m => {
+      const insumo = (m.insumo_nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const motivo = (m.motivo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const usuario = (m.usuario_nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      return insumo.includes(q) || motivo.includes(q) || usuario.includes(q)
+    })
   }, [movimientos, busqueda])
 
-  // Métricas
+  // Métricas memoizadas
   const metricas = useMemo(() => {
     let entradas = 0
     let salidas = 0
@@ -107,71 +183,6 @@ export function TabKardexAuditoria({
     return { total: movimientos.length, entradas, salidas, mermas, personal }
   }, [movimientos])
 
-  const getTipoInfo = (tipo: TipoMovimientoStock) => {
-    switch (tipo) {
-      case 'ingreso_mercaderia':
-        return {
-          label: 'Ingreso / Compra',
-          bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          icon: TrendingUp,
-        }
-      case 'venta_automatica':
-        return {
-          label: 'Venta Comanda',
-          bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-          icon: ShoppingBag,
-        }
-      case 'consumo_personal':
-        return {
-          label: 'Consumo Personal',
-          bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-          icon: User,
-        }
-      case 'merma_vencimiento':
-        return {
-          label: 'Merma Vencimiento',
-          bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-          icon: AlertTriangle,
-        }
-      case 'merma_rotura':
-        return {
-          label: 'Merma Rotura',
-          bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-          icon: AlertTriangle,
-        }
-      case 'merma_cocina':
-        return {
-          label: 'Merma Cocina',
-          bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-          icon: AlertTriangle,
-        }
-      case 'ajuste_inventario':
-        return {
-          label: 'Conteo Físico',
-          bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          icon: ShieldCheck,
-        }
-      default:
-        return {
-          label: 'Ajuste Manual',
-          bg: 'bg-slate-800 text-slate-300 border-slate-700',
-          icon: RotateCcw,
-        }
-    }
-  }
-
-  const formatearFecha = (fechaStr: string) => {
-    const fecha = new Date(fechaStr)
-    return new Intl.DateTimeFormat('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(fecha)
-  }
-
   // Exportar a CSV
   const exportarCSV = () => {
     if (movimientosFiltrados.length === 0) return
@@ -180,35 +191,36 @@ export function TabKardexAuditoria({
       'Fecha',
       'Insumo',
       'Tipo de Movimiento',
-      'Cantidad Delta',
-      'Unidad',
+      'Variacion Delta',
       'Stock Anterior',
-      'Stock Nuevo',
+      'Stock Resultante',
+      'Unidad de Medida',
       'Motivo / Comprobante',
-      'Usuario Responsable',
+      'Responsable',
     ]
 
     const filas = movimientosFiltrados.map(m => [
       `"${formatearFecha(m.created_at)}"`,
       `"${m.insumo_nombre.replace(/"/g, '""')}"`,
-      `"${m.tipo_movimiento}"`,
-      m.cantidad_delta,
-      `"${m.unidad_medida}"`,
+      `"${getTipoInfo(m.tipo_movimiento).label}"`,
+      m.cantidad_delta > 0 ? `+${m.cantidad_delta}` : `${m.cantidad_delta}`,
       m.stock_anterior,
       m.stock_nuevo,
+      `"${m.unidad_medida}"`,
       `"${(m.motivo || '').replace(/"/g, '""')}"`,
       `"${m.usuario_nombre.replace(/"/g, '""')}"`,
     ])
 
-    const contenidoCSV = '\uFEFF' + [encabezados.join(','), ...filas.map(f => f.join(','))].join('\n')
-    const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' })
+    const csvContenido = '\uFEFF' + [encabezados.join(','), ...filas.map(f => f.join(','))].join('\n')
+    const blob = new Blob([csvContenido], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.setAttribute('href', url)
-    link.setAttribute('download', `kardex_stock_chefsy_${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `kardex_stock_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (

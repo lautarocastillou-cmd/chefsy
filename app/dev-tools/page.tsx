@@ -1576,6 +1576,8 @@ export default function DevToolsPage() {
                                   <img
                                     src={fotoAMostrar}
                                     alt={nombreAMostrar}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
@@ -2110,6 +2112,8 @@ export default function DevToolsPage() {
                       <img
                         src={item.url}
                         alt="Foto de la casa"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

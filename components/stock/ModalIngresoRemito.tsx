@@ -38,24 +38,35 @@ export function ModalIngresoRemito({
   // Mapa de cantidades a ingresar por insumoId: { [insumoId]: number }
   const [cantidades, setCantidades] = useState<Record<string, number>>({})
   const [guardando, setGuardando] = useState(false)
+  // Mapa O(1) de insumos para accesos ultra-rápidos
+  const insumosMap = useMemo(() => new Map(insumos.map(i => [i.id, i])), [insumos])
 
-  // Insumos filtrados para la grilla
+  // Insumos filtrados para la grilla con búsqueda normalizada sin acentos
   const insumosDisponibles = useMemo(() => {
+    const q = busqueda
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+
     return insumos.filter(ins => {
       const matchCat = filtroCategoria === 'todas' || ins.categoria_id === filtroCategoria
-      const matchQuery =
-        !busqueda.trim() ||
-        ins.nombre.toLowerCase().includes(busqueda.toLowerCase().trim())
-      return matchCat && matchQuery
+      if (!matchCat) return false
+      if (!q) return true
+      const nombreNorm = (ins.nombre || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+      return nombreNorm.includes(q)
     })
   }, [insumos, filtroCategoria, busqueda])
 
-  // Artículos con cantidad cargada (> 0)
+  // Artículos con cantidad cargada (> 0) con acceso O(1)
   const itemsACargar = useMemo(() => {
     return Object.entries(cantidades)
       .filter(([_, cant]) => Number(cant) > 0)
       .map(([id, cant]) => {
-        const ins = insumos.find(i => i.id === id)
+        const ins = insumosMap.get(id)
         return {
           id,
           nombre: ins?.nombre || id,
@@ -65,7 +76,7 @@ export function ModalIngresoRemito({
           nuevoStock: (ins?.stock_actual || 0) + Number(cant),
         }
       })
-  }, [cantidades, insumos])
+  }, [cantidades, insumosMap])
 
   const totalUnidades = useMemo(() => {
     return itemsACargar.reduce((acc, item) => acc + item.delta, 0)

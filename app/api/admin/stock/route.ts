@@ -116,44 +116,68 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, stock_actual: stockNuevo })
       }
       case 'registrar_movimiento_masivo': {
-        // Ingreso masivo de remito / factura de compra
+        // Ingreso masivo de remito / factura de compra optimizado en batch
         const { movimientos, motivoGeneral } = payload
         if (!Array.isArray(movimientos) || movimientos.length === 0) {
           return NextResponse.json({ error: 'Array de movimientos requerido' }, { status: 400 })
         }
 
+        const ids = movimientos.map(m => m.id)
+        const { data: insumos, error: errorInsumos } = await supabaseAdmin
+          .from('stock_insumos')
+          .select('id, nombre, stock_actual, unidad_medida')
+          .in('id', ids)
+
+        if (errorInsumos || !insumos) {
+          throw new Error('Error al obtener insumos para el remito')
+        }
+
+        const insumosMap = new Map(insumos.map(i => [i.id, i]))
+        const filasMovimientos: any[] = []
+        const updatesInsumos: PromiseLike<any>[] = []
         const resultados: any[] = []
+        const ahoraIso = new Date().toISOString()
+
         for (const item of movimientos) {
-          const { id, delta, tipo_movimiento = 'ingreso_mercaderia', motivo } = item
-          const { data: insumo } = await supabaseAdmin
-            .from('stock_insumos')
-            .select('id, nombre, stock_actual, unidad_medida')
-            .eq('id', id)
-            .single()
+          const insumo = insumosMap.get(item.id)
+          if (!insumo) continue
 
-          if (insumo) {
-            const stockAnterior = Number(insumo.stock_actual) || 0
-            const cantidadDelta = Number(delta) || 0
-            const stockNuevo = Math.max(0, stockAnterior + cantidadDelta)
+          const stockAnterior = Number(insumo.stock_actual) || 0
+          const cantidadDelta = Number(item.delta) || 0
+          const stockNuevo = Math.max(0, stockAnterior + cantidadDelta)
 
-            await supabaseAdmin
+          updatesInsumos.push(
+            supabaseAdmin
               .from('stock_insumos')
-              .update({ stock_actual: stockNuevo, updated_at: new Date().toISOString() })
-              .eq('id', id)
+              .update({ stock_actual: stockNuevo, updated_at: ahoraIso })
+              .eq('id', item.id)
+          )
 
-            await supabaseAdmin.from('stock_movimientos').insert({
-              insumo_id: insumo.id,
-              insumo_nombre: insumo.nombre,
-              tipo_movimiento,
-              cantidad_delta: cantidadDelta,
-              stock_anterior: stockAnterior,
-              stock_nuevo: stockNuevo,
-              unidad_medida: insumo.unidad_medida || 'unidades',
-              motivo: motivo || motivoGeneral || 'Ingreso masivo de mercadería',
-              usuario_nombre: usuarioNombre,
-            })
+          filasMovimientos.push({
+            insumo_id: insumo.id,
+            insumo_nombre: insumo.nombre,
+            tipo_movimiento: item.tipo_movimiento || 'ingreso_mercaderia',
+            cantidad_delta: cantidadDelta,
+            stock_anterior: stockAnterior,
+            stock_nuevo: stockNuevo,
+            unidad_medida: insumo.unidad_medida || 'unidades',
+            motivo: item.motivo || motivoGeneral || 'Ingreso masivo de mercadería',
+            usuario_nombre: usuarioNombre,
+          })
 
-            resultados.push({ id, stock_actual: stockNuevo })
+          resultados.push({ id: item.id, stock_actual: stockNuevo })
+        }
+
+        // Ejecutar updates en paralelo y bulk insert de Kardex en 1 sola llamada
+        await Promise.all(updatesInsumos)
+
+        if (filasMovimientos.length > 0) {
+          const { error: errorBatchMov } = await supabaseAdmin
+            .from('stock_movimientos')
+            .insert(filasMovimientos)
+
+          if (errorBatchMov) {
+            console.warn('[API Stock] Error al registrar lote de Kardex:', errorBatchMov)
           }
         }
 
