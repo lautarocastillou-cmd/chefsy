@@ -16,6 +16,7 @@ import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import { usePathname, useRouter } from 'next/navigation'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
 import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
+import ConsumoPersonalFlotante from '@/components/herramientas/ConsumoPersonalFlotante'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
 export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
@@ -117,6 +118,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
           <NotificadorAccesos />
           <NotitaFlotante />
           <CalculadoraFlotante />
+          <ConsumoPersonalFlotante />
         </>
       )}
     </div>
