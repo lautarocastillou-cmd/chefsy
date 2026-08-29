@@ -1,18 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   X,
   UploadCloud,
   Check,
   AlertCircle,
   Loader2,
-  ExternalLink,
   Sparkles,
-  Layers,
   Image as ImageIcon
 } from 'lucide-react'
-import { extraerGoogleDriveFileId, obtenerUrlsDirectasGoogleDrive } from '@/lib/gdrive'
+import { extraerGoogleDriveFileIds, obtenerUrlsDirectasGoogleDrive } from '@/lib/gdrive'
 
 interface ModalImportarGoogleDriveProps {
   abierto: boolean
@@ -27,46 +25,37 @@ export default function ModalImportarGoogleDrive({
   onCerrar,
   onFotosImportadas,
   titulo = 'Importar Fotos desde Google Drive',
-  descripcion = 'Pegá enlaces públicos de fotos de Google Drive para descargarlas, optimizarlas y guardarlas en tu menú.',
+  descripcion = 'Pegá enlaces públicos de una o varias fotos de Google Drive para descargarlas, optimizarlas y guardarlas en tu menú.',
 }: ModalImportarGoogleDriveProps) {
   const [textoLinks, setTextoLinks] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [progresoTexto, setProgresoTexto] = useState('')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Extraer todos los File IDs detectados en el texto de forma reactiva
+  const idsDetectados = useMemo(() => {
+    return extraerGoogleDriveFileIds(textoLinks)
+  }, [textoLinks])
+
   if (!abierto) return null
 
-  // Extraer todos los File IDs detectados en el texto
-  const lineas = textoLinks
-    .split(/[\n,;\s]+/)
-    .map(l => l.trim())
-    .filter(Boolean)
-
-  const idsDetectados = lineas
-    .map(l => ({ original: l, id: extraerGoogleDriveFileId(l) }))
-    .filter((item): item is { original: string; id: string } => Boolean(item.id))
-
-  // Eliminar duplicados
-  const idsUnicos = Array.from(new Set(idsDetectados.map(i => i.id))).map(id => {
-    return idsDetectados.find(i => i.id === id)!
-  })
-
   const handleImportar = async () => {
-    if (idsUnicos.length === 0) {
+    if (idsDetectados.length === 0) {
       setErrorMsg('No se detectaron enlaces válidos de Google Drive.')
       return
     }
 
     setProcesando(true)
     setErrorMsg(null)
-    setProgresoTexto(`Conectando con Google Drive (${idsUnicos.length} fotos)...`)
+    setProgresoTexto(`Conectando con Google Drive (${idsDetectados.length} ${idsDetectados.length === 1 ? 'foto' : 'fotos'})...`)
 
     try {
       const res = await fetch('/api/admin/google-drive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          urls: idsUnicos.map(i => i.id),
+          urls: idsDetectados,
+          texto: textoLinks,
         }),
       })
 
@@ -76,10 +65,10 @@ export default function ModalImportarGoogleDrive({
         throw new Error(data.error || 'Error al descargar fotos de Google Drive.')
       }
 
-      const urlsFinales = (data.items || []).map((item: any) => item.urlPublica)
+      const urlsFinales = (data.urls || data.items?.map((item: any) => item.urlPublica) || [])
 
       if (urlsFinales.length === 0) {
-        throw new Error('No se pudo procesar ninguna foto. Verificá que los enlaces sean públicos.')
+        throw new Error('No se pudo procesar ninguna foto. Verificá que los archivos tengan el enlace compartido como "Cualquier persona con el enlace".')
       }
 
       onFotosImportadas(urlsFinales)
@@ -126,12 +115,12 @@ export default function ModalImportarGoogleDrive({
           <div className="p-3.5 bg-blue-950/30 border border-blue-500/20 rounded-2xl space-y-1.5 text-xs text-blue-200">
             <p className="font-bold flex items-center gap-1.5 text-blue-300">
               <Sparkles size={14} />
-              <span>¿Cómo obtener el enlace en Google Drive?</span>
+              <span>¿Cómo obtener los enlaces en Google Drive?</span>
             </p>
             <ol className="list-decimal list-inside space-y-1 text-slate-300 text-[11px] leading-relaxed">
-              <li>Hacé clic derecho en la foto en tu Google Drive ➔ <strong>Compartir</strong>.</li>
+              <li>Hacé clic derecho en la foto (o seleccioná varias) ➔ <strong>Compartir</strong>.</li>
               <li>Cambiá el acceso general a <strong>"Cualquier persona con el enlace"</strong>.</li>
-              <li>Hacé clic en <strong>Copiar enlace</strong> y pegalo acá abajo.</li>
+              <li>Hacé clic en <strong>Copiar enlace</strong> y pegá uno o varios enlaces acá abajo.</li>
             </ol>
           </div>
 
@@ -139,39 +128,42 @@ export default function ModalImportarGoogleDrive({
           <div className="space-y-1.5">
             <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex justify-between items-center">
               <span>Pegar Enlaces de Google Drive</span>
-              <span className="text-[10px] text-slate-400 font-normal">
-                {idsUnicos.length} {idsUnicos.length === 1 ? 'foto detectada' : 'fotos detectadas'}
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                idsDetectados.length > 0
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'text-slate-500'
+              }`}>
+                {idsDetectados.length} {idsDetectados.length === 1 ? 'foto detectada' : 'fotos detectadas'}
               </span>
             </label>
             <textarea
               rows={4}
               value={textoLinks}
               onChange={e => setTextoLinks(e.target.value)}
-              placeholder="https://drive.google.com/file/d/1A2B3C4D.../view&#10;https://drive.google.com/open?id=1X2Y3Z...&#10;(Podés pegar varios enlaces uno debajo del otro)"
+              placeholder="https://drive.google.com/file/d/1A2B3C4D.../view&#10;https://drive.google.com/open?id=1X2Y3Z...&#10;(Podés pegar 1 o múltiples enlaces juntos, uno debajo del otro)"
               className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-white text-xs font-mono leading-relaxed resize-none"
             />
           </div>
 
           {/* Previsualización en Vivo de Fotos detectadas */}
-          {idsUnicos.length > 0 && (
+          {idsDetectados.length > 0 && (
             <div className="space-y-2">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Vista previa detectada ({idsUnicos.length}):
+                Fotos detectadas listas para importar ({idsDetectados.length}):
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-950/60 rounded-2xl border border-slate-800">
-                {idsUnicos.map((item, idx) => {
-                  const urls = obtenerUrlsDirectasGoogleDrive(item.id)
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1.5 bg-slate-950/60 rounded-2xl border border-slate-800">
+                {idsDetectados.map((id, idx) => {
+                  const urls = obtenerUrlsDirectasGoogleDrive(id)
                   return (
                     <div
-                      key={`${item.id}-${idx}`}
+                      key={`${id}-${idx}`}
                       className="relative aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800 group"
                     >
                       <img
-                        src={urls.cdnUrl}
+                        src={urls.thumbnailUrl}
                         alt={`Drive ${idx + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Fallback si la imagen no cargó directamente
                           (e.target as HTMLElement).style.display = 'none'
                         }}
                       />
@@ -210,8 +202,8 @@ export default function ModalImportarGoogleDrive({
           <button
             type="button"
             onClick={handleImportar}
-            disabled={procesando || idsUnicos.length === 0}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            disabled={procesando || idsDetectados.length === 0}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
           >
             {procesando ? (
               <>
@@ -221,7 +213,7 @@ export default function ModalImportarGoogleDrive({
             ) : (
               <>
                 <UploadCloud size={15} />
-                <span>Importar {idsUnicos.length > 0 ? `(${idsUnicos.length})` : ''} a Chefsy</span>
+                <span>Importar {idsDetectados.length > 0 ? `${idsDetectados.length} ${idsDetectados.length === 1 ? 'foto' : 'fotos'}` : ''} a Chefsy</span>
               </>
             )}
           </button>

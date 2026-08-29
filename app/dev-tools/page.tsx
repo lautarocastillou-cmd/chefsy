@@ -106,6 +106,7 @@ export default function DevToolsPage() {
   // Banco de Fotos de la Casa
   const [mostrarBancoModal, setMostrarBancoModal] = useState(false)
   const [busquedaBanco, setBusquedaBanco] = useState('')
+  const [fotosLibresBanco, setFotosLibresBanco] = useState<string[]>([])
   const [asignandoFotoUrl, setAsignandoFotoUrl] = useState<string | null>(null)
   const [asignandoProductoId, setAsignandoProductoId] = useState<string>('')
 
@@ -189,8 +190,22 @@ export default function DevToolsPage() {
     }
   }
 
+  // Cargar fotos almacenadas en el bucket de storage
+  const cargarFotosStorage = async () => {
+    try {
+      const res = await fetch('/api/admin/banco-fotos')
+      const data = await res.json()
+      if (data.fotos && Array.isArray(data.fotos)) {
+        setFotosLibresBanco(data.fotos.map((f: any) => f.url))
+      }
+    } catch (e) {
+      console.warn('Error cargando fotos de storage:', e)
+    }
+  }
+
   useEffect(() => {
     cargarMetadata()
+    cargarFotosStorage()
   }, [])
 
   // Comprimir imagen a tamaño web óptimo
@@ -594,8 +609,13 @@ export default function DevToolsPage() {
     mostrarToast('Imagen por enlace añadida a la galería', 'success')
   }
 
-  // Importar Fotos desde Google Drive
+  // Importar Fotos desde Google Drive (1 o múltiples)
   const handleFotosImportadasGoogleDrive = (urls: string[]) => {
+    if (urls.length === 0) return
+
+    // Agregar de inmediato a fotos libres del banco para actualizar el contador y la grilla
+    setFotosLibresBanco(prev => Array.from(new Set([...urls, ...prev])))
+
     if (productoEditandoId) {
       setGaleriaFotos(prev => [
         ...prev,
@@ -607,7 +627,7 @@ export default function DevToolsPage() {
       ])
       mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive añadida${urls.length === 1 ? '' : 's'} a la galería! 📸`, 'success')
     } else {
-      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive subida${urls.length === 1 ? '' : 's'} al almacenamiento! 📸`, 'success')
+      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive guardada${urls.length === 1 ? '' : 's'} en el Banco de la Casa! 📸`, 'success')
     }
   }
 
@@ -948,19 +968,27 @@ export default function DevToolsPage() {
       })
     })
 
+    // 2. Integrar fotos libres subidas a storage / Google Drive / PC que aún no están asignadas a un producto
+    fotosLibresBanco.forEach(url => {
+      if (!mapa.has(url)) {
+        mapa.set(url, [])
+      }
+    })
+
     const resultado: FotoBancoItem[] = []
     mapa.forEach((productosUsados, url) => {
       resultado.push({ url, productosUsados })
     })
 
     return resultado
-  }, [productos, metadata])
+  }, [productos, metadata, fotosLibresBanco])
 
   const bancoFotosFiltradas = useMemo(() => {
     if (!busquedaBanco.trim()) return bancoFotos
     const query = busquedaBanco.toLowerCase()
     return bancoFotos.filter(item =>
-      item.productosUsados.some(p => p.nombre.toLowerCase().includes(query))
+      item.productosUsados.some(p => p.nombre.toLowerCase().includes(query)) ||
+      (item.productosUsados.length === 0 && 'nueva sin asignar libre banco'.includes(query))
     )
   }, [bancoFotos, busquedaBanco])
 
@@ -1858,20 +1886,30 @@ export default function DevToolsPage() {
 
                     <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Usada en ({item.productosUsados.length}):
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1 max-h-16 overflow-y-auto">
-                          {item.productosUsados.map(p => (
-                            <span
-                              key={p.id}
-                              className="bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded-md truncate max-w-full"
-                              title={p.nombre}
-                            >
-                              {p.nombre}
+                        {item.productosUsados.length === 0 ? (
+                          <div className="flex items-center gap-1.5 py-1">
+                            <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-black px-2.5 py-0.5 rounded-md inline-flex items-center gap-1">
+                              <span>✨ Nueva en el Banco (Sin asignar)</span>
                             </span>
-                          ))}
-                        </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              Usada en ({item.productosUsados.length}):
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1 max-h-16 overflow-y-auto">
+                              {item.productosUsados.map(p => (
+                                <span
+                                  key={p.id}
+                                  className="bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded-md truncate max-w-full"
+                                  title={p.nombre}
+                                >
+                                  {p.nombre}
+                                </span>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
