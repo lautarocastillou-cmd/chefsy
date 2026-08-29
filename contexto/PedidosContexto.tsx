@@ -235,6 +235,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const { usuarioActivo } = usarAuth()
   const { agregarNotificacion } = usarTemaNotificacion()
   const isAdmin = usuarioActivo?.rol === 'admin'
+  const esStaff = usuarioActivo?.rol === 'admin' || usuarioActivo?.rol === 'cadete'
 
   // ── Hooks especializados ──────────────────────────────
 
@@ -243,6 +244,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     prevPedidosRef,
     cambiosLocalesRef,
     eliminadosLocalesRef,
+    habilitado: esStaff,
   })
 
   useSincronizacionOffline({ setDbEstado, agregarNotificacion, isAdmin })

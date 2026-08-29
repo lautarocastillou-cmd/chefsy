@@ -21,6 +21,7 @@ interface UsePedidosRealtimeProps {
   prevPedidosRef: MutableRefObject<Pedido[]>
   cambiosLocalesRef: MutableRefObject<Record<string, number>>
   eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
+  habilitado?: boolean
 }
 
 const fetcher = async () => {
@@ -33,21 +34,34 @@ export function usePedidosRealtime({
   prevPedidosRef,
   cambiosLocalesRef,
   eliminadosLocalesRef,
+  habilitado = true,
 }: UsePedidosRealtimeProps) {
-  const [estaListo, setEstaListo] = useState(false)
-  const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
+  const [estaListo, setEstaListo] = useState(!habilitado)
+  const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>(
+    habilitado ? 'cargando' : 'conectado'
+  )
 
-  // 1) Carga inicial y caché con SWR (Stale-While-Revalidate)
-  const { data: pedidosSWR, error, mutate } = useSWR('pedidosActivos', fetcher, {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    refreshInterval: 0,
-    dedupingInterval: 4000,
-    fallbackData: [],
-  })
+  // 1) Carga inicial y caché con SWR (solo se ejecuta si es staff)
+  const { data: pedidosSWR, error, mutate } = useSWR(
+    habilitado ? 'pedidosActivos' : null,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 0,
+      dedupingInterval: 4000,
+      fallbackData: [],
+    }
+  )
 
   // Sincronizar SWR con el estado local
   useEffect(() => {
+    if (!habilitado) {
+      setEstaListo(true)
+      setDbEstado('conectado')
+      return
+    }
+
     if (error) {
       console.error('[SWR] Error cargando pedidos:', error)
       setDbEstado('desconectado')
@@ -70,11 +84,11 @@ export function usePedidosRealtime({
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, prevPedidosRef, eliminadosLocalesRef])
+  }, [pedidosSWR, error, despachar, prevPedidosRef, eliminadosLocalesRef, habilitado])
 
-  // 2) Suscripción a Supabase Realtime
+  // 2) Suscripción a Supabase Realtime (solo si está habilitado y autenticado)
   useEffect(() => {
-    if (!estaListo) return
+    if (!estaListo || !habilitado) return
 
     const channel = suscribirAPedidos(
       (pedido, archivado) => {
@@ -114,7 +128,7 @@ export function usePedidosRealtime({
       channel.unsubscribe()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estaListo])
+  }, [estaListo, habilitado])
 
   return { estaListo, dbEstado, setDbEstado, mutate }
 }
