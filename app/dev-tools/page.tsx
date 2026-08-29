@@ -130,6 +130,16 @@ export default function DevToolsPage() {
   const [tarjetaArrastradaId, setTarjetaArrastradaId] = useState<string | null>(null)
   const [subiendoFotoTarjetaId, setSubiendoFotoTarjetaId] = useState<string | null>(null)
 
+  // Subida en Lote y Selección Múltiple en Banco de Fotos
+  const [subiendoLoteBanco, setSubiendoLoteBanco] = useState(false)
+  const [progresoLoteBanco, setProgresoLoteBanco] = useState('')
+  const [isDraggingOverBanco, setIsDraggingOverBanco] = useState(false)
+  const [bancoSeleccionMultiple, setBancoSeleccionMultiple] = useState<string[]>([])
+
+  // Procesamiento de múltiples fotos en modal
+  const [procesandoMultiplesFotos, setProcesandoMultiplesFotos] = useState(false)
+  const [progresoMultiplesFotos, setProgresoMultiplesFotos] = useState('')
+
   // Toasts
   const [toasts, setToasts] = useState<ToastInfo[]>([])
 
@@ -253,29 +263,88 @@ export default function DevToolsPage() {
     }
   }
 
-  // Anexar fotos nuevas a la galería sin borrar las existentes
+  // Anexar fotos nuevas a la galería sin borrar las existentes (soporta 1 o múltiples fotos)
   const anexarArchivos = async (archivos: File[]) => {
     if (!archivos || archivos.length === 0) return
 
+    setProcesandoMultiplesFotos(true)
+    setProgresoMultiplesFotos(`Comprimiendo ${archivos.length} ${archivos.length === 1 ? 'foto' : 'fotos'}...`)
+
     try {
-      const fotosProcesadas = await Promise.all(
-        archivos.map(async file => {
-          const base64 = await comprimirImagen(file)
-          return {
-            id: `nueva-${Math.random().toString(36).substring(7)}`,
-            url: base64,
-            esNueva: true,
-            base64,
-            archivo: file,
-          } as FotoItem
+      const fotosProcesadas: FotoItem[] = []
+      for (let i = 0; i < archivos.length; i++) {
+        const file = archivos[i]
+        setProgresoMultiplesFotos(`Comprimiendo foto ${i + 1} de ${archivos.length}...`)
+        const base64 = await comprimirImagen(file)
+        fotosProcesadas.push({
+          id: `nueva-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
+          url: base64,
+          esNueva: true,
+          base64,
+          archivo: file,
         })
-      )
+      }
 
       setGaleriaFotos(prev => [...prev, ...fotosProcesadas])
-      mostrarToast(`Se ${archivos.length === 1 ? 'añadió 1 foto' : `añadieron ${archivos.length} fotos`} a la galería`, 'info')
+      mostrarToast(`¡${archivos.length === 1 ? '1 foto añadida' : `${archivos.length} fotos añadidas`} a la galería! 📸`, 'success')
     } catch (err) {
       console.error('Error procesando fotos:', err)
       mostrarToast('Error al leer o comprimir una de las imágenes.', 'error')
+    } finally {
+      setProcesandoMultiplesFotos(false)
+      setProgresoMultiplesFotos('')
+    }
+  }
+
+  // Subida en Lote directa de múltiples fotos al Banco de Fotos de la Casa
+  const subirLoteArchivosAlBanco = async (archivos: File[]) => {
+    if (!archivos || archivos.length === 0) return
+
+    setSubiendoLoteBanco(true)
+    setProgresoLoteBanco(`Iniciando carga de ${archivos.length} fotos...`)
+
+    try {
+      let completadas = 0
+      for (let i = 0; i < archivos.length; i++) {
+        const file = archivos[i]
+        setProgresoLoteBanco(`Subiendo ${i + 1} de ${archivos.length}: ${file.name.substring(0, 20)}...`)
+        const base64 = await comprimirImagen(file)
+        const uploadRes = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, nombreOriginal: file.name }),
+        })
+        if (uploadRes.ok) {
+          completadas++
+        }
+      }
+
+      mostrarToast(`¡${completadas} fotos subidas con éxito al almacenamiento de Chefsy! 📸`, 'success')
+      await cargarMetadata()
+    } catch (err: any) {
+      console.error(err)
+      mostrarToast('Error al subir lote de fotos: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setSubiendoLoteBanco(false)
+      setProgresoLoteBanco('')
+    }
+  }
+
+  const handleSubirLoteBancoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'))
+    if (files.length > 0) {
+      subirLoteArchivosAlBanco(files)
+      e.target.value = ''
+    }
+  }
+
+  const handleDropBanco = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOverBanco(false)
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    if (files.length > 0) {
+      subirLoteArchivosAlBanco(files)
     }
   }
 
@@ -1683,10 +1752,37 @@ export default function DevToolsPage() {
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
                 <div className="text-xs font-bold text-slate-400 shrink-0">
                   <span>Total: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong> fotos</span>
                 </div>
+
+                {/* Input para subir lote de fotos de la PC */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  id="banco-upload-input"
+                  className="hidden"
+                  onChange={handleSubirLoteBancoInput}
+                />
+                <label
+                  htmlFor="banco-upload-input"
+                  className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-md shadow-emerald-600/20 active:scale-95"
+                  title="Seleccionar múltiples fotos a la vez de tu computadora"
+                >
+                  {subiendoLoteBanco ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      <span>{progresoLoteBanco || 'Subiendo lote...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={15} />
+                      <span>Subir Múltiples Fotos (PC)</span>
+                    </>
+                  )}
+                </label>
 
                 <button
                   type="button"
@@ -1699,6 +1795,35 @@ export default function DevToolsPage() {
                   </svg>
                   <span>Google Drive</span>
                 </button>
+              </div>
+            </div>
+
+            {/* Zona de Drag & Drop para Arrastrar Lote de Fotos directamente al Banco */}
+            <div
+              onDragOver={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsDraggingOverBanco(true)
+              }}
+              onDragLeave={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsDraggingOverBanco(false)
+              }}
+              onDrop={handleDropBanco}
+              className={`p-4 border-2 border-dashed rounded-3xl text-center transition-all ${
+                isDraggingOverBanco
+                  ? 'border-emerald-400 bg-emerald-500/10 scale-[0.99]'
+                  : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-slate-400">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                  <UploadCloud size={16} />
+                  <span>Arrastrá un lote de varias fotos juntas acá</span>
+                </div>
+                <span className="hidden sm:inline text-slate-600">•</span>
+                <span>Se optimizan y guardan en el Banco de la Casa al instante.</span>
               </div>
             </div>
 
@@ -2062,16 +2187,42 @@ export default function DevToolsPage() {
                   </div>
 
                   {/* Selector del Banco de Fotos dentro del Modal */}
+                  {/* Selector del Banco de Fotos dentro del Modal con Selección Múltiple */}
                   {mostrarBancoModal && (
                     <div className="p-4 bg-slate-950 border border-indigo-500/30 rounded-2xl space-y-3 animate-in fade-in duration-150">
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                           <ImageIcon size={16} className="text-indigo-400" />
-                          <span className="text-xs font-black text-white">Elegir foto del Banco de la Casa</span>
+                          <span className="text-xs font-black text-white">Elegir fotos del Banco de la Casa</span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          {bancoFotos.length} fotos disponibles
-                        </span>
+                        
+                        <div className="flex items-center gap-2">
+                          {bancoSeleccionMultiple.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nuevasParaAgregar = bancoSeleccionMultiple
+                                  .filter(url => !galeriaFotos.some(f => f.url === url))
+                                  .map((url, i) => ({
+                                    id: `banco-multi-${Date.now()}-${i}`,
+                                    url,
+                                    esNueva: false,
+                                  }))
+
+                                setGaleriaFotos(prev => [...prev, ...nuevasParaAgregar])
+                                mostrarToast(`¡${nuevasParaAgregar.length} fotos añadidas a la galería! 📸`, 'success')
+                                setBancoSeleccionMultiple([])
+                              }}
+                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[11px] font-black transition-colors cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95"
+                            >
+                              <Plus size={13} />
+                              <span>Añadir {bancoSeleccionMultiple.length} seleccionadas</span>
+                            </button>
+                          )}
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {bancoFotos.length} fotos disponibles
+                          </span>
+                        </div>
                       </div>
 
                       {bancoFotos.length === 0 ? (
@@ -2081,29 +2232,29 @@ export default function DevToolsPage() {
                       ) : (
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1">
                           {bancoFotos.map((item, i) => {
-                            const yaAgregada = galeriaFotos.some(f => f.url === item.url)
+                            const yaEnGaleria = galeriaFotos.some(f => f.url === item.url)
+                            const estaSeleccionada = bancoSeleccionMultiple.includes(item.url)
+
                             return (
                               <button
                                 key={`modal-banco-${i}`}
                                 type="button"
                                 onClick={() => {
-                                  if (yaAgregada) {
+                                  if (yaEnGaleria) {
                                     mostrarToast('Esta foto ya está en la galería', 'info')
                                     return
                                   }
-                                  setGaleriaFotos(prev => [
-                                    ...prev,
-                                    {
-                                      id: `banco-${Date.now()}-${i}`,
-                                      url: item.url,
-                                      esNueva: false,
-                                    },
-                                  ])
-                                  mostrarToast('Foto añadida desde el banco', 'success')
+                                  if (estaSeleccionada) {
+                                    setBancoSeleccionMultiple(prev => prev.filter(u => u !== item.url))
+                                  } else {
+                                    setBancoSeleccionMultiple(prev => [...prev, item.url])
+                                  }
                                 }}
                                 className={`relative aspect-square rounded-xl overflow-hidden border transition-all text-left group/banco cursor-pointer ${
-                                  yaAgregada
-                                    ? 'border-emerald-500 ring-2 ring-emerald-500/30 opacity-70'
+                                  yaEnGaleria
+                                    ? 'border-emerald-500 ring-2 ring-emerald-500/30 opacity-60'
+                                    : estaSeleccionada
+                                    ? 'border-indigo-400 ring-2 ring-indigo-500/60 scale-95'
                                     : 'border-slate-800 hover:border-indigo-400 hover:scale-105'
                                 }`}
                               >
@@ -2112,11 +2263,17 @@ export default function DevToolsPage() {
                                   alt="Foto banco"
                                   className="w-full h-full object-cover"
                                 />
-                                {yaAgregada ? (
-                                  <div className="absolute inset-0 bg-emerald-950/60 flex items-center justify-center text-emerald-400">
-                                    <Check size={16} className="stroke-[3]" />
+                                {yaEnGaleria && (
+                                  <div className="absolute inset-0 bg-emerald-950/70 flex items-center justify-center">
+                                    <Check size={16} className="text-emerald-400 stroke-[3]" />
                                   </div>
-                                ) : (
+                                )}
+                                {estaSeleccionada && (
+                                  <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-1 shadow-md">
+                                    <Check size={12} className="stroke-[3]" />
+                                  </div>
+                                )}
+                                {!yaEnGaleria && !estaSeleccionada && (
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/banco:opacity-100 flex items-center justify-center transition-opacity">
                                     <Plus size={18} className="text-white" />
                                   </div>
@@ -2268,7 +2425,7 @@ export default function DevToolsPage() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                    className={`border-2 border-dashed rounded-3xl p-6 text-center transition-all ${
                       isDraggingOver
                         ? 'border-chefsy-400 bg-chefsy-500/10 scale-[0.99]'
                         : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
@@ -2284,21 +2441,30 @@ export default function DevToolsPage() {
                     />
                     <label
                       htmlFor="upload-foto-input"
-                      className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                      className="cursor-pointer flex flex-col items-center justify-center gap-2.5"
                     >
                       <div className="w-12 h-12 rounded-2xl bg-chefsy-500/10 border border-chefsy-500/20 flex items-center justify-center text-chefsy-400">
-                        <UploadCloud size={24} />
+                        {procesandoMultiplesFotos ? (
+                          <Loader2 size={24} className="animate-spin text-chefsy-400" />
+                        ) : (
+                          <UploadCloud size={24} />
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-white">
-                          Hacé clic para elegir fotos o arrastralas acá
+                          {procesandoMultiplesFotos ? (
+                            <span>{progresoMultiplesFotos || 'Procesando fotos seleccionadas...'}</span>
+                          ) : (
+                            <span>Hacé clic para elegir múltiples fotos a la vez o arrastralas juntas acá</span>
+                          )}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Podés seleccionar múltiples fotos, arrastrar o pegar con <strong className="text-chefsy-300">Ctrl + V</strong>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Podés marcar <strong className="text-chefsy-300">múltiples fotos</strong> con <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-200">Ctrl</kbd> o <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-200">Shift</kbd> en tu explorador, arrastrar en grupo o pegar con <strong className="text-chefsy-300">Ctrl + V</strong>
                         </p>
                       </div>
-                      <span className="mt-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-colors">
-                        Explorar Archivos...
+                      <span className="mt-1 px-5 py-2.5 bg-chefsy-600 hover:bg-chefsy-500 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-chefsy-600/30 flex items-center gap-2">
+                        <UploadCloud size={15} />
+                        <span>Elegir Múltiples Fotos de tu PC...</span>
                       </span>
                     </label>
                   </div>
