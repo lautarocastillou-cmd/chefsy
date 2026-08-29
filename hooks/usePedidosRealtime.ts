@@ -71,9 +71,12 @@ export function usePedidosRealtime({
             .filter(p => idsProtegidos.has(p.id))
             .map(p => [p.id, p])
         )
-        const pedidosMerged = pedidosSWR.map(p =>
-          localesPorId.has(p.id) ? localesPorId.get(p.id)! : p
-        )
+        const idsEnSWR = new Set(pedidosSWR.map(p => p.id))
+        const nuevosLocalesFaltantes = Array.from(localesPorId.values()).filter(p => !idsEnSWR.has(p.id))
+        const pedidosMerged = [
+          ...nuevosLocalesFaltantes,
+          ...pedidosSWR.map(p => localesPorId.has(p.id) ? localesPorId.get(p.id)! : p)
+        ]
         despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMerged })
         prevPedidosRef.current = pedidosMerged
       } else {

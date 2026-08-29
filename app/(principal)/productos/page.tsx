@@ -86,6 +86,26 @@ export default function PaginaAdministracionCatalogos() {
     return [...categorias].sort((a, b) => a.orden - b.orden)
   }, [categorias])
 
+  // Grupos de productos estructurados por categoría (incluyendo sin categoría si existieran)
+  const gruposCategorias = useMemo(() => {
+    const idsCat = new Set(categoriasOrdenadas.map((c) => c.id))
+    const grupos: { id: string; nombre: string; productos: ProductoCatalogo[] }[] = []
+
+    categoriasOrdenadas.forEach((cat) => {
+      const prodsCat = productosFiltrados.filter((p) => p.categoriaId === cat.id)
+      if (prodsCat.length > 0) {
+        grupos.push({ id: cat.id, nombre: cat.nombre, productos: prodsCat })
+      }
+    })
+
+    const prodsSinCat = productosFiltrados.filter((p) => !idsCat.has(p.categoriaId))
+    if (prodsSinCat.length > 0) {
+      grupos.push({ id: 'sin-categoria', nombre: 'Otras categorías / Sin asignar', productos: prodsSinCat })
+    }
+
+    return grupos
+  }, [categoriasOrdenadas, productosFiltrados])
+
   // Mapa de nombres de categorías para búsquedas rápidas
   const mapaCategorias = useMemo(() => {
     const mapa: Record<string, string> = {}
@@ -496,102 +516,101 @@ export default function PaginaAdministracionCatalogos() {
                         </td>
                       </tr>
                     ) : (
-                      categoriasOrdenadas.map((cat) => {
-                        const prodCat = productosFiltrados.filter((p) => p.categoriaId === cat.id)
-                        if (prodCat.length === 0) return null
-
-                        return (
-                          <React.Fragment key={cat.id}>
-                            <tr className="bg-slate-50/80 dark:bg-slate-800/60">
-                              <td colSpan={6} className="px-4 py-2 font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
-                                {cat.nombre}
+                      gruposCategorias.map((grupo) => (
+                        <React.Fragment key={grupo.id}>
+                          <tr className="bg-slate-50/80 dark:bg-slate-800/60">
+                            <td colSpan={6} className="px-4 py-2 font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+                              {grupo.nombre}
+                            </td>
+                          </tr>
+                          {grupo.productos.map((prod) => (
+                            <tr
+                              key={prod.id}
+                              className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors ${
+                                !prod.activo ? 'opacity-60' : ''
+                              } ${editandoProductoId === prod.id ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/50 dark:hover:bg-amber-950/30' : ''}`}
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  {prod.esCombo && (
+                                    <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+                                      🎁 COMBO
+                                    </span>
+                                  )}
+                                  <span className="font-semibold text-slate-800 dark:text-slate-100">{prod.nombre}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                                  {mapaCategorias[prod.categoriaId] || 'Sin categoría'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-50">
+                                {formatearPrecio(prod.precio)}
+                              </td>
+                              <td className="px-4 py-3">
+                                {prod.modificadoresIds && prod.modificadoresIds.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                    {prod.modificadoresIds.map((mid) => {
+                                      const mod = modificadores.find((m) => m.id === mid)
+                                      if (!mod) return null
+                                      return (
+                                        <span
+                                          key={mid}
+                                          className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/40"
+                                        >
+                                          {mod.nombre}
+                                        </span>
+                                      )
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 dark:text-slate-550 italic text-[10px]">Sin adicionales</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() => alternarEstadoProducto(prod)}
+                                  title={prod.activo ? 'Desactivar producto' : 'Activar producto'}
+                                  className="focus:outline-none"
+                                >
+                                  {prod.activo ? (
+                                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900/60 px-2 py-0.5 rounded-full text-[10px] hover:bg-emerald-100 dark:hover:bg-emerald-900/80 transition-colors">
+                                      <CheckCircle size={12} /> Activo
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full text-[10px] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                                      <XCircle size={12} /> Inactivo
+                                    </span>
+                                  )}
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => seleccionarProductoParaEditar(prod)}
+                                    className={`p-1.5 rounded-lg border transition-all ${
+                                      editandoProductoId === prod.id
+                                        ? 'bg-amber-100 border-amber-200 dark:bg-amber-950/60 dark:border-amber-900 text-amber-700 dark:text-amber-300'
+                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-100'
+                                    }`}
+                                    title="Editar"
+                                  >
+                                    <Edit2 size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => eliminarProducto(prod.id)}
+                                    className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 dark:text-slate-450 hover:text-red-600 dark:hover:text-red-400 hover:border-red-150 dark:hover:border-red-900/60 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
-                            {prodCat.map((prod) => (
-                              <tr
-                                key={prod.id}
-                                className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors ${
-                                  !prod.activo ? 'opacity-60' : ''
-                                } ${editandoProductoId === prod.id ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/50 dark:hover:bg-amber-950/30' : ''}`}
-                              >
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    {prod.esCombo && (
-                                      <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-                                        🎁 COMBO
-                                      </span>
-                                    )}
-                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{prod.nombre}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                                    {mapaCategorias[prod.categoriaId] || 'Sin categoría'}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-50">
-                                  {formatearPrecio(prod.precio)}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {prod.modificadoresIds && prod.modificadoresIds.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                      {prod.modificadoresIds.map((mid) => {
-                                        const mod = modificadores.find((m) => m.id === mid)
-                                        if (!mod) return null
-                                        return (
-                                          <span
-                                            key={mid}
-                                            className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/40"
-                                          >
-                                            {mod.nombre}
-                                          </span>
-                                        )
-                                      })}
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 dark:text-slate-550 italic text-[10px]">Sin adicionales</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <button
-                                    onClick={() => alternarEstadoProducto(prod)}
-                                    title={prod.activo ? 'Desactivar producto' : 'Activar producto'}
-                                    className="focus:outline-none"
-                                  >
-                                    {prod.activo ? (
-                                      <CheckCircle size={18} className="text-emerald-500 dark:text-emerald-400 mx-auto" />
-                                    ) : (
-                                      <XCircle size={18} className="text-slate-300 dark:text-slate-600 mx-auto" />
-                                    )}
-                                  </button>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    <button
-                                      onClick={() => seleccionarProductoParaEditar(prod)}
-                                      className={`p-1.5 rounded-lg border transition-all ${
-                                        editandoProductoId === prod.id
-                                          ? 'bg-amber-100 border-amber-200 dark:bg-amber-950/60 dark:border-amber-900 text-amber-700 dark:text-amber-300'
-                                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-100'
-                                      }`}
-                                      title="Editar"
-                                    >
-                                      <Edit2 size={13} />
-                                    </button>
-                                    <button
-                                      onClick={() => eliminarProducto(prod.id)}
-                                      className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 dark:text-slate-450 hover:text-red-600 dark:hover:text-red-400 hover:border-red-150 dark:hover:border-red-900/60 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all"
-                                      title="Eliminar"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </React.Fragment>
-                        )
-                      })
+                          ))}
+                        </React.Fragment>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -606,114 +625,109 @@ export default function PaginaAdministracionCatalogos() {
                   No se encontraron productos en esta categoría o búsqueda.
                 </div>
               ) : (
-                categoriasOrdenadas.map((cat) => {
-                  const prodCat = productosFiltrados.filter((p) => p.categoriaId === cat.id)
-                  if (prodCat.length === 0) return null
-
-                  return (
-                    <div key={cat.id} className="space-y-3">
-                      <div className="flex items-center gap-2 mt-4 mb-2">
-                        <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-                        <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                          {cat.nombre}
-                        </h4>
-                        <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-                      </div>
-                      
-                      {prodCat.map((prod) => (
-                        <div
-                          key={prod.id}
-                          className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-2.5 transition-all ${
-                            !prod.activo ? 'opacity-60' : ''
-                          } ${editandoProductoId === prod.id ? 'border-amber-300 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/10' : ''}`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {prod.esCombo && (
-                                  <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm">
-                                    🎁 COMBO
-                                  </span>
-                                )}
-                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold">
-                                  {mapaCategorias[prod.categoriaId] || 'Sin categoría'}
+                gruposCategorias.map((grupo) => (
+                  <div key={grupo.id} className="space-y-3">
+                    <div className="flex items-center gap-2 mt-4 mb-2">
+                      <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+                      <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        {grupo.nombre}
+                      </h4>
+                      <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+                    </div>
+                    
+                    {grupo.productos.map((prod) => (
+                      <div
+                        key={prod.id}
+                        className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-2.5 transition-all ${
+                          !prod.activo ? 'opacity-60' : ''
+                        } ${editandoProductoId === prod.id ? 'border-amber-300 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/10' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {prod.esCombo && (
+                                <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm">
+                                  🎁 COMBO
                                 </span>
-                              </div>
-                              <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-1">{prod.nombre}</h4>
-                            </div>
-                            <span className="font-black text-slate-900 dark:text-slate-50 text-base">{formatearPrecio(prod.precio)}</span>
-                          </div>
-
-                          {/* Modificadores en mobile */}
-                          {prod.modificadoresIds && prod.modificadoresIds.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-0.5">
-                              {prod.modificadoresIds.map((mid) => {
-                                const mod = modificadores.find((m) => m.id === mid)
-                                if (!mod) return null
-                                return (
-                                  <span
-                                    key={mid}
-                                    className="bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-300 text-[8px] font-bold px-1 py-0.5 rounded"
-                                  >
-                                    {mod.nombre}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400 border-t border-slate-50 dark:border-slate-800/80 pt-2 mt-1">
-                            <div className="flex items-center gap-1.5">
-                              <span>Stock:</span>
-                              {prod.stock !== undefined && prod.stock !== null ? (
-                                <span className={`font-semibold ${prod.stock > 5 ? 'text-green-600' : 'text-orange-600'}`}>
-                                  {prod.stock} u.
-                                </span>
-                              ) : (
-                                <span className="italic">Ilimitado</span>
                               )}
+                              <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold">
+                                {mapaCategorias[prod.categoriaId] || 'Sin categoría'}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-3">
-                              {/* Activo toggle */}
-                              <button
-                                onClick={() => alternarEstadoProducto(prod)}
-                                className="flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 focus:outline-none"
-                              >
-                                {prod.activo ? (
-                                  <>
-                                    <CheckCircle size={14} className="text-emerald-500" />
-                                    <span>Activo</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle size={14} className="text-slate-350" />
-                                    <span>Inactivo</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
+                            <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-1">{prod.nombre}</h4>
                           </div>
+                          <span className="font-black text-slate-900 dark:text-slate-50 text-base">{formatearPrecio(prod.precio)}</span>
+                        </div>
 
-                          {/* Acciones */}
-                          <div className="flex gap-2 border-t border-slate-50 dark:border-slate-800/80 pt-2.5 mt-0.5">
+                        {/* Modificadores en mobile */}
+                        {prod.modificadoresIds && prod.modificadoresIds.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {prod.modificadoresIds.map((mid) => {
+                              const mod = modificadores.find((m) => m.id === mid)
+                              if (!mod) return null
+                              return (
+                                <span
+                                  key={mid}
+                                  className="bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-300 text-[8px] font-bold px-1 py-0.5 rounded"
+                                >
+                                  {mod.nombre}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-slate-400 border-t border-slate-50 dark:border-slate-800/80 pt-2 mt-1">
+                          <div className="flex items-center gap-1.5">
+                            <span>Stock:</span>
+                            {prod.stock !== undefined && prod.stock !== null ? (
+                              <span className={`font-semibold ${prod.stock > 5 ? 'text-green-600' : 'text-orange-600'}`}>
+                                {prod.stock} u.
+                              </span>
+                            ) : (
+                              <span className="italic">Ilimitado</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {/* Activo toggle */}
                             <button
-                              onClick={() => seleccionarProductoParaEditar(prod)}
-                              className="flex-1 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                              onClick={() => alternarEstadoProducto(prod)}
+                              className="flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 focus:outline-none"
                             >
-                              <Edit2 size={12} /> Editar
-                            </button>
-                            <button
-                              onClick={() => eliminarProducto(prod.id)}
-                              className="py-1.5 px-3 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
-                            >
-                              <Trash2 size={12} />
+                              {prod.activo ? (
+                                <>
+                                  <CheckCircle size={14} className="text-emerald-500" />
+                                  <span>Activo</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-350" />
+                                  <span>Inactivo</span>
+                                </>
+                              )}
                             </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )
-                })
+
+                        {/* Acciones */}
+                        <div className="flex gap-2 border-t border-slate-50 dark:border-slate-800/80 pt-2.5 mt-0.5">
+                          <button
+                            onClick={() => seleccionarProductoParaEditar(prod)}
+                            className="flex-1 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <Edit2 size={12} /> Editar
+                          </button>
+                          <button
+                            onClick={() => eliminarProducto(prod.id)}
+                            className="py-1.5 px-3 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))
               )}
             </div>
           </div>

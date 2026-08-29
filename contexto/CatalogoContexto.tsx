@@ -108,6 +108,10 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
       const prods = catalogoNuevo.productos || []
       const mods = catalogoNuevo.modificadores || []
 
+      // Protección: nunca sobreescribir datos en memoria si la respuesta remota vino vacía por error
+      if (prods.length === 0 && productosRef.current.length > 0) return
+      if (cats.length === 0 && categoriasRef.current.length > 0) return
+
       setCategorias(cats)
       categoriasRef.current = cats
       setCache('chefsy-categorias-v1', cats)
@@ -161,7 +165,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
     } finally {
       setTimeout(() => {
         esCambioCatalogoLocalRef.current = false
-      }, 500)
+      }, 1200)
     }
   }
 

@@ -156,13 +156,27 @@ export async function inicializarCatalogo(datosBase: {
 export function suscribirACatalogo(
   onActualizacion: (catalogo: CatalogoGuardado) => void
 ): RealtimeChannel {
-  const recargar = async () => {
-    try {
-      const catalogo = await obtenerCatalogoPrincipal()
-      if (catalogo) onActualizacion(catalogo)
-    } catch (err) {
-      console.error('[Realtime Catalogo] Error al recargar:', err)
-    }
+  let timeoutId: any = null
+
+  const recargar = () => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(async () => {
+      try {
+        const catalogo = await obtenerCatalogoPrincipal()
+        // Proteger: nunca emitir un catálogo con listas vacías si fue un glitch temporal
+        if (
+          catalogo &&
+          Array.isArray(catalogo.productos) &&
+          catalogo.productos.length > 0 &&
+          Array.isArray(catalogo.categorias) &&
+          catalogo.categorias.length > 0
+        ) {
+          onActualizacion(catalogo)
+        }
+      } catch (err) {
+        console.error('[Realtime Catalogo] Error al recargar:', err)
+      }
+    }, 350)
   }
 
   return supabase
