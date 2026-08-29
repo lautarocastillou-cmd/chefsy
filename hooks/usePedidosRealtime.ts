@@ -63,40 +63,13 @@ export function usePedidosRealtime({
           .map(([id]) => id)
       )
 
-      // Proteger cambios locales recientes (< 10s) que no hayan sido eliminados
-      const idsProtegidos = new Set(
-        Object.entries(cambiosLocalesRef.current)
-          .filter(([id, ts]) => ahora - ts < 10000 && !idsEliminados.has(id))
-          .map(([id]) => id)
-      )
-
       const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
-      prevPedidosRef.current = prevPedidosRef.current.filter(p => !idsEliminados.has(p.id))
-
-      if (idsProtegidos.size > 0 && prevPedidosRef.current.length > 0) {
-        // Merge: tomar la versión local de los pedidos protegidos
-        const localesPorId = new Map(
-          prevPedidosRef.current
-            .filter(p => idsProtegidos.has(p.id))
-            .map(p => [p.id, p])
-        )
-        const idsEnSWR = new Set(pedidosSWRFiltrados.map(p => p.id))
-        const nuevosLocalesFaltantes = Array.from(localesPorId.values()).filter(p => !idsEnSWR.has(p.id))
-        const pedidosMerged = [
-          ...nuevosLocalesFaltantes,
-          ...pedidosSWRFiltrados.map(p => localesPorId.has(p.id) ? localesPorId.get(p.id)! : p)
-        ]
-        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMerged })
-        prevPedidosRef.current = pedidosMerged
-      } else {
-        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
-        prevPedidosRef.current = pedidosSWRFiltrados
-      }
-
+      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
+      prevPedidosRef.current = pedidosSWRFiltrados
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, prevPedidosRef, cambiosLocalesRef, eliminadosLocalesRef])
+  }, [pedidosSWR, error, despachar, prevPedidosRef, eliminadosLocalesRef])
 
   // 2) Suscripción a Supabase Realtime
   useEffect(() => {
@@ -111,7 +84,8 @@ export function usePedidosRealtime({
         }
 
         const ultCambio = cambiosLocalesRef.current[pedido.id] || 0
-        if (Date.now() - ultCambio < 10000) return
+        // Ignorar rebote/eco local durante 3 segundos
+        if (Date.now() - ultCambio < 3000) return
 
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })

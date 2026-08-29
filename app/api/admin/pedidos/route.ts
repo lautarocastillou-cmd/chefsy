@@ -39,8 +39,8 @@ export async function POST(request: Request) {
     // 3. Procesar acciones con validación de roles
     switch (accion) {
       case 'crear': {
-        if (rol !== 'admin') {
-          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        if (rol !== 'admin' && rol !== 'cajero') {
+          return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
         const { pedido } = body
@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       }
 
       case 'editar': {
-        if (rol !== 'admin') {
-          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        if (rol !== 'admin' && rol !== 'cajero') {
+          return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
         const { id, pedido } = body
@@ -218,8 +218,8 @@ export async function POST(request: Request) {
       }
 
       case 'confirmar_pago': {
-        if (rol !== 'admin') {
-          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        if (rol !== 'admin' && rol !== 'cajero') {
+          return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
         const { id, pago_confirmado } = body
@@ -423,28 +423,13 @@ export async function POST(request: Request) {
       }
 
       case 'asignar_cadete': {
-        if (rol !== 'admin') {
-          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        if (rol !== 'admin' && rol !== 'cajero') {
+          return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
         const { id, cadete_id, cadete_nombre } = body
         if (!id) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
-        }
-
-        // Si se asigna un cadete, verificar que tenga el turno iniciado (GPS activo)
-        if (cadete_id) {
-          const { data: cadeteGPS } = await supabaseAdmin
-            .from('cadetes')
-            .select('gps_activo')
-            .ilike('id', cadete_id)
-            .maybeSingle()
-
-          if (!cadeteGPS || !cadeteGPS.gps_activo) {
-            return NextResponse.json({
-              error: `El repartidor ${cadete_nombre || cadete_id} no inició turno (GPS inactivo). Debe activar el GPS en su app para recibir pedidos.`
-            }, { status: 400 })
-          }
         }
 
         const { data: updateData, error } = await supabaseAdmin
@@ -469,8 +454,8 @@ export async function POST(request: Request) {
       }
 
       case 'cambiar_metodo_pago': {
-        if (rol !== 'admin') {
-          return NextResponse.json({ error: 'Operación reservada para administradores.' }, { status: 403 })
+        if (rol !== 'admin' && rol !== 'cajero') {
+          return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
         const { id, metodoPago } = body
