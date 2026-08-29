@@ -330,6 +330,8 @@ export default function DevToolsPage() {
 
     try {
       let completadas = 0
+      const urlsNuevas: string[] = []
+
       for (let i = 0; i < archivos.length; i++) {
         const file = archivos[i]
         setProgresoLoteBanco(`Subiendo ${i + 1} de ${archivos.length}: ${file.name.substring(0, 20)}...`)
@@ -337,14 +339,26 @@ export default function DevToolsPage() {
         const uploadRes = await fetch('/api/admin/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, nombreOriginal: file.name }),
+          body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
         })
-        if (uploadRes.ok) {
-          completadas++
+        const uploadData = await uploadRes.json()
+        if (uploadRes.ok && !uploadData.error) {
+          const finalUrl = uploadData.urlTransformada || uploadData.urlOriginal
+          if (finalUrl) {
+            urlsNuevas.push(finalUrl)
+            completadas++
+          }
+        } else {
+          console.warn('Error subiendo archivo:', file.name, uploadData?.error)
         }
       }
 
+      if (urlsNuevas.length > 0) {
+        setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
+      }
+
       mostrarToast(`¡${completadas} fotos subidas con éxito al almacenamiento de Chefsy! 📸`, 'success')
+      await cargarFotosStorage()
       await cargarMetadata()
     } catch (err: any) {
       console.error(err)
@@ -395,7 +409,7 @@ export default function DevToolsPage() {
         const uploadRes = await fetch('/api/admin/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, nombreOriginal: file.name }),
+          body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
         })
         const uploadData = await uploadRes.json()
         if (!uploadRes.ok || uploadData.error) {

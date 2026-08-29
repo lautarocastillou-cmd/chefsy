@@ -30,21 +30,23 @@ export async function POST(request: Request) {
       ext = mimeType.split('/')[1] || 'png'
     } else if (contentType.includes('application/json')) {
       const body = await request.json()
-      const imagen = body.imagen
+      const imagen = body.imagen || body.base64
       if (!oldUrl) oldUrl = body.oldUrl || null
 
       if (!imagen) {
         return NextResponse.json({ error: 'Imagen requerida.' }, { status: 400 })
       }
 
-      const matches = imagen.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/)
-      if (!matches || matches.length !== 3) {
-        return NextResponse.json({ error: 'Formato base64 inválido' }, { status: 400 })
+      if (imagen.includes(';base64,')) {
+        const parts = imagen.split(';base64,')
+        mimeType = parts[0].replace('data:', '') || 'image/jpeg'
+        buffer = Buffer.from(parts[1], 'base64')
+        ext = mimeType.split('/')[1] || 'jpg'
+      } else {
+        mimeType = 'image/jpeg'
+        buffer = Buffer.from(imagen, 'base64')
+        ext = 'jpg'
       }
-
-      mimeType = matches[1]
-      buffer = Buffer.from(matches[2], 'base64')
-      ext = mimeType.split('/')[1] || 'png'
     } else {
       const arrayBuffer = await request.arrayBuffer()
       buffer = Buffer.from(arrayBuffer)
