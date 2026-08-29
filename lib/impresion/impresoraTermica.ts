@@ -167,6 +167,7 @@ class GestorImpresoraTermica {
         // Buscar interfaz con endpoint OUT para envío bulk de ESC/POS
         let interfaceNum = 0
         let endpointOutNum = 1
+        let interfazEncontrada = false
 
         if (device.configuration?.interfaces) {
           for (const iface of device.configuration.interfaces) {
@@ -175,17 +176,28 @@ class GestorImpresoraTermica {
                 if (ep.direction === 'out') {
                   interfaceNum = iface.interfaceNumber
                   endpointOutNum = ep.endpointNumber
+                  interfazEncontrada = true
                   break
                 }
               }
+              if (interfazEncontrada) break
             }
+            if (interfazEncontrada) break
           }
         }
 
         try {
           await device.claimInterface(interfaceNum)
-        } catch (claimErr) {
+        } catch (claimErr: any) {
           console.warn('[Impresora USB] Advertencia al reclamar interfaz:', claimErr)
+          // Si Windows bloquea el reclamo de interfaz por tener driver activo
+          if (claimErr?.name === 'SecurityError' || claimErr?.message?.includes('claimInterface')) {
+            await device.close()
+            return {
+              exito: false,
+              mensaje: 'Windows tiene bloqueado el acceso USB exclusivo. Te recomendamos imprimir directamente con el controlador de Windows.',
+            }
+          }
         }
 
         this.dispositivoUsb = device
@@ -472,10 +484,11 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
     })
 
     if (this.estaConectada()) {
-      return await this.enviarRaw(bytes)
+      const ok = await this.enviarRaw(bytes)
+      if (ok) return true
     }
 
-    // Fallback Iframe si no hay conexión directa
+    // Fallback Iframe si no hay conexión directa o si falló el envío directo
     const htmlPrueba = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
