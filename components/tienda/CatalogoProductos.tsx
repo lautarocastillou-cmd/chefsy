@@ -50,7 +50,7 @@ interface CatalogoProductosProps {
 // Componente
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function CatalogoProductos({
+function CatalogoProductosComponente({
   categoriasActivas,
   productosFiltrados,
   categoriaSeleccionada,
@@ -168,3 +168,6 @@ export default function CatalogoProductos({
     </main>
   )
 }
+
+const CatalogoProductos = React.memo(CatalogoProductosComponente)
+export default CatalogoProductos

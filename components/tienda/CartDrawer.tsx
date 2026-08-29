@@ -11,7 +11,66 @@ const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector')
 
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import { ItemCarrito as TipoItemCarrito } from '@/tipos/tienda'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
+
+interface PropsItemCarritoFila {
+  item: TipoItemCarrito
+  onEliminar: (idCart: string) => void
+  onActualizarCantidad: (idCart: string, delta: number) => void
+}
+
+const ItemCarritoFila = React.memo(function ItemCarritoFila({ item, onEliminar, onActualizarCantidad }: PropsItemCarritoFila) {
+  return (
+    <div 
+      className="flex justify-between gap-3 p-3 bg-[#252525] border border-[#3d3d3d] rounded-2xl transition-colors hover:bg-[#2a2a2a]"
+    >
+      <div className="flex-1 space-y-1 text-left">
+        <h4 className="font-bold text-base text-white leading-tight">
+          {item.producto.nombre}
+        </h4>
+        {item.modificadoresSeleccionados.length > 0 && (
+          <p className="text-sm text-slate-400 italic">
+            + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
+          </p>
+        )}
+        <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
+          {item.pago_con_puntos ? (
+             <span className="text-chefsy-400 bg-chefsy-500/10 px-2 py-0.5 rounded-md border border-chefsy-500/20">{item.producto.precio_puntos} pts</span>
+          ) : formatearPrecio(item.precioUnitario)}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-end justify-between gap-2.5 min-w-[120px]">
+        <button
+          onClick={() => onEliminar(item.idCart)}
+          className="text-slate-500 hover:text-red-500 p-2 rounded transition-colors focus:outline-none cursor-pointer"
+          title="Eliminar ítem"
+        >
+          <Trash2 size={20} />
+        </button>
+
+        <div className="flex items-center border border-[#3d3d3d] rounded-lg bg-[#1a1a1a] overflow-hidden">
+          <button
+            onClick={() => onActualizarCantidad(item.idCart, -1)}
+            className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none cursor-pointer"
+          >
+            <Minus size={18} />
+          </button>
+          <span className="px-3 text-sm font-bold text-white">
+            {item.cantidad}
+          </span>
+          <button
+            onClick={() => onActualizarCantidad(item.idCart, 1)}
+            className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none cursor-pointer"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+})
 
 export default function CartDrawer() {
   const { usuario, perfil } = usarClienteAuth()
@@ -274,54 +333,12 @@ export default function CartDrawer() {
           ) : !mostrarCheckout ? (
             <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4">
               {carrito.map(item => (
-                <div 
+                <ItemCarritoFila
                   key={item.idCart}
-                  className="flex justify-between gap-3 p-3 bg-[#252525] border border-[#3d3d3d] rounded-2xl transition-colors hover:bg-[#2a2a2a]"
-                >
-                  <div className="flex-1 space-y-1 text-left">
-                    <h4 className="font-bold text-base text-white leading-tight">
-                      {item.producto.nombre}
-                    </h4>
-                    {item.modificadoresSeleccionados.length > 0 && (
-                      <p className="text-sm text-slate-400 italic">
-                        + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
-                      </p>
-                    )}
-                    <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
-                      {item.pago_con_puntos ? (
-                         <span className="text-chefsy-400 bg-chefsy-500/10 px-2 py-0.5 rounded-md border border-chefsy-500/20">{item.producto.precio_puntos} pts</span>
-                      ) : formatearPrecio(item.precioUnitario)}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-end justify-between gap-2.5 min-w-[120px]">
-                    <button
-                      onClick={() => onEliminar(item.idCart)}
-                      className="text-slate-500 hover:text-red-500 p-2 rounded transition-colors focus:outline-none"
-                      title="Eliminar ítem"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-
-                    <div className="flex items-center border border-[#3d3d3d] rounded-lg bg-[#1a1a1a] overflow-hidden">
-                      <button
-                        onClick={() => onActualizarCantidad(item.idCart, -1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none"
-                      >
-                        <Minus size={18} />
-                      </button>
-                      <span className="px-3 text-sm font-bold text-white">
-                        {item.cantidad}
-                      </span>
-                      <button
-                        onClick={() => onActualizarCantidad(item.idCart, 1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-[#252525] transition-colors text-slate-400 focus:outline-none"
-                      >
-                        <Plus size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  item={item}
+                  onEliminar={onEliminar}
+                  onActualizarCantidad={onActualizarCantidad}
+                />
               ))}
             </div>
           ) : (
