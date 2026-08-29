@@ -20,6 +20,7 @@ interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
   prevPedidosRef: MutableRefObject<Pedido[]>
   cambiosLocalesRef: MutableRefObject<Record<string, number>>
+  eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
 }
 
 const fetcher = async () => {
@@ -31,6 +32,7 @@ export function usePedidosRealtime({
   despachar,
   prevPedidosRef,
   cambiosLocalesRef,
+  eliminadosLocalesRef,
 }: UsePedidosRealtimeProps) {
   const [estaListo, setEstaListo] = useState(false)
   const [dbEstado, setDbEstado] = useState<'conectado' | 'desconectado' | 'cargando'>('cargando')
@@ -53,16 +55,23 @@ export function usePedidosRealtime({
     }
 
     if (pedidosSWR) {
-      // Proteger cambios locales recientes: si un pedido fue modificado
-      // localmente en los últimos 10 segundos, preservar la versión local
-      // en lugar de sobreescribirla con datos potencialmente desactualizados
-      // del servidor (ej. SWR revalidateOnFocus tras un swipe en cadetería).
       const ahora = Date.now()
-      const idsProtegidos = new Set(
-        Object.entries(cambiosLocalesRef.current)
-          .filter(([, ts]) => ahora - ts < 10000)
+      const eliminadosMap = eliminadosLocalesRef?.current || {}
+      const idsEliminados = new Set(
+        Object.entries(eliminadosMap)
+          .filter(([, ts]) => ahora - ts < 30000)
           .map(([id]) => id)
       )
+
+      // Proteger cambios locales recientes (< 10s) que no hayan sido eliminados
+      const idsProtegidos = new Set(
+        Object.entries(cambiosLocalesRef.current)
+          .filter(([id, ts]) => ahora - ts < 10000 && !idsEliminados.has(id))
+          .map(([id]) => id)
+      )
+
+      const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
+      prevPedidosRef.current = prevPedidosRef.current.filter(p => !idsEliminados.has(p.id))
 
       if (idsProtegidos.size > 0 && prevPedidosRef.current.length > 0) {
         // Merge: tomar la versión local de los pedidos protegidos
@@ -71,23 +80,23 @@ export function usePedidosRealtime({
             .filter(p => idsProtegidos.has(p.id))
             .map(p => [p.id, p])
         )
-        const idsEnSWR = new Set(pedidosSWR.map(p => p.id))
+        const idsEnSWR = new Set(pedidosSWRFiltrados.map(p => p.id))
         const nuevosLocalesFaltantes = Array.from(localesPorId.values()).filter(p => !idsEnSWR.has(p.id))
         const pedidosMerged = [
           ...nuevosLocalesFaltantes,
-          ...pedidosSWR.map(p => localesPorId.has(p.id) ? localesPorId.get(p.id)! : p)
+          ...pedidosSWRFiltrados.map(p => localesPorId.has(p.id) ? localesPorId.get(p.id)! : p)
         ]
         despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosMerged })
         prevPedidosRef.current = pedidosMerged
       } else {
-        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWR })
-        prevPedidosRef.current = pedidosSWR
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
+        prevPedidosRef.current = pedidosSWRFiltrados
       }
 
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, prevPedidosRef, cambiosLocalesRef])
+  }, [pedidosSWR, error, despachar, prevPedidosRef, cambiosLocalesRef, eliminadosLocalesRef])
 
   // 2) Suscripción a Supabase Realtime
   useEffect(() => {
@@ -95,11 +104,18 @@ export function usePedidosRealtime({
 
     const channel = suscribirAPedidos(
       (pedido, archivado) => {
+        // Si el pedido fue eliminado localmente recientemente, ignorar cualquier eco
+        if (eliminadosLocalesRef?.current?.[pedido.id]) {
+          const tiempoEliminado = Date.now() - eliminadosLocalesRef.current[pedido.id]
+          if (tiempoEliminado < 30000) return
+        }
+
         const ultCambio = cambiosLocalesRef.current[pedido.id] || 0
         if (Date.now() - ultCambio < 10000) return
 
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
+          prevPedidosRef.current = prevPedidosRef.current.filter((p) => p.id !== pedido.id)
           mutate((current) => current ? current.filter((p) => p.id !== pedido.id) : [], false)
         } else {
           despachar({ tipo: 'UPSERT_PEDIDO', pedido })
@@ -113,9 +129,8 @@ export function usePedidosRealtime({
         }
       },
       (id) => {
-        const ultCambio = cambiosLocalesRef.current[id] || 0
-        if (Date.now() - ultCambio < 10000) return
         despachar({ tipo: 'ELIMINAR_PEDIDO', id })
+        prevPedidosRef.current = prevPedidosRef.current.filter((p) => p.id !== id)
         mutate((current) => current ? current.filter((p) => p.id !== id) : [], false)
       }
     )

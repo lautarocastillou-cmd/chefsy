@@ -229,6 +229,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   const prevPedidosRef = useRef<Pedido[]>([])
   const cambiosLocalesRef = useRef<Record<string, number>>({})
+  const eliminadosLocalesRef = useRef<Record<string, number>>({})
 
   const { usuarioActivo } = usarAuth()
   const { agregarNotificacion } = usarTemaNotificacion()
@@ -240,6 +241,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     despachar,
     prevPedidosRef,
     cambiosLocalesRef,
+    eliminadosLocalesRef,
   })
 
   useSincronizacionOffline({ setDbEstado, agregarNotificacion, isAdmin })
@@ -619,7 +621,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   }
 
   const eliminarPedido = async (id: string) => {
-    cambiosLocalesRef.current[id] = Date.now()
+    delete cambiosLocalesRef.current[id]
+    eliminadosLocalesRef.current[id] = Date.now()
+    prevPedidosRef.current = prevPedidosRef.current.filter((p) => p.id !== id)
     despachar({ tipo: 'ELIMINAR_PEDIDO', id })
     mutateSWR((current) => {
       if (!current) return []
