@@ -106,6 +106,7 @@ export default function DevToolsPage() {
   // Banco de Fotos de la Casa
   const [mostrarBancoModal, setMostrarBancoModal] = useState(false)
   const [busquedaBanco, setBusquedaBanco] = useState('')
+  const [filtroCategoriaBanco, setFiltroCategoriaBanco] = useState('todas')
   const [fotosLibresBanco, setFotosLibresBanco] = useState<string[]>([])
   const [asignandoFotoUrl, setAsignandoFotoUrl] = useState<string | null>(null)
   const [asignandoProductoId, setAsignandoProductoId] = useState<string>('')
@@ -900,22 +901,47 @@ export default function DevToolsPage() {
     return { total: productos.length, sinFoto, conFoto, sinDesc, pausados, activos }
   }, [productos, metadata])
 
+  // Normalizador para búsqueda insensible a acentos y mayúsculas
+  const normalizarParaBusqueda = (texto: string) => {
+    return (texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+  }
+
   const productosFiltrados = useMemo(() => {
+    const q = normalizarParaBusqueda(busqueda)
+
     return productos.filter(p => {
-      // 1. Filtro texto
-      const meta = metadata[p.id]
-      const nombrePub = meta?.nombre_publico || p.nombre
-      const coincideBusqueda =
-        nombrePub.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-      if (!coincideBusqueda) return false
+      // 1. Filtro texto (busca en nombre público, nombre interno, descripción y nombre de categoría)
+      if (q) {
+        const meta = metadata[p.id]
+        const nombrePub = normalizarParaBusqueda(meta?.nombre_publico || '')
+        const nombreInterno = normalizarParaBusqueda(p.nombre || '')
+        const desc = normalizarParaBusqueda(meta?.descripcion_publica || '')
+        const catNombre = normalizarParaBusqueda(categorias.find(c => c.id === p.categoriaId)?.nombre || '')
+
+        const coincide =
+          nombrePub.includes(q) ||
+          nombreInterno.includes(q) ||
+          desc.includes(q) ||
+          catNombre.includes(q)
+
+        if (!coincide) return false
+      }
 
       // 2. Filtro categoría
-      if (filtroCategoria !== 'todas' && p.categoriaId !== filtroCategoria) {
-        return false
+      if (filtroCategoria !== 'todas') {
+        const catProd = String(p.categoriaId || '').trim()
+        const catFiltro = String(filtroCategoria).trim()
+        if (catProd !== catFiltro) {
+          return false
+        }
       }
 
       // 3. Filtro estado
+      const meta = metadata[p.id]
       const fotos = parsearFotosDeUrl(meta?.imagen_url)
       const tieneFotoPropia = fotos.length > 0 && !esImagenPlaceholder(fotos[0])
       const desc = meta?.descripcion_publica || OBTENER_DETALLES_COMPLEMENTARIOS(p.categoriaId, p.nombre, p.id).desc
@@ -929,7 +955,7 @@ export default function DevToolsPage() {
 
       return true
     })
-  }, [productos, metadata, busqueda, filtroCategoria, filtroEstado])
+  }, [productos, metadata, busqueda, filtroCategoria, filtroEstado, categorias])
 
   // Foto de portada para la vista previa
   const fotoPortadaPreview = useMemo(() => {
@@ -989,13 +1015,35 @@ export default function DevToolsPage() {
   }, [productos, metadata, fotosLibresBanco])
 
   const bancoFotosFiltradas = useMemo(() => {
-    if (!busquedaBanco.trim()) return bancoFotos
-    const query = busquedaBanco.toLowerCase()
-    return bancoFotos.filter(item =>
-      item.productosUsados.some(p => p.nombre.toLowerCase().includes(query)) ||
-      (item.productosUsados.length === 0 && 'nueva sin asignar libre banco'.includes(query))
-    )
-  }, [bancoFotos, busquedaBanco])
+    const q = normalizarParaBusqueda(busquedaBanco)
+
+    return bancoFotos.filter(item => {
+      // 1. Filtro categoría en el banco
+      if (filtroCategoriaBanco !== 'todas') {
+        const coincideCat = item.productosUsados.some(
+          p => String(p.categoriaId).trim() === String(filtroCategoriaBanco).trim()
+        )
+        if (!coincideCat) return false
+      }
+
+      // 2. Filtro búsqueda de texto
+      if (q) {
+        const coincideProd = item.productosUsados.some(p => {
+          const np = normalizarParaBusqueda(p.nombre)
+          const nc = normalizarParaBusqueda(categorias.find(c => c.id === p.categoriaId)?.nombre || '')
+          return np.includes(q) || nc.includes(q)
+        })
+        const coincideUrl = normalizarParaBusqueda(item.url).includes(q)
+        const coincideSinAsignar =
+          item.productosUsados.length === 0 &&
+          (q.includes('sin') || q.includes('nueva') || q.includes('libre') || q.includes('banco'))
+
+        if (!coincideProd && !coincideUrl && !coincideSinAsignar) return false
+      }
+
+      return true
+    })
+  }, [bancoFotos, busquedaBanco, filtroCategoriaBanco, categorias])
 
   // Asignar una foto del banco directamente a otro producto
   const asignarFotoAProductoDirecto = async (fotoUrl: string, productoId: string) => {
@@ -1154,176 +1202,180 @@ export default function DevToolsPage() {
           </button>
         </div>
 
-        {/* Barra de Estadísticas y Diagnóstico Rápido */}
+        {/* Pestaña 1: Diseño Visual (Fotos y Textos) */}
         {tabActive === 'visual' && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="bg-slate-900/60 border border-slate-800/80 p-3.5 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black">
-                {stats.total}
+          <div className="space-y-6">
+            {/* Barra de Estadísticas y Diagnóstico Rápido */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-slate-900/60 border border-slate-800/80 p-3.5 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-black">
+                  {stats.total}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Menú</p>
+                  <p className="text-sm font-black text-slate-200 truncate">Productos</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Menú</p>
-                <p className="text-sm font-black text-slate-200 truncate">Productos</p>
-              </div>
-            </div>
 
-            <button
-              onClick={() => setFiltroEstado(filtroEstado === 'pausados' ? 'todos' : 'pausados')}
-              className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
-                filtroEstado === 'pausados'
-                  ? 'bg-rose-950/60 border-rose-500/50 ring-2 ring-rose-500/20'
-                  : stats.pausados > 0
-                  ? 'bg-slate-900/60 border-rose-900/40 hover:border-rose-700'
-                  : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black ${
-                stats.pausados > 0
-                  ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
-                  : 'bg-slate-800 border-slate-700 text-slate-400'
-              }`}>
-                {stats.pausados}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Pausados</p>
-                <p className="text-sm font-black text-slate-200 truncate">Ocultos Tienda</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setFiltroEstado(filtroEstado === 'con_foto' ? 'todos' : 'con_foto')}
-              className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
-                filtroEstado === 'con_foto'
-                  ? 'bg-emerald-950/60 border-emerald-500/50 ring-2 ring-emerald-500/20'
-                  : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
-              }`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black">
-                {stats.conFoto}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Fotos Propias</p>
-                <p className="text-sm font-black text-slate-200 truncate">Con Galería</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setFiltroEstado(filtroEstado === 'sin_foto' ? 'todos' : 'sin_foto')}
-              className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
-                filtroEstado === 'sin_foto'
-                  ? 'bg-rose-950/60 border-rose-500/50 ring-2 ring-rose-500/20'
-                  : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
-              }`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-black">
-                {stats.sinFoto}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Faltan Fotos</p>
-                <p className="text-sm font-black text-slate-200 truncate">Placeholder</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setFiltroEstado(filtroEstado === 'sin_desc' ? 'todos' : 'sin_desc')}
-              className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
-                filtroEstado === 'sin_desc'
-                  ? 'bg-amber-950/60 border-amber-500/50 ring-2 ring-amber-500/20'
-                  : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
-              }`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-black">
-                {stats.sinDesc}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Sin Descripción</p>
-                <p className="text-sm font-black text-slate-200 truncate">Texto pendiente</p>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Filtros y Buscador */}
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por nombre público o interno..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-chefsy-500 focus:border-transparent outline-none font-medium text-sm text-white placeholder:text-slate-500 transition-all shadow-inner"
-            />
-            {busqueda && (
               <button
-                onClick={() => setBusqueda('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-            {/* Selector de Modo de Vista (Tarjetas vs Tabla Rápida) */}
-            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-2xl shrink-0">
-              <button
-                type="button"
-                onClick={() => setModoVista('grid')}
-                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  modoVista === 'grid'
-                    ? 'bg-chefsy-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                onClick={() => setFiltroEstado(filtroEstado === 'pausados' ? 'todos' : 'pausados')}
+                className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
+                  filtroEstado === 'pausados'
+                    ? 'bg-rose-950/60 border-rose-500/50 ring-2 ring-rose-500/20'
+                    : stats.pausados > 0
+                    ? 'bg-slate-900/60 border-rose-900/40 hover:border-rose-700'
+                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
                 }`}
-                title="Vista en Cuadrícula de Tarjetas"
               >
-                <LayoutGrid size={15} />
-                <span className="hidden sm:inline">Tarjetas</span>
+                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black ${
+                  stats.pausados > 0
+                    ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
+                    : 'bg-slate-800 border-slate-700 text-slate-400'
+                }`}>
+                  {stats.pausados}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Pausados</p>
+                  <p className="text-sm font-black text-slate-200 truncate">Ocultos Tienda</p>
+                </div>
               </button>
+
               <button
-                type="button"
-                onClick={() => setModoVista('tabla')}
-                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  modoVista === 'tabla'
-                    ? 'bg-chefsy-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                onClick={() => setFiltroEstado(filtroEstado === 'con_foto' ? 'todos' : 'con_foto')}
+                className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
+                  filtroEstado === 'con_foto'
+                    ? 'bg-emerald-950/60 border-emerald-500/50 ring-2 ring-emerald-500/20'
+                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
                 }`}
-                title="Modo Edición Rápida en Tabla (Estilo Excel)"
               >
-                <TableIcon size={15} />
-                <span className="hidden sm:inline">Tabla Rápida</span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black">
+                  {stats.conFoto}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Fotos Propias</p>
+                  <p className="text-sm font-black text-slate-200 truncate">Con Galería</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setFiltroEstado(filtroEstado === 'sin_foto' ? 'todos' : 'sin_foto')}
+                className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
+                  filtroEstado === 'sin_foto'
+                    ? 'bg-rose-950/60 border-rose-500/50 ring-2 ring-rose-500/20'
+                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-black">
+                  {stats.sinFoto}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Faltan Fotos</p>
+                  <p className="text-sm font-black text-slate-200 truncate">Placeholder</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setFiltroEstado(filtroEstado === 'sin_desc' ? 'todos' : 'sin_desc')}
+                className={`p-3.5 rounded-2xl flex items-center gap-3 transition-all text-left border cursor-pointer ${
+                  filtroEstado === 'sin_desc'
+                    ? 'bg-amber-950/60 border-amber-500/50 ring-2 ring-amber-500/20'
+                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-black">
+                  {stats.sinDesc}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Sin Descripción</p>
+                  <p className="text-sm font-black text-slate-200 truncate">Texto pendiente</p>
+                </div>
               </button>
             </div>
 
-            <select
-              value={filtroCategoria}
-              onChange={e => setFiltroCategoria(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs sm:text-sm font-bold rounded-2xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-chefsy-500 transition-all cursor-pointer"
-            >
-              <option value="todas">Todas las Categorías</option>
-              {categorias.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nombre}
-                </option>
-              ))}
-            </select>
+            {/* Filtros y Buscador de la Tienda */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre público, interno o descripción..."
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-chefsy-500 focus:border-transparent outline-none font-medium text-sm text-white placeholder:text-slate-500 transition-all shadow-inner"
+                />
+                {busqueda && (
+                  <button
+                    onClick={() => setBusqueda('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
 
-            {filtroEstado !== 'todos' && (
-              <button
-                onClick={() => setFiltroEstado('todos')}
-                className="px-3 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
-                title="Limpiar filtro"
-              >
-                <RotateCcw size={14} />
-                <span>Restablecer Filtros</span>
-              </button>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+                {/* Selector de Modo de Vista (Tarjetas vs Tabla Rápida) */}
+                <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-2xl shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setModoVista('grid')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      modoVista === 'grid'
+                        ? 'bg-chefsy-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Vista en Cuadrícula de Tarjetas"
+                  >
+                    <LayoutGrid size={15} />
+                    <span className="hidden sm:inline">Tarjetas</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModoVista('tabla')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      modoVista === 'tabla'
+                        ? 'bg-chefsy-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Modo Edición Rápida en Tabla (Estilo Excel)"
+                  >
+                    <TableIcon size={15} />
+                    <span className="hidden sm:inline">Tabla Rápida</span>
+                  </button>
+                </div>
 
-        {/* Sección Diseño Visual (Tarjetas o Tabla Rápida) */}
-        {tabActive === 'visual' && (
-          <div>
+                <select
+                  value={filtroCategoria}
+                  onChange={e => setFiltroCategoria(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 text-slate-200 text-xs sm:text-sm font-bold rounded-2xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-chefsy-500 transition-all cursor-pointer"
+                >
+                  <option value="todas">Todas las Categorías ({productos.length})</option>
+                  {categorias.map(cat => {
+                    const cant = productos.filter(p => p.categoriaId === cat.id).length
+                    return (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nombre} ({cant})
+                      </option>
+                    )
+                  })}
+                </select>
+
+                {(filtroEstado !== 'todos' || filtroCategoria !== 'todas' || busqueda) && (
+                  <button
+                    onClick={() => {
+                      setFiltroEstado('todos')
+                      setFiltroCategoria('todas')
+                      setBusqueda('')
+                    }}
+                    className="px-3.5 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                    title="Restablecer todos los filtros"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Restablecer</span>
+                  </button>
+                )}
+              </div>
+            </div>
             {/* 1. Vista en Cuadrícula de Tarjetas */}
             {modoVista === 'grid' && (
               <div>
@@ -1763,18 +1815,18 @@ export default function DevToolsPage() {
           </div>
         )}
 
-        {/* Pestaña Banco de Fotos de la Casa */}
+        {/* Pestaña 2: Banco de Fotos de la Casa */}
         {tabActive === 'banco' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-4 rounded-3xl">
-              <div className="relative flex-1 w-full">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-4 rounded-3xl">
+              <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                 <input
                   type="text"
-                  placeholder="Buscar foto por nombre de producto que la use..."
+                  placeholder="Buscar foto por nombre de plato, categoría o 'sin asignar'..."
                   value={busquedaBanco}
                   onChange={e => setBusquedaBanco(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm text-white placeholder:text-slate-500"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm text-white placeholder:text-slate-500 transition-all"
                 />
                 {busquedaBanco && (
                   <button
@@ -1785,9 +1837,37 @@ export default function DevToolsPage() {
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="text-xs font-bold text-slate-400 shrink-0">
-                  <span>Total: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong> fotos</span>
+
+              <div className="flex flex-wrap items-center gap-2.5 justify-between md:justify-end">
+                <select
+                  value={filtroCategoriaBanco}
+                  onChange={e => setFiltroCategoriaBanco(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-slate-200 text-xs sm:text-sm font-bold rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+                >
+                  <option value="todas">Todas las Categorías</option>
+                  {categorias.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                {(busquedaBanco || filtroCategoriaBanco !== 'todas') && (
+                  <button
+                    onClick={() => {
+                      setBusquedaBanco('')
+                      setFiltroCategoriaBanco('todas')
+                    }}
+                    className="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                    title="Restablecer filtros del banco"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Restablecer</span>
+                  </button>
+                )}
+
+                <div className="text-xs font-bold text-slate-400 shrink-0 px-1">
+                  <span>Fotos: <strong className="text-indigo-400">{bancoFotosFiltradas.length}</strong></span>
                 </div>
 
                 {/* Input para subir lote de fotos de la PC */}
@@ -1812,7 +1892,7 @@ export default function DevToolsPage() {
                   ) : (
                     <>
                       <UploadCloud size={15} />
-                      <span>Subir Múltiples Fotos (PC)</span>
+                      <span>Subir Fotos (PC)</span>
                     </>
                   )}
                 </label>
@@ -1856,15 +1936,32 @@ export default function DevToolsPage() {
                   <span>Arrastrá un lote de varias fotos juntas acá</span>
                 </div>
                 <span className="hidden sm:inline text-slate-600">•</span>
-                <span>Se optimizan y guardan en el Banco de la Casa al instante.</span>
+                <span>Se procesan, comprimen en WebP y se agregan al banco en vivo</span>
               </div>
             </div>
 
             {bancoFotosFiltradas.length === 0 ? (
               <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
                 <ImageIcon className="mx-auto text-slate-600 w-12 h-12" />
-                <h3 className="text-base font-bold text-slate-300">No hay fotos en el banco</h3>
-                <p className="text-xs text-slate-500">Subí fotos a los platos del menú para que aparezcan disponibles acá para reutilizar.</p>
+                <h3 className="text-base font-bold text-slate-300">No se encontraron fotos en el banco</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {busquedaBanco || filtroCategoriaBanco !== 'todas'
+                    ? 'No hay fotos que coincidan con la búsqueda o categoría seleccionada.'
+                    : 'Subí fotos a los platos del menú para que aparezcan disponibles acá para reutilizar.'}
+                </p>
+                {(busquedaBanco || filtroCategoriaBanco !== 'todas') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusquedaBanco('')
+                      setFiltroCategoriaBanco('todas')
+                    }}
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer mt-2"
+                  >
+                    <RotateCcw size={13} />
+                    <span>Ver Todas las Fotos</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1995,79 +2092,156 @@ export default function DevToolsPage() {
           </div>
         )}
 
-        {/* Grilla Tienda Chefsitos */}
+        {/* Pestaña 3: Tienda Chefsitos (Precios en Puntos) */}
         {tabActive === 'chefsitos' && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {productosFiltrados.map(prod => {
-              const meta = metadata[prod.id]
-              const pts = preciosPuntos[prod.id] ?? 0
-              const fotos = parsearFotosDeUrl(meta?.imagen_url)
-              const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(prod.categoriaId, prod.nombre, prod.id)
-              const fotoAMostrar = fotos[0] || fallback.img
-
-              return (
-                <div
-                  key={prod.id}
-                  className="bg-slate-900 border border-amber-500/20 p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-2xl rounded-full pointer-events-none"></div>
-                  
-                  <div className="space-y-3 relative z-10">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-16 h-16 bg-slate-950 rounded-2xl overflow-hidden shrink-0 border border-slate-800 flex items-center justify-center">
-                        {fotoAMostrar ? (
-                          <img src={fotoAMostrar} alt={prod.nombre} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon className="text-slate-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-white leading-tight truncate">
-                          {meta?.nombre_publico || prod.nombre}
-                        </h3>
-                        <p className="text-xs text-slate-400 truncate mt-0.5">Precio normal: {formatearPrecio(prod.precio)}</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-950/60 border border-slate-800 p-3 rounded-2xl space-y-2">
-                      <label className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
-                        <span>🪙</span>
-                        <span>Canje por Chefsitos (Puntos)</span>
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="10"
-                          value={pts}
-                          onChange={e =>
-                            setPreciosPuntos({
-                              ...preciosPuntos,
-                              [prod.id]: parseInt(e.target.value) || 0,
-                            })
-                          }
-                          placeholder="0 = No canjeable"
-                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none font-bold text-white text-sm"
-                        />
-                        <span className="text-xs font-black text-amber-400 shrink-0">pts</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500">
-                        {pts > 0 ? 'Visible en la sección de Canje por Puntos.' : 'Oculto de la sección de canje.'}
-                      </p>
-                    </div>
-                  </div>
-
+          <div className="space-y-6">
+            {/* Toolbar Chefsitos */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Buscar plato para configurar puntos Chefsitos..."
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-amber-500 outline-none font-medium text-sm text-white placeholder:text-slate-500 transition-all shadow-inner"
+                />
+                {busqueda && (
                   <button
-                    onClick={() => guardarPrecioChefsitos(prod.id)}
-                    disabled={guardandoPuntosId === prod.id}
-                    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 relative z-10"
+                    onClick={() => setBusqueda('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
                   >
-                    {guardandoPuntosId === prod.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    {guardandoPuntosId === prod.id ? 'Guardando...' : 'Guardar Precio Chefsitos'}
+                    <X size={16} />
                   </button>
-                </div>
-              )
-            })}
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={filtroCategoria}
+                  onChange={e => setFiltroCategoria(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 text-slate-200 text-xs sm:text-sm font-bold rounded-2xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer"
+                >
+                  <option value="todas">Todas las Categorías ({productos.length})</option>
+                  {categorias.map(cat => {
+                    const cant = productos.filter(p => p.categoriaId === cat.id).length
+                    return (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nombre} ({cant})
+                      </option>
+                    )
+                  })}
+                </select>
+
+                {(filtroCategoria !== 'todas' || busqueda) && (
+                  <button
+                    onClick={() => {
+                      setFiltroCategoria('todas')
+                      setBusqueda('')
+                    }}
+                    className="px-3.5 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                    title="Restablecer filtros"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Restablecer</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {productosFiltrados.length === 0 ? (
+              <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 text-center space-y-4">
+                <AlertTriangle className="mx-auto text-amber-500 w-12 h-12" />
+                <h3 className="text-lg font-bold text-slate-300">No se encontraron productos</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  No hay platos que coincidan con la búsqueda o categoría seleccionada.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBusqueda('')
+                    setFiltroCategoria('todas')
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw size={14} />
+                  <span>Ver Todos los Platos</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {productosFiltrados.map(prod => {
+                  const meta = metadata[prod.id]
+                  const pts = preciosPuntos[prod.id] ?? 0
+                  const fotos = parsearFotosDeUrl(meta?.imagen_url)
+                  const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(prod.categoriaId, prod.nombre, prod.id)
+                  const fotoAMostrar = fotos[0] || fallback.img
+
+                  return (
+                    <div
+                      key={prod.id}
+                      className="bg-slate-900 border border-amber-500/20 p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-2xl rounded-full pointer-events-none"></div>
+                      
+                      <div className="space-y-3 relative z-10">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-16 h-16 bg-slate-950 rounded-2xl overflow-hidden shrink-0 border border-slate-800 flex items-center justify-center">
+                            {fotoAMostrar ? (
+                              <img src={fotoAMostrar} alt={prod.nombre} className="w-full h-full object-cover" />
+                            ) : (
+                              <ImageIcon className="text-slate-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-white leading-tight truncate">
+                              {meta?.nombre_publico || prod.nombre}
+                            </h3>
+                            <p className="text-xs text-slate-400 truncate mt-0.5">Precio normal: {formatearPrecio(prod.precio)}</p>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-950/60 border border-slate-800 p-3 rounded-2xl space-y-2">
+                          <label className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                            <span>🪙</span>
+                            <span>Canje por Chefsitos (Puntos)</span>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="10"
+                              value={pts}
+                              onChange={e =>
+                                setPreciosPuntos({
+                                  ...preciosPuntos,
+                                  [prod.id]: parseInt(e.target.value) || 0,
+                                })
+                              }
+                              placeholder="0 = No canjeable"
+                              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none font-bold text-white text-sm"
+                            />
+                            <span className="text-xs font-black text-amber-400 shrink-0">pts</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500">
+                            {pts > 0 ? 'Visible en la sección de Canje por Puntos.' : 'Oculto de la sección de canje.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => guardarPrecioChefsitos(prod.id)}
+                        disabled={guardandoPuntosId === prod.id}
+                        className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 relative z-10"
+                      >
+                        {guardandoPuntosId === prod.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {guardandoPuntosId === prod.id ? 'Guardando...' : 'Guardar Precio Chefsitos'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
