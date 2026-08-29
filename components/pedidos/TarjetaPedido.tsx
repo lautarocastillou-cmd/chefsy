@@ -18,6 +18,9 @@ import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import BadgeSmartBatch from './BadgeSmartBatch'
+import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
+import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
+import { Sliders, Zap } from 'lucide-react'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -52,6 +55,8 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
   const [ticketCopiado, setTicketCopiado] = useState(false)
   const [modalImpresion, setModalImpresion] = useState(false)
+  const [modalConfigImpresora, setModalConfigImpresora] = useState(false)
+  const [infoImpresora, setInfoImpresora] = useState(gestorImpresora.obtenerInfo())
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -211,97 +216,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     setTicketCopiado(true)
   }
 
-  const imprimirSilencioso = (tipo: 'ticket' | 'cocina') => {
-    const f = formatearPrecio
-    const p = pedido
-
-    const metodoPagoLabel: Record<string, string> = {
-      efectivo: 'Efectivo', tarjeta: 'Tarjeta',
-      transferencia: 'Transferencia', mixto: 'Mixto', sin_especificar: 'Sin especificar',
-    }
-
-    // ── Ticket para el Cliente ────────────────────────────────────────────────
-    const htmlTicket = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  @page{margin:0!important;size:auto}
-  html,body{margin:0!important;padding:0!important;font-family:monospace;font-size:12px;width:80mm;color:#000;background:#fff}
-  body{padding:0 2px!important}
-  h1{font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin:0 0 2px 0;padding-top:0}
-  .sub{text-align:center;font-size:10px;margin-bottom:3px}
-  .sep{border-top:1px dashed #000;margin:4px 0}
-  .row{display:flex;justify-content:space-between;margin:2px 0}
-  .bold{font-weight:bold}
-  .big{font-size:14px;font-weight:bold}
-  .center{text-align:center}
-  .upper{text-transform:uppercase}
-  table{width:100%;border-collapse:collapse}
-  td{padding:2px 0;vertical-align:top;font-size:11px}
-  td:last-child{text-align:right;white-space:nowrap}
-  .nota{font-size:10px;background:#f5f5f5;padding:3px 5px;border-radius:3px;margin-top:3px}
-  @media print{@page{margin:0!important;size:auto}html,body{margin:0!important;padding:0 2px!important}}
-</style></head><body>
-<h1>CHEFSY</h1>
-<div class="sub">Ticket de Pedido</div>
-<div class="sub">Pedido #${p.id.slice(0,6).toUpperCase()} &nbsp;·&nbsp; ${p.hora}</div>
-<div class="sep"></div>
-<div class="row"><span><b>Cliente:</b> ${p.cliente}</span></div>
-${p.telefono && p.telefono !== 'Sin especificar' ? `<div class="row"><span><b>Tel:</b> ${p.telefono}</span></div>` : ''}
-<div class="row"><span><b>Entrega:</b> ${p.tipoEntrega === 'delivery' ? 'Delivery' : p.tipoEntrega === 'retiro' ? 'Retiro en local' : 'Consumo en local'}</span></div>
-${p.direccion ? `<div class="row"><span><b>Dir:</b> ${p.direccion}</span></div>` : ''}
-<div class="sep"></div>
-<table>
-${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
-</table>
-<div class="sep"></div>
-${p.costoEnvio ? `<div class="row"><span>Subtotal:</span><span>${f(p.total - (p.costoEnvio ?? 0))}</span></div><div class="row"><span>Envío:</span><span>${f(p.costoEnvio)}</span></div>` : ''}
-<div class="row big"><span>TOTAL:</span><span>${f(p.total)}</span></div>
-<div class="row"><span>Pago:</span><span>${metodoPagoLabel[p.metodoPago ?? 'sin_especificar'] ?? 'Desconocido'}</span></div>
-${p.observaciones ? `<div class="sep"></div><div class="nota bold upper">NOTAS: ${p.observaciones}</div>` : ''}
-<div class="sep"></div>
-<div class="center" style="margin-top:4px;font-size:10px">¡Gracias por su compra! · Sistema Chefsy</div>
-</body></html>`
-
-    // ── Comanda para Cocina ───────────────────────────────────────────────────
-    const htmlCocina = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  @page{margin:0!important;size:auto}
-  html,body{margin:0!important;padding:0!important;font-family:monospace;font-size:17px;width:80mm;color:#000;background:#fff}
-  body{padding:0 2px!important}
-  h1{font-size:26px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin:0 0 2px 0;padding-top:0}
-  .sub{text-align:center;font-size:14px;margin-bottom:3px}
-  .sep{border-top:2px dashed #000;margin:6px 0}
-  .prod{display:flex;align-items:baseline;gap:6px;margin:5px 0;font-size:18px;font-weight:bold}
-  .cant{font-size:26px;min-width:32px;text-align:right;line-height:1}
-  .pname{flex:1}
-  .nota{font-size:15px;font-weight:bold;text-transform:uppercase;background:#eee;padding:4px 6px;border-radius:3px;margin-top:6px}
-  .tipo{font-size:16px;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:1px;border:2px solid #000;padding:3px;margin-top:4px}
-  @media print{@page{margin:0!important;size:auto}html,body{margin:0!important;padding:0 2px!important}}
-</style></head><body>
-<h1>COCINA</h1>
-<div class="sub">${p.hora}</div>
-<div class="sub"><b>${p.cliente}</b></div>
-<div class="sep"></div>
-${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><span class="pname">${prod.nombre}</span></div>`).join('')}
-${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observaciones}</div>` : ''}
-<div class="sep"></div>
-<div class="tipo">${p.tipoEntrega === 'delivery' ? '🛵 DELIVERY' : p.tipoEntrega === 'retiro' ? '🏠 RETIRO EN LOCAL' : '🍽 CONSUMO EN LOCAL'}</div>
-</body></html>`
-
-    const html = tipo === 'ticket' ? htmlTicket : htmlCocina
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0;pointer-events:none'
-    document.body.appendChild(iframe)
-    const doc = iframe.contentWindow?.document
-    if (!doc) return
-    doc.open(); doc.write(html); doc.close()
-    iframe.contentWindow?.focus()
-    setTimeout(() => {
-      iframe.contentWindow?.print()
-      setTimeout(() => document.body.removeChild(iframe), 2000)
-    }, 300)
+  const imprimirSilencioso = async (tipo: 'ticket' | 'cocina') => {
     setModalImpresion(false)
+    await gestorImpresora.imprimirPedido(pedido, tipo)
   }
 
   return (
@@ -738,14 +655,40 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observacio
               </button>
             </div>
 
-            <div className="px-4 pb-4">
-              <p className="text-[10px] text-slate-400 text-center">
-                Se imprimirá directamente en tu impresora predeterminada
-              </p>
+            <div className="px-4 pb-4 space-y-2">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#3d3d3d] text-xs">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${infoImpresora.conectada ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">
+                    {infoImpresora.conectada ? 'Térmica Directa (0.1s)' : 'Modo Diálogo Windows'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalImpresion(false)
+                    setModalConfigImpresora(true)
+                  }}
+                  className="p-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-[#3d3d3d] transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                  title="Configurar Impresora Térmica"
+                >
+                  <Sliders size={13} />
+                  <span>Ajustes</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal de Configuración de Impresora Térmica Directa */}
+      <ModalConfiguracionImpresora
+        abierto={modalConfigImpresora}
+        onCerrar={() => {
+          setModalConfigImpresora(false)
+          setInfoImpresora(gestorImpresora.obtenerInfo())
+        }}
+      />
     </div>
   )
 })
