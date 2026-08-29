@@ -82,15 +82,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Actualizar coordenadas en los pedidos activos del cadete
-    const coords = { latitud: Number(lat), longitud: Number(lng) }
-    await adminClient
-      .from('pedidos')
-      .update({ cadete_coordenadas: coords })
-      .ilike('cadete_id', idNormalizado)
-      .in('estado', ['en_cocina', 'listo', 'en_camino'])
-      .eq('archivado', false)
-
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Error procesando ubicación:', err)

@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = estadosActivos.includes(data.estado)
     const coordsFinalesCadete = mostrarCadete
-      ? (data.cadete_coordenadas ?? cadeteCoordsFallback ?? null)
+      ? (cadeteCoordsFallback ?? data.cadete_coordenadas ?? null)
       : null
 
     // Buscar otros pedidos activos del mismo cliente (por teléfono)

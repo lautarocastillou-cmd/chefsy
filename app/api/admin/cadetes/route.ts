@@ -54,3 +54,45 @@ export async function GET() {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
+
+// ── POST: Actualizar posición GPS del cadete autenticado ─────────────────────
+export async function POST(request: Request) {
+  try {
+    const sesion = await obtenerSesion()
+    if (!sesion || (sesion.rol !== 'cadete' && sesion.rol !== 'admin')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { lat, lng, gps_activo } = body || {}
+    const cadeteId = String(sesion.usuario).trim().toLowerCase()
+
+    const supabase = obtenerSupabaseAdmin()
+    const camposActualizar: any = {
+      id: cadeteId,
+      nombre: sesion.nombre || cadeteId,
+      activo: true,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (lat !== undefined && lng !== undefined) {
+      camposActualizar.lat = Number(lat)
+      camposActualizar.lng = Number(lng)
+    }
+
+    if (gps_activo !== undefined) {
+      camposActualizar.gps_activo = Boolean(gps_activo)
+    }
+
+    const { error } = await supabase
+      .from('cadetes')
+      .upsert(camposActualizar, { onConflict: 'id' })
+
+    if (error) throw error
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    console.error('[API Cadetes] Error POST:', error)
+    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 })
+  }
+}

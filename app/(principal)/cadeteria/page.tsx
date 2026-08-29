@@ -446,20 +446,16 @@ export default function PaginaCadeteria() {
           ultimasCoordenadasRef.current = coords
           ultimaActualizacionGpsRef.current = ahora
 
-          // Usar la referencia más reciente de pedidos listos para evitar el cierre de estado (stale closure)
-          const pedidosIds = pedidosListosRef.current.map(p => p.id)
-          if (pedidosIds.length === 0) return
-
           try {
-            const respuesta = await fetch('/api/admin/pedidos', {
+            const respuesta = await fetch('/api/admin/cadetes', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                accion: 'actualizar_gps',
-                ids: pedidosIds,
-                cadete_coordenadas: coords
+                lat: coords.latitud,
+                lng: coords.longitud,
+                gps_activo: true
               })
             })
 
