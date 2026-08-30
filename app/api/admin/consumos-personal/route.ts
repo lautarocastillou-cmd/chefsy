@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { ConsumoPersonal, NuevoConsumoPayload } from '@/tipos/consumo'
+import { registrarConsumoPersonalKardex } from '@/lib/stock-motor'
 
 // ─────────────────────────────────────────────────────
 // app/api/admin/consumos-personal/route.ts
@@ -118,6 +119,16 @@ export async function POST(request: Request) {
           const consumosActuales = await leerConsumosFallback(supabaseAdmin)
           const actualizados = [nuevoConsumo, ...consumosActuales]
           await guardarConsumosFallback(supabaseAdmin, actualizados)
+        }
+
+        // Si se indicó descontar stock, registrar deducción en Kardex
+        if (nuevoConsumo.descontar_stock && nuevoConsumo.producto_id) {
+          await registrarConsumoPersonalKardex(
+            nuevoConsumo.producto_id,
+            nuevoConsumo.producto_nombre,
+            nuevoConsumo.cantidad,
+            nuevoConsumo.persona_nombre
+          )
         }
 
         return NextResponse.json({ ok: true, consumo: nuevoConsumo })

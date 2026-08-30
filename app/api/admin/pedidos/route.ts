@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { enviarNotificacionCadete } from '@/lib/webpush'
+import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
 
 export async function POST(request: Request) {
   // 1. Validar sesión en el servidor
@@ -174,33 +175,31 @@ export async function POST(request: Request) {
           )
         }
 
-        // Descontar stock inteligentemente cuando pasa a "entregado" (y antes no lo era)
+        // Descontar stock y asentar en Kardex cuando pasa a "entregado" (y antes no lo era)
         if (pedidoPrevio?.estado !== 'entregado' && estado === 'entregado' && pedidoAct?.productos) {
           const productosVendidos = pedidoAct.productos.map((p: any) => ({
             idCatalogo: p.idCatalogo,
-            cantidad: p.cantidad
-          })).filter((p: any) => p.idCatalogo)
+            id: p.id,
+            cantidad: p.cantidad,
+            nombre: p.nombre
+          })).filter((p: any) => p.idCatalogo || p.id)
 
           if (productosVendidos.length > 0) {
-            const { error: rpcError } = await supabaseAdmin.rpc('deducir_stock', {
-              productos_vendidos: productosVendidos
-            })
-            if (rpcError) console.error('[Stock] Error al deducir stock:', rpcError)
+            await registrarVentaKardex(productosVendidos, id, pedidoAct.cliente)
           }
         }
 
-        // Restituir stock inteligentemente cuando deja de ser "entregado" (ej. pasa a cancelado o nuevo)
+        // Restituir stock y asentar en Kardex cuando deja de ser "entregado" (ej. pasa a cancelado o nuevo)
         if (pedidoPrevio?.estado === 'entregado' && estado !== 'entregado' && pedidoAct?.productos) {
           const productosDevueltos = pedidoAct.productos.map((p: any) => ({
             idCatalogo: p.idCatalogo,
-            cantidad: p.cantidad
-          })).filter((p: any) => p.idCatalogo)
+            id: p.id,
+            cantidad: p.cantidad,
+            nombre: p.nombre
+          })).filter((p: any) => p.idCatalogo || p.id)
 
           if (productosDevueltos.length > 0) {
-            const { error: rpcError } = await supabaseAdmin.rpc('restituir_stock', {
-              productos_devueltos: productosDevueltos
-            })
-            if (rpcError) console.error('[Stock] Error al restituir stock:', rpcError)
+            await restituirVentaKardex(productosDevueltos, id, pedidoAct.cliente)
           }
         }
 
@@ -264,14 +263,13 @@ export async function POST(request: Request) {
         if (pedidoEliminar?.estado === 'entregado' && pedidoEliminar?.productos) {
           const productosDevueltos = pedidoEliminar.productos.map((p: any) => ({
             idCatalogo: p.idCatalogo,
-            cantidad: p.cantidad
-          })).filter((p: any) => p.idCatalogo)
+            id: p.id,
+            cantidad: p.cantidad,
+            nombre: p.nombre
+          })).filter((p: any) => p.idCatalogo || p.id)
 
           if (productosDevueltos.length > 0) {
-            const { error: rpcError } = await supabaseAdmin.rpc('restituir_stock', {
-              productos_devueltos: productosDevueltos
-            })
-            if (rpcError) console.error('[Stock] Error al restituir stock al eliminar pedido:', rpcError)
+            await restituirVentaKardex(productosDevueltos, id)
           }
         }
 

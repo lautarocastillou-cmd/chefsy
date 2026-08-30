@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { registrarVentaKardex } from '@/lib/stock-motor'
 
 // Token compartido con la app Flutter
 const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
@@ -99,11 +100,13 @@ export async function POST(request: Request) {
     if (pedidoPrevio?.estado !== 'entregado' && estado === 'entregado' && pedidoAct?.productos) {
       const productosVendidos = pedidoAct.productos.map((p: any) => ({
         idCatalogo: p.idCatalogo,
-        cantidad: p.cantidad
-      })).filter((p: any) => p.idCatalogo)
+        id: p.id,
+        cantidad: p.cantidad,
+        nombre: p.nombre
+      })).filter((p: any) => p.idCatalogo || p.id)
 
       if (productosVendidos.length > 0) {
-        await supabase.rpc('deducir_stock', { productos_vendidos: productosVendidos })
+        await registrarVentaKardex(productosVendidos, id, pedidoAct.cliente)
       }
     }
 
