@@ -114,14 +114,14 @@ export default function ModalPersonalizacion({
               >
                 {listaFotos.map((imgUrl, i) => {
                   const optimized = optimizarUrlImagen(imgUrl, 600)
-                  const isCloud = imgUrl.includes('res.cloudinary.com')
+                  const isCdn = imgUrl.includes('res.cloudinary.com') || imgUrl.includes('supabase.co') || imgUrl.includes('unsplash.com') || imgUrl.includes('lh3.googleusercontent.com')
                   return (
                     <div key={i} className="relative w-full h-full shrink-0 snap-center">
                       <Image 
                         src={optimized} 
                         alt={`${producto.nombre} - Foto ${i+1}`} 
                         fill
-                        unoptimized={isCloud}
+                        unoptimized={isCdn}
                         priority={i === 0}
                         className="object-cover" 
                       />

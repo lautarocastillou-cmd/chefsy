@@ -43,21 +43,47 @@ export function generarIdProducto(): string {
 export const BLUR_DATA_URL_DEFAULT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyMjIyMjIiLz48L3N2Zz4="
 
 /**
- * Optimiza URLs de imágenes (Cloudinary y generales) reduciendo peso y formato
+ * Optimiza URLs de imágenes (Cloudinary, Supabase Storage, Unsplash, Google) reduciendo peso y formato
  */
 export function optimizarUrlImagen(url: string, ancho: number = 300): string {
   if (!url) return ''
   const limpia = url.trim()
 
+  // 1. Cloudinary
   if (limpia.includes('res.cloudinary.com') && limpia.includes('/upload/')) {
     const partes = limpia.split('/upload/')
     let resto = partes[1]
-    // Limpiamos transformaciones previas (ej. f_auto,q_auto,w_800/ o w_500,h_500/) para que no se encadenen o contradigan
     resto = resto.replace(/^([^/]+\/)*(v\d+\/)/, '$2')
     if (/^(?:[a-z]_[^/]+,)*[a-z]_[^/]+\//i.test(resto)) {
       resto = resto.replace(/^[^/]+\//, '')
     }
     return `${partes[0]}/upload/f_auto,q_auto,w_${ancho},c_limit/${resto}`
+  }
+
+  // 2. Supabase Storage (Transformación dinámica on-the-fly)
+  if (limpia.includes('.supabase.co/storage/v1/')) {
+    let baseUrl = limpia
+    // Si apunta al endpoint crudo object/public, pasamos a render/image/public
+    if (baseUrl.includes('/object/public/')) {
+      baseUrl = baseUrl.replace('/object/public/', '/render/image/public/')
+    }
+    const separador = baseUrl.includes('?') ? '&' : '?'
+    // Limpiamos query params previos de width/quality si existían
+    const urlLimpiaParams = baseUrl.replace(/[?&](width|quality|resize)=[^&]*/g, '')
+    const sepFinal = urlLimpiaParams.includes('?') ? '&' : '?'
+    return `${urlLimpiaParams}${sepFinal}width=${ancho}&quality=80&resize=contain`
+  }
+
+  // 3. Unsplash
+  if (limpia.includes('images.unsplash.com')) {
+    const separador = limpia.includes('?') ? '&' : '?'
+    return `${limpia}${separador}w=${ancho}&q=80&auto=format`
+  }
+
+  // 4. Google Drive / LH3 CDN
+  if (limpia.includes('lh3.googleusercontent.com/d/')) {
+    const base = limpia.split('=')[0]
+    return `${base}=w${ancho}-rw`
   }
 
   return limpia
@@ -69,6 +95,7 @@ export function optimizarUrlImagen(url: string, ancho: number = 300): string {
 export function generarBlurUrl(url: string): string {
   if (!url) return BLUR_DATA_URL_DEFAULT
   const limpia = url.trim()
+
   if (limpia.includes('res.cloudinary.com') && limpia.includes('/upload/')) {
     const partes = limpia.split('/upload/')
     let resto = partes[1]
@@ -78,5 +105,13 @@ export function generarBlurUrl(url: string): string {
     }
     return `${partes[0]}/upload/w_20,e_blur:1000,q_10,f_auto/${resto}`
   }
+
+  if (limpia.includes('.supabase.co/storage/v1/')) {
+    let baseUrl = limpia.replace('/object/public/', '/render/image/public/')
+    const urlLimpiaParams = baseUrl.replace(/[?&](width|quality|resize)=[^&]*/g, '')
+    const sepFinal = urlLimpiaParams.includes('?') ? '&' : '?'
+    return `${urlLimpiaParams}${sepFinal}width=20&quality=10&resize=contain`
+  }
+
   return BLUR_DATA_URL_DEFAULT
 }

@@ -47,7 +47,7 @@ function ProductCard({
 
   // Optimización de imágenes inteligente (CDN Cloudinary o Next.js Image Optimization)
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
-  const isCloudinary = rawSrc.includes('res.cloudinary.com')
+  const isCdnOptimized = rawSrc.includes('res.cloudinary.com') || rawSrc.includes('supabase.co') || rawSrc.includes('unsplash.com') || rawSrc.includes('lh3.googleusercontent.com')
   
   const optimizedSrc = optimizarUrlImagen(rawSrc, 250)
   const blurSrc = generarBlurUrl(rawSrc)
@@ -82,7 +82,7 @@ function ProductCard({
           fill
           priority={esPrioritario}
           loading={esPrioritario ? undefined : 'lazy'}
-          unoptimized={isCloudinary}
+          unoptimized={isCdnOptimized}
           placeholder="blur"
           blurDataURL={blurSrc}
           sizes="(max-width: 768px) 50vw, 250px"
