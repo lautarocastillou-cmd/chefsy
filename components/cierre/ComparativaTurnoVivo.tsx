@@ -80,7 +80,7 @@ export default function ComparativaTurnoVivo({
   return (
     <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-lg border border-indigo-800/40 relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Resplandor decorativo de fondo */}
-      <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/5 rounded-full pointer-events-none" />
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 relative z-10">
         <div className="flex items-start gap-3">

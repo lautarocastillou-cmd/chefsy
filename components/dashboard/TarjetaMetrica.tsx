@@ -72,7 +72,7 @@ export default function TarjetaMetrica({
     )}>
       {/* Glow de fondo decorativo */}
       <div className={cn(
-        'absolute -right-6 -bottom-6 w-24 h-24 rounded-full blur-2xl pointer-events-none transition-opacity opacity-40 group-hover:opacity-80 duration-500',
+        'absolute -right-6 -bottom-6 w-24 h-24 rounded-full pointer-events-none transition-opacity opacity-20 group-hover:opacity-40 duration-500',
         e.badgeGlow
       )} />
 

@@ -78,7 +78,7 @@ function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
 
   return (
     <div
-      className="absolute inset-x-0 top-0 bg-white/85 backdrop-blur-sm rounded-2xl border border-white/40 p-4 pointer-events-none shadow-md"
+      className="absolute inset-x-0 top-0 bg-white rounded-2xl border border-white/40 p-4 pointer-events-none shadow-md"
       style={{
         transform: `translateY(${translateY}px) scale(${scale})`,
         transformOrigin: 'top center',
@@ -244,7 +244,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Señal GPS pausada */}
       {gpsApagado && (
-        <div className="absolute inset-x-3 top-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-red-200 dark:border-red-900/50 flex items-center gap-2.5 animate-in slide-in-from-top-4">
+        <div className="absolute inset-x-3 top-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-xl border border-red-200 dark:border-red-900/50 flex items-center gap-2.5 animate-in slide-in-from-top-4">
           <WifiOff size={18} className="text-red-500 shrink-0" />
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
             {cadeteNombre} está en camino (señal GPS momentáneamente pausada).
@@ -254,7 +254,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Cadete en viaje previo antes de salir con este pedido */}
       {cadeteOcupadoEnOtroViaje && !isEnCamino && (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
           </div>
@@ -271,7 +271,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Cocina / Preparación */}
       {isEnPreparacion && !cadeteOcupadoEnOtroViaje && (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
             <Flame size={22} className="animate-pulse" />
           </div>
@@ -365,7 +365,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         />
       ))}
       {/* Tarjeta principal encima */}
-      <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-4" style={{ zIndex: 20 }}>
+      <div className="relative bg-white rounded-2xl shadow-xl border border-white/20 p-4" style={{ zIndex: 20 }}>
         {headerPrincipal}
       </div>
     </div>
@@ -375,7 +375,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     <div className="flex flex-col items-center gap-2 pt-2 pb-4">
       <a
         href="https://chefsy.xyz/"
-        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition-all backdrop-blur-md shadow-lg active:scale-95"
+        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition-all shadow-lg active:scale-95 cursor-pointer"
       >
         <ArrowLeft size={14} /><span>Volver a la tienda</span>
       </a>

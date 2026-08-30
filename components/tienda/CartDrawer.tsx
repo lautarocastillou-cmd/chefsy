@@ -799,7 +799,7 @@ export default function CartDrawer() {
               : 'translate-y-12 opacity-0 scale-95'
           }`}
         >
-          <div className="bg-[#181818]/95 backdrop-blur-xl border border-amber-500/50 text-white px-5 py-3.5 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(245,158,11,0.2)] flex items-center gap-3.5 border-l-4 border-l-amber-500">
+          <div className="bg-[#181818] border border-amber-500/50 text-white px-5 py-3.5 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(245,158,11,0.2)] flex items-center gap-3.5 border-l-4 border-l-amber-500">
             <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-lg font-bold shadow-inner">
               ⚠️
             </div>

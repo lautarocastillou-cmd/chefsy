@@ -106,7 +106,7 @@ export default function HeroSection({
           {/* 2. Imagen de Producto Gigante Flotante */}
           <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-1 lg:pt-0">
             <div className="burger-float-wrapper relative w-full max-w-[250px] sm:max-w-[350px] md:max-w-[650px] xl:max-w-[850px] aspect-square">
-              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/50 blur-xl rounded-full scale-y-50 -z-10 opacity-70"></div>
+              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/30 rounded-full scale-y-50 -z-10 opacity-70"></div>
               
               <Image 
                 src={configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp"} 
@@ -139,7 +139,7 @@ export default function HeroSection({
                 placeholder="Ej. Cheddar, Papas, Mila especial..."
                 value={busqueda}
                 onChange={(e) => onBusquedaChange(e.target.value)}
-                className="w-full bg-white/5 backdrop-blur-xl border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
+                className="w-full bg-black/40 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               

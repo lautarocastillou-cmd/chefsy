@@ -49,7 +49,7 @@ export default function FooterTienda() {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-              <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+              <div className="absolute bottom-3 right-3 bg-black/85 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
                 <MapPin size={12} className="text-chefsy-400" />
                 <span className="text-[10px] font-bold text-white uppercase tracking-wider">Ver en Google Maps</span>
               </div>

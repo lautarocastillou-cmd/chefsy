@@ -66,7 +66,7 @@ export default function SelectorCategorias({
           <button
             type="button"
             onClick={onToggleSelector}
-            className="w-full flex items-center justify-between bg-[#121814]/90 backdrop-blur-xl border border-chefsy-500/40 hover:border-chefsy-400 text-white py-3.5 px-5 sm:px-6 rounded-2xl outline-none focus:border-chefsy-400 transition-all cursor-pointer shadow-2xl group-hover:bg-[#18211b]"
+            className="w-full flex items-center justify-between bg-[#121814] border border-chefsy-500/40 hover:border-chefsy-400 text-white py-3.5 px-5 sm:px-6 rounded-2xl outline-none focus:border-chefsy-400 transition-all cursor-pointer shadow-2xl group-hover:bg-[#18211b]"
           >
             <div className="flex flex-col text-left mr-2 truncate">
               <span className="text-xs sm:text-sm font-bold tracking-wider text-chefsy-400 uppercase flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(54,101,74,0.8)]">

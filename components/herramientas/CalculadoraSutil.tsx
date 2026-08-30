@@ -138,7 +138,7 @@ export default function CalculadoraSutil() {
       {/* Botón flotante sutil */}
       <button
         onClick={() => setAbierta(v => !v)}
-        className="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full shadow-md bg-zinc-900/80 hover:bg-zinc-900 border border-zinc-800 text-white/80 hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 backdrop-blur-sm"
+        className="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full shadow-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
         title="Calculadora"
       >
         <Calculator size={18} />

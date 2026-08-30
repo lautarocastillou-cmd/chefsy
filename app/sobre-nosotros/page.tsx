@@ -15,7 +15,7 @@ export default function PaginaInicio() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-chefsy/30">
       
       {/* NAVEGACIÓN */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 transition-colors">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.jpg" alt="Chefsy Logo" className="w-8 h-8 rounded-lg" />
@@ -71,7 +71,7 @@ export default function PaginaInicio() {
           
           <div className="relative mt-10 lg:mt-0">
             {/* Círculo decorativo */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-chefsy-200 to-chefsy-50 dark:from-chefsy-900 dark:to-slate-900 rounded-full blur-3xl opacity-50 transform scale-90"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-chefsy-200/20 to-chefsy-50/20 dark:from-chefsy-900/20 dark:to-slate-900/20 rounded-full opacity-50 transform scale-90"></div>
             {/* Imagen Principal */}
             <img 
               src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80" 
@@ -176,8 +176,8 @@ export default function PaginaInicio() {
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto bg-chefsy text-white rounded-[3rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden shadow-2xl">
           {/* Luces de fondo */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full blur-[100px] opacity-30"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-300 rounded-full blur-[100px] opacity-30"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/20 rounded-full"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-300/20 rounded-full"></div>
           
           <div className="relative z-10 space-y-6">
             <h2 className="text-4xl md:text-5xl font-black tracking-tight">¿Listo para hacer tu pedido?</h2>

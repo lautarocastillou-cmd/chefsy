@@ -53,7 +53,7 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
         type="button"
         onClick={toggleAbierto}
         aria-label="Ver ubicación del local"
-        className={`group flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/90 hover:text-white border border-white/20 hover:border-emerald-500/40 rounded-full transition-all duration-200 backdrop-blur-md cursor-pointer active:scale-95 shadow-sm ${
+        className={`group flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/90 hover:text-white border border-white/20 hover:border-emerald-500/40 rounded-full transition-all duration-200 cursor-pointer active:scale-95 shadow-sm ${
           size === 'sm' ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs font-semibold'
         }`}
       >
@@ -67,7 +67,7 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
       {/* Ventana flotante superpuesta */}
       {abierto && (
         <div 
-          className="fixed left-1/2 -translate-x-1/2 md:absolute md:left-0 md:translate-x-0 md:top-full mt-2 z-[9999] w-[calc(100vw-32px)] max-w-sm md:w-80 bg-[#161618]/95 backdrop-blur-xl border border-white/15 text-white rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+          className="fixed left-1/2 -translate-x-1/2 md:absolute md:left-0 md:translate-x-0 md:top-full mt-2 z-[9999] w-[calc(100vw-32px)] max-w-sm md:w-80 bg-[#161618] border border-white/15 text-white rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
           style={{ 
             top: typeof window !== 'undefined' && window.innerWidth < 768 && containerRef.current
               ? (containerRef.current.getBoundingClientRect().bottom + 8) 

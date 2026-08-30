@@ -255,7 +255,7 @@ export default function TiendaMobile() {
       {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
       {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/75 -z-10 pointer-events-none" />}
       {/* Header App-like minimalista */}
-      <div className="bg-[#141414]/95 backdrop-blur-md sticky top-0 z-[100] px-4 py-3 shadow-md border-b border-white/5">
+      <div className="bg-[#141414] sticky top-0 z-[100] px-4 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg overflow-hidden relative shadow-sm border border-white/10 shrink-0">

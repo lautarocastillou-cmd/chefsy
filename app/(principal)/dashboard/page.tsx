@@ -98,9 +98,9 @@ export default function PaginaDashboard() {
     <div className="space-y-8 pb-12">
       {/* ── Banner de Bienvenida Chefsy Modern ── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#122e21] via-[#1d4633] to-[#0f241a] dark:from-[#0d1f16] dark:via-[#153426] dark:to-[#09150f] text-white p-7 sm:p-9 shadow-xl border border-emerald-500/20">
-        {/* Glows ambientales y texturas de fondo */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Texturas de fondo */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-emerald-600/5 rounded-full pointer-events-none" />
         
         {/* Watermark sutil */}
         <div className="absolute top-1/2 -translate-y-1/2 -right-8 opacity-10 pointer-events-none rotate-12">

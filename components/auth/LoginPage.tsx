@@ -45,12 +45,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-chefsy-900 via-slate-900 to-chefsy-800 p-4 relative overflow-hidden font-sans">
-      {/* Círculos decorativos abstractos de fondo */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-chefsy-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
       {/* Tarjeta Principal de Login */}
-      <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-3xl border border-white/20 dark:border-slate-800 shadow-2xl p-6 md:p-8 space-y-6 z-10 transition-all">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-white/20 dark:border-slate-800 shadow-2xl p-6 md:p-8 space-y-6 z-10 transition-all">
         {/* Logo y Encabezado */}
         <div className="text-center space-y-3">
           <div className="inline-block relative">

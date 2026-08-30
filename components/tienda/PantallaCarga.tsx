@@ -65,7 +65,7 @@ export default function PantallaCarga() {
             <motion.div 
               animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="absolute inset-0 bg-white/20 blur-2xl rounded-full"
+              className="absolute inset-0 bg-white/10 rounded-full"
             />
             
             <img 

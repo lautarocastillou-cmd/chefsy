@@ -1221,10 +1221,10 @@ export default function DevToolsPage() {
             key={toast.id}
             className={`p-4 rounded-2xl shadow-2xl border pointer-events-auto flex items-center gap-3 transition-all animate-in slide-in-from-bottom-5 duration-200 ${
               toast.tipo === 'success'
-                ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-100 backdrop-blur-md'
+                ? 'bg-emerald-950 border-emerald-500/30 text-emerald-100'
                 : toast.tipo === 'error'
-                ? 'bg-rose-950/90 border-rose-500/30 text-rose-100 backdrop-blur-md'
-                : 'bg-slate-900/90 border-slate-700 text-slate-200 backdrop-blur-md'
+                ? 'bg-rose-950 border-rose-500/30 text-rose-100'
+                : 'bg-slate-900 border-slate-700 text-slate-200'
             }`}
           >
             {toast.tipo === 'success' && <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />}
@@ -1238,7 +1238,7 @@ export default function DevToolsPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Cabecera Principal */}
-        <div className="bg-slate-900/90 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-xl">
+        <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/dashboard')}
@@ -1552,7 +1552,7 @@ export default function DevToolsPage() {
                         >
                           {/* Overlay de Subida */}
                           {estaSubiendoFoto && (
-                            <div className="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
+                            <div className="absolute inset-0 z-30 bg-slate-950 flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
                               <Loader2 className="animate-spin text-chefsy-400 w-8 h-8" />
                               <p className="text-xs font-black text-white">Comprimiendo y subiendo foto...</p>
                               <p className="text-[10px] text-slate-400">Asignando a "{nombreAMostrar}"</p>
@@ -1561,7 +1561,7 @@ export default function DevToolsPage() {
 
                           {/* Overlay de Drop Target */}
                           {estaSiendoArrastrada && !estaSubiendoFoto && (
-                            <div className="absolute inset-0 z-20 bg-chefsy-950/95 border-2 border-dashed border-chefsy-400 rounded-3xl backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
+                            <div className="absolute inset-0 z-20 bg-chefsy-950 border-2 border-dashed border-chefsy-400 rounded-3xl flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
                               <UploadCloud className="w-10 h-10 text-chefsy-400 animate-bounce" />
                               <p className="text-xs font-black text-white">Soltá la foto acá</p>
                               <p className="text-[10px] text-chefsy-200">Se establecerá como portada de "{nombreAMostrar}"</p>
@@ -1584,7 +1584,7 @@ export default function DevToolsPage() {
                                   <ImageIcon className="text-slate-600" />
                                 )}
                                 {fotos.length > 1 && (
-                                  <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md text-[9px] font-black text-white px-1.5 py-0.5 rounded-md border border-white/10">
+                                  <span className="absolute bottom-1 right-1 bg-black/85 text-[9px] font-black text-white px-1.5 py-0.5 rounded-md border border-white/10">
                                     +{fotos.length - 1}
                                   </span>
                                 )}
@@ -1920,7 +1920,7 @@ export default function DevToolsPage() {
 
                 {/* Barra Flotante Sticky de Cambios Pendientes */}
                 {filasConCambios.length > 0 && (
-                  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-amber-500/50 shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
+                  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 border border-amber-500/50 shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
                     <div className="flex items-center gap-2.5">
                       <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
                       <p className="text-xs font-bold text-white">
@@ -2120,7 +2120,7 @@ export default function DevToolsPage() {
                         <button
                           type="button"
                           onClick={() => setFotoZoomUrl(item.url)}
-                          className="p-1.5 bg-black/70 hover:bg-black text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer"
+                          className="p-1.5 bg-black/85 hover:bg-black text-white rounded-xl transition-colors cursor-pointer"
                           title="Ver en grande"
                         >
                           <Eye size={14} />
@@ -2128,7 +2128,7 @@ export default function DevToolsPage() {
                         <button
                           type="button"
                           onClick={() => setConfirmandoEliminarFoto(item)}
-                          className="p-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl backdrop-blur-md transition-colors cursor-pointer"
+                          className="p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-colors cursor-pointer"
                           title="Eliminar foto del banco y de la nube"
                         >
                           <Trash2 size={14} />
@@ -2340,7 +2340,7 @@ export default function DevToolsPage() {
                       key={prod.id}
                       className="bg-slate-900 border border-amber-500/20 p-4 rounded-3xl shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden"
                     >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-2xl rounded-full pointer-events-none"></div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full pointer-events-none"></div>
                       
                       <div className="space-y-3 relative z-10">
                         <div className="flex items-start gap-3.5">
@@ -2407,7 +2407,7 @@ export default function DevToolsPage() {
 
       {/* Modal de Confirmación de Eliminación de Foto del Banco */}
       {confirmandoEliminarFoto && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
@@ -2480,7 +2480,7 @@ export default function DevToolsPage() {
 
       {/* Modal de Edición Integral con Live Preview */}
       {productoEditandoId && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
             
             {/* Header del Modal */}
@@ -2777,7 +2777,7 @@ export default function DevToolsPage() {
                                 
                                 {/* Overlay de Recorte IA si está procesando esta foto */}
                                 {recortandoFotoId === foto.id && (
-                                  <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center gap-1.5 animate-in fade-in z-20">
+                                  <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-2 text-center gap-1.5 animate-in fade-in z-20">
                                     <Loader2 className="animate-spin text-chefsy-400 w-6 h-6" />
                                     <p className="text-[10px] font-black text-white">{mensajeRecorte || 'Recortando fondo...'}</p>
                                   </div>
@@ -2793,7 +2793,7 @@ export default function DevToolsPage() {
                                 <button
                                   type="button"
                                   onClick={() => setFotoZoomUrl(foto.url)}
-                                  className="absolute bottom-1.5 right-1.5 p-1.5 bg-black/60 hover:bg-black/90 backdrop-blur-md text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                  className="absolute bottom-1.5 right-1.5 p-1.5 bg-black/80 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                   title="Ver grande"
                                 >
                                   <Eye size={14} />
@@ -2992,7 +2992,7 @@ export default function DevToolsPage() {
                           </span>
                         )}
                         {galeriaFotos.length > 1 && (
-                          <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-sm text-[8px] font-black text-white px-1.5 py-0.5 rounded border border-white/10">
+                          <span className="absolute bottom-1 right-1 bg-black/85 text-[8px] font-black text-white px-1.5 py-0.5 rounded border border-white/10">
                             1/{galeriaFotos.length}
                           </span>
                         )}

@@ -97,7 +97,7 @@ export default function ModalPersonalizacion({
         
         {/* Barra decorativa superior (solo mobile) */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
-          <div className="w-10 h-1 rounded-full bg-slate-600/80 backdrop-blur-md shadow-sm" />
+          <div className="w-10 h-1 rounded-full bg-slate-600 shadow-sm" />
         </div>
 
         {/* Galería de Imágenes con Animación Fluida */}
@@ -123,8 +123,6 @@ export default function ModalPersonalizacion({
                         fill
                         unoptimized={isCloud}
                         priority={i === 0}
-                        placeholder="blur"
-                        blurDataURL={generarBlurUrl(imgUrl)}
                         className="object-cover" 
                       />
                       <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1c1c] to-transparent pointer-events-none" />
@@ -138,18 +136,18 @@ export default function ModalPersonalizacion({
                   <button
                     type="button"
                     onClick={() => galeriaRef.current?.scrollBy({ left: -galeriaRef.current.clientWidth, behavior: 'smooth' })}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <button
                     type="button"
                     onClick={() => galeriaRef.current?.scrollBy({ left: galeriaRef.current.clientWidth, behavior: 'smooth' })}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all active:scale-95 shadow-lg cursor-pointer"
                   >
                     <ChevronRight size={20} />
                   </button>
-                  <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
+                  <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-black/70 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
                     <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
                     {listaFotos.length} fotos
                   </div>

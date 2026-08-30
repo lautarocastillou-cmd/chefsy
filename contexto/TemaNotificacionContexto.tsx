@@ -176,7 +176,7 @@ function ContenedorToasts({
           return (
             <div
               key={n.id}
-              className="relative overflow-hidden bg-white/90 dark:bg-[#1e1e1e]/90 backdrop-blur-md border border-slate-100 dark:border-zinc-800 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)] rounded-2xl p-4 flex gap-3.5 items-start transition-all duration-350 transform hover:scale-[1.02] border-l-4"
+              className="relative overflow-hidden bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-zinc-800 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)] rounded-2xl p-4 flex gap-3.5 items-start transition-all duration-350 transform hover:scale-[1.02] border-l-4"
               style={{
                 borderLeftColor: n.tipo === 'success' ? '#10B981' : n.tipo === 'warning' ? '#F59E0B' : '#3B82F6'
               }}

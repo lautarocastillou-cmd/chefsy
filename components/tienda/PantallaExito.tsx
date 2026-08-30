@@ -105,13 +105,13 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
   return (
     <div className="min-h-screen bg-[#121212] flex items-center justify-center p-4 transition-colors font-sans relative overflow-hidden">
       {/* Resplandor ambiental de fondo */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/5 rounded-full pointer-events-none" />
 
-      <div className="relative w-full max-w-lg bg-[#1e1e1e]/90 backdrop-blur-xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_40px_rgba(16,185,129,0.1)] rounded-3xl p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-lg bg-[#1e1e1e] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_40px_rgba(16,185,129,0.1)] rounded-3xl p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-300">
         
         {/* Logo con aura verde */}
         <div className="relative w-24 h-24 mx-auto">
-          <div className="absolute inset-0 bg-emerald-500/30 rounded-full blur-xl animate-pulse" />
+          <div className="absolute inset-0 bg-emerald-500/10 rounded-full" />
           <div className="relative w-24 h-24 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.3)] overflow-hidden bg-white p-0.5">
             <Image 
               src="/logo.jpg" 

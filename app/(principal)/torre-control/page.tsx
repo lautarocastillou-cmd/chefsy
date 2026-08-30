@@ -182,7 +182,7 @@ export default function TorreControlPage() {
         <MapaGlobal cadetes={cadetes} focusedId={focusedId} />
 
         {/* Overlay Legend */}
-        <div className="absolute bottom-6 right-6 z-[1000] bg-white/95 backdrop-blur-md p-3.5 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-none">
+        <div className="absolute bottom-6 right-6 z-[1000] bg-white p-3.5 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-none">
           <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1 border-b pb-1">
             Referencias en Mapa
           </div>

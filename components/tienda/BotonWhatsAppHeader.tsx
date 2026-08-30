@@ -20,7 +20,7 @@ export default function BotonWhatsAppHeader({ size = 'md' }: BotonWhatsAppHeader
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contactar por WhatsApp"
-      className={`group flex items-center gap-1.5 bg-white/10 hover:bg-emerald-500/20 text-white/90 hover:text-white border border-white/20 hover:border-emerald-500/40 rounded-full transition-all duration-200 backdrop-blur-md active:scale-95 shadow-sm ${
+      className={`group flex items-center gap-1.5 bg-white/10 hover:bg-emerald-500/20 text-white/90 hover:text-white border border-white/20 hover:border-emerald-500/40 rounded-full transition-all duration-200 active:scale-95 shadow-sm ${
         size === 'sm' ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs font-semibold'
       }`}
     >

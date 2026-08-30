@@ -742,7 +742,7 @@ export default function MetricasHistoricas() {
                       if (active && payload && payload.length) {
                         const item = payload[0]?.payload
                         return (
-                          <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
+                          <div className="bg-white dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
                             <p className="font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 pb-1.5">
                               {item?.fechaCompleta || label}
                             </p>
@@ -798,7 +798,7 @@ export default function MetricasHistoricas() {
                       if (active && payload && payload.length) {
                         const item = payload[0]?.payload
                         return (
-                          <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
                             <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
                               {item?.fechaCompleta || label}
                             </p>
@@ -867,7 +867,7 @@ export default function MetricasHistoricas() {
                       if (active && payload && payload.length) {
                         const item = payload[0]?.payload
                         return (
-                          <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
+                          <div className="bg-white dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
                             <p className="font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 pb-1.5">
                               {item?.fechaCompleta || label}
                             </p>
@@ -926,7 +926,7 @@ export default function MetricasHistoricas() {
                       if (active && payload && payload.length) {
                         const item = payload[0]?.payload
                         return (
-                          <div className="bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
                             <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
                               {item?.fechaCompleta || label}
                             </p>

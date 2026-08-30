@@ -51,10 +51,10 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
 
   return (
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center pointer-events-none px-4 transition-all duration-300">
-      <div className={`pointer-events-auto bg-[#161616]/95 backdrop-blur-2xl border border-white/15 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) flex items-center justify-around ${
+      <div className={`pointer-events-auto bg-[#161616] border border-white/15 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) flex items-center justify-around ${
         esGrande 
           ? 'w-full max-w-[230px] py-2 px-4 scale-100' 
-          : 'w-full max-w-[185px] py-1.5 px-3 scale-95 opacity-90 bg-[#121212]/95 border-white/20'
+          : 'w-full max-w-[185px] py-1.5 px-3 scale-95 opacity-90 bg-[#121212] border-white/20'
       }`}>
         <button 
           onClick={() => onNavClick('home')}

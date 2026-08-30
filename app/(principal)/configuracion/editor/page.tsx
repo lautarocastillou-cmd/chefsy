@@ -342,7 +342,7 @@ export default function EditorTienda() {
                   placeholder="Arrastrá textura acá o pegá la URL..."
                 />
                 {subiendoImagen === 'textura_fondo_url' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900 rounded-lg">
                     <Loader2 size={16} className="animate-spin text-chefsy-400" />
                   </div>
                 )}
@@ -511,7 +511,7 @@ export default function EditorTienda() {
                   placeholder="Arrastrá una imagen acá o pegá la URL..."
                 />
                 {subiendoImagen === 'logo_url' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900 rounded-lg">
                     <Loader2 size={16} className="animate-spin text-chefsy-400" />
                   </div>
                 )}
@@ -543,7 +543,7 @@ export default function EditorTienda() {
                   placeholder="Arrastrá una imagen acá o pegá la URL..."
                 />
                 {subiendoImagen === 'hero_image_url' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900 rounded-lg">
                     <Loader2 size={16} className="animate-spin text-chefsy-400" />
                   </div>
                 )}
@@ -576,7 +576,7 @@ export default function EditorTienda() {
                   placeholder="Arrastrá una imagen acá o pegá la URL..."
                 />
                 {subiendoImagen === 'hero_image_secundaria' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900 rounded-lg">
                     <Loader2 size={16} className="animate-spin text-chefsy-400" />
                   </div>
                 )}
@@ -797,7 +797,7 @@ export default function EditorTienda() {
         
         {/* Etiqueta flotante */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
-          <div className="bg-slate-900/90 backdrop-blur border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 pointer-events-none shadow-xl">
+          <div className="bg-slate-900 border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 pointer-events-none shadow-xl">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             Previsualización en vivo
           </div>

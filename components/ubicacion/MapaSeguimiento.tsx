@@ -225,7 +225,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* HUD Superior con ETA */}
       {etaText && !esperandoGps && (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-emerald-600/95 backdrop-blur-md text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-4 border border-emerald-400/40">
+          <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-4 border border-emerald-400/40">
             <span className="text-lg">🛵</span>
             <span className="text-xs sm:text-sm font-black tracking-wide">{etaText}</span>
           </div>
@@ -235,7 +235,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* Badge flotante inferior cuando aún no hay señal de GPS del cadete */}
       {esperandoGps && pedido.estado === 'en_camino' && (
         <div className="absolute inset-x-0 bottom-4 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-bounce">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-bounce">
             <div className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chefsy-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-chefsy-500"></span>

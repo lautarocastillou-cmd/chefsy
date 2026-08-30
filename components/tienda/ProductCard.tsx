@@ -94,7 +94,7 @@ function ProductCard({
           </span>
         )}
         {agotado && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
             <span className="bg-red-500 text-white font-extrabold text-[8px] px-2 py-1 rounded uppercase tracking-wider shadow-lg">
               Agotado
             </span>
