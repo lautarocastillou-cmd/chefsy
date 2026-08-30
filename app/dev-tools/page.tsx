@@ -214,9 +214,27 @@ export default function DevToolsPage() {
     cargarFotosStorage()
   }, [])
 
-  // Comprimir imagen a tamaño web óptimo
-  const comprimirImagen = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  // Comprimir imagen o subir directamente al optimizador WebP del servidor (compatible con HEVC/HEIC)
+  const comprimirImagen = async (file: File): Promise<string> => {
+    const esHeicOHevc = /\.(heic|heif|hevc|h265)$/i.test(file.name) || file.type.includes('heic') || file.type.includes('hevc')
+
+    // Si es HEIC/HEVC, la subimos directamente al servidor que tiene libheif para transformarla a WebP
+    if (esHeicOHevc) {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await res.json()
+        if (data.url) return data.url
+      } catch (e) {
+        console.warn('Fallback HEVC upload error:', e)
+      }
+    }
+
+    return new Promise((resolve) => {
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = event => {
@@ -250,16 +268,18 @@ export default function DevToolsPage() {
           }
           ctx.drawImage(img, 0, 0, width, height)
           
-          // Exportar en WebP 75% ultraliviano con fallback seguro a JPEG 75%
           let dataUrl = canvas.toDataURL('image/webp', 0.75)
           if (!dataUrl.startsWith('data:image/webp')) {
             dataUrl = canvas.toDataURL('image/jpeg', 0.75)
           }
           resolve(dataUrl)
         }
-        img.onerror = err => reject(err)
+        img.onerror = () => {
+          // Si el navegador falla al decodificar en cliente (ej. HEVC), retornar dataUrl original para que lo procese el servidor
+          resolve(event.target?.result as string)
+        }
       }
-      reader.onerror = err => reject(err)
+      reader.onerror = () => resolve('')
     })
   }
 
@@ -289,40 +309,61 @@ export default function DevToolsPage() {
     }
   }
 
-  // Anexar fotos nuevas a la galería sin borrar las existentes (soporta 1 o múltiples fotos)
+  // Anexar fotos nuevas a la galería sin borrar las existentes (soporta HEIC, HEVC, PNG, JPG, WebP)
   const anexarArchivos = async (archivos: File[]) => {
     if (!archivos || archivos.length === 0) return
 
     setProcesandoMultiplesFotos(true)
-    setProgresoMultiplesFotos(`Comprimiendo ${archivos.length} ${archivos.length === 1 ? 'foto' : 'fotos'}...`)
+    setProgresoMultiplesFotos(`Procesando y optimizando ${archivos.length} ${archivos.length === 1 ? 'foto' : 'fotos'}...`)
 
     try {
       const fotosProcesadas: FotoItem[] = []
       for (let i = 0; i < archivos.length; i++) {
         const file = archivos[i]
-        setProgresoMultiplesFotos(`Comprimiendo foto ${i + 1} de ${archivos.length}...`)
-        const base64 = await comprimirImagen(file)
-        fotosProcesadas.push({
-          id: `nueva-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
-          url: base64,
-          esNueva: true,
-          base64,
-          archivo: file,
-        })
+        setProgresoMultiplesFotos(`Optimizando foto ${i + 1} de ${archivos.length}...`)
+        
+        const esHeic = /\.(heic|heif|hevc|h265)$/i.test(file.name) || file.type.includes('heic') || file.type.includes('hevc')
+
+        if (esHeic) {
+          // Subir directamente a la API que convierte HEVC/HEIC a WebP en el servidor
+          const formData = new FormData()
+          formData.append('file', file)
+          const res = await fetch('/api/admin/upload', {
+            method: 'POST',
+            body: formData,
+          })
+          const data = await res.json()
+          if (data.url) {
+            fotosProcesadas.push({
+              id: `hevc-${Date.now()}-${i}`,
+              url: data.url,
+              esNueva: false,
+            })
+          }
+        } else {
+          const base64 = await comprimirImagen(file)
+          fotosProcesadas.push({
+            id: `nueva-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
+            url: base64,
+            esNueva: true,
+            base64,
+            archivo: file,
+          })
+        }
       }
 
       setGaleriaFotos(prev => [...prev, ...fotosProcesadas])
       mostrarToast(`¡${archivos.length === 1 ? '1 foto añadida' : `${archivos.length} fotos añadidas`} a la galería! 📸`, 'success')
     } catch (err) {
       console.error('Error procesando fotos:', err)
-      mostrarToast('Error al leer o comprimir una de las imágenes.', 'error')
+      mostrarToast('Error al procesar una de las imágenes.', 'error')
     } finally {
       setProcesandoMultiplesFotos(false)
       setProgresoMultiplesFotos('')
     }
   }
 
-  // Subida en Lote directa de múltiples fotos al Banco de Fotos de la Casa
+  // Subida en Lote directa de múltiples fotos al Banco de Fotos de la Casa (compatible con HEVC/HEIC)
   const subirLoteArchivosAlBanco = async (archivos: File[]) => {
     if (!archivos || archivos.length === 0) return
 
@@ -336,15 +377,17 @@ export default function DevToolsPage() {
       for (let i = 0; i < archivos.length; i++) {
         const file = archivos[i]
         setProgresoLoteBanco(`Subiendo ${i + 1} de ${archivos.length}: ${file.name.substring(0, 20)}...`)
-        const base64 = await comprimirImagen(file)
+        
+        const formData = new FormData()
+        formData.append('file', file)
+
         const uploadRes = await fetch('/api/admin/upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
+          body: formData,
         })
         const uploadData = await uploadRes.json()
         if (uploadRes.ok && !uploadData.error) {
-          const finalUrl = uploadData.urlTransformada || uploadData.urlOriginal
+          const finalUrl = uploadData.url || uploadData.urlTransformada || uploadData.urlOriginal
           if (finalUrl) {
             urlsNuevas.push(finalUrl)
             completadas++
@@ -358,7 +401,7 @@ export default function DevToolsPage() {
         setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
       }
 
-      mostrarToast(`¡${completadas} fotos subidas con éxito al almacenamiento de Chefsy! 📸`, 'success')
+      mostrarToast(`¡${completadas} fotos subidas y optimizadas a WebP con éxito! 📸`, 'success')
       await cargarFotosStorage()
       await cargarMetadata()
     } catch (err: any) {
@@ -371,7 +414,9 @@ export default function DevToolsPage() {
   }
 
   const handleSubirLoteBancoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'))
+    const files = Array.from(e.target.files || []).filter(f =>
+      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif|heic|heif|hevc|h265)$/i.test(f.name)
+    )
     if (files.length > 0) {
       subirLoteArchivosAlBanco(files)
       e.target.value = ''
@@ -382,7 +427,9 @@ export default function DevToolsPage() {
     e.preventDefault()
     e.stopPropagation()
     setIsDraggingOverBanco(false)
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif|heic|heif|hevc|h265)$/i.test(f.name)
+    )
     if (files.length > 0) {
       subirLoteArchivosAlBanco(files)
     }
@@ -394,9 +441,9 @@ export default function DevToolsPage() {
     e.stopPropagation()
     setTarjetaArrastradaId(null)
 
-    // 1. Extraer archivos locales (con soporte de MIME y extensiones de imagen)
+    // 1. Extraer archivos locales (con soporte de MIME y extensiones de imagen incluyendo HEVC/HEIC)
     const files = Array.from(e.dataTransfer.files || []).filter(f =>
-      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif)$/i.test(f.name)
+      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif|heic|heif|hevc|h265)$/i.test(f.name)
     )
 
     // 2. Si no hay archivos en dataTransfer.files, verificar si se arrastró una URL desde la web
@@ -409,7 +456,7 @@ export default function DevToolsPage() {
     }
 
     if (files.length === 0 && !urlArrastrada) {
-      mostrarToast('Por favor arrastrá un archivo de imagen válido (JPG, PNG, WebP) o un enlace.', 'info')
+      mostrarToast('Por favor arrastrá un archivo de imagen válido (JPG, PNG, WebP, HEVC, HEIC) o un enlace.', 'info')
       return
     }
 
@@ -421,22 +468,22 @@ export default function DevToolsPage() {
         urlsNuevas.push(urlArrastrada)
       } else {
         mostrarToast(
-          `Comprimiendo y subiendo ${files.length === 1 ? 'la foto' : `${files.length} fotos`} de "${prod.nombre}"...`,
+          `Subiendo y optimizando ${files.length === 1 ? 'la foto' : `${files.length} fotos`} de "${prod.nombre}" a WebP...`,
           'info'
         )
 
         for (const file of files) {
-          const base64 = await comprimirImagen(file)
+          const formData = new FormData()
+          formData.append('file', file)
           const uploadRes = await fetch('/api/admin/upload', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imagen: base64, base64, nombreOriginal: file.name }),
+            body: formData,
           })
           const uploadData = await uploadRes.json()
           if (!uploadRes.ok || uploadData.error) {
             throw new Error(uploadData.error || 'Error al subir una de las imágenes')
           }
-          const urlFinal = uploadData.urlTransformada || uploadData.urlOriginal
+          const urlFinal = uploadData.url || uploadData.urlTransformada || uploadData.urlOriginal
           if (urlFinal) urlsNuevas.push(urlFinal)
         }
       }
@@ -591,7 +638,9 @@ export default function DevToolsPage() {
     e.preventDefault()
     e.stopPropagation()
     setIsDraggingOver(false)
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif|heic|heif|hevc|h265)$/i.test(f.name)
+    )
     if (files.length > 0) {
       anexarArchivos(files)
     }
@@ -605,9 +654,9 @@ export default function DevToolsPage() {
       const items = Array.from(e.clipboardData?.items || [])
       const imageFiles: File[] = []
       for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile()
-          if (file) imageFiles.push(file)
+        const file = item.getAsFile()
+        if (file && (item.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|jfif|heic|heif|hevc|h265)$/i.test(file.name))) {
+          imageFiles.push(file)
         }
       }
       if (imageFiles.length > 0) {
@@ -753,17 +802,32 @@ export default function DevToolsPage() {
       const urlsFinales: string[] = []
 
       for (const foto of galeriaFotos) {
-        if (foto.esNueva && foto.base64) {
-          const uploadRes = await fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imagen: foto.base64 }),
-          })
+        if (foto.esNueva) {
+          let uploadRes: Response
+          if (foto.archivo) {
+            const formData = new FormData()
+            formData.append('file', foto.archivo)
+            uploadRes = await fetch('/api/admin/upload', {
+              method: 'POST',
+              body: formData,
+            })
+          } else if (foto.base64) {
+            uploadRes = await fetch('/api/admin/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imagen: foto.base64 }),
+            })
+          } else {
+            urlsFinales.push(foto.url)
+            continue
+          }
+
           const uploadData = await uploadRes.json()
           if (!uploadRes.ok || uploadData.error) {
             throw new Error(uploadData.error || 'Error al subir una de las imágenes')
           }
-          urlsFinales.push(uploadData.urlTransformada || uploadData.urlOriginal)
+          const finalUrl = uploadData.url || uploadData.urlTransformada || uploadData.urlOriginal
+          if (finalUrl) urlsFinales.push(finalUrl)
         } else {
           urlsFinales.push(foto.url)
         }
@@ -1713,7 +1777,7 @@ export default function DevToolsPage() {
                             <input
                               type="file"
                               id={`upload-direct-${prod.id}`}
-                              accept="image/*"
+                              accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC"
                               multiple
                               className="hidden"
                               onChange={e => {
@@ -2012,7 +2076,7 @@ export default function DevToolsPage() {
                 {/* Input para subir lote de fotos de la PC */}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC"
                   multiple
                   id="banco-upload-input"
                   className="hidden"
@@ -2878,7 +2942,7 @@ export default function DevToolsPage() {
                   >
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC"
                       multiple
                       id="upload-foto-input"
                       className="hidden"

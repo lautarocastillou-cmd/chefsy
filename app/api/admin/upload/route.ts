@@ -26,8 +26,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Archivo requerido.' }, { status: 400 })
       }
       buffer = Buffer.from(await file.arrayBuffer())
-      mimeType = file.type
-      ext = mimeType.split('/')[1] || 'png'
+      mimeType = file.type || ''
+      const nameParts = file.name ? file.name.split('.') : []
+      ext = nameParts.length > 1 ? (nameParts.pop()?.toLowerCase() || 'png') : 'png'
     } else if (contentType.includes('application/json')) {
       const body = await request.json()
       const imagen = body.imagen || body.base64
@@ -59,16 +60,20 @@ export async function POST(request: Request) {
       if (fileNameHeader) {
         const nameParts = decodeURIComponent(fileNameHeader).split('.')
         if (nameParts.length > 1) {
-          ext = nameParts.pop() || ext
+          ext = nameParts.pop()?.toLowerCase() || ext
         }
       }
     }
 
-    // Optimizar imagen a WebP ultraliviano (reduce de megabytes a ~35-65KB)
-    const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 900, maxAlto: 900, calidad: 75 })
-    buffer = optimizada.buffer
-    mimeType = optimizada.contentType
-    ext = optimizada.ext
+    const esVideo = mimeType.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext)
+
+    if (!esVideo) {
+      // Optimizar cualquier imagen (JPEG, PNG, HEIC, HEIF, HEVC, WebP, AVIF) a WebP ultraliviano
+      const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 1200, maxAlto: 1200, calidad: 78 })
+      buffer = optimizada.buffer
+      mimeType = optimizada.contentType
+      ext = optimizada.ext
+    }
 
     const fileName = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
 
@@ -105,6 +110,7 @@ export async function POST(request: Request) {
       .getPublicUrl(fileName)
 
     return NextResponse.json({
+      url: publicData.publicUrl,
       urlOriginal: publicData.publicUrl,
       urlTransformada: publicData.publicUrl
     })

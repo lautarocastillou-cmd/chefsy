@@ -181,7 +181,9 @@ export default function EditorTienda() {
 
   const optimizarImagen = (file: File, maxWidth = 1200, quality = 0.82): Promise<File> => {
     return new Promise((resolve) => {
+      const esHeic = /\.(heic|heif|hevc|h265)$/i.test(file.name) || file.type.includes('heic') || file.type.includes('hevc')
       if (
+        esHeic ||
         !file.type.startsWith('image/') ||
         file.type.includes('svg') ||
         file.type.includes('gif') ||
@@ -212,8 +214,10 @@ export default function EditorTienda() {
             resolve(new File([blob], `${nombreSinExt}_opt.webp`, { type: 'image/webp' }))
           }, 'image/webp', quality)
         }
+        img.onerror = () => resolve(file)
         img.src = e.target?.result as string
       }
+      reader.onerror = () => resolve(file)
       reader.readAsDataURL(file)
     })
   }
@@ -221,21 +225,20 @@ export default function EditorTienda() {
   const subirArchivo = async (file: File, campoDestino: string) => {
     try {
       setSubiendoImagen(campoDestino)
-      const isVideo = file.type.startsWith('video/')
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name)
       const maxWidth = campoDestino === 'logo_url' ? 600 : 1200
       const fileParaSubir = isVideo ? file : await optimizarImagen(file, maxWidth)
 
+      const formData = new FormData()
+      formData.append('file', fileParaSubir)
+
       const uploadRes = await fetch('/api/admin/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': fileParaSubir.type || 'application/octet-stream',
-          'X-File-Name': encodeURIComponent(fileParaSubir.name),
-        },
-        body: fileParaSubir,
+        body: formData,
       })
       const uploadData = await uploadRes.json()
       if (uploadData.error) throw new Error(uploadData.error)
-      const nuevaUrl = uploadData.urlOriginal || uploadData.urlTransformada
+      const nuevaUrl = uploadData.url || uploadData.urlOriginal || uploadData.urlTransformada
 
       if (campoDestino.startsWith('slide_img_')) {
         const slideId = campoDestino.replace('slide_img_', '')
@@ -606,7 +609,7 @@ export default function EditorTienda() {
                       <span>Plato Principal (PNG)</span>
                       <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
                         <Upload size={10} className="inline mr-1" /> Subir
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_url')} />
+                        <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_url')} />
                       </label>
                     </label>
                     <input
@@ -625,7 +628,7 @@ export default function EditorTienda() {
                       <span>Plato Secundario (Acompañamiento)</span>
                       <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
                         <Upload size={10} className="inline mr-1" /> Subir
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_secundaria')} />
+                        <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_secundaria')} />
                       </label>
                     </label>
                     <input
@@ -1003,7 +1006,7 @@ export default function EditorTienda() {
                   <span>URL de Textura Personalizada</span>
                   <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
                     <Upload size={10} className="inline mr-1" /> Subir Imagen
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'textura_fondo_url')} />
+                    <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'textura_fondo_url')} />
                   </label>
                 </label>
                 <input
@@ -1021,7 +1024,7 @@ export default function EditorTienda() {
                   <span>Logo de la Tienda</span>
                   <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
                     <Upload size={10} className="inline mr-1" /> Subir Logo
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'logo_url')} />
+                    <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'logo_url')} />
                   </label>
                 </label>
                 <input
