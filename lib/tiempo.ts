@@ -23,12 +23,62 @@ export function obtenerFechaNegocio(fechaReferencia: Date = new Date()): string 
 }
 
 /**
- * Detecta automáticamente si el turno actual es Mediodía o Noche según la hora local.
+ * Devuelve la fecha/hora en la zona horaria de Argentina (UTC-3).
+ */
+export function obtenerHoraArgentina(fechaReferencia: Date = new Date()): Date {
+  const utc = fechaReferencia.getTime() + (fechaReferencia.getTimezoneOffset() * 60000)
+  return new Date(utc - (3 * 3600000))
+}
+
+/**
+ * Verifica si es domingo en Argentina (día 0).
+ */
+export function esDomingoArgentina(fechaReferencia: Date = new Date()): boolean {
+  const horaArg = obtenerHoraArgentina(fechaReferencia)
+  return horaArg.getDay() === 0
+}
+
+/**
+ * Evalúa el estado del local combinando la regla de turnos manuales y días de atención.
+ * - Los domingos el local permanece CERRADO.
+ * - Ningún turno se activa automáticamente si no se inicia manualmente.
+ */
+export function obtenerEstadoHorarioLocal(turnoActivo: boolean | null | undefined, fechaReferencia: Date = new Date()) {
+  const esDomingo = esDomingoArgentina(fechaReferencia)
+
+  if (!turnoActivo) {
+    if (esDomingo) {
+      return {
+        abierto: false,
+        esDomingo: true,
+        motivo: 'domingo' as const,
+        mensaje: 'Los domingos el local permanece cerrado. Te esperamos de lunes a sábados.',
+      }
+    }
+    return {
+      abierto: false,
+      esDomingo: false,
+      motivo: 'turno_cerrado' as const,
+      mensaje: 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+    }
+  }
+
+  return {
+    abierto: true,
+    esDomingo,
+    motivo: 'abierto' as const,
+    mensaje: 'Local abierto y recibiendo pedidos.',
+  }
+}
+
+/**
+ * Detecta si el turno es Mediodía o Noche según la hora local de Argentina.
  * - 10:00 a 16:00 hs: Mediodía (11:30 a 14:00)
  * - Resto del tiempo: Noche (20:30 a 01:00)
  */
 export function detectarTipoTurnoActual(fechaReferencia: Date = new Date()): 'mediodia' | 'noche' {
-  const hora = fechaReferencia.getHours()
+  const horaArg = obtenerHoraArgentina(fechaReferencia)
+  const hora = horaArg.getHours()
   if (hora >= 10 && hora < 16) {
     return 'mediodia'
   }

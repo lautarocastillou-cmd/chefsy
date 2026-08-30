@@ -5,12 +5,12 @@
 
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { esDomingoArgentina, obtenerEstadoHorarioLocal } from '@/lib/tiempo'
 
 // ── Rate limiting en memoria por IP ───────────────────────────────────────────
-// Resetea con cada deploy (suficiente para entorno serverless)
 const rateLimitIP = new Map<string, { intentos: number; ultimoReset: number }>()
-const MAX_PEDIDOS_POR_SESION = 3   // máximo 3 pedidos activos
-const VENTANA_RATE_LIMIT_MS  = 10 * 60 * 1000  // ventana de 10 min para intentos rápidos
+const MAX_PEDIDOS_POR_SESION = 3 // máximo 3 pedidos activos
+const VENTANA_RATE_LIMIT_MS = 10 * 60 * 1000 // ventana de 10 min
 
 function obtenerIP(req: Request): string {
   return (
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const ip = obtenerIP(request)
     const ahora = Date.now()
 
-    // ── Rate limit por IP: máx 10 requests en 10 minutos ────────────────────
+    // ── Rate limit por IP ───────────────────────────────────────────────────
     const registro = rateLimitIP.get(ip) || { intentos: 0, ultimoReset: ahora }
     if (ahora - registro.ultimoReset > VENTANA_RATE_LIMIT_MS) {
       registro.intentos = 0
@@ -65,25 +65,31 @@ export async function POST(request: Request) {
 
     const supabaseAdmin = obtenerSupabaseAdmin()
 
-    // ── Verificar que el turno / local esté realmente activo ───────────────
-    const { data: turnoData } = await supabaseAdmin
+    // ── BLINDAJE DE TURNOS: Verificar en tiempo real que el local esté ABIERTO ─
+    const { data: turnoData, error: turnoError } = await supabaseAdmin
       .from('turnos')
       .select('activo, tipo_turno')
       .eq('id', 1)
       .single()
 
-    if (!turnoData || !turnoData.activo) {
-      console.warn(`[API Pedido] Intento de compra con local cerrado desde IP: ${ip}`)
+    const estaActivoDb = !turnoError && turnoData ? Boolean(turnoData.activo) : false
+    const estadoLocal = obtenerEstadoHorarioLocal(estaActivoDb)
+
+    if (!estadoLocal.abierto) {
+      console.warn(`[API Pedido] Intento de compra con local cerrado (${estadoLocal.motivo}) desde IP: ${ip}`)
       return NextResponse.json(
-        { error: 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábado de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.' },
+        {
+          error: estadoLocal.mensaje,
+          motivo: estadoLocal.motivo,
+          esDomingo: estadoLocal.esDomingo,
+        },
         { status: 400 }
       )
     }
 
     const telefono = String(body.telefono).trim()
 
-    // ── Límite de 3 pedidos activos por teléfono ─────────────────────────────
-    // Estados "activos" = todo lo que no está entregado, cancelado, ni archivado
+    // ── Límite de pedidos activos por teléfono ───────────────────────────────
     const { count, error: countError } = await supabaseAdmin
       .from('pedidos')
       .select('id', { count: 'exact', head: true })
@@ -93,7 +99,6 @@ export async function POST(request: Request) {
 
     if (countError) {
       console.error('[API Pedido] Error al verificar pedidos activos:', countError.message)
-      // Si falla la verificación, dejamos pasar (mejor UX que bloquear)
     } else if ((count ?? 0) >= MAX_PEDIDOS_POR_SESION) {
       console.warn(`[API Pedido] Límite de pedidos activos alcanzado para tel: ${telefono}`)
       return NextResponse.json(
@@ -111,11 +116,10 @@ export async function POST(request: Request) {
       })
       if (rpcError) {
         console.error('[API Pedido] Error RPC puntos:', rpcError.message)
-        // No bloqueamos el pedido si falla el sistema de puntos
       }
     }
 
-    // ── Insertar pedido con service_role (bypasea RLS) ───────────────────────
+    // ── Insertar pedido con service_role (bypassea RLS) ───────────────────────
     const payload = {
       ...body,
       archivado: false,

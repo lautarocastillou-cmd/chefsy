@@ -68,6 +68,8 @@ interface ValorContextoCarrito {
   setPedidoCompletado: (p: Pedido | null) => void
   procesarCompra: (onError?: (msg: string) => void) => Promise<void>
   turnoActivo: boolean | null
+  esDomingoCerrado: boolean
+  mensajeCierre: string
   procesandoCompra: boolean
 }
 
@@ -75,6 +77,10 @@ const ContextoCarrito = createContext<ValorContextoCarrito | undefined>(undefine
 
 export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [turnoActivo, setTurnoActivo] = useState<boolean | null>(null)
+  const [esDomingoCerrado, setEsDomingoCerrado] = useState(false)
+  const [mensajeCierre, setMensajeCierre] = useState(
+    'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'
+  )
   const [procesandoCompra, setProcesandoCompra] = useState(false)
 
   useEffect(() => {
@@ -82,17 +88,19 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     const verificarTurno = async () => {
       if (document.hidden) return
       try {
-        const res = await fetch('/api/tienda/turno')
+        const res = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setTurnoActivo(data.activo)
+          setEsDomingoCerrado(Boolean(data.esDomingo && !data.activo))
+          if (data.mensaje) setMensajeCierre(data.mensaje)
         }
       } catch (err) {
         console.error('Error verificando turno de tienda:', err)
       }
     }
     verificarTurno()
-    intv = setInterval(verificarTurno, 30000)
+    intv = setInterval(verificarTurno, 20000)
 
     const handleVisibility = () => {
       if (!document.hidden) verificarTurno()
@@ -443,7 +451,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       distanciaClienteKm, costoEnvio,
       totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
       pedidoCompletado, setPedidoCompletado,
-      procesarCompra, turnoActivo, procesandoCompra
+      procesarCompra, turnoActivo, esDomingoCerrado, mensajeCierre, procesandoCompra
     }}>
       {children}
     </ContextoCarrito.Provider>

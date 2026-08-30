@@ -104,6 +104,8 @@ export default function CartDrawer() {
     coordenadasCliente,
     setCoordenadasCliente: onSetCoordenadasCliente,
     turnoActivo,
+    esDomingoCerrado,
+    mensajeCierre,
     procesandoCompra
   } = usarCarrito()
 
@@ -692,12 +694,12 @@ export default function CartDrawer() {
 
                     <div className="mt-8 pt-6 border-t border-[#3d3d3d]">
                       {turnoActivo === false ? (
-                        <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in">
-                          <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
-                            <span>🔒</span> Local Cerrado
+                        <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in space-y-1.5">
+                          <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
+                            <span>🔒</span> {esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}
                           </p>
                           <p className="text-slate-200 text-xs font-semibold leading-relaxed">
-                            Nuestro horario de atención es de 20:30 a 01:00hs.
+                            {mensajeCierre}
                           </p>
                         </div>
                       ) : turnoActivo === null ? (
@@ -761,12 +763,12 @@ export default function CartDrawer() {
             </div>
 
             {turnoActivo === false ? (
-              <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in">
-                <p className="text-red-400 font-extrabold text-sm mb-1 flex items-center justify-center gap-1.5">
-                  <span>🔒</span> Local Cerrado
+              <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in space-y-1.5">
+                <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
+                  <span>🔒</span> {esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}
                 </p>
                 <p className="text-slate-200 text-xs font-semibold leading-relaxed">
-                  Nuestro horario de atención es de 20:30 a 01:00hs.
+                  {mensajeCierre}
                 </p>
               </div>
             ) : !mostrarCheckout ? (

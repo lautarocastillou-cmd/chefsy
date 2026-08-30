@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Search, Star, Clock, Sparkles } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
+import { usarCarrito } from '@/contexto/CarritoContexto'
 
 interface Props {
   configuracion: ConfiguracionTienda | null
@@ -25,6 +26,7 @@ export default function HeroCentradoMinimalista({
   fuenteHeroClase,
   onBusquedaChange,
 }: Props) {
+  const { turnoActivo, esDomingoCerrado } = usarCarrito()
   const efectoTitulo = configuracion?.efecto_titulo_hero || 'none'
   const colorSecundario = configuracion?.color_titulo_secundario || '#F59E0B'
 
@@ -81,10 +83,17 @@ export default function HeroCentradoMinimalista({
 
         {/* Estado en Vivo / Horario */}
         {configuracion?.hero_mostrar_horario !== false && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md shadow-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Abierto hoy • 20:30 a 01:00 hs</span>
-          </div>
+          turnoActivo ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md shadow-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Abierto hoy • Recibiendo pedidos</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-rose-300 bg-rose-500/10 border border-rose-500/30 backdrop-blur-md shadow-md">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>{esDomingoCerrado ? 'Cerrado los domingos' : 'Cerrado en este momento'}</span>
+            </div>
+          )
         )}
       </div>
 
