@@ -503,25 +503,25 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       {/* Modal del Mapa */}
       {verMapa && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={() => setVerMapa(false)}
         >
           <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out]"
+            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out] border border-slate-200 dark:border-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shrink-0">
               <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <MapPin className="text-indigo-500" /> Seguimiento: {pedido.cliente}
               </h3>
               <button 
                 onClick={() => setVerMapa(false)}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-white transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 h-[400px]">
+            <div className="relative p-0 bg-slate-50 dark:bg-slate-950 h-[400px] overflow-hidden">
               <MapaSeguimiento pedido={pedido} />
             </div>
           </div>
