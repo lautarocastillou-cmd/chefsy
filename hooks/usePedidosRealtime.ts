@@ -79,8 +79,19 @@ export function usePedidosRealtime({
       )
 
       const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
-      despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
-      prevPedidosRef.current = pedidosSWRFiltrados
+
+      // Evitar bucle infinito de re-render si los pedidos no cambiaron
+      const prev = prevPedidosRef.current || []
+      const sonIguales = prev.length === pedidosSWRFiltrados.length &&
+        prev.every((p, i) => {
+          const s = pedidosSWRFiltrados[i]
+          return s && p.id === s.id && p.estado === s.estado && p.hora === s.hora && p.cadete_id === s.cadete_id
+        })
+
+      if (!sonIguales) {
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
+        prevPedidosRef.current = pedidosSWRFiltrados
+      }
       setDbEstado('conectado')
       setEstaListo(true)
     }
