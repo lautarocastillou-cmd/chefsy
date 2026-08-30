@@ -33,6 +33,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  FolderOpen,
   Scissors,
   LayoutGrid,
   Table as TableIcon
@@ -2038,13 +2039,11 @@ export default function DevToolsPage() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalGDrive(true)}
-                  className="px-3.5 py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 hover:border-blue-500 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
-                  title="Importar fotos desde Google Drive"
+                  className="px-3.5 py-2.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/25 hover:border-indigo-500 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                  title="Subir carpeta completa de Windows / Drive o pegar enlaces"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.71 3.5L1.15 15l3.43 6l6.55-11.5L7.71 3.5zm8.58 0l-6.56 11.5l3.43 6l6.56-11.5l-3.43-6zm-5.15 9l-3.43 6h13.14l3.43-6H11.14z" />
-                  </svg>
-                  <span>Google Drive</span>
+                  <FolderOpen size={15} />
+                  <span>Subir Carpeta / Drive</span>
                 </button>
               </div>
             </div>
@@ -2605,13 +2604,11 @@ export default function DevToolsPage() {
                       <button
                         type="button"
                         onClick={() => setMostrarModalGDrive(true)}
-                        className="text-[11px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 cursor-pointer"
-                        title="Importar fotos desde Google Drive"
+                        className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 cursor-pointer"
+                        title="Subir carpeta completa de Windows / Drive o pegar enlaces"
                       >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M7.71 3.5L1.15 15l3.43 6l6.55-11.5L7.71 3.5zm8.58 0l-6.56 11.5l3.43 6l6.56-11.5l-3.43-6zm-5.15 9l-3.43 6h13.14l3.43-6H11.14z" />
-                        </svg>
-                        <span>Google Drive</span>
+                        <FolderOpen size={14} />
+                        <span>Carpeta / Drive</span>
                       </button>
 
                       <button
