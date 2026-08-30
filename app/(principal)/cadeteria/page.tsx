@@ -100,7 +100,13 @@ function TarjetaPedidoCadete({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-chefsy-200 dark:border-slate-800 rounded-2xl p-4 space-y-3.5 animate-[slideIn_0.2s_ease-out] transition-colors">
+    <div 
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 240px',
+      }}
+      className="bg-white dark:bg-slate-900 border border-chefsy-200 dark:border-slate-800 rounded-2xl p-4 space-y-3.5 animate-[slideIn_0.2s_ease-out] transition-colors"
+    >
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

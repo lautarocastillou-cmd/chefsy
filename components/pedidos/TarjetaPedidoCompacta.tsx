@@ -76,6 +76,10 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
   return (
     <div 
       onClick={onClickDetalle}
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 110px',
+      }}
       className={cn(
         "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-2.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden cursor-pointer group",
         bordesPorEstado[pedido.estado],
