@@ -233,7 +233,11 @@ export default function PaginaDashboard() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {pedidosRecientes.map((pedido) => (
-                <TarjetaPedido key={pedido.id} pedido={pedido} />
+                <TarjetaPedido 
+                  key={pedido.id} 
+                  pedido={pedido} 
+                  onEditarPedido={(p) => setPedidoSeleccionadoParaEditar(p)} 
+                />
               ))}
             </div>
           )}

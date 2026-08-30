@@ -299,7 +299,11 @@ export default function PaginaPedidos() {
             : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5"
         )}>
           {pedidosFiltrados.map((pedido) => (
-            <TarjetaPedido key={pedido.id} pedido={pedido} />
+            <TarjetaPedido 
+              key={pedido.id} 
+              pedido={pedido} 
+              onEditarPedido={(p) => setPedidoAEditar(p)} 
+            />
           ))}
         </div>
       )}

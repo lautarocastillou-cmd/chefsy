@@ -15,7 +15,10 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
-import FormularioPedido from './FormularioPedido'
+import dynamic from 'next/dynamic'
+const FormularioPedidoLazy = dynamic(() => import('./FormularioPedido'), {
+  loading: () => <div className="p-8 text-center text-sm text-slate-400">Cargando formulario...</div>
+})
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import BadgeSmartBatch from './BadgeSmartBatch'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
@@ -40,11 +43,12 @@ const bordesPorEstado: Record<Pedido['estado'], string> = {
 interface PropsTarjetaPedido {
   pedido: Pedido
   soloLectura?: boolean
+  onEditarPedido?: (pedido: Pedido) => void
 }
 
 import React from 'react'
 
-const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false }: PropsTarjetaPedido) {
+const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false, onEditarPedido }: PropsTarjetaPedido) {
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
   const { modificadores: catalogoModificadores } = usarCatalogo()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
@@ -245,7 +249,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
           <BadgeEstado estado={pedido.estado} />
           <div className="flex items-center gap-1">
             <button 
-              onClick={() => setEditandoPedidoCompleto(true)}
+              onClick={() => onEditarPedido ? onEditarPedido(pedido) : setEditandoPedidoCompleto(true)}
               className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
               title="Editar Pedido"
             >
@@ -568,7 +572,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               </button>
             </div>
             <div className="px-6 pb-6">
-              <FormularioPedido 
+              <FormularioPedidoLazy 
                 pedidoInicial={pedido} 
                 onClose={() => setEditandoPedidoCompleto(false)} 
               />
