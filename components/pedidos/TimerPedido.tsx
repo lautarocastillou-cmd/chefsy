@@ -11,110 +11,98 @@ interface PropsTimerPedido {
   mostrarFilaCompleta?: boolean
 }
 
+function parsearFechaMs(val: any): number | null {
+  if (!val) return null
+  if (typeof val === 'number') return val
+  if (val instanceof Date) {
+    const t = val.getTime()
+    return isNaN(t) ? null : t
+  }
+  if (typeof val === 'string') {
+    const t = Date.parse(val.includes(' ') && !val.includes('T') ? val.replace(' ', 'T') : val)
+    if (!isNaN(t)) return t
+  }
+  return null
+}
+
 /**
  * Componente que muestra en tiempo real cuántos minutos/segundos lleva un pedido en cada estado.
- * Muestra múltiples temporizadores (Nuevo, Cocina, Listo) secuencialmente que se frenan
- * a medida que el pedido cambia de estado.
+ * Optimizado con cálculo entero en memoria para eliminar presión sobre CPU y Garbage Collector.
  */
 const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaCompleta = false }: PropsTimerPedido) {
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-  const ahora = useRelojGlobal(!esFinal)
+  const ahoraMs = useRelojGlobal(!esFinal)
 
-  // Función de parseo segura compatible con todos los navegadores (incluso Safari de iOS)
-  const parsearFechaSegura = (val: any): Date | null => {
-    if (!val) return null
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val
-    
-    let d = new Date(val)
-    if (!isNaN(d.getTime())) return d
+  // Memoizar timestamps de fechas parseadas (solo se calculan si cambian los campos del pedido)
+  const tCreacion = React.useMemo(() => {
+    return parsearFechaMs(pedido.created_at) || parsearFechaHora(pedido.fecha, pedido.hora).getTime()
+  }, [pedido.created_at, pedido.fecha, pedido.hora])
 
-    if (typeof val === 'string') {
-      // Reemplazar espacios por T para compatibilidad estricta
-      const normalizada = val.replace(' ', 'T')
-      d = new Date(normalizada)
-      if (!isNaN(d.getTime())) return d
-
-      // Intentar quitando milisegundos y zonas horarias
-      const limpia = normalizada.split('.')[0]
-      d = new Date(limpia)
-      if (!isNaN(d.getTime())) return d
-    }
-    return null
-  }
-
-  // Obtener fechas base usando el parser seguro
-  const fechaCreacion = parsearFechaSegura(pedido.created_at) || parsearFechaHora(pedido.fecha, pedido.hora)
-  const fechaCocina = parsearFechaSegura(pedido.cocina_at)
-  const fechaListo = parsearFechaSegura(pedido.listo_at)
-  const fechaEntregado = parsearFechaSegura(pedido.entregado_at)
+  const tCocina = React.useMemo(() => parsearFechaMs(pedido.cocina_at), [pedido.cocina_at])
+  const tListo = React.useMemo(() => parsearFechaMs(pedido.listo_at), [pedido.listo_at])
+  const tEntregado = React.useMemo(() => parsearFechaMs(pedido.entregado_at), [pedido.entregado_at])
 
   // ── 1. Temporizador: NUEVO ──────────────────────────────
-  // Siempre visible.
-  // Termina cuando el pedido pasa a Cocina, Listo o Entregado/Cancelado.
-  let finNuevo = ahora
-  if (fechaCocina) finNuevo = fechaCocina
-  else if (fechaListo) finNuevo = fechaListo
-  else if (fechaEntregado) finNuevo = fechaEntregado
+  let finNuevoMs = ahoraMs
+  if (tCocina) finNuevoMs = tCocina
+  else if (tListo) finNuevoMs = tListo
+  else if (tEntregado) finNuevoMs = tEntregado
   else if (pedido.estado !== 'nuevo') {
-    // Si cambió de estado pero no tiene timestamp, se congela en la creación
-    finNuevo = fechaCreacion
+    finNuevoMs = tCreacion
   }
-  const segNuevo = Math.max(0, calcularDiferenciaSegundos(fechaCreacion, finNuevo))
-  const estaNuevoTicking = !fechaCocina && !fechaListo && !fechaEntregado && pedido.estado === 'nuevo'
+  const segNuevo = Math.max(0, Math.floor((finNuevoMs - tCreacion) / 1000))
+  const estaNuevoTicking = !tCocina && !tListo && !tEntregado && pedido.estado === 'nuevo'
 
   // ── 2. Temporizador: COCINA ──────────────────────────────
-  // Visible solo si ya entró a cocina.
-  // Termina cuando el pedido pasa a Listo o Entregado/Cancelado.
-  const showCocina = !!fechaCocina || pedido.estado === 'en_cocina'
+  const showCocina = !!tCocina || pedido.estado === 'en_cocina'
   let segCocina = 0
   let estaCocinaTicking = false
   if (showCocina) {
-    const inicioCocina = fechaCocina || fechaCreacion
-    let finCocina = ahora
-    if (fechaListo) finCocina = fechaListo
-    else if (fechaEntregado) finCocina = fechaEntregado
+    const inicioCocina = tCocina || tCreacion
+    let finCocina = ahoraMs
+    if (tListo) finCocina = tListo
+    else if (tEntregado) finCocina = tEntregado
     else if (pedido.estado !== 'en_cocina') {
       finCocina = inicioCocina
     }
-    segCocina = Math.max(0, calcularDiferenciaSegundos(inicioCocina, finCocina))
-    estaCocinaTicking = !fechaListo && !fechaEntregado && pedido.estado === 'en_cocina'
+    segCocina = Math.max(0, Math.floor((finCocina - inicioCocina) / 1000))
+    estaCocinaTicking = !tListo && !tEntregado && pedido.estado === 'en_cocina'
   }
 
   // ── 3. Temporizador: LISTO ──────────────────────
-  // Visible solo si pasó a Listo.
-  const showListo = !!fechaListo || pedido.estado === 'listo'
+  const showListo = !!tListo || pedido.estado === 'listo'
   let segListo = 0
   let estaListoTicking = false
   if (showListo) {
-    const inicioListo = fechaListo || fechaCocina || fechaCreacion
-    let finListo = ahora
-    if (fechaEntregado) finListo = fechaEntregado
+    const inicioListo = tListo || tCocina || tCreacion
+    let finListo = ahoraMs
+    if (tEntregado) finListo = tEntregado
     else if (pedido.estado !== 'listo') {
       finListo = inicioListo
     }
-    segListo = Math.max(0, calcularDiferenciaSegundos(inicioListo, finListo))
-    estaListoTicking = !fechaEntregado && pedido.estado === 'listo'
+    segListo = Math.max(0, Math.floor((finListo - inicioListo) / 1000))
+    estaListoTicking = !tEntregado && pedido.estado === 'listo'
   }
 
-  // Detección aislada de atraso
+  // Detección de atraso ultra liviana
   let esAtrasado = false
   if (!esFinal) {
-    let fechaInicioAtraso: Date | null = null
+    let tInicioAtraso: number | null = null
     let limiteSegundos = 0
 
     if (pedido.estado === 'nuevo') {
-      fechaInicioAtraso = fechaCreacion
+      tInicioAtraso = tCreacion
       limiteSegundos = 60 // 1 min
     } else if (pedido.estado === 'en_cocina') {
-      fechaInicioAtraso = fechaCocina || fechaCreacion
+      tInicioAtraso = tCocina || tCreacion
       limiteSegundos = 45 * 60 // 45 min
     } else if (pedido.estado === 'listo') {
-      fechaInicioAtraso = fechaListo || fechaCocina || fechaCreacion
+      tInicioAtraso = tListo || tCocina || tCreacion
       limiteSegundos = 10 * 60 // 10 min
     }
 
-    if (fechaInicioAtraso) {
-      const segTranscurridos = calcularDiferenciaSegundos(fechaInicioAtraso, ahora)
+    if (tInicioAtraso) {
+      const segTranscurridos = Math.floor((ahoraMs - tInicioAtraso) / 1000)
       esAtrasado = segTranscurridos >= limiteSegundos
     }
   }

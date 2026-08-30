@@ -29,34 +29,38 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
   const { cambiarEstado } = usarPedidos()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
-  const ahoraDate = useRelojGlobal(!esFinal)
-  const ahora = ahoraDate.getTime()
+  const ahoraMs = useRelojGlobal(!esFinal)
 
-  // Calcular tiempo transcurrido total para mostrar
-  const tInicial = new Date(pedido.created_at || ahora).getTime()
-  const diffTotal = Math.floor((ahora - tInicial) / 60000)
+  const tInicial = React.useMemo(() => {
+    return pedido.created_at ? new Date(pedido.created_at).getTime() : null
+  }, [pedido.created_at])
+
+  const tCocina = React.useMemo(() => pedido.cocina_at ? new Date(pedido.cocina_at).getTime() : null, [pedido.cocina_at])
+  const tListo = React.useMemo(() => pedido.listo_at ? new Date(pedido.listo_at).getTime() : null, [pedido.listo_at])
+
+  const inicioEfectivo = tInicial || ahoraMs
+  const diffTotal = Math.floor((ahoraMs - inicioEfectivo) / 60000)
   const minutos = diffTotal >= 60 ? `${Math.floor(diffTotal / 60)}h ${diffTotal % 60}m` : `${diffTotal}m`
 
   // Calcular si está demorado en su etapa actual
   let esAtrasado = false
   if (!esFinal) {
-    let fechaInicio: string | null | undefined = null
+    let tInicioEtapa: number | null = null
     let limiteMs = 0
 
     if (pedido.estado === 'nuevo') {
-      fechaInicio = pedido.created_at
+      tInicioEtapa = tInicial
       limiteMs = 1 * 60 * 1000 // 1 min
     } else if (pedido.estado === 'en_cocina') {
-      fechaInicio = pedido.cocina_at || pedido.created_at
+      tInicioEtapa = tCocina || tInicial
       limiteMs = 45 * 60 * 1000 // 45 min
     } else if (pedido.estado === 'listo') {
-      fechaInicio = pedido.listo_at || pedido.cocina_at || pedido.created_at
+      tInicioEtapa = tListo || tCocina || tInicial
       limiteMs = 10 * 60 * 1000 // 10 min
     }
 
-    if (fechaInicio) {
-      const startMs = new Date(fechaInicio).getTime()
-      esAtrasado = ahora - startMs >= limiteMs
+    if (tInicioEtapa) {
+      esAtrasado = ahoraMs - tInicioEtapa >= limiteMs
     }
   }
 

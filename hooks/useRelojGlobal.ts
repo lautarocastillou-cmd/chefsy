@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react'
 
-type Suscriptor = (ahora: Date) => void
+type Suscriptor = (ahoraMs: number) => void
 const suscriptores = new Set<Suscriptor>()
 let intervaloId: NodeJS.Timeout | null = null
-let fechaActual = new Date()
+let timestampActual = Date.now()
 
 function iniciarReloj() {
   if (intervaloId !== null) return
   intervaloId = setInterval(() => {
-    fechaActual = new Date()
-    suscriptores.forEach((suscriptor) => suscriptor(fechaActual))
+    timestampActual = Date.now()
+    suscriptores.forEach((suscriptor) => suscriptor(timestampActual))
   }, 1000)
 }
 
@@ -23,18 +23,18 @@ function detenerReloj() {
 }
 
 /**
- * Hook singleton que suscribe el componente a un reloj maestro global de 1 segundo.
- * Evita que se creen N intervalos en paralelo por cada tarjeta de pedido.
+ * Hook singleton ultraliviano que suscribe el componente a un reloj maestro global de 1 segundo (milisegundos).
+ * Evita instanciar objetos Date() constantes y reduce a cero la presión sobre el Garbage Collector.
  * @param activo Si es false, no se suscribe al reloj (ej: pedidos entregados/cancelados).
  */
-export function useRelojGlobal(activo: boolean = true): Date {
-  const [ahora, setAhora] = useState<Date>(() => fechaActual)
+export function useRelojGlobal(activo: boolean = true): number {
+  const [ahoraMs, setAhoraMs] = useState<number>(() => timestampActual)
 
   useEffect(() => {
     if (!activo) return
 
-    const suscriptor: Suscriptor = (nuevaFecha) => {
-      setAhora(nuevaFecha)
+    const suscriptor: Suscriptor = (nuevoMs) => {
+      setAhoraMs(nuevoMs)
     }
 
     suscriptores.add(suscriptor)
@@ -46,5 +46,6 @@ export function useRelojGlobal(activo: boolean = true): Date {
     }
   }, [activo])
 
-  return ahora
+  return ahoraMs
 }
+
