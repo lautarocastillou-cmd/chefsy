@@ -10,9 +10,16 @@ export default function BannerSugerenciasRuta() {
   const { pedidos, cadetes, asignarCadete } = usarPedidos()
   const [procesandoGrupoId, setProcesandoGrupoId] = useState<string | null>(null)
 
+  const firmaCandidatos = useMemo(() => {
+    return pedidos
+      .filter((p) => p.tipoEntrega === 'delivery' && p.estado !== 'entregado' && p.estado !== 'cancelado')
+      .map((p) => `${p.id}:${p.cadete_id || ''}:${p.coordenadas?.latitud || ''}`)
+      .join('|')
+  }, [pedidos])
+
   const grupos = useMemo(() => {
     return detectarGruposCercanos(pedidos, 750)
-  }, [pedidos])
+  }, [firmaCandidatos])
 
   // Filtrar grupos que tengan pedidos sin asignar o con cadetes diferentes
   const gruposConOportunidad = useMemo(() => {

@@ -19,15 +19,38 @@ export interface GrupoBatch {
   cadeteNombre?: string | null
 }
 
+// Caché en memoria para evitar recalcular distancias trigonométricas (Haversine)
+const cacheDistancias = new Map<string, number>()
+
+function obtenerDistanciaMetrosCacheada(
+  idA: string, coordA: { latitud: number; longitud: number },
+  idB: string, coordB: { latitud: number; longitud: number }
+): number {
+  const clave = idA < idB ? `${idA}_${idB}` : `${idB}_${idA}`
+  const existente = cacheDistancias.get(clave)
+  if (existente !== undefined) return existente
+
+  const distKm = calcularDistanciaKm(coordA, coordB)
+  const distMetros = Math.round(distKm * 1000)
+  cacheDistancias.set(clave, distMetros)
+
+  // Prevenir crecimiento infinito en sesiones muy prolongadas
+  if (cacheDistancias.size > 2000) {
+    cacheDistancias.clear()
+  }
+  return distMetros
+}
+
 /**
  * Encuentra todos los pedidos vecinos cercanos a un pedido específico (dentro del umbral en metros).
+ * Optimizado con caché espacial de distancias.
  */
 export function obtenerVecinosCercanos(
   pedido: Pedido,
   todosPedidos: Pedido[],
   umbralMetros: number = 750
 ): VecinoCercano[] {
-  if (!pedido.coordenadas || !pedido.coordenadas.latitud || !pedido.coordenadas.longitud) {
+  if (!pedido.coordenadas?.latitud || !pedido.coordenadas?.longitud) {
     return []
   }
 
@@ -38,15 +61,16 @@ export function obtenerVecinosCercanos(
   }
 
   const vecinos: VecinoCercano[] = []
+  const coordA = pedido.coordenadas
 
-  for (const otro of todosPedidos) {
+  for (let i = 0; i < todosPedidos.length; i++) {
+    const otro = todosPedidos[i]
     if (otro.id === pedido.id) continue
     if (otro.tipoEntrega !== 'delivery') continue
     if (!estadosActivos.includes(otro.estado)) continue
-    if (!otro.coordenadas || !otro.coordenadas.latitud || !otro.coordenadas.longitud) continue
+    if (!otro.coordenadas?.latitud || !otro.coordenadas?.longitud) continue
 
-    const distKm = calcularDistanciaKm(pedido.coordenadas, otro.coordenadas)
-    const distMetros = Math.round(distKm * 1000)
+    const distMetros = obtenerDistanciaMetrosCacheada(pedido.id, coordA, otro.id, otro.coordenadas)
 
     if (distMetros <= umbralMetros) {
       vecinos.push({
@@ -97,8 +121,12 @@ export function detectarGruposCercanos(
       for (const otro of candidatos) {
         if (visitados.has(otro.id)) continue
 
-        const distKm = calcularDistanciaKm(actual.coordenadas!, otro.coordenadas!)
-        const distMetros = Math.round(distKm * 1000)
+        const distMetros = obtenerDistanciaMetrosCacheada(
+          actual.id,
+          actual.coordenadas!,
+          otro.id,
+          otro.coordenadas!
+        )
 
         if (distMetros <= umbralMetros) {
           visitados.add(otro.id)

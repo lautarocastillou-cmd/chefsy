@@ -12,13 +12,29 @@ interface PropsBadgeSmartBatch {
 }
 
 export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
+  // Salida temprana inmediata para pedidos que no son delivery o no tienen GPS
+  const esCandidato = pedido.tipoEntrega === 'delivery' && 
+                      pedido.estado !== 'entregado' && 
+                      pedido.estado !== 'cancelado' && 
+                      Boolean(pedido.coordenadas?.latitud && pedido.coordenadas?.longitud)
+
   const { pedidos, cadetes, asignarCadete } = usarPedidos()
   const [abierto, setAbierto] = useState(false)
   const [asignando, setAsignando] = useState(false)
 
+  // Firma liviana que solo cambia si se agregan, mueven o reasignan pedidos delivery activos
+  const firmaCandidatos = useMemo(() => {
+    if (!esCandidato) return ''
+    return pedidos
+      .filter((p) => p.tipoEntrega === 'delivery' && p.estado !== 'entregado' && p.estado !== 'cancelado')
+      .map((p) => `${p.id}:${p.cadete_id || ''}:${p.coordenadas?.latitud || ''}`)
+      .join('|')
+  }, [pedidos, esCandidato])
+
   const vecinos = useMemo(() => {
+    if (!esCandidato) return []
     return obtenerVecinosCercanos(pedido, pedidos, 750)
-  }, [pedido, pedidos])
+  }, [pedido.id, pedido.cadete_id, pedido.estado, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esCandidato, firmaCandidatos])
 
   if (vecinos.length === 0) return null
 
