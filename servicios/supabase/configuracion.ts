@@ -1,5 +1,15 @@
 import { supabase, supabaseAnon } from '@/lib/supabase'
 
+export interface CarruselSlide {
+  id: string
+  titulo: string
+  subtitulo: string
+  badge?: string
+  imagen_url: string
+  boton_texto?: string
+  categoria_id?: string
+}
+
 export interface ConfiguracionTienda {
   id: number
   color_principal: string
@@ -22,6 +32,12 @@ export interface ConfiguracionTienda {
   whatsapp_mensaje?: string
   link_instagram?: string
   link_tiktok?: string
+  hero_layout?: 'parallax_doble' | 'carrusel_promo' | 'cinematic_video' | 'centrado_minimalista'
+  hero_video_url?: string
+  hero_video_overlay_opacity?: number
+  hero_badge_texto?: string
+  hero_carrusel_slides?: CarruselSlide[]
+  hero_mostrar_horario?: boolean
 }
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
@@ -55,7 +71,30 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       textura_fondo_url: '',
       whatsapp_mensaje: '¡Hola Chefsy! Hice un pedido online:',
       link_instagram: '',
-      link_tiktok: ''
+      link_tiktok: '',
+      hero_layout: 'parallax_doble',
+      hero_video_url: '',
+      hero_video_overlay_opacity: 60,
+      hero_badge_texto: '⭐ 4.9 en Google • Los mejores de la ciudad',
+      hero_carrusel_slides: [
+        {
+          id: 'slide-1',
+          titulo: 'DOBLE SMASH BURGER',
+          subtitulo: '2x 120g de carne seleccionada + Doble Cheddar Fundido',
+          badge: '🔥 MÁS PEDIDO',
+          imagen_url: '/burger-loca.webp',
+          boton_texto: 'Ver Hamburguesas',
+        },
+        {
+          id: 'slide-2',
+          titulo: 'MIÉRCOLES DE PROMO 2x1',
+          subtitulo: 'Aprovechá 2x1 en Lomos y Pizzas durante todo el turno',
+          badge: '⚡ PROMO EXCLUSIVA',
+          imagen_url: '/burger-loca.webp',
+          boton_texto: 'Pedir Ahora',
+        }
+      ],
+      hero_mostrar_horario: true,
     }
   }
 

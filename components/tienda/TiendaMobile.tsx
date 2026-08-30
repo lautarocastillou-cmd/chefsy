@@ -23,7 +23,7 @@ import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
-import HeroParallax3D from '@/components/tienda/HeroParallax3D'
+import HeroManager from '@/components/tienda/hero/HeroManager'
 import dynamic from 'next/dynamic'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
@@ -308,21 +308,21 @@ export default function TiendaMobile() {
 
       {/* Contenido principal de la Tienda */}
       <>
-          {/* Hero Section Parallax 3D & Insignias Flotantes */}
+          {/* Hero Section Dinámico (Parallax, Carrusel, Cinemático o Minimalista) */}
           {!categoriaSeleccionada && !busqueda && (
-            <HeroParallax3D
-              heroImageUrl={configuracion?.hero_image_url || '/burger-loca.webp'}
-              heroLinea1={configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
-              heroLinea2={configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
-              heroScale={configuracion?.hero_escala}
-              heroPosX={configuracion?.hero_pos_x}
-              heroPosY={configuracion?.hero_pos_y}
-              isVideoBg={isVideoBg}
-              bgImage={bgImage}
-              onExplorarClick={() => {
-                setSelectorAbierto(true)
-                const el = document.getElementById('seccion-menu-categorias')
-                if (el) el.scrollIntoView({ behavior: 'smooth' })
+            <HeroManager
+              categoriasActivas={categoriasActivas}
+              categoriaSeleccionada={categoriaSeleccionada}
+              busqueda={busqueda}
+              sugerenciaBusqueda={sugerenciaBusqueda}
+              selectorAbierto={selectorAbierto}
+              animatedWordIndex={0}
+              animatedWords={[]}
+              onBusquedaChange={setBusqueda}
+              onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
+              onSeleccionarCategoria={(id) => {
+                setCategoriaSeleccionada(id === 'todos' ? null : id)
+                setSelectorAbierto(false)
               }}
             />
           )}

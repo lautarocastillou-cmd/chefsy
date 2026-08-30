@@ -17,6 +17,8 @@ const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr
 const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHistorialPedidos'), { ssr: false })
 const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfilCliente'), { ssr: false })
 
+import HeroManager from '@/components/tienda/hero/HeroManager'
+
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
   categoriaSeleccionada: string | null
@@ -30,32 +32,13 @@ interface HeroSectionProps {
   onSeleccionarCategoria: (id: string | null) => void
 }
 
-export default function HeroSection({
-  categoriasActivas,
-  categoriaSeleccionada,
-  busqueda,
-  sugerenciaBusqueda,
-  selectorAbierto,
-  animatedWordIndex,
-  animatedWords,
-  onBusquedaChange,
-  onToggleSelector,
-  onSeleccionarCategoria,
-}: HeroSectionProps) {
+export default function HeroSection(props: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
   const { usuario, perfil, cerrarSesion } = usarClienteAuth()
   const [mostrarLogin, setMostrarLogin] = React.useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = React.useState(false)
   const [mostrarHistorial, setMostrarHistorial] = React.useState(false)
   const [mostrarPerfil, setMostrarPerfil] = React.useState(false)
-
-  const fuenteHeroClase = {
-    bebas: 'font-bebas',
-    montserrat: 'font-montserrat',
-    inter: 'font-inter',
-    playfair: 'font-playfair',
-    anton: 'font-anton'
-  }[configuracion?.fuente_hero || 'bebas'] || 'font-bebas'
 
   return (
     <>
@@ -81,105 +64,8 @@ export default function HeroSection({
         </div>
       </header>
 
-      {/* --- HERO SECTION TIPO SQEW --- */}
-      <div className="relative min-h-[40vh] lg:min-h-[85vh] w-full flex flex-col px-4 md:px-12 py-2 lg:py-10 overflow-visible">
-        
-        {/* Contenedor Principal del Hero */}
-        <div className="relative z-50 flex-1 grid grid-cols-1 lg:grid-cols-2 pt-2 lg:pt-0 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-2 lg:gap-y-4 items-center">
-          
-          {/* 1. Tipografía Gigante (Hero) */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 mt-2 lg:mt-0">
-            <h1 
-              className={`hero-title-1 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] tracking-normal leading-[0.85] uppercase`}
-              style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
-            >
-              {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
-            </h1>
-            <h1 
-              className={`hero-title-2 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] tracking-normal leading-[0.85] uppercase`}
-              style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
-            >
-              {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
-            </h1>
-          </div>
-
-          {/* 2. Imagen de Producto Gigante Flotante */}
-          <div className="relative w-full flex items-center justify-center lg:justify-end pointer-events-none z-20 order-2 lg:row-span-2 pt-1 lg:pt-0">
-            <div className="burger-float-wrapper relative w-full max-w-[250px] sm:max-w-[350px] md:max-w-[650px] xl:max-w-[850px] aspect-square">
-              <div className="absolute inset-x-0 bottom-10 h-1/2 bg-black/30 rounded-full scale-y-50 -z-10 opacity-70"></div>
-              
-              <Image 
-                src={configuracion?.hero_image_url?.split('|')[0] || "/burger-loca.webp"} 
-                alt="Chefsy Hero" 
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 850px"
-                className="object-contain transition-all duration-200"
-                style={{
-                  objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
-                  transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 3. Selector de Categorías y Subtítulo */}
-          <div className="hero-controls flex flex-col gap-3 lg:gap-5 w-full max-w-lg relative z-40 order-3 lg:self-start mt-2 lg:mt-0">
-            <p 
-              className="font-bebas text-4xl md:text-7xl tracking-wide leading-none whitespace-nowrap text-center lg:text-left uppercase"
-              style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
-            >
-              {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
-            </p>
-            <div className="relative w-full">
-              <input
-                id="busqueda_hero"
-                name="busqueda_hero"
-                type="text"
-                placeholder="Ej. Cheddar, Papas, Mila especial..."
-                value={busqueda}
-                onChange={(e) => onBusquedaChange(e.target.value)}
-                className="w-full bg-black/40 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              
-              {/* Sugerencia: ¿Quisiste decir? */}
-              {sugerenciaBusqueda && (
-                <div className="absolute -bottom-8 left-0 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <button
-                    onClick={() => onBusquedaChange(sugerenciaBusqueda)}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-chefsy-500/20 hover:bg-chefsy-500/30 border border-chefsy-500/40 rounded-full text-xs font-medium text-white transition-all shadow-lg"
-                  >
-                    <span className="text-slate-300">¿Quisiste decir</span>
-                    <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
-                    <span className="text-slate-300">?</span>
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-4 w-full">
-              <SelectorCategorias
-                categoriasActivas={categoriasActivas}
-                categoriaSeleccionada={categoriaSeleccionada}
-                selectorAbierto={selectorAbierto}
-                onToggleSelector={onToggleSelector}
-                onSeleccionarCategoria={onSeleccionarCategoria}
-              />
-              <div className="word-carousel w-[50%] h-[60px]">
-                <h2
-                  key={animatedWordIndex}
-                  className="word-enter font-bebas text-4xl sm:text-5xl md:text-6xl tracking-wide"
-                  style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
-                >
-                  {animatedWords[animatedWordIndex]}
-                </h2>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
+      {/* --- RENDERIZADO DINÁMICO DEL HERO SEGÚN EL LAYOUT SELECCIONADO --- */}
+      <HeroManager {...props} />
 
       {mostrarLogin && (
         <ModalLoginCliente 
