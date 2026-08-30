@@ -6,12 +6,10 @@ import { obtenerMovimientosStockGenerales } from '@/servicios/supabase/stock'
 import {
   History,
   Search,
-  Filter,
   Download,
   Calendar,
   RotateCcw,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   ShoppingBag,
   User,
@@ -19,50 +17,59 @@ import {
   ArrowRight,
   Clock,
   Loader2,
-  FileSpreadsheet,
-  CheckCircle2,
+  Package,
+  Layers,
+  Sparkles
 } from 'lucide-react'
 
 // Helper estático de tipos fuera del ciclo de render
-const TIPO_INFO_MAP: Record<TipoMovimientoStock, { label: string; bg: string; icon: any }> = {
+const TIPO_INFO_MAP: Record<TipoMovimientoStock, { label: string; bg: string; dot: string; icon: any }> = {
   ingreso_mercaderia: {
     label: 'Ingreso / Compra',
-    bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    dot: 'bg-emerald-400',
     icon: TrendingUp,
   },
   venta_automatica: {
     label: 'Venta Comanda',
-    bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    bg: 'bg-sky-500/10 text-sky-400 border-sky-500/30',
+    dot: 'bg-sky-400',
     icon: ShoppingBag,
   },
   consumo_personal: {
     label: 'Consumo Personal',
-    bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
+    dot: 'bg-purple-400',
     icon: User,
   },
   merma_vencimiento: {
     label: 'Merma Vencimiento',
-    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+    dot: 'bg-rose-400',
     icon: AlertTriangle,
   },
   merma_rotura: {
     label: 'Merma Rotura',
-    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    bg: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+    dot: 'bg-rose-400',
     icon: AlertTriangle,
   },
   merma_cocina: {
     label: 'Merma Cocina',
-    bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    bg: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    dot: 'bg-amber-400',
     icon: AlertTriangle,
   },
   ajuste_inventario: {
     label: 'Conteo Físico',
-    bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
+    dot: 'bg-cyan-400',
     icon: ShieldCheck,
   },
   ajuste_manual: {
     label: 'Ajuste Manual',
-    bg: 'bg-slate-800 text-slate-300 border-slate-700',
+    bg: 'bg-slate-800/90 text-slate-300 border-slate-700',
+    dot: 'bg-slate-400',
     icon: RotateCcw,
   },
 }
@@ -72,25 +79,39 @@ function getTipoInfo(tipo: TipoMovimientoStock) {
     TIPO_INFO_MAP[tipo] || {
       label: 'Ajuste Manual',
       bg: 'bg-slate-800 text-slate-300 border-slate-700',
+      dot: 'bg-slate-400',
       icon: RotateCcw,
     }
   )
 }
 
-const DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
-function formatearFecha(fechaStr: string) {
+// Badge de Fecha y Hora moderno en 1 sola línea sin cortes
+function BadgeFechaHora({ fechaStr }: { fechaStr: string }) {
   try {
-    return DATE_FORMATTER.format(new Date(fechaStr))
+    const d = new Date(fechaStr)
+    if (isNaN(d.getTime())) {
+      return <span className="font-mono text-xs text-slate-400 whitespace-nowrap">{fechaStr}</span>
+    }
+
+    const dia = d.getDate().toString().padStart(2, '0')
+    const mes = d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').toUpperCase()
+    const hora = d.getHours().toString().padStart(2, '0')
+    const min = d.getMinutes().toString().padStart(2, '0')
+
+    return (
+      <div className="inline-flex items-center gap-2 whitespace-nowrap select-none">
+        <div className="inline-flex items-center gap-1 bg-slate-950/80 border border-slate-800/90 px-2.5 py-1 rounded-lg shadow-xs">
+          <Calendar size={12} className="text-indigo-400 shrink-0" />
+          <span className="font-extrabold text-slate-200 text-xs tracking-tight">{dia} {mes}</span>
+        </div>
+        <div className="inline-flex items-center gap-1 bg-slate-900/60 border border-slate-800/60 px-2 py-1 rounded-lg text-slate-300 font-mono text-xs">
+          <Clock size={11} className="text-slate-400 shrink-0" />
+          <span className="font-bold">{hora}:{min}</span>
+        </div>
+      </div>
+    )
   } catch {
-    return fechaStr
+    return <span className="font-mono text-xs text-slate-400 whitespace-nowrap">{fechaStr}</span>
   }
 }
 
@@ -130,7 +151,7 @@ export function TabKardexAuditoria({
         insumoId: filtroInsumoId,
         tipo: filtroTipo,
         desde,
-        limite: 200,
+        limite: 300,
       })
       setMovimientos(datos)
     } catch (err) {
@@ -200,7 +221,7 @@ export function TabKardexAuditoria({
     ]
 
     const filas = movimientosFiltrados.map(m => [
-      `"${formatearFecha(m.created_at)}"`,
+      `"${new Date(m.created_at).toLocaleString('es-AR')}"`,
       `"${m.insumo_nombre.replace(/"/g, '""')}"`,
       `"${getTipoInfo(m.tipo_movimiento).label}"`,
       m.cantidad_delta > 0 ? `+${m.cantidad_delta}` : `${m.cantidad_delta}`,
@@ -225,53 +246,91 @@ export function TabKardexAuditoria({
 
   return (
     <div className="space-y-6">
-      {/* Banner Superior & Métricas */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-3xl">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Movimientos</p>
-          <p className="text-xl font-black text-white mt-0.5">{metricas.total}</p>
+      
+      {/* ── KPIs Modernos con Glow y Gradiente ─────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+        {/* Total Movimientos */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-slate-800/80 p-4 rounded-2xl shadow-sm relative overflow-hidden group hover:border-slate-700 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Total Registros</p>
+            <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl">
+              <History size={16} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-white mt-1 font-mono">{metricas.total}</p>
+          <span className="text-[10px] text-slate-500 font-semibold mt-0.5 block">Asientos auditados</span>
         </div>
 
-        <div className="bg-slate-900/80 border border-emerald-500/30 p-4 rounded-3xl">
-          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Entradas (Compras)</p>
-          <p className="text-xl font-black text-emerald-300 mt-0.5">+{metricas.entradas}</p>
+        {/* Entradas */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-emerald-500/30 p-4 rounded-2xl shadow-sm relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest">Compras / Entradas</p>
+            <div className="p-2 bg-emerald-500/15 text-emerald-400 rounded-xl">
+              <TrendingUp size={16} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-emerald-300 mt-1 font-mono">+{metricas.entradas}</p>
+          <span className="text-[10px] text-emerald-400/70 font-semibold mt-0.5 block">Ingresos al stock</span>
         </div>
 
-        <div className="bg-slate-900/80 border border-blue-500/30 p-4 rounded-3xl">
-          <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Salidas (Ventas)</p>
-          <p className="text-xl font-black text-blue-300 mt-0.5">-{metricas.salidas}</p>
+        {/* Salidas Ventas */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-sky-500/30 p-4 rounded-2xl shadow-sm relative overflow-hidden group hover:border-sky-500/50 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold text-sky-400 uppercase tracking-widest">Ventas Comanda</p>
+            <div className="p-2 bg-sky-500/15 text-sky-400 rounded-xl">
+              <ShoppingBag size={16} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-sky-300 mt-1 font-mono">-{metricas.salidas}</p>
+          <span className="text-[10px] text-sky-400/70 font-semibold mt-0.5 block">Descontados por recetas</span>
         </div>
 
-        <div className="bg-slate-900/80 border border-rose-500/30 p-4 rounded-3xl">
-          <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Mermas / Bajas</p>
-          <p className="text-xl font-black text-rose-400 mt-0.5">-{metricas.mermas}</p>
+        {/* Mermas */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-rose-500/30 p-4 rounded-2xl shadow-sm relative overflow-hidden group hover:border-rose-500/50 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold text-rose-400 uppercase tracking-widest">Mermas / Roturas</p>
+            <div className="p-2 bg-rose-500/15 text-rose-400 rounded-xl">
+              <AlertTriangle size={16} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-rose-400 mt-1 font-mono">-{metricas.mermas}</p>
+          <span className="text-[10px] text-rose-400/70 font-semibold mt-0.5 block">Pérdidas justificadas</span>
         </div>
 
-        <div className="bg-slate-900/80 border border-purple-500/30 p-4 rounded-3xl col-span-2 sm:col-span-1">
-          <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Consumo Personal</p>
-          <p className="text-xl font-black text-purple-300 mt-0.5">-{metricas.personal}</p>
+        {/* Consumo Personal */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-purple-500/30 p-4 rounded-2xl shadow-sm relative overflow-hidden group hover:border-purple-500/50 transition-all col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Consumo Personal</p>
+            <div className="p-2 bg-purple-500/15 text-purple-400 rounded-xl">
+              <User size={16} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-purple-300 mt-1 font-mono">-{metricas.personal}</p>
+          <span className="text-[10px] text-purple-400/70 font-semibold mt-0.5 block">Gastos de staff</span>
         </div>
       </div>
 
-      {/* Barra de Filtros y Búsqueda */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800 p-4 rounded-3xl">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+      {/* ── Barra de Filtros Inteligentes ────────────────────────── */}
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl backdrop-blur-md shadow-xs">
+        
+        {/* Buscador */}
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
           <input
             type="text"
-            placeholder="Buscar por insumo, factura, motivo o usuario..."
+            placeholder="Buscar por insumo, comanda, motivo o responsable..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm text-white placeholder:text-slate-500"
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none text-xs text-white placeholder:text-slate-500 transition-all"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Selector de Insumo */}
           <select
             value={filtroInsumoId}
             onChange={e => setFiltroInsumoId(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-2xl px-3 py-3 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer max-w-[200px]"
           >
             <option value="todos">Todos los Insumos</option>
             {insumos.map(i => (
@@ -285,7 +344,7 @@ export function TabKardexAuditoria({
           <select
             value={filtroTipo}
             onChange={e => setFiltroTipo(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-2xl px-3 py-3 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
           >
             <option value="todos">Todos los Tipos</option>
             <option value="ingreso_mercaderia">🟢 Compras / Ingresos</option>
@@ -298,15 +357,15 @@ export function TabKardexAuditoria({
             <option value="ajuste_manual">⚪ Ajustes Manuales</option>
           </select>
 
-          {/* Periodo */}
-          <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-2xl">
+          {/* Periodo Pills */}
+          <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
             {(['hoy', '7dias', 'mes', 'todos'] as const).map(p => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setFiltroPeriodo(p)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filtroPeriodo === p ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  filtroPeriodo === p ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {p === 'hoy' ? 'Hoy' : p === '7dias' ? '7 días' : p === 'mes' ? 'Este Mes' : 'Todo'}
@@ -314,48 +373,49 @@ export function TabKardexAuditoria({
             ))}
           </div>
 
+          {/* Exportar CSV */}
           <button
             type="button"
             onClick={exportarCSV}
             disabled={movimientosFiltrados.length === 0}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-black rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-40"
+            className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-40"
             title="Exportar movimientos a Excel / CSV"
           >
-            <Download size={15} />
-            <span className="hidden sm:inline">Exportar CSV</span>
+            <Download size={14} />
+            <span>Exportar CSV</span>
           </button>
         </div>
       </div>
 
-      {/* Tabla de Movimientos del Kardex */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
+      {/* ── Tabla de Movimientos del Kardex ──────────────────────── */}
+      <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl backdrop-blur-sm">
+        <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
-              <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px] sm:text-[11px]">
-                <th className="py-3.5 px-4 w-36">Fecha y Hora</th>
-                <th className="py-3.5 px-4 min-w-[180px]">Insumo</th>
-                <th className="py-3.5 px-4 w-40">Tipo de Evento</th>
-                <th className="py-3.5 px-4 w-28 text-right">Delta</th>
-                <th className="py-3.5 px-4 w-36 text-center">Stock (Antes ➔ Después)</th>
-                <th className="py-3.5 px-4 min-w-[220px]">Motivo / Comprobante</th>
-                <th className="py-3.5 px-4 w-36">Responsable</th>
+              <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+                <th className="py-4 px-5 min-w-[210px]">Fecha y Hora</th>
+                <th className="py-4 px-5 min-w-[200px]">Insumo</th>
+                <th className="py-4 px-5 min-w-[170px]">Tipo de Evento</th>
+                <th className="py-4 px-5 min-w-[120px] text-right">Variación Delta</th>
+                <th className="py-4 px-5 min-w-[180px] text-center">Stock (Antes ➔ Después)</th>
+                <th className="py-4 px-5 min-w-[260px]">Motivo / Comprobante</th>
+                <th className="py-4 px-5 min-w-[150px]">Responsable</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-800/50">
               {cargando ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center">
-                    <Loader2 className="animate-spin text-indigo-400 mx-auto" size={28} />
-                    <p className="text-xs text-slate-400 font-bold mt-2">Cargando libro de auditoría...</p>
+                  <td colSpan={7} className="py-20 text-center">
+                    <Loader2 className="animate-spin text-indigo-400 mx-auto" size={32} />
+                    <p className="text-xs text-slate-400 font-bold mt-2.5">Cargando libro de auditoría...</p>
                   </td>
                 </tr>
               ) : movimientosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center">
+                  <td colSpan={7} className="py-20 text-center">
                     <div className="max-w-sm mx-auto space-y-2">
-                      <History className="text-slate-600 mx-auto" size={36} />
-                      <p className="text-sm font-bold text-slate-300">No se encontraron movimientos</p>
+                      <History className="text-slate-600 mx-auto" size={40} />
+                      <p className="text-sm font-bold text-slate-200">No se encontraron movimientos</p>
                       <p className="text-xs text-slate-500">
                         Probá cambiando los filtros de período, insumo o tipo de evento.
                       </p>
@@ -365,55 +425,68 @@ export function TabKardexAuditoria({
               ) : (
                 movimientosFiltrados.map(m => {
                   const info = getTipoInfo(m.tipo_movimiento)
+                  const Icono = info.icon
                   const esPositivo = m.cantidad_delta > 0
 
                   return (
-                    <tr key={m.id} className="hover:bg-slate-800/40 transition-colors">
-                      {/* Fecha y Hora */}
-                      <td className="py-3.5 px-4 text-xs font-mono text-slate-400">
-                        {formatearFecha(m.created_at)}
+                    <tr key={m.id} className="hover:bg-slate-800/30 transition-colors group">
+                      
+                      {/* Fecha y Hora en Badge Horizontal */}
+                      <td className="py-3.5 px-5">
+                        <BadgeFechaHora fechaStr={m.created_at} />
                       </td>
 
                       {/* Insumo */}
-                      <td className="py-3.5 px-4 font-bold text-white">
-                        {m.insumo_nombre}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                          <span className="font-extrabold text-white text-xs sm:text-sm tracking-tight">{m.insumo_nombre}</span>
+                        </div>
                       </td>
 
                       {/* Tipo de Evento */}
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black border uppercase tracking-wider inline-flex items-center gap-1 ${info.bg}`}>
-                          {info.label}
+                      <td className="py-3.5 px-5">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1.5 ${info.bg}`}>
+                          <Icono size={12} className="shrink-0" />
+                          <span>{info.label}</span>
                         </span>
                       </td>
 
                       {/* Delta */}
-                      <td className="py-3.5 px-4 text-right">
-                        <span className={`font-mono font-black text-xs px-2 py-0.5 rounded-md ${
-                          esPositivo ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      <td className="py-3.5 px-5 text-right">
+                        <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap ${
+                          esPositivo 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                         }`}>
-                          {esPositivo ? `+${m.cantidad_delta}` : m.cantidad_delta} {m.unidad_medida}
+                          {esPositivo ? `+${m.cantidad_delta}` : m.cantidad_delta} <span className="text-[10px] opacity-75 font-normal">{m.unidad_medida}</span>
                         </span>
                       </td>
 
                       {/* Stock Antes -> Después */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 text-xs text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                          <span>{m.stock_anterior}</span>
-                          <ArrowRight size={10} className="text-slate-600" />
-                          <strong className="text-white">{m.stock_nuevo}</strong>
+                      <td className="py-3.5 px-5 text-center">
+                        <div className="inline-flex items-center gap-2 text-xs bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80 whitespace-nowrap">
+                          <span className="text-slate-400 font-mono font-medium">{m.stock_anterior}</span>
+                          <ArrowRight size={11} className="text-slate-600 shrink-0" />
+                          <strong className="text-white font-mono font-black text-xs">{m.stock_nuevo}</strong>
+                          <span className="text-[9px] text-slate-500 uppercase">{m.unidad_medida}</span>
                         </div>
                       </td>
 
-                      {/* Motivo */}
-                      <td className="py-3.5 px-4 text-xs text-slate-300 italic">
-                        {m.motivo || '—'}
+                      {/* Motivo / Comprobante */}
+                      <td className="py-3.5 px-5">
+                        <span className="text-xs text-slate-300 block font-medium max-w-[320px] truncate" title={m.motivo || ''}>
+                          {m.motivo || '—'}
+                        </span>
                       </td>
 
                       {/* Responsable */}
-                      <td className="py-3.5 px-4 text-xs text-slate-400 font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <User size={12} className="text-slate-500" />
-                          <span>{m.usuario_nombre}</span>
+                      <td className="py-3.5 px-5 text-xs text-slate-400 font-medium">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase shrink-0">
+                            {(m.usuario_nombre || 'S')[0]}
+                          </div>
+                          <span className="truncate max-w-[120px]">{m.usuario_nombre}</span>
                         </div>
                       </td>
                     </tr>

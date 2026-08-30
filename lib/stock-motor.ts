@@ -16,7 +16,8 @@ export interface ItemVendido {
 export async function registrarVentaKardex(
   productos: ItemVendido[],
   referenciaPedidoId: string,
-  clienteNombre?: string
+  clienteNombre?: string,
+  fechaIso?: string
 ): Promise<void> {
   if (!Array.isArray(productos) || productos.length === 0) return
 
@@ -73,6 +74,7 @@ export async function registrarVentaKardex(
     if (errInsumos || !insumos || insumos.length === 0) return
 
     const ahoraIso = new Date().toISOString()
+    const timestampFinal = fechaIso || ahoraIso
     const updatesInsumos: PromiseLike<any>[] = []
     const filasKardex: any[] = []
 
@@ -101,6 +103,7 @@ export async function registrarVentaKardex(
         motivo: `Venta Comanda #${referenciaPedidoId}${clienteNombre ? ` (${clienteNombre})` : ''}`,
         usuario_nombre: 'Cocina / Comanda',
         referencia_id: referenciaPedidoId,
+        created_at: timestampFinal,
       })
     }
 
