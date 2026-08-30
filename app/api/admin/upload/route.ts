@@ -66,10 +66,11 @@ export async function POST(request: Request) {
     }
 
     const esVideo = mimeType.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext)
+    const esHeic = ['heic', 'heif', 'hevc', 'h265'].includes(ext) || mimeType.includes('heic') || mimeType.includes('heif') || mimeType.includes('hevc')
 
     if (!esVideo) {
       // Optimizar cualquier imagen (JPEG, PNG, HEIC, HEIF, HEVC, WebP, AVIF) a WebP ultraliviano
-      const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 1200, maxAlto: 1200, calidad: 78 })
+      const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 1200, maxAlto: 1200, calidad: 78, esHeic })
       buffer = optimizada.buffer
       mimeType = optimizada.contentType
       ext = optimizada.ext
