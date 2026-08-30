@@ -229,10 +229,16 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
   }
 
   return (
-    <div className={cn(
-      "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
-      bordesPorEstado[pedido.estado]
-    )}>
+    <div 
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 280px',
+      }}
+      className={cn(
+        "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
+        bordesPorEstado[pedido.estado]
+      )}
+    >
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
