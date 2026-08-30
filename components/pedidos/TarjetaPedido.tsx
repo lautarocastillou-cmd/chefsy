@@ -13,7 +13,7 @@ import TimerPedido from './TimerPedido'
 import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { crearEnlaceGoogleMaps } from '@/lib/ubicacion'
+import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import FormularioPedido from './FormularioPedido'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
@@ -177,7 +177,10 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${extrasTexto}`
     }).join('\n\n')
 
-    const costoEnvio = pedido.costoEnvio || 0
+    let costoEnvio = pedido.costoEnvio || 0
+    if (pedido.tipoEntrega === 'delivery' && costoEnvio === 0 && !pedido.envioManual) {
+      costoEnvio = pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500
+    }
     const total = subtotal + costoEnvio
 
     let infoCliente = `Cliente: ${pedido.cliente}`
@@ -398,9 +401,28 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             </div>
           )}
           {pedido.costoEnvio !== undefined && pedido.costoEnvio > 0 && (
-            <span className="text-blue-600 font-medium text-[11px] ml-1">
+            <span className="text-blue-600 dark:text-blue-400 font-medium text-[11px] ml-1">
               + Envío ({formatearPrecio(pedido.costoEnvio)})
             </span>
+          )}
+          {pedido.tipoEntrega === 'delivery' && (!pedido.costoEnvio || pedido.costoEnvio === 0) && !soloLectura && (
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation()
+                const costoSugerido = pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500
+                const nuevoTotal = pedido.total + costoSugerido
+                editarPedido({
+                  ...pedido,
+                  costoEnvio: costoSugerido,
+                  total: nuevoTotal,
+                })
+              }}
+              className="inline-flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md transition-all animate-pulse cursor-pointer ml-1"
+              title="Este pedido de delivery no tiene costo de envío sumado. Hacé clic para sumarle el costo en 1 clic."
+            >
+              <span>⚠️ + Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
+            </button>
           )}
           {!pedido.observaciones && !editandoNota && !soloLectura && (
             <button

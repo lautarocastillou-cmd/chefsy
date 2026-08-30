@@ -299,10 +299,19 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                 <span>Subtotal</span>
                 <span>{formatearPrecio(subtotal)}</span>
               </div>
-              {pideDireccion && costoEnvioFinal > 0 && (
+              {pideDireccion && (
                 <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  <span>Envío</span>
-                  <span>{formatearPrecio(costoEnvioFinal)}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>Envío</span>
+                    {cargandoEnvio && (
+                      <span className="text-[10px] text-chefsy-400 font-normal animate-pulse">
+                        (calculando ruta...)
+                      </span>
+                    )}
+                  </span>
+                  <span className={cargandoEnvio ? 'opacity-70' : ''}>
+                    {formatearPrecio(costoEnvioFinal)}
+                  </span>
                 </div>
               )}
               <div className="border-t border-slate-700/60 my-1 pt-3 flex items-end justify-between">
@@ -316,14 +325,14 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
               <button
                 type="button"
                 onClick={manejarEnvio}
-                className="flex-1 bg-chefsy hover:bg-chefsy-700 text-white p-4 rounded-xl font-bold text-base transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                className="flex-1 bg-chefsy hover:bg-chefsy-700 text-white p-4 rounded-xl font-bold text-base transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
                 ✓ {pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}
               </button>
               <button
                 type="button"
                 onClick={cancelar}
-                className="px-6 py-4 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                className="px-6 py-4 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
               >
                 Cancelar
               </button>

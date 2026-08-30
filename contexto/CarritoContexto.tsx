@@ -317,6 +317,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
 
     const puntosGanados = Math.floor(totalCarrito * 0.05) // 5% de cashback en puntos
+    const costoEnvioGarantizado = tipoEntrega === 'delivery' ? Math.max(costoFinal || 1500, 1500) : 0
 
     const nuevoPedido: Pedido & { cliente_id?: string; puntos_gastados?: number; puntos_ganados?: number } = {
       id: generarId(),
@@ -348,8 +349,8 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           categoriaId: item.producto.categoriaId
         }
       }),
-      total: subtotalCarrito + (tipoEntrega === 'delivery' ? costoFinal : 0),
-      costoEnvio: tipoEntrega === 'delivery' ? costoFinal : 0,
+      total: subtotalCarrito + costoEnvioGarantizado,
+      costoEnvio: costoEnvioGarantizado,
       distanciaKm: distFinal,
       coordenadas: coordsFinal || undefined,
       estado: 'nuevo',

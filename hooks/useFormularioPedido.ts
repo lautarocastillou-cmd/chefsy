@@ -51,7 +51,10 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     return p.costoEnvio !== calcularCostoEnvio(p.distanciaKm)
   }
 
-  const [costoEnvio, setCostoEnvio] = useState(0)
+  const [costoEnvio, setCostoEnvio] = useState(() => {
+    if (pedidoInicial?.costoEnvio !== undefined) return pedidoInicial.costoEnvio
+    return pedidoInicial?.tipoEntrega === 'delivery' || !pedidoInicial ? 1500 : 0
+  })
   const [distanciaKm, setDistanciaKm] = useState(pedidoInicial?.distanciaKm || 0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
   const [envioManual, setEnvioManualState] = useState(() => determinarEnvioManual(pedidoInicial))
@@ -60,8 +63,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const manejarSetEnvioManual = (manual: boolean) => {
     setEnvioManualState(manual)
     if (manual && (!costoEnvioManualInput || Number(costoEnvioManualInput) === 0)) {
-      const val = costoEnvioFinal || costoEnvio || 0
-      if (val > 0) setCostoEnvioManualInput(val.toString())
+      const val = costoEnvioFinal || costoEnvio || 1500
+      setCostoEnvioManualInput(val.toString())
     }
   }
 
@@ -86,6 +89,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       setDistanciaKm(pedidoInicial.distanciaKm || 0)
       if (pedidoInicial.costoEnvio !== undefined) {
         setCostoEnvio(pedidoInicial.costoEnvio)
+      } else if (pedidoInicial.tipoEntrega === 'delivery') {
+        setCostoEnvio(1500)
       }
 
       const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
@@ -115,10 +120,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
   }, [telefono, pedidos])
 
-  // 3. Cálculos Derivados
+  // 3. Cálculos Derivados con Blindaje de Envío
   const subtotal = calcularTotalFilas(filasProductos)
   const pideDireccion = requiereDireccion(tipoEntrega)
-  const costoEnvioFinal = envioManual ? (Number(costoEnvioManualInput) || 0) : costoEnvio
+  const costoEnvioFinal = pideDireccion
+    ? (envioManual ? (costoEnvioManualInput === '' ? 0 : Number(costoEnvioManualInput) || 0) : (costoEnvio > 0 ? costoEnvio : 1500))
+    : 0
   const total = subtotal + costoEnvioFinal
 
   // 4. API de Mapa (Google Maps / OSRM)
@@ -136,11 +143,16 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
         .catch(err => {
           if (err.name !== 'AbortError') {
             setCargandoEnvio(false)
+            // Fallback de seguridad si falla la red: mantener costo base
+            if (costoEnvio === 0) setCostoEnvio(1500)
           }
         })
     } else if (!pideDireccion) {
       setDistanciaKm(0)
       setCostoEnvio(0)
+    } else if (pideDireccion && !coordenadas && !envioManual && costoEnvio === 0) {
+      // Si es delivery pero aún no hay coordenadas, asegurar costo base de $1500
+      setCostoEnvio(1500)
     }
 
     return () => controller.abort()
@@ -163,6 +175,10 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     if (!requiereDireccion(nuevoTipo)) {
       setDireccion('')
       setCoordenadas(null)
+      setCostoEnvio(0)
+      setDistanciaKm(0)
+    } else {
+      if (costoEnvio === 0) setCostoEnvio(1500)
     }
   }
 
@@ -180,6 +196,10 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
           if (!requiereDireccion(siguiente)) {
             setDireccion('')
             setCoordenadas(null)
+            setCostoEnvio(0)
+            setDistanciaKm(0)
+          } else {
+            if (costoEnvio === 0) setCostoEnvio(1500)
           }
           return siguiente
         })
@@ -188,7 +208,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [costoEnvio])
 
   const cargarEjemplo = () => {
     const ejemplos = [
@@ -259,7 +279,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
   }
 
-  const manejarEnvio = () => {
+  const manejarEnvio = async () => {
     setError('')
 
     if (!cliente.trim()) return setError('El nombre del cliente es obligatorio.')
@@ -273,10 +293,31 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return setError('Agregá al menos un producto del catálogo.')
     }
 
+    // ── Respaldo Infalible de Costo de Envío en Guardado Rápido ──
+    let costoEnvioRespaldo = costoEnvioFinal
+    let distRespaldo = distanciaKm
+
+    if (pideDireccion && !envioManual) {
+      if (cargandoEnvio && coordenadas) {
+        try {
+          const dist = await obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas)
+          distRespaldo = dist
+          costoEnvioRespaldo = calcularCostoEnvio(dist)
+        } catch {
+          costoEnvioRespaldo = costoEnvio > 0 ? costoEnvio : 1500
+        }
+      } else if (costoEnvioRespaldo === 0) {
+        // Si no hay coordenadas o la API no respondió aún, aplicar costo base de $1500
+        costoEnvioRespaldo = 1500
+      }
+    }
+
+    const totalCalculado = subtotal + (pideDireccion ? costoEnvioRespaldo : 0)
+
     if (metodoPago === 'mixto') {
       const sumaMixto = (Number(montoEfectivo) || 0) + (Number(montoTransferencia) || 0) + (Number(montoTarjeta) || 0)
-      if (sumaMixto !== total) {
-        return setError(`El pago mixto ($${sumaMixto}) no coincide con el total ($${total}).`)
+      if (sumaMixto !== totalCalculado) {
+        return setError(`El pago mixto ($${sumaMixto}) no coincide con el total ($${totalCalculado}).`)
       }
     }
 
@@ -291,9 +332,9 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       direccion: pideDireccion ? direccion.trim() : '',
       coordenadas: pideDireccion ? coordenadas ?? undefined : undefined,
       productos: productosParseados,
-      total,
-      costoEnvio: costoEnvioFinal > 0 ? costoEnvioFinal : undefined,
-      distanciaKm: distanciaKm > 0 ? Number(distanciaKm.toFixed(2)) : undefined,
+      total: totalCalculado,
+      costoEnvio: pideDireccion ? (costoEnvioRespaldo > 0 ? costoEnvioRespaldo : undefined) : undefined,
+      distanciaKm: distRespaldo > 0 ? Number(distRespaldo.toFixed(2)) : undefined,
       envioManual: envioManual,
       estado: pedidoInicial?.estado || 'nuevo',
       metodoPago,
