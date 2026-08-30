@@ -28,6 +28,48 @@ import {
 } from 'lucide-react'
 import { useAgendaClientes, ClienteAgrupado, TipoSegmentoCliente, CriterioOrdenCliente } from '@/hooks/useAgendaClientes'
 
+// Componente para renderizar direcciones o badges de GPS limpios
+function DireccionBadge({ direccion }: { direccion: string }) {
+  if (!direccion) return <span className="text-slate-400 italic text-[11px]">Sin dirección</span>
+
+  const esLink = direccion.startsWith('http://') || 
+                 direccion.startsWith('https://') || 
+                 direccion.includes('maps.google') || 
+                 direccion.includes('goo.gl') || 
+                 direccion.includes('maps.app.goo.gl')
+
+  if (esLink) {
+    return (
+      <a
+        href={direccion}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center gap-1.5 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-800/60 px-2.5 py-1 rounded-lg font-bold text-[11px] hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all shadow-xs group shrink-0"
+        title="Abrir en Google Maps"
+      >
+        <MapPin size={12} className="text-blue-600 dark:text-blue-400 shrink-0" />
+        <span>📍 Ubicación GPS (Ver Mapa)</span>
+        <ExternalLink size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+      </a>
+    )
+  }
+
+  if (direccion === 'Retiro / Consumo Local') {
+    return (
+      <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
+        {direccion}
+      </span>
+    )
+  }
+
+  return (
+    <span className="truncate block font-medium text-slate-700 dark:text-slate-300 text-xs" title={direccion}>
+      {direccion}
+    </span>
+  )
+}
+
 export default function PaginaAgendaClientes() {
   const {
     cargando,
@@ -344,21 +386,8 @@ export default function PaginaAgendaClientes() {
                         <td className="px-5 py-3.5 font-mono font-medium text-slate-600 dark:text-slate-350">
                           {cliente.telefono}
                         </td>
-                        <td className="px-5 py-3.5 text-slate-600 dark:text-slate-350 max-w-[180px]">
-                          {cliente.direccionMasReciente.startsWith('http') ? (
-                            <a
-                              href={cliente.direccionMasReciente}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-chefsy hover:underline font-bold text-[11px] bg-chefsy/10 px-2 py-0.5 rounded-md"
-                            >
-                              <MapPin size={11} /> Ubicación GPS <ExternalLink size={10} />
-                            </a>
-                          ) : (
-                            <span className="truncate block" title={cliente.direccionMasReciente}>
-                              {cliente.direccionMasReciente}
-                            </span>
-                          )}
+                        <td className="px-5 py-3.5 max-w-[220px]">
+                          <DireccionBadge direccion={cliente.direccionMasReciente} />
                         </td>
                         <td className="px-5 py-3.5 text-center font-bold text-slate-900 dark:text-slate-100">
                           {cliente.totalPedidos}
@@ -440,6 +469,11 @@ export default function PaginaAgendaClientes() {
                             {cliente.diasDesdeUltimoPedido === 0 ? 'Hoy' : `Hace ${cliente.diasDesdeUltimoPedido}d`}
                           </span>
                         </div>
+                        {cliente.direccionMasReciente && cliente.direccionMasReciente !== 'Retiro / Consumo Local' && (
+                          <div className="mt-2 max-w-[240px]">
+                            <DireccionBadge direccion={cliente.direccionMasReciente} />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <ChevronRight size={18} className="text-slate-400 shrink-0 ml-2" />
@@ -572,17 +606,8 @@ export default function PaginaAgendaClientes() {
                         </span>
                       </div>
                       <div className="col-span-3">
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Dirección Frecuente</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300 mt-1 block flex items-center gap-1">
-                          <MapPin size={12} className="text-slate-400 shrink-0" />
-                          {clienteSeleccionado.direccionMasReciente.startsWith('http') ? (
-                            <a href={clienteSeleccionado.direccionMasReciente} target="_blank" rel="noopener noreferrer" className="text-chefsy font-bold hover:underline">
-                              Abrir enlace de Google Maps
-                            </a>
-                          ) : (
-                            <span className="truncate">{clienteSeleccionado.direccionMasReciente}</span>
-                          )}
-                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Dirección Frecuente</span>
+                        <DireccionBadge direccion={clienteSeleccionado.direccionMasReciente} />
                       </div>
                       <div className="col-span-3">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Plato Favorito</span>
