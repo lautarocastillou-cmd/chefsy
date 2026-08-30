@@ -67,7 +67,10 @@ export async function GET(request: Request) {
       if (res1.ok) {
         const data1 = await res1.json()
         if (data1?.routes?.[0]?.distance !== undefined) {
-          return NextResponse.json({ distance: data1.routes[0].distance / 1000 })
+          return NextResponse.json(
+            { distance: data1.routes[0].distance / 1000 },
+            { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
+          )
         }
       }
     } catch (err) {}
@@ -78,7 +81,10 @@ export async function GET(request: Request) {
       if (res2.ok) {
         const data2 = await res2.json()
         if (data2?.routes?.[0]?.distance !== undefined) {
-          return NextResponse.json({ distance: data2.routes[0].distance / 1000 })
+          return NextResponse.json(
+            { distance: data2.routes[0].distance / 1000 },
+            { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
+          )
         }
       }
     } catch (err) {}

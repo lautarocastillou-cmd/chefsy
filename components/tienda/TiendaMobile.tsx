@@ -80,7 +80,7 @@ export default function TiendaMobile() {
       if (esFocus && ahora - ultimaLlamada < 30000) return
       ultimaLlamada = ahora
       try {
-        const res = await fetch('/api/tienda-metadata?t=' + ahora)
+        const res = await fetch('/api/tienda-metadata')
         const data = await res.json()
         if (Array.isArray(data)) {
           const m: Record<string, any> = {}

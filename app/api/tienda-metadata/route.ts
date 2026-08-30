@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 /**
  * GET /api/tienda-metadata
  * Ruta pública — no requiere autenticación.
  * Devuelve los metadatos públicos de productos (descripción, imagen, nombre público).
+ * Optimizado con caché Edge (s-maxage=60, stale-while-revalidate=300).
  */
 export async function GET() {
   try {
@@ -15,7 +17,7 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json(data || [], {
       headers: {
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       }
     })
   } catch (error: any) {

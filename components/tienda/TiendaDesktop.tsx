@@ -86,12 +86,7 @@ export default function TiendaDesktop() {
       ultimaLlamada = ahora
 
       try {
-        const res = await fetch('/api/tienda-metadata?t=' + ahora, {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        })
+        const res = await fetch('/api/tienda-metadata')
         const data = await res.json()
         if (Array.isArray(data)) {
           const m: Record<string, MetaProducto> = {}

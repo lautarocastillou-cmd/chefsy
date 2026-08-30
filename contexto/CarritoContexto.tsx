@@ -78,9 +78,11 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [procesandoCompra, setProcesandoCompra] = useState(false)
 
   useEffect(() => {
+    let intv: any
     const verificarTurno = async () => {
+      if (document.hidden) return
       try {
-        const res = await fetch(`/api/tienda/turno?t=${Date.now()}`, { cache: 'no-store' })
+        const res = await fetch('/api/tienda/turno')
         if (res.ok) {
           const data = await res.json()
           setTurnoActivo(data.activo)
@@ -90,8 +92,17 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       }
     }
     verificarTurno()
-    const intv = setInterval(verificarTurno, 30000)
-    return () => clearInterval(intv)
+    intv = setInterval(verificarTurno, 30000)
+
+    const handleVisibility = () => {
+      if (!document.hidden) verificarTurno()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(intv)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [])
 
   const { usuario, estaListo: authListo } = usarClienteAuth()
