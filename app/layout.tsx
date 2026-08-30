@@ -3,8 +3,7 @@ import './globals.css'
 import { ProveedorAuth } from '@/contexto/AuthContexto'
 import { ProveedorClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
-import { ProveedorCatalogo } from '@/contexto/CatalogoContexto'
-import { ProveedorTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
+import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import { Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
@@ -75,14 +74,12 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorClienteAuth>
-              <ProveedorTemaNotificacion>
-                <ProveedorCatalogo>
-                  <SmoothScrollProvider>
-                    <GlobalEvents />
-                    {children}
-                  </SmoothScrollProvider>
-                </ProveedorCatalogo>
-              </ProveedorTemaNotificacion>
+              <ProveedorPedidos>
+                <SmoothScrollProvider>
+                  <GlobalEvents />
+                  {children}
+                </SmoothScrollProvider>
+              </ProveedorPedidos>
             </ProveedorClienteAuth>
           </ProveedorAuth>
         </ConfiguracionTiendaProvider>

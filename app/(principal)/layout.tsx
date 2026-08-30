@@ -129,10 +129,6 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
     return <VerificadorLogin />
   }
 
-  return (
-    <ProveedorPedidos>
-      <ContenidoPrincipal>{children}</ContenidoPrincipal>
-    </ProveedorPedidos>
-  )
+  return <ContenidoPrincipal>{children}</ContenidoPrincipal>
 }
 
