@@ -344,7 +344,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
 
       {/* FOOTER: Opciones de Desarrollador */}
       {!pedidoInicial && (
-        <div className="pt-8 border-t border-slate-200 dark:border-slate-800/60 mt-12">
+        <div className="pt-8 border-t border-slate-200 dark:border-slate-800/60 mt-12 pb-16 md:pb-0">
           <div className="bg-amber-50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg text-amber-600 dark:text-amber-400">
@@ -365,6 +365,29 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
           </div>
         </div>
       )}
+
+      {/* ── Barra de Confirmación Inferior Fija para Móvil ──────── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
+        <div className="flex items-center gap-3 max-w-md mx-auto">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Total ({filasProductos.reduce((acc: number, f) => acc + (f.idProductoCatalogo ? (f.cantidad || 1) : 0), 0)} ítems)
+            </span>
+            <span className="text-xl font-black text-emerald-400 font-mono leading-tight">
+              {formatearPrecio(total)}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={manejarEnvio}
+            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white py-3 px-4 rounded-2xl font-black text-xs transition-all shadow-lg shadow-emerald-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>{pedidoInicial ? 'Guardar Cambios' : 'Confirmar Pedido'}</span>
+            <span>➔</span>
+          </button>
+        </div>
+      </div>
 
     </div>
   )

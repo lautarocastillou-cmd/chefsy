@@ -194,35 +194,55 @@ export default function PaginaPedidos() {
       {/* En vista Kanban, no mostramos los filtros porque las columnas actúan como filtros */}
       {modoVista !== 'tablero' && (
         <>
-          {/* ── Barra superior (Filtros de Estado y Entrega) ── */}
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            {/* Filtros de Estado */}
-            <div className="flex flex-wrap gap-1.5">
-              {opcionesFiltro.map((opcion) => (
-                <button
-                  key={opcion.valor}
-                  onClick={() => setFiltroActivo(opcion.valor)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer',
-                    filtroActivo === opcion.valor
-                      ? 'bg-chefsy text-white'
-                      : 'bg-white dark:bg-slate-900 border border-chefsy-200/60 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-chefsy-50 dark:hover:bg-slate-850'
-                  )}
-                >
-                  {opcion.etiqueta}
-                </button>
-              ))}
+          {/* ── Barra de Filtros de Estado Móvil y Desktop ── */}
+          <div className="space-y-2.5">
+            {/* Carrusel Horizontal de Estados con Conteo y Badges */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none snap-x py-1 -mx-3 px-3 md:mx-0 md:px-0">
+              {opcionesFiltro.map((opcion) => {
+                const count = opcion.valor === 'todos'
+                  ? pedidosBase.filter(p => vista === 'activos' ? p.estado !== 'cancelado' : true).length
+                  : pedidosBase.filter(p => p.estado === opcion.valor).length
+                const activo = filtroActivo === opcion.valor
+
+                return (
+                  <button
+                    key={opcion.valor}
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
+                      setFiltroActivo(opcion.valor)
+                    }}
+                    className={cn(
+                      'snap-start shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 active:scale-95 select-none shadow-xs',
+                      activo
+                        ? 'bg-chefsy text-white shadow-md shadow-chefsy/20'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850'
+                    )}
+                  >
+                    <span>{opcion.etiqueta}</span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-black px-1.5 py-0.2 rounded-full',
+                        activo
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
 
-            {/* Filtros de Entrega */}
-            <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+            {/* Filtros de Tipo de Entrega */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none snap-x py-0.5 -mx-3 px-3 md:mx-0 md:px-0">
               <button
                 onClick={() => setFiltroEntrega('todos')}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer',
+                  'snap-start shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 select-none',
                   filtroEntrega === 'todos'
-                    ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-700'
-                    : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-850'
+                    ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
                 )}
               >
                 Todos los tipos
@@ -232,10 +252,10 @@ export default function PaginaPedidos() {
                   key={opcion.valor}
                   onClick={() => setFiltroEntrega(opcion.valor)}
                   className={cn(
-                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer inline-flex items-center gap-1.5',
+                    'snap-start shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95 select-none',
                     filtroEntrega === opcion.valor
-                      ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-700'
-                      : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-850'
+                      ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
                   )}
                 >
                   <IconoTipoEntrega tipo={opcion.valor} />
@@ -246,8 +266,8 @@ export default function PaginaPedidos() {
           </div>
 
           {/* ── Contador e info de modo ── */}
-          <div className="flex justify-between items-center text-sm text-gray-400">
-            <p>
+          <div className="flex justify-between items-center text-xs text-gray-400">
+            <p className="font-semibold">
               {pedidosFiltrados.length}{' '}
               {pedidosFiltrados.length === 1 ? 'pedido' : 'pedidos'}
             </p>
@@ -308,31 +328,31 @@ export default function PaginaPedidos() {
         </div>
       )}
 
-      {/* ── Botón Flotante para Crear Pedido ── */}
+      {/* ── Botón Flotante para Crear Pedido (Solo Desktop/Tablet, en Móvil está en BottomNav) ── */}
       <button
         onClick={handleAbrirNuevoPedido}
-        className="fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
+        className="hidden md:flex fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
       >
         <Plus size={18} />
         <span>Crear Pedido</span>
       </button>
 
-      {/* ── Modal de Nuevo / Editar Pedido ── */}
+      {/* ── Modal de Nuevo / Editar Pedido (Fullscreen en Móvil, Diálogo en Desktop) ── */}
       {(modalNuevoPedidoAbierto || pedidoAEditar) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
           <div 
-            className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative will-change-transform" 
+            className="bg-white dark:bg-slate-900 border-0 md:border border-slate-200/50 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative will-change-transform flex flex-col" 
             data-lenis-prevent="true"
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
           >
             {/* Header del Modal */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-6 pb-4 mb-4">
+            <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                   {pedidoAEditar ? '✏️ Editar Pedido' : '📝 Nuevo Pedido'}
                 </h2>
-                <p className="text-xs text-gray-400 dark:text-slate-400">
+                <p className="text-[11px] text-gray-400 dark:text-slate-400">
                   {pedidoAEditar ? 'Modificar detalles de la orden' : 'Registrar una orden desde el panel'}
                 </p>
               </div>
@@ -341,13 +361,13 @@ export default function PaginaPedidos() {
                   setModalNuevoPedidoAbierto(false)
                   setPedidoAEditar(null)
                 }}
-                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90"
               >
                 <X size={20} />
               </button>
             </div>
             {/* Contenido del Modal */}
-            <div className="px-6 pb-6">
+            <div className="p-3 md:p-6 pb-28 md:pb-6 flex-1 overflow-y-auto">
               <FormularioPedido 
                 pedidoInicial={pedidoAEditar || undefined}
                 onClose={() => {

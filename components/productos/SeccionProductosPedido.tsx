@@ -8,10 +8,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { FilaProductoPedido, ProductoCatalogo } from '@/tipos/catalogo'
 import { calcularTotalFilas } from '@/lib/catalogo'
-import { formatearPrecio, generarIdProducto } from '@/lib/utils'
+import { formatearPrecio, generarIdProducto, cn } from '@/lib/utils'
 import FilaProductoPedidoComponente from './FilaProductoPedido'
+import SelectorCatalogoTactilMobile from './SelectorCatalogoTactilMobile'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X, LayoutGrid, List } from 'lucide-react'
 
 interface PropsSeccionProductosPedido {
   filas: FilaProductoPedido[]
@@ -204,23 +205,55 @@ export default function SeccionProductosPedido({
     onFilasChange(filas.filter((_, i) => i !== indice))
   }
 
+  const [modoMobile, setModoMobile] = useState<'catalogo' | 'filas'>('catalogo')
+
   return (
     <section className="relative">
-      {/* Cabecera de la Sección con Buscador Rápido Ctrl + K */}
+      {/* Cabecera de la Sección con Toggle de Modo en Mobile */}
       <div className="flex items-center justify-between mb-3 relative">
         <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Productos del Pedido
         </h3>
 
-        <div className="flex items-center gap-2">
-          {/* Botón Buscador Rápido con Badge Ctrl + K */}
+        <div className="flex items-center gap-1.5">
+          {/* Toggle en Mobile (Catálogo vs Filas) */}
+          <div className="md:hidden flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setModoMobile('catalogo')}
+              className={cn(
+                'px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer',
+                modoMobile === 'catalogo'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+              )}
+            >
+              <LayoutGrid size={11} />
+              <span>POS Táctil</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoMobile('filas')}
+              className={cn(
+                'px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer',
+                modoMobile === 'filas'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+              )}
+            >
+              <List size={11} />
+              <span>Filas</span>
+            </button>
+          </div>
+
+          {/* Botón Buscador Rápido con Badge Ctrl + K (Desktop) */}
           <button
             type="button"
             onClick={() => {
               setMostrarBuscador(!mostrarBuscador)
               if (mostrarBuscador) setBusqueda('')
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors shadow-2xs cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors shadow-2xs cursor-pointer"
             title="Buscar producto rápidamente (Ctrl + K)"
           >
             <Search size={13} className="text-emerald-600" />
@@ -321,37 +354,72 @@ export default function SeccionProductosPedido({
         )}
       </div>
 
-      {/* Encabezado (desktop) */}
-      <div className="hidden sm:grid sm:grid-cols-[1fr_1.4fr_64px_96px_32px] gap-2 mb-1 px-1 text-slate-400 dark:text-slate-500 font-semibold text-[11px] uppercase tracking-wider">
-        <span>Categoría (opc.)</span>
-        <span>Producto / Buscador</span>
-        <span className="text-center">Cant.</span>
-        <span className="text-right">Precio unit.</span>
-        <span />
+      {/* ── Vista Móvil de Catálogo POS Táctil ─────────────────────── */}
+      <div className="md:hidden">
+        {modoMobile === 'catalogo' ? (
+          <div className="space-y-3">
+            <SelectorCatalogoTactilMobile filas={filas} onFilasChange={onFilasChange} />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filas.map((fila, indice) => (
+              <FilaProductoPedidoComponente
+                key={fila.id}
+                fila={fila}
+                indice={indice}
+                puedeEliminar={filas.length > 1}
+                onCambio={manejarCambioFila}
+                onEliminar={eliminarFila}
+              />
+            ))}
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={agregarFila}
+                className="w-full text-xs font-bold text-slate-700 dark:text-slate-200 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
+              >
+                <Plus size={15} />
+                <span>+ Agregar otro producto</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="space-y-2">
-        {filas.map((fila, indice) => (
-          <FilaProductoPedidoComponente
-            key={fila.id}
-            fila={fila}
-            indice={indice}
-            puedeEliminar={filas.length > 1}
-            onCambio={manejarCambioFila}
-            onEliminar={eliminarFila}
-          />
-        ))}
-      </div>
+      {/* ── Vista Desktop de Tabla y Filas (hidden en móvil) ──────── */}
+      <div className="hidden md:block">
+        {/* Encabezado (desktop) */}
+        <div className="grid grid-cols-[1fr_1.4fr_64px_96px_32px] gap-2 mb-1 px-1 text-slate-400 dark:text-slate-500 font-semibold text-[11px] uppercase tracking-wider">
+          <span>Categoría (opc.)</span>
+          <span>Producto / Buscador</span>
+          <span className="text-center">Cant.</span>
+          <span className="text-right">Precio unit.</span>
+          <span />
+        </div>
 
-      <div className="mt-2.5">
-        <button
-          type="button"
-          onClick={agregarFila}
-          className="w-full text-xs font-bold text-slate-700 dark:text-slate-200 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
-        >
-          <Plus size={15} />
-          <span>+ Agregar otro producto</span>
-        </button>
+        <div className="space-y-2">
+          {filas.map((fila, indice) => (
+            <FilaProductoPedidoComponente
+              key={fila.id}
+              fila={fila}
+              indice={indice}
+              puedeEliminar={filas.length > 1}
+              onCambio={manejarCambioFila}
+              onEliminar={eliminarFila}
+            />
+          ))}
+        </div>
+
+        <div className="mt-2.5">
+          <button
+            type="button"
+            onClick={agregarFila}
+            className="w-full text-xs font-bold text-slate-700 dark:text-slate-200 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
+          >
+            <Plus size={15} />
+            <span>+ Agregar otro producto</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between bg-chefsy-50 dark:bg-slate-800/60 border border-chefsy-200 dark:border-slate-700 rounded-xl px-4 py-3 mt-4">

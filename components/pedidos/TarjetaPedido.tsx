@@ -10,7 +10,9 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt } from 'lucide-react'
+import SwipeActionPedido from './SwipeActionPedido'
+import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt, MoreHorizontal, Phone, MessageCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
@@ -32,12 +34,12 @@ const etiquetaMetodoPago: Record<string, string> = {
 }
 
 const bordesPorEstado: Record<Pedido['estado'], string> = {
-  nuevo:      'border-l-[3px] border-l-blue-500',
-  en_cocina:  'border-l-[3px] border-l-orange-500',
-  listo:      'border-l-[3px] border-l-amber-500',
-  en_camino:  'border-l-[3px] border-l-indigo-500',
-  entregado:  'border-l-[3px] border-l-green-500',
-  cancelado:  'border-l-[3px] border-l-red-500',
+  nuevo:      'border-l-[4px] border-l-blue-500',
+  en_cocina:  'border-l-[4px] border-l-orange-500',
+  listo:      'border-l-[4px] border-l-amber-500',
+  en_camino:  'border-l-[4px] border-l-indigo-500',
+  entregado:  'border-l-[4px] border-l-green-500',
+  cancelado:  'border-l-[4px] border-l-red-500',
 }
 
 interface PropsTarjetaPedido {
@@ -61,6 +63,24 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [modalImpresion, setModalImpresion] = useState(false)
   const [modalConfigImpresora, setModalConfigImpresora] = useState(false)
   const [infoImpresora, setInfoImpresora] = useState(gestorImpresora.obtenerInfo())
+  const [sheetMobileAbierto, setSheetMobileAbierto] = useState(false)
+
+  const abrirWhatsAppDirecto = () => {
+    if (!pedido.telefono || pedido.telefono === 'Sin especificar') {
+      copiarParaWhatsApp()
+      return
+    }
+    const cleanTel = pedido.telefono.replace(/\D/g, '')
+    const formattedTel = cleanTel.startsWith('54') ? cleanTel : `549${cleanTel}`
+    const textoMensaje = `¡Hola ${pedido.cliente}! Te escribimos de Chefsy por tu pedido #${pedido.id.slice(-4)}.`
+    window.open(`https://wa.me/${formattedTel}?text=${encodeURIComponent(textoMensaje)}`, '_blank')
+  }
+
+  const llamarDirecto = () => {
+    if (!pedido.telefono || pedido.telefono === 'Sin especificar') return
+    const cleanTel = pedido.telefono.replace(/\D/g, '')
+    window.location.href = `tel:${cleanTel}`
+  }
 
   useEffect(() => {
     setNotaTemporal(pedido.observaciones || '')
@@ -241,22 +261,56 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     >
       {/* Cabecera del pedido: Cliente y Estado */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-snug" title={pedido.cliente}>
-            {pedido.cliente}
-          </h4>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-snug" title={pedido.cliente}>
+              {pedido.cliente}
+            </h4>
+            {/* Acciones directas táctiles en mobile */}
+            {pedido.telefono && pedido.telefono !== 'Sin especificar' && (
+              <div className="flex items-center gap-1 md:hidden">
+                <button
+                  onClick={abrirWhatsAppDirecto}
+                  className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-90 transition-transform"
+                  title="Escribir por WhatsApp"
+                >
+                  <MessageCircle size={14} />
+                </button>
+                <button
+                  onClick={llamarDirecto}
+                  className="p-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 active:scale-90 transition-transform"
+                  title="Llamar al cliente"
+                >
+                  <Phone size={14} />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 dark:text-[#a8a8a8] font-medium">
             <span>{pedido.telefono === 'Sin especificar' ? 'Tel: Sin especificar' : `Tel: ${pedido.telefono}`}</span>
             <span className="text-slate-300 dark:text-[#686868]">•</span>
             <span>{pedido.hora}</span>
           </div>
         </div>
+
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <BadgeEstado estado={pedido.estado} />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <BadgeEstado estado={pedido.estado} />
+            {/* Botón 3 puntos para Action Sheet en Mobile */}
+            <button
+              onClick={() => setSheetMobileAbierto(true)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-200 bg-slate-100 dark:bg-[#333] active:scale-90 transition-transform"
+              title="Más acciones del pedido"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+          </div>
+
+          {/* Botones de escritorio (hidden en mobile) */}
+          <div className="hidden md:flex items-center gap-1">
             <button 
               onClick={() => onEditarPedido ? onEditarPedido(pedido) : setEditandoPedidoCompleto(true)}
-              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
+              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Editar Pedido"
             >
               <Pencil size={11} />
@@ -268,7 +322,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                     revertirEstado(pedido.id)
                   }
                 }}
-                className="text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all p-1 rounded-md border border-orange-100 dark:border-orange-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+                className="text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all p-1 rounded-md border border-orange-100 dark:border-orange-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
                 title="Revertir al estado anterior"
               >
                 <Undo2 size={11} />
@@ -280,28 +334,28 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                   eliminarPedido(pedido.id)
                 }
               }}
-              className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all p-1 rounded-md border border-red-100 dark:border-red-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+              className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all p-1 rounded-md border border-red-100 dark:border-red-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Eliminar Pedido Definitivamente"
             >
               <Trash2 size={11} />
             </button>
             <button 
               onClick={copiarParaWhatsApp}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Copiar para WhatsApp"
             >
               {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} className="dark:text-[#a8a8a8]" />}
             </button>
             <button 
               onClick={() => setModalImpresion(true)}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Imprimir Ticket / Comanda"
             >
               <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
             <button 
               onClick={copiarTicketCliente}
-              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all p-1 rounded-md border border-amber-100 dark:border-amber-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm"
+              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all p-1 rounded-md border border-amber-100 dark:border-amber-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Copiar Ticket / Desglose para el Cliente"
             >
               {ticketCopiado ? (
@@ -587,44 +641,79 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         </div>
       )}
 
-      {/* Botones de acción */}
+      {/* Botones de acción con soporte táctil Swipe */}
       {!soloLectura && !esFinal && (
-        <div className="flex gap-1.5 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
+        <div className="flex items-center gap-2 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
           {siguienteEstado ? (
-            <>
-              <button
-                onClick={manejarAvance}
-                disabled={procesando}
-                className="flex-1 px-3 py-1.5 bg-chefsy text-white text-xs font-semibold rounded-md hover:bg-chefsy-700 transition-colors shadow-sm active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {procesando ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Actualizando...</span>
-                  </>
-                ) : (
-                  obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)
-                )}
-              </button>
-              <button
-                onClick={manejarCancelacion}
-                disabled={procesando}
-                className="px-2.5 py-1.5 border border-red-100 dark:border-red-900/50 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition-colors shrink-0 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={manejarCancelacion}
-              disabled={procesando}
-              className="w-full px-3 py-1.5 border border-red-100 dark:border-red-900/50 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
-            >
-              Cancelar Pedido
-            </button>
-          )}
+            <div className="flex-1 min-w-0">
+              <SwipeActionPedido
+                texto={obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)}
+                textoConfirmado="¡Actualizado!"
+                colorFondo={
+                  siguienteEstado === 'en_cocina'
+                    ? 'bg-orange-500/10 border-orange-500/30 dark:bg-orange-950/20'
+                    : siguienteEstado === 'listo'
+                    ? 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20'
+                    : siguienteEstado === 'en_camino'
+                    ? 'bg-indigo-500/10 border-indigo-500/30 dark:bg-indigo-950/20'
+                    : 'bg-emerald-500/10 border-emerald-500/30 dark:bg-emerald-950/20'
+                }
+                colorThumb={
+                  siguienteEstado === 'en_cocina'
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                    : siguienteEstado === 'listo'
+                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                    : siguienteEstado === 'en_camino'
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
+                    : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                }
+                colorTexto={
+                  siguienteEstado === 'en_cocina'
+                    ? 'text-orange-700 dark:text-orange-300'
+                    : siguienteEstado === 'listo'
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : siguienteEstado === 'en_camino'
+                    ? 'text-indigo-700 dark:text-indigo-300'
+                    : 'text-emerald-700 dark:text-emerald-300'
+                }
+                onConfirmar={manejarAvance}
+                deshabilitado={procesando}
+              />
+            </div>
+          ) : null}
+
+          {/* Botón rápido de cancelar */}
+          <button
+            onClick={manejarCancelacion}
+            disabled={procesando}
+            className="h-11 px-3 border border-red-200 dark:border-red-900/40 text-red-500 hover:text-red-600 text-xs font-bold rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all shrink-0 disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            title="Cancelar Pedido"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
+
+      {/* Action Sheet Inferior para Mobile */}
+      <ModalAccionesPedidoMobile
+        pedido={pedido}
+        abierto={sheetMobileAbierto}
+        onClose={() => setSheetMobileAbierto(false)}
+        onEditar={() => {
+          if (onEditarPedido) onEditarPedido(pedido)
+          else setEditandoPedidoCompleto(true)
+        }}
+        onImprimir={() => setModalImpresion(true)}
+        onCopiarTicket={copiarTicketCliente}
+        onCopiarWhatsApp={copiarParaWhatsApp}
+        onVerMapa={() => setVerMapa(true)}
+        onRevertirEstado={() => revertirEstado(pedido.id)}
+        onCancelar={() => {
+          if (window.confirm('¿Estás seguro de cancelar este pedido?')) {
+            manejarCancelacion()
+          }
+        }}
+      />
 
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
 

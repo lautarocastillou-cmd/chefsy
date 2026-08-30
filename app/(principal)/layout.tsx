@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
+import BottomNavMobile from '@/components/layout/BottomNavMobile'
 import { Menu, X } from 'lucide-react'
 import { usarAuth } from '@/contexto/AuthContexto'
 import VerificadorLogin from '@/components/auth/VerificadorLogin'
@@ -77,7 +78,7 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
       {/* Área principal */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0 h-full overflow-y-auto" data-lenis-prevent="true">
         {/* Cabecera Móvil (Barra superior) */}
-        <header className="md:hidden sticky top-0 bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0 z-50">
+        <header className="md:hidden sticky top-0 bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0 z-40">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMenuAbierto(true)}
@@ -95,20 +96,27 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
           />
         </header>
 
-        {/* Contenedor de Contenido Principal */}
-        <main className="flex-1 p-4 md:p-6">
+        {/* Contenedor de Contenido Principal con padding inferior para BottomNav */}
+        <main className="flex-1 p-3 md:p-6 pb-28 md:pb-6">
           {tienePermiso ? children : <AccesoRestringido />}
         </main>
       </div>
 
+      {/* Barra de Navegación Inferior Fija para Móviles */}
+      {tienePermiso && (
+        <BottomNavMobile
+          onAbrirNuevoPedido={() => router.push('/nuevo-pedido')}
+        />
+      )}
+
       {/* Herramientas flotantes (solo admin, persisten entre páginas) */}
       {esAdmin && pathname !== '/cadeteria' && (
-        <>
+        <div className="hidden md:block">
           <NotificadorAccesos />
           <NotitaFlotante />
           <CalculadoraFlotante />
           <ConsumoPersonalFlotante />
-        </>
+        </div>
       )}
     </div>
   )
