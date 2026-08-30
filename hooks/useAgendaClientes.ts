@@ -2,14 +2,23 @@ import { useState, useMemo, useEffect } from 'react'
 import { Pedido } from '@/tipos'
 import { obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
 
+export type TipoSegmentoCliente = 'todos' | 'vip' | 'en_riesgo' | 'nuevos' | 'top_ticket'
+export type CriterioOrdenCliente = 'pedidos_desc' | 'gasto_desc' | 'reciente_desc' | 'nombre_asc' | 'ticket_desc'
+
 export interface ClienteAgrupado {
   telefono: string
   nombre: string
   direccionMasReciente: string
   totalPedidos: number
   totalGastado: number
+  ticketPromedio: number
   platoFavorito: string
   fechaUltimoPedido: string
+  diasDesdeUltimoPedido: number
+  esVip: boolean
+  enRiesgo: boolean
+  esNuevo: boolean
+  esTopTicket: boolean
   pedidosHistoricos: Pedido[]
 }
 
@@ -17,6 +26,8 @@ export function useAgendaClientes() {
   const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [segmentoActivo, setSegmentoActivo] = useState<TipoSegmentoCliente>('todos')
+  const [criterioOrden, setCriterioOrden] = useState<CriterioOrdenCliente>('pedidos_desc')
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteAgrupado | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +76,8 @@ export function useAgendaClientes() {
       grupos[tel].push(p)
     })
 
+    const ahoraMs = Date.now()
+
     // Mapear cada grupo a estadísticas acumuladas
     const listaClientes: ClienteAgrupado[] = Object.entries(grupos).map(([telefono, pedidosCliente]) => {
       // Ordenar pedidos del más nuevo al más viejo
@@ -84,6 +97,13 @@ export function useAgendaClientes() {
       // Contar pedidos válidos para gasto total
       const pedidosValidos = pedidosCliente.filter((p) => p && p.estado !== 'cancelado')
       const totalGastado = pedidosValidos.reduce((sum, p) => sum + (Number(p?.total) || 0), 0)
+      const totalPedidos = pedidosCliente.length
+      const ticketPromedio = totalPedidos > 0 ? Math.round(totalGastado / totalPedidos) : 0
+
+      // Días desde última compra
+      const fechaStr = ultimoPedido.created_at || (ultimoPedido.fecha ? `${ultimoPedido.fecha}T12:00:00` : '')
+      const timestamp = fechaStr ? new Date(fechaStr).getTime() : 0
+      const diasDesdeUltimoPedido = timestamp > 0 ? Math.max(0, Math.floor((ahoraMs - timestamp) / (1000 * 60 * 60 * 24))) : 999
 
       // Encontrar plato preferido
       const contadorPlatos: Record<string, number> = {}
@@ -106,14 +126,30 @@ export function useAgendaClientes() {
         }
       })
 
+      // Segmentaciones inteligentes:
+      // VIP: 5 o más pedidos
+      const esVip = totalPedidos >= 5
+      // En Riesgo / Inactivo: Compró al menos 2 veces en el pasado pero no pide hace 25+ días
+      const enRiesgo = totalPedidos >= 2 && diasDesdeUltimoPedido >= 25
+      // Nuevo: 1 pedido realizado en los últimos 30 días
+      const esNuevo = totalPedidos === 1 && diasDesdeUltimoPedido <= 30
+      // Top Ticket: Ticket promedio alto (ej. >= $18.000)
+      const esTopTicket = ticketPromedio >= 18000
+
       return {
         telefono,
         nombre,
         direccionMasReciente,
-        totalPedidos: pedidosCliente.length,
+        totalPedidos,
         totalGastado,
+        ticketPromedio,
         platoFavorito,
         fechaUltimoPedido: (ultimoPedido.fecha || '').toString(),
+        diasDesdeUltimoPedido,
+        esVip,
+        enRiesgo,
+        esNuevo,
+        esTopTicket,
         pedidosHistoricos: ordenados,
       }
     })
@@ -121,19 +157,7 @@ export function useAgendaClientes() {
     return listaClientes
   }, [pedidosHistoricos])
 
-  // Filtrar clientes por búsqueda
-  const clientesFiltrados = useMemo(() => {
-    if (!Array.isArray(clientesAgrupados)) return []
-    const query = (busqueda || '').toLowerCase()
-    return clientesAgrupados.filter((c) => {
-      if (!c) return false
-      const nom = (c.nombre || '').toLowerCase()
-      const tel = (c.telefono || '').toLowerCase()
-      return nom.includes(query) || tel.includes(query)
-    })
-  }, [clientesAgrupados, busqueda])
-
-  // Métricas Macro
+  // Métricas Macro y Conteo por Segmentos
   const metricas = useMemo(() => {
     const totalClientes = clientesAgrupados.length
     
@@ -142,8 +166,18 @@ export function useAgendaClientes() {
     let clienteTopSpender = 'N/A'
     let maxGasto = 0
 
+    let conteoVip = 0
+    let conteoEnRiesgo = 0
+    let conteoNuevos = 0
+    let conteoTopTicket = 0
+
     clientesAgrupados.forEach((c) => {
       if (!c) return
+      if (c.esVip) conteoVip++
+      if (c.enRiesgo) conteoEnRiesgo++
+      if (c.esNuevo) conteoNuevos++
+      if (c.esTopTicket) conteoTopTicket++
+
       if ((c.totalPedidos || 0) > maxPedidos) {
         maxPedidos = c.totalPedidos
         clienteEstrella = c.nombre || 'N/A'
@@ -160,14 +194,64 @@ export function useAgendaClientes() {
       maxPedidos,
       clienteTopSpender,
       maxGasto,
+      conteoVip,
+      conteoEnRiesgo,
+      conteoNuevos,
+      conteoTopTicket,
     }
   }, [clientesAgrupados])
+
+  // Filtrar y ordenar clientes
+  const clientesFiltrados = useMemo(() => {
+    if (!Array.isArray(clientesAgrupados)) return []
+    const query = (busqueda || '').toLowerCase()
+
+    let resultado = clientesAgrupados.filter((c) => {
+      if (!c) return false
+      const nom = (c.nombre || '').toLowerCase()
+      const tel = (c.telefono || '').toLowerCase()
+      const coincideBusqueda = nom.includes(query) || tel.includes(query)
+      if (!coincideBusqueda) return false
+
+      if (segmentoActivo === 'vip') return c.esVip
+      if (segmentoActivo === 'en_riesgo') return c.enRiesgo
+      if (segmentoActivo === 'nuevos') return c.esNuevo
+      if (segmentoActivo === 'top_ticket') return c.esTopTicket
+      return true
+    })
+
+    // Ordenamiento
+    resultado.sort((a, b) => {
+      if (criterioOrden === 'pedidos_desc') {
+        return b.totalPedidos - a.totalPedidos || b.totalGastado - a.totalGastado
+      }
+      if (criterioOrden === 'gasto_desc') {
+        return b.totalGastado - a.totalGastado || b.totalPedidos - a.totalPedidos
+      }
+      if (criterioOrden === 'ticket_desc') {
+        return b.ticketPromedio - a.ticketPromedio
+      }
+      if (criterioOrden === 'reciente_desc') {
+        return a.diasDesdeUltimoPedido - b.diasDesdeUltimoPedido
+      }
+      if (criterioOrden === 'nombre_asc') {
+        return a.nombre.localeCompare(b.nombre)
+      }
+      return 0
+    })
+
+    return resultado
+  }, [clientesAgrupados, busqueda, segmentoActivo, criterioOrden])
 
   return {
     cargando,
     error,
     busqueda,
     setBusqueda,
+    segmentoActivo,
+    setSegmentoActivo,
+    criterioOrden,
+    setCriterioOrden,
     clienteSeleccionado,
     setClienteSeleccionado,
     clientesFiltrados,
