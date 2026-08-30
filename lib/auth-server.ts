@@ -58,7 +58,18 @@ export async function validarCredenciales(
       .eq('usuario', uLimpio)
       .single()
 
-    if (error || !usuarioBd) return null
+    if (error || !usuarioBd) {
+      // Fallback: verificación con variables de entorno si la tabla usuarios no fue sembrada
+      const adminPass = process.env.CHEFSY_ADMIN_PASS
+      const cadetePass = process.env.CHEFSY_CADETE_PASS
+      if (uLimpio === 'admin' && adminPass && clave === adminPass) {
+        return { usuario: 'admin', nombre: 'Administrador', rol: 'admin' }
+      }
+      if (uLimpio === 'cadete' && cadetePass && clave === cadetePass) {
+        return { usuario: 'cadete', nombre: 'Cadete', rol: 'cadete' }
+      }
+      return null
+    }
 
     const datosUsuario = {
       usuario: usuarioBd.usuario,
