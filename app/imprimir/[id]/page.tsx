@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { usarPedidos } from '@/contexto/PedidosContexto'
+import { ProveedorPedidos, usarPedidos } from '@/contexto/PedidosContexto'
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 
-export default function TicketImpresion() {
+function TicketContenido() {
   const { id } = useParams()
   const { pedidos, estaListo } = usarPedidos()
   const [pedido, setPedido] = useState<Pedido | null>(null)
@@ -124,5 +124,13 @@ export default function TicketImpresion() {
         <p className="text-[10px]">Sistema Chefsy</p>
       </div>
     </div>
+  )
+}
+
+export default function TicketImpresion() {
+  return (
+    <ProveedorPedidos>
+      <TicketContenido />
+    </ProveedorPedidos>
   )
 }

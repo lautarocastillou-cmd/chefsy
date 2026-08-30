@@ -14,14 +14,15 @@ import VerificadorLogin from '@/components/auth/VerificadorLogin'
 import NotificadorAccesos from '@/components/auth/NotificadorAccesos'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import { usePathname, useRouter } from 'next/navigation'
+import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
 import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
 import ConsumoPersonalFlotante from '@/components/herramientas/ConsumoPersonalFlotante'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
-export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
+function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const { usuarioActivo, estaListoAuth } = usarAuth()
+  const { usuarioActivo } = usarAuth()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -30,21 +31,9 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
     onAbrirModal: () => router.push('/nuevo-pedido'),
   })
 
-  if (!estaListoAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-chefsy-50 dark:bg-zinc-950">
-        <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!usuarioActivo) {
-    return <VerificadorLogin />
-  }
-
   // Si el usuario es cadete, no tiene permiso de ver las páginas de administración (que están en este layout)
-  const esCadete = usuarioActivo.rol === 'cadete'
-  const esAdmin = usuarioActivo.rol === 'admin'
+  const esCadete = usuarioActivo?.rol === 'cadete'
+  const esAdmin = usuarioActivo?.rol === 'admin'
 
   // Si es cadete y está en cadetería, renderizamos su vista directamente sin la barra lateral
   if (esCadete && pathname === '/cadeteria') {
@@ -122,6 +111,28 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
         </>
       )}
     </div>
+  )
+}
+
+export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
+  const { usuarioActivo, estaListoAuth } = usarAuth()
+
+  if (!estaListoAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-chefsy-50 dark:bg-zinc-950">
+        <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!usuarioActivo) {
+    return <VerificadorLogin />
+  }
+
+  return (
+    <ProveedorPedidos>
+      <ContenidoPrincipal>{children}</ContenidoPrincipal>
+    </ProveedorPedidos>
   )
 }
 

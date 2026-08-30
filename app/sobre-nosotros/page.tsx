@@ -2,11 +2,11 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { ChevronRight, Star, Clock, Truck, ShieldCheck, MapPin } from 'lucide-react'
 
 export default function PaginaInicio() {
-  const { productos } = usarPedidos()
+  const { productos } = usarCatalogo()
   
   // Seleccionamos algunos productos estrella para el inicio
   const productosDestacados = productos.filter(p => p.activo).slice(0, 3)
