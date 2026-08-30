@@ -50,8 +50,11 @@ function formatearTamano(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-// Extensiones de imagen soportadas
-const EXTENSIONES_IMAGEN = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'svg'])
+// Extensiones de imagen soportadas (incluyendo HEVC, HEIC de iPhone y Samsung)
+const EXTENSIONES_IMAGEN = new Set([
+  'jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'svg',
+  'heic', 'heif', 'hevc', 'h265'
+])
 
 function esArchivoImagen(nombre: string, mimeType?: string): boolean {
   if (mimeType && mimeType.startsWith('image/')) return true
@@ -487,7 +490,7 @@ export default function ModalImportarCarpetaYDrive({
         <input
           ref={inputArchivosRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif,.hevc,.h265,.avif,.webp"
           multiple
           className="hidden"
           onChange={handleSeleccionInput}
@@ -636,6 +639,23 @@ export default function ModalImportarCarpetaYDrive({
                           src={foto.previewUrl}
                           alt={foto.nombre}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback visual para HEVC / HEIC si el navegador no renderiza blob HEIF directamente
+                            const target = e.target as HTMLElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent && !parent.querySelector('.hevc-fallback')) {
+                              const fallback = document.createElement('div')
+                              fallback.className = 'hevc-fallback absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-2 text-center'
+                              fallback.innerHTML = `
+                                <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black text-[10px] mb-1">
+                                  HEVC
+                                </div>
+                                <span class="text-[9px] text-slate-400 font-bold leading-tight">Foto HEIC/HEVC</span>
+                              `
+                              parent.appendChild(fallback)
+                            }
+                          }}
                         />
 
                         {/* Checkbox en la esquina superior izquierda */}

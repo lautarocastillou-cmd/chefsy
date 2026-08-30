@@ -21,8 +21,11 @@ export async function optimizarImagenWebP(
   const calidad = opciones.calidad || 75
 
   try {
-    const bufferOptimizado = await sharp(bufferOriginal)
-      .rotate() // Auto-rotar según orientación EXIF de celulares
+    const bufferOptimizado = await sharp(bufferOriginal, {
+      failOn: 'none',
+      animated: false,
+    })
+      .rotate() // Auto-rotar según orientación EXIF de celulares (iPhone/Android)
       .resize({
         width: maxAncho,
         height: maxAlto,

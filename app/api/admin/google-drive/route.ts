@@ -45,6 +45,17 @@ function detectarTipoImagen(buffer: Buffer): { contentType: string; ext: string 
     return { contentType: 'image/webp', ext: 'webp' }
   }
 
+  // HEIC / HEIF / HEVC / AVIF: ....ftyp(heic|hevc|mif1|msf1|avif)
+  if (buffer.length >= 12 && buffer.slice(4, 8).toString('ascii') === 'ftyp') {
+    const brand = buffer.slice(8, 12).toString('ascii').toLowerCase()
+    if (['heic', 'heix', 'hevc', 'hevx', 'heif', 'mif1', 'msf1'].includes(brand)) {
+      return { contentType: 'image/heic', ext: 'heic' }
+    }
+    if (['avif', 'avis'].includes(brand)) {
+      return { contentType: 'image/avif', ext: 'avif' }
+    }
+  }
+
   return null
 }
 
