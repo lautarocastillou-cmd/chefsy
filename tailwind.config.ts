@@ -22,6 +22,12 @@ const config: Config = {
         montserrat: ['var(--font-montserrat)', 'sans-serif'],
         inter: ['var(--font-inter)', 'sans-serif'],
         anton: ['var(--font-anton)', 'sans-serif'],
+        playfair: ['var(--font-playfair)', 'serif'],
+        outfit: ['var(--font-outfit)', 'sans-serif'],
+        'plus-jakarta': ['var(--font-plus-jakarta)', 'sans-serif'],
+        syne: ['var(--font-syne)', 'sans-serif'],
+        'permanent-marker': ['var(--font-permanent-marker)', 'cursive'],
+        cinzel: ['var(--font-cinzel)', 'serif'],
       },
       colors: {
         chefsy: {

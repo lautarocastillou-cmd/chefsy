@@ -38,6 +38,12 @@ export interface ConfiguracionTienda {
   hero_badge_texto?: string
   hero_carrusel_slides?: CarruselSlide[]
   hero_mostrar_horario?: boolean
+  estilo_tarjetas?: 'glassmorphism' | 'neon_glow' | 'minimalista_clean' | 'compacto_lista'
+  mostrar_badges_automaticos?: boolean
+  mostrar_badge_descuento?: boolean
+  efecto_titulo_hero?: 'none' | 'gradient' | 'neon_glow' | 'stroke'
+  color_titulo_secundario?: string
+  fuente_tienda_catalogo?: string
 }
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
@@ -95,6 +101,12 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
         }
       ],
       hero_mostrar_horario: true,
+      estilo_tarjetas: 'glassmorphism',
+      mostrar_badges_automaticos: true,
+      mostrar_badge_descuento: true,
+      efecto_titulo_hero: 'none',
+      color_titulo_secundario: '#F59E0B',
+      fuente_tienda_catalogo: 'bebas',
     }
   }
 

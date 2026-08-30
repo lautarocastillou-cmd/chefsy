@@ -53,13 +53,39 @@ export default function HeroParallaxDoble({
     setRotateY(0)
   }
 
+  const efectoTitulo = configuracion?.efecto_titulo_hero || 'none'
+  const colorSecundario = configuracion?.color_titulo_secundario || '#F59E0B'
+
+  let efectoEstiloLinea2: React.CSSProperties = {
+    color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
+  }
+
+  if (efectoTitulo === 'gradient') {
+    efectoEstiloLinea2 = {
+      backgroundImage: `linear-gradient(135deg, var(--chefsy-text-hero-2, var(--chefsy-main)), ${colorSecundario})`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    }
+  } else if (efectoTitulo === 'neon_glow') {
+    efectoEstiloLinea2 = {
+      color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
+      filter: 'drop-shadow(0 0 25px var(--chefsy-main))',
+    }
+  } else if (efectoTitulo === 'stroke') {
+    efectoEstiloLinea2 = {
+      WebkitTextStroke: '2px var(--chefsy-text-hero-2, var(--chefsy-main))',
+      color: 'transparent',
+    }
+  }
+
   return (
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative min-h-[40vh] lg:min-h-[85vh] w-full flex flex-col px-4 md:px-12 py-2 lg:py-10 overflow-visible select-none"
+      className="relative min-h-[42vh] lg:min-h-[85vh] w-full flex flex-col px-4 md:px-12 py-2 lg:py-10 overflow-visible select-none"
     >
+      {/* Estilos CSS para animaciones flotantes */}
       <style jsx>{`
         @keyframes floatSlow1 {
           0% { transform: translateY(0px) rotate(0deg); }
@@ -92,7 +118,7 @@ export default function HeroParallaxDoble({
           </h1>
           <h1 
             className={`hero-title-2 ${fuenteHeroClase} text-[4rem] sm:text-[5rem] md:text-[6rem] lg:text-[7rem] xl:text-[8.5rem] 2xl:text-[9.5rem] tracking-normal leading-[0.85] uppercase drop-shadow-2xl`}
-            style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
+            style={efectoEstiloLinea2}
           >
             {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
           </h1>

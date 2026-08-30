@@ -28,8 +28,13 @@ export default function HeroManager(props: HeroManagerProps) {
     bebas: 'font-bebas',
     montserrat: 'font-montserrat',
     inter: 'font-inter',
+    anton: 'font-anton',
     playfair: 'font-playfair',
-    anton: 'font-anton'
+    outfit: 'font-outfit',
+    plus_jakarta: 'font-plus-jakarta',
+    syne: 'font-syne',
+    permanent_marker: 'font-permanent-marker',
+    cinzel: 'font-cinzel',
   }[configuracion?.fuente_hero || 'bebas'] || 'font-bebas'
 
   const layout = configuracion?.hero_layout || 'parallax_doble'

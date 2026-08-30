@@ -4,7 +4,18 @@ import { ProveedorAuth } from '@/contexto/AuthContexto'
 import { ProveedorClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ConfiguracionTiendaProvider } from '@/contexto/ConfiguracionTiendaContexto'
 import { ProveedorPedidos } from '@/contexto/PedidosContexto'
-import { Bebas_Neue, Montserrat, Inter, Anton } from 'next/font/google'
+import {
+  Bebas_Neue,
+  Montserrat,
+  Inter,
+  Anton,
+  Playfair_Display,
+  Outfit,
+  Plus_Jakarta_Sans,
+  Syne,
+  Permanent_Marker,
+  Cinzel,
+} from 'next/font/google'
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 
@@ -31,6 +42,43 @@ const anton = Anton({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-anton',
+  display: 'swap',
+})
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+})
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+})
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  display: 'swap',
+})
+
+const syne = Syne({
+  subsets: ['latin'],
+  variable: '--font-syne',
+  display: 'swap',
+})
+
+const permanentMarker = Permanent_Marker({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-permanent-marker',
+  display: 'swap',
+})
+
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  variable: '--font-cinzel',
   display: 'swap',
 })
 
@@ -70,7 +118,9 @@ export const metadata: Metadata = {
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased overflow-x-clip ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable}`}>
+      <body
+        className={`font-sans antialiased overflow-x-clip ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable} ${playfair.variable} ${outfit.variable} ${plusJakarta.variable} ${syne.variable} ${permanentMarker.variable} ${cinzel.variable}`}
+      >
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorClienteAuth>
