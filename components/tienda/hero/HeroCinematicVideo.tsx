@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef } from 'react'
-import { Search, Flame, Play, Volume2, VolumeX } from 'lucide-react'
+import { Search, Flame, Volume2, VolumeX } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
 
@@ -23,7 +23,6 @@ export default function HeroCinematicVideo({
   sugerenciaBusqueda,
   fuenteHeroClase,
   onBusquedaChange,
-  onSeleccionarCategoria,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [estaMuteado, setEstaMuteado] = React.useState(true)
@@ -43,8 +42,33 @@ export default function HeroCinematicVideo({
     setEstaMuteado(videoRef.current.muted)
   }
 
+  const efectoTitulo = configuracion?.efecto_titulo_hero || 'none'
+  const colorSecundario = configuracion?.color_titulo_secundario || '#F59E0B'
+
+  let efectoEstiloLinea2: React.CSSProperties = {
+    color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
+  }
+
+  if (efectoTitulo === 'gradient') {
+    efectoEstiloLinea2 = {
+      backgroundImage: `linear-gradient(135deg, var(--chefsy-text-hero-2, var(--chefsy-main)), ${colorSecundario})`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    }
+  } else if (efectoTitulo === 'neon_glow') {
+    efectoEstiloLinea2 = {
+      color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
+      filter: 'drop-shadow(0 0 20px var(--chefsy-main))',
+    }
+  } else if (efectoTitulo === 'stroke') {
+    efectoEstiloLinea2 = {
+      WebkitTextStroke: '2px var(--chefsy-text-hero-2, var(--chefsy-main))',
+      color: 'transparent',
+    }
+  }
+
   return (
-    <div className="relative w-full min-h-[50vh] lg:min-h-[80vh] flex flex-col justify-center px-4 md:px-12 py-10 lg:py-16 overflow-hidden select-none">
+    <div className="relative w-full flex flex-col justify-center px-4 md:px-12 py-6 sm:py-10 md:py-16 overflow-hidden select-none">
       
       {/* ── Background: Video Cinemático o Textura con Fallback ─── */}
       <div className="absolute inset-0 w-full h-full -z-20 overflow-hidden bg-black">
@@ -81,66 +105,53 @@ export default function HeroCinematicVideo({
         <button
           type="button"
           onClick={toggleAudio}
-          className="absolute top-6 right-6 z-30 p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-lg cursor-pointer"
+          className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-lg cursor-pointer"
           title={estaMuteado ? 'Activar sonido' : 'Silenciar video'}
         >
-          {estaMuteado ? <VolumeX size={18} /> : <Volume2 size={18} className="text-emerald-400" />}
+          {estaMuteado ? <VolumeX size={15} /> : <Volume2 size={15} className="text-emerald-400" />}
         </button>
       )}
 
-      {/* ── Contenido Central Cinemático ─────────────────────────── */}
-      <div className="relative z-20 max-w-4xl mx-auto w-full text-center flex flex-col items-center space-y-5 my-auto">
+      {/* ── Contenido Central Cinemático Proporcionado ───────────── */}
+      <div className="relative z-20 max-w-4xl mx-auto w-full text-center flex flex-col items-center space-y-3 sm:space-y-4 my-auto">
         
         {/* Badge Gourmet */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest text-amber-300 bg-black/60 border border-amber-500/40 backdrop-blur-md shadow-2xl">
-          <Flame size={15} className="text-amber-400 animate-bounce" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300 bg-black/60 border border-amber-500/40 backdrop-blur-md shadow-xl">
+          <Flame size={13} className="text-amber-400 animate-bounce" />
           <span>{configuracion?.hero_badge_texto || 'COCINA EN VIVO • SABOR ARTESANAL'}</span>
         </div>
 
-        {/* Título Principal Tipográfico Gigante */}
-        <div className="space-y-1">
+        {/* Título Principal Tipográfico Proporcional */}
+        <div className="space-y-0.5">
           <h1 
-            className={`${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight leading-[0.9] text-white uppercase drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]`}
+            className={`${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.9] text-white uppercase drop-shadow-[0_8px_20px_rgba(0,0,0,0.8)]`}
           >
             {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
           </h1>
           <h2 
-            className={`${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight leading-[0.9] uppercase drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]`}
-            style={{ color: 'var(--chefsy-text-hero-2, var(--chefsy-main))' }}
+            className={`${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.9] uppercase drop-shadow-[0_8px_20px_rgba(0,0,0,0.8)]`}
+            style={efectoEstiloLinea2}
           >
             {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
           </h2>
         </div>
 
         {/* Subtítulo / Frase */}
-        <p className="font-bebas text-2xl sm:text-3xl md:text-4xl text-slate-200 tracking-wider uppercase drop-shadow-md">
+        <p className="font-bebas text-xl sm:text-2xl md:text-3xl text-slate-200 tracking-wider uppercase drop-shadow-md">
           {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
         </p>
 
-        {/* Buscador Central Cinemático */}
-        <div className="w-full max-w-xl relative pt-2">
+        {/* Buscador Central Cinemático (Solo Desktop) */}
+        <div className="hidden md:block w-full max-w-xl relative pt-2">
           <input
             id="busqueda_cinematic"
             type="text"
             placeholder="Buscá tu plato favorito (ej. Doble Smash, Lomo, Mozzarella)..."
             value={busqueda}
             onChange={(e) => onBusquedaChange(e.target.value)}
-            className="w-full bg-black/60 border border-white/25 hover:border-white/50 focus:border-chefsy-400 text-white py-4 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium text-xs sm:text-sm backdrop-blur-xl"
+            className="w-full bg-black/60 border border-white/25 hover:border-white/50 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium text-xs sm:text-sm backdrop-blur-xl"
           />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-
-          {sugerenciaBusqueda && (
-            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 animate-in fade-in duration-300">
-              <button
-                onClick={() => onBusquedaChange(sugerenciaBusqueda)}
-                className="text-xs text-chefsy-400 hover:text-chefsy-300 font-semibold flex items-center gap-1 bg-black/90 px-3 py-1 rounded-full border border-white/15 backdrop-blur-sm shadow-md cursor-pointer"
-              >
-                <span>¿Buscabas</span>
-                <span className="underline font-bold text-white">{sugerenciaBusqueda}</span>
-                <span>?</span>
-              </button>
-            </div>
-          )}
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
         </div>
 
       </div>

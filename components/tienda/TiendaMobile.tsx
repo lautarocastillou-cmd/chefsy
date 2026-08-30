@@ -307,7 +307,7 @@ export default function TiendaMobile() {
       </div>
 
       {/* Contenido principal de la Tienda */}
-      <>
+      <div className="pb-32">
           {/* Hero Section Dinámico (Parallax, Carrusel, Cinemático o Minimalista) */}
           {!categoriaSeleccionada && !busqueda && (
             <HeroManager
@@ -327,25 +327,39 @@ export default function TiendaMobile() {
             />
           )}
 
-
-
-          {/* Modal de Selección de Categorías (se activa desde el botón del Hero) */}
-          <div id="seccion-menu-categorias">
-            <SelectorCategorias
-              categoriasActivas={categoriasActivas}
-              categoriaSeleccionada={categoriaSeleccionada}
-              selectorAbierto={selectorAbierto}
-              onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
-              onSeleccionarCategoria={(id) => {
-                setCategoriaSeleccionada(id === 'todos' ? null : id)
-                setSelectorAbierto(false)
-              }}
-              soloModal={true}
-            />
+          {/* Chips Horizontales de Categorías (Acceso Rápido con 1 Toque) */}
+          <div className="sticky top-[108px] z-30 bg-[#141414]/95 backdrop-blur-md py-2.5 px-3 border-b border-white/5 overflow-x-auto scrollbar-none flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCategoriaSeleccionada(null)}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
+                !categoriaSeleccionada
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'bg-zinc-900/90 text-slate-300 border border-white/10 hover:bg-zinc-800'
+              )}
+            >
+              🍽️ Todos
+            </button>
+            {categoriasActivas.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategoriaSeleccionada(cat.id)}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
+                  categoriaSeleccionada === cat.id
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'bg-zinc-900/90 text-slate-300 border border-white/10 hover:bg-zinc-800'
+                )}
+              >
+                {cat.nombre}
+              </button>
+            ))}
           </div>
 
-          {/* Catálogo de Productos (Reutiliza el componente original pero se adaptará porque usa Tailwind) */}
-          <div className="px-2 mt-4">
+          {/* Catálogo de Productos */}
+          <div className="px-2.5 mt-3">
             <CatalogoProductos
               categoriasActivas={categoriasActivas}
               productosFiltrados={productosFiltrados}
@@ -357,7 +371,7 @@ export default function TiendaMobile() {
           </div>
           
           <FooterTienda />
-      </>
+      </div>
 
       <BottomNav activeTab={activeTab} onNavClick={handleNavClick} />
 
