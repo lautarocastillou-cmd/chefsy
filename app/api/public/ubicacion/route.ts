@@ -40,17 +40,31 @@ export async function POST(request: Request) {
     // 1. Verificar estado actual en tabla cadetes
     const { data: cadeteExistente } = await adminClient
       .from('cadetes')
-      .select('id, gps_activo')
+      .select('id, gps_activo, apagado_por_admin')
       .ilike('id', idNormalizado)
       .maybeSingle()
 
-    // 🔒 BLINDAJE DE APAGADO DE GPS:
-    // Si el admin (o el cadete) apagó el GPS (gps_activo === false en DB), NO revivirlo
-    // automáticamente solo por recibir un ping de fondo del teléfono.
-    // Solo se reactiva si la app manda iniciar_gps_manual: true (cuando el cadete toca el botón en su pantalla).
-    const debePermanecerApagado = Boolean(cadeteExistente && cadeteExistente.gps_activo === false && !iniciar_gps_manual)
+    // Si el Administrador ejecutó un Kill Switch desde Torre de Control:
+    if (cadeteExistente?.apagado_por_admin && !iniciar_gps_manual) {
+      // Limpiar la orden pendiente para que el cadete pueda volver a encenderlo cuando quiera
+      await adminClient
+        .from('cadetes')
+        .update({
+          gps_activo: false,
+          apagado_por_admin: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cadeteExistente.id)
 
-    const estadoGpsFinal = debePermanecerApagado ? false : true
+      // Responder con la orden de apagado para que la app móvil detenga el servicio
+      return NextResponse.json({
+        success: true,
+        gps_activo: false,
+        comando: 'apagar_gps'
+      })
+    }
+
+    const estadoGpsFinal = gps_activo === false ? false : true
 
     const camposActualizar: any = {
       lat: Number(lat),
@@ -59,6 +73,7 @@ export async function POST(request: Request) {
       heading: heading !== undefined && heading !== null ? Number(heading) : null,
       speed: speed !== undefined && speed !== null ? Number(speed) : null,
       gps_activo: estadoGpsFinal,
+      apagado_por_admin: false,
       updated_at: new Date().toISOString()
     }
 
@@ -135,7 +150,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       gps_activo: estadoGpsFinal,
-      comando: debePermanecerApagado ? 'apagar_gps' : 'continuar'
+      comando: estadoGpsFinal ? 'continuar' : 'apagar_gps'
     })
   } catch (err) {
     console.error('Error procesando ubicación:', err)

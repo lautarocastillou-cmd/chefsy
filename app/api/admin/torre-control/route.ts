@@ -148,11 +148,12 @@ export async function POST(request: Request) {
     const supabase = obtenerSupabaseAdmin()
     const idNormalizado = String(cadeteId).trim().toLowerCase()
 
-    // Forzar gps_activo a false
+    // Forzar gps_activo a false y registrar orden de apagado remoto
     const { error } = await supabase
       .from('cadetes')
       .update({
         gps_activo: false,
+        apagado_por_admin: true,
         updated_at: new Date().toISOString()
       })
       .ilike('id', idNormalizado)
