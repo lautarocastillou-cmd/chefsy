@@ -388,8 +388,9 @@ export function TabKardexAuditoria({
       </div>
 
       {/* ── Tabla de Movimientos del Kardex ──────────────────────── */}
-      <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl backdrop-blur-sm">
-        <div className="overflow-x-auto scrollbar-thin">
+      <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+        {/* ── DESKTOP TABLE ── */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
@@ -495,6 +496,81 @@ export function TabKardexAuditoria({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── MOBILE CARDS VIEW (SIN SCROLL HORIZONTAL) ── */}
+        <div className="block md:hidden divide-y divide-slate-800/70">
+          {cargando ? (
+            <div className="py-12 text-center">
+              <Loader2 className="animate-spin text-indigo-400 mx-auto" size={28} />
+              <p className="text-xs text-slate-400 font-bold mt-2">Cargando movimientos...</p>
+            </div>
+          ) : movimientosFiltrados.length === 0 ? (
+            <div className="p-8 text-center space-y-2">
+              <History className="text-slate-600 mx-auto" size={32} />
+              <p className="text-xs font-bold text-slate-200">No se encontraron movimientos</p>
+            </div>
+          ) : (
+            movimientosFiltrados.map((m) => {
+              const info = getTipoInfo(m.tipo_movimiento)
+              const Icono = info.icon
+              const esPositivo = m.cantidad_delta > 0
+
+              return (
+                <div key={m.id} className="p-3.5 space-y-2.5 hover:bg-slate-800/20 transition-colors">
+                  {/* Cabecera Insumo y Delta */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                        <h4 className="font-extrabold text-white text-xs truncate">{m.insumo_nombre}</h4>
+                      </div>
+                      <div className="mt-1">
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border uppercase tracking-wider inline-flex items-center gap-1 ${info.bg}`}>
+                          <Icono size={10} className="shrink-0" />
+                          <span>{info.label}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <span className={`font-mono font-black text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap shrink-0 ${
+                      esPositivo 
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    }`}>
+                      {esPositivo ? `+${m.cantidad_delta}` : m.cantidad_delta} <span className="text-[9px] opacity-75 font-normal">{m.unidad_medida}</span>
+                    </span>
+                  </div>
+
+                  {/* Transición de Stock y Responsable */}
+                  <div className="flex items-center justify-between text-[11px] bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-500 text-[10px]">Stock:</span>
+                      <span className="text-slate-400 font-mono">{m.stock_anterior}</span>
+                      <ArrowRight size={10} className="text-slate-600 shrink-0" />
+                      <strong className="text-white font-mono font-black">{m.stock_nuevo}</strong>
+                      <span className="text-[9px] text-slate-500 uppercase">{m.unidad_medida}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <User size={10} />
+                      <span className="truncate max-w-[90px]">{m.usuario_nombre}</span>
+                    </div>
+                  </div>
+
+                  {/* Fecha y Motivo */}
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                    <BadgeFechaHora fechaStr={m.created_at} />
+                    {m.motivo && (
+                      <span className="text-slate-300 truncate max-w-[180px]" title={m.motivo}>
+                        {m.motivo}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
     </div>

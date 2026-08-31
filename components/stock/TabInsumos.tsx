@@ -593,18 +593,18 @@ export function TabInsumos({
 
       {/* ── BANNER DE AUTO-PAUSADO INTELIGENTE ───────────────────────────────── */}
       {totalPlatosPausadosPorAgotamiento > 0 && (
-        <div className="bg-amber-500/10 border-2 border-amber-500/30 p-4 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in fade-in">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in fade-in">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-2xl shrink-0 mt-0.5 sm:mt-0">
+            <div className="p-2.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl shrink-0 mt-0.5 sm:mt-0 border border-amber-300/80 dark:border-amber-700/50">
               <ShieldAlert size={22} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
+              <h4 className="text-sm font-black text-amber-950 dark:text-amber-200 flex items-center gap-2">
                 <span>🛡️ {totalPlatosPausadosPorAgotamiento} plato(s) pausados automáticamente en la tienda</span>
               </h4>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <p className="text-xs text-amber-900/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
                 Ocultados en la carta online para proteger las ventas debido al quiebre de stock de:{' '}
-                <strong className="text-white">
+                <strong className="text-amber-950 dark:text-amber-100 font-black">
                   {insumosAgotadosConPlatosPausados.map(i => i.nombre).slice(0, 3).join(', ')}
                   {insumosAgotadosConPlatosPausados.length > 3 ? ` y +${insumosAgotadosConPlatosPausados.length - 3}` : ''}
                 </strong>.
@@ -616,7 +616,7 @@ export function TabInsumos({
             <button
               type="button"
               onClick={() => setModalRemitoAbierto(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Truck size={14} />
               <span>Ingresar Mercadería</span>
@@ -789,7 +789,8 @@ export function TabInsumos({
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* ── TABLA DESKTOP (PRESERVADA 100% PARA PANTALLAS MEDIANAS Y GRANDES) ── */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
@@ -1018,6 +1019,248 @@ export function TabInsumos({
               })}
             </tbody>
           </table>
+
+          {insumosFiltrados.length === 0 && (
+            <div className="text-center text-slate-500 py-12">
+              <Package size={36} className="mx-auto text-slate-400 mb-2 opacity-50" />
+              <p className="font-bold">No se encontraron insumos</p>
+              <p className="text-xs text-slate-400 mt-1">Probá cambiando el filtro o término de búsqueda.</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── VISTA MOBILE DE INSUMOS (TARJETAS TÁCTILES 100% ADAPTADAS, SIN DESLIZAR A LOS COSTADOS) ── */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+          {insumosFiltrados.map((ins) => {
+            const cat = categorias.find((c) => c.id === ins.categoria_id)
+            const stockEdit = stockRapido[ins.id] ?? ins.stock_actual
+            const isModified = stockEdit !== ins.stock_actual
+
+            const esCritico = ins.stock_actual <= 0
+            const esBajo = ins.stock_actual > 0 && ins.stock_actual <= 5
+            const estaPausado = estaPausadoEnTienda(ins)
+            const asociados = obtenerProductosAsociados(ins)
+
+            return (
+              <div
+                key={ins.id}
+                className={`p-3.5 transition-colors space-y-3 ${
+                  estaPausado
+                    ? 'bg-slate-100/70 dark:bg-slate-900/70'
+                    : esCritico
+                    ? 'bg-rose-50/40 dark:bg-rose-950/20'
+                    : esBajo
+                    ? 'bg-amber-50/30 dark:bg-amber-950/15'
+                    : 'bg-white dark:bg-slate-900'
+                }`}
+              >
+                {/* Cabecera de la Card: Insumo, Categoría y Badge de Estado */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                          estaPausado
+                            ? 'bg-slate-400'
+                            : esCritico
+                            ? 'bg-rose-500 animate-pulse'
+                            : esBajo
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                      />
+                      <h4 className={`font-black text-sm text-slate-900 dark:text-slate-100 truncate ${estaPausado ? 'line-through opacity-70' : ''}`}>
+                        {ins.nombre}
+                      </h4>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                        {cat?.nombre || 'General'}
+                      </span>
+                      {asociados.length > 0 && (
+                        <span className="text-[10px] text-slate-400 truncate max-w-[190px]" title={asociados.map(a => a.nombre).join(', ')}>
+                          Platos: {asociados.map(a => a.nombre).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Badge Semáforo */}
+                  <div className="shrink-0">
+                    {estaPausado ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600">
+                        <EyeOff size={11} /> Pausado
+                      </span>
+                    ) : esCritico ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                        <XCircle size={11} /> {ins.stock_actual < 0 ? `Quiebre (${ins.stock_actual})` : 'Agotado (0)'}
+                      </span>
+                    ) : esBajo ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                        <AlertTriangle size={11} /> Bajo ({ins.stock_actual})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        <CheckCircle2 size={11} /> Stock ({ins.stock_actual})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Control Táctil de Stock [-] Input [+] */}
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500">Stock:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nuevo = Math.max(0, (stockRapido[ins.id] ?? ins.stock_actual) - 1)
+                          setStockRapido({ ...stockRapido, [ins.id]: nuevo })
+                        }}
+                        className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black text-sm flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                        title="Restar 1"
+                      >
+                        -
+                      </button>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={stockEdit}
+                        onChange={(e) => setStockRapido({ ...stockRapido, [ins.id]: Number(e.target.value) })}
+                        onBlur={() => {
+                          if (isModified) guardarStockRapido(ins.id)
+                        }}
+                        className={`w-16 rounded-lg py-1.5 text-center font-black text-sm border outline-none ${
+                          esCritico
+                            ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 text-rose-700 dark:text-rose-300'
+                            : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100'
+                        }`}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nuevo = (stockRapido[ins.id] ?? ins.stock_actual) + 1
+                          setStockRapido({ ...stockRapido, [ins.id]: nuevo })
+                        }}
+                        className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black text-sm flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                        title="Sumar 1"
+                      >
+                        +
+                      </button>
+
+                      <span className="text-[11px] text-slate-500 font-medium ml-1">
+                        {ins.unidad_medida}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isModified && (
+                    <button
+                      type="button"
+                      onClick={() => guardarStockRapido(ins.id)}
+                      disabled={guardandoStockId === ins.id}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {guardandoStockId === ins.id ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                      <span>Guardar</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Acciones Rápidas Táctiles */}
+                <div className="flex items-center justify-between gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 flex-1">
+                    {/* Toggle Pausar/Mostrar en Tienda */}
+                    <button
+                      type="button"
+                      onClick={() => alternarEstadoEnTienda(ins)}
+                      disabled={procesandoPausa[ins.id]}
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer ${
+                        estaPausado
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {procesandoPausa[ins.id] ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : estaPausado ? (
+                        <>
+                          <EyeOff size={13} />
+                          <span>Pausado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye size={13} />
+                          <span>Visible</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Reabastecer Rápido */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInsumoReposicion(ins)
+                        setTipoOperacion('sumar')
+                        setSubtipoMovimiento('ingreso_mercaderia')
+                        setMotivoMovimiento('')
+                        setCantidadDelta(12)
+                      }}
+                      className="py-1.5 px-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Zap size={13} />
+                      <span>+Pack</span>
+                    </button>
+
+                    {/* Kardex */}
+                    <button
+                      type="button"
+                      onClick={() => setInsumoKardex(ins)}
+                      className="py-1.5 px-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <History size={13} />
+                      <span>Kardex</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {/* Editar */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditando(ins.id)
+                        setNombre(ins.nombre)
+                        setCategoriaId(ins.categoria_id)
+                        setStock(ins.stock_actual)
+                        setUnidad(ins.unidad_medida)
+                        setMostrarFormulario(true)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                      className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                      title="Editar"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+
+                    {/* Eliminar */}
+                    <button
+                      type="button"
+                      onClick={() => eliminar(ins.id, ins.nombre)}
+                      className="p-2 text-rose-500 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
 
           {insumosFiltrados.length === 0 && (
             <div className="text-center text-slate-500 py-12">
