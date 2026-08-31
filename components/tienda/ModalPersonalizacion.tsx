@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
-
+import { usarCarrito } from '@/contexto/CarritoContexto'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -37,6 +37,8 @@ export default function ModalPersonalizacion({
   onSetNota,
   onAgregar,
 }: ModalPersonalizacionProps) {
+  const { turnoActivo, esDomingoCerrado, mensajeCierre } = usarCarrito()
+  const estaCerrado = turnoActivo === false || esDomingoCerrado
   const [mostrarFotos, setMostrarFotos] = useState(false)
   const galeriaRef = useRef<HTMLDivElement>(null)
   const listaFotos = imagenFinal ? (imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal]).map(url => url.trim()).filter(Boolean) : []
@@ -278,10 +280,21 @@ export default function ModalPersonalizacion({
           {/* Botón agregar */}
           <div className="flex-1 flex flex-col gap-2">
             <button
-              onClick={() => onAgregar(false)}
-              className="w-full bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl shadow-lg shadow-chefsy-500/20 transition-all active:scale-[0.98] cursor-pointer text-center leading-none"
+              onClick={() => {
+                if (estaCerrado) {
+                  alert(mensajeCierre || 'El local se encuentra cerrado en este momento.')
+                  return
+                }
+                onAgregar(false)
+              }}
+              disabled={estaCerrado}
+              className={`w-full font-bebas text-lg tracking-wider py-2.5 px-3 rounded-xl transition-all text-center leading-none ${
+                estaCerrado
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  : 'bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white shadow-lg shadow-chefsy-500/20 active:scale-[0.98] cursor-pointer'
+              }`}
             >
-              Agregar · {formatearPrecio(precioUnitarioTotal * cantidadModal)}
+              {estaCerrado ? '🔒 Local Cerrado' : `Agregar · ${formatearPrecio(precioUnitarioTotal * cantidadModal)}`}
             </button>
           </div>
         </div>

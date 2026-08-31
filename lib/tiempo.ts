@@ -46,15 +46,18 @@ export function esDomingoArgentina(fechaReferencia: Date = new Date()): boolean 
 export function obtenerEstadoHorarioLocal(turnoActivo: boolean | null | undefined, fechaReferencia: Date = new Date()) {
   const esDomingo = esDomingoArgentina(fechaReferencia)
 
-  if (!turnoActivo) {
-    if (esDomingo) {
-      return {
-        abierto: false,
-        esDomingo: true,
-        motivo: 'domingo' as const,
-        mensaje: 'Los domingos el local permanece cerrado. Te esperamos de lunes a sábados.',
-      }
+  // 1. REGLA ESTRICTA DE DOMINGOS: El local permanece 100% CERRADO los domingos
+  if (esDomingo) {
+    return {
+      abierto: false,
+      esDomingo: true,
+      motivo: 'domingo' as const,
+      mensaje: 'Los domingos el local permanece cerrado. Te esperamos de lunes a sábados.',
     }
+  }
+
+  // 2. Si no hay turno activo iniciado manualmente por el administrador, permanece cerrado
+  if (!turnoActivo) {
     return {
       abierto: false,
       esDomingo: false,
@@ -65,7 +68,7 @@ export function obtenerEstadoHorarioLocal(turnoActivo: boolean | null | undefine
 
   return {
     abierto: true,
-    esDomingo,
+    esDomingo: false,
     motivo: 'abierto' as const,
     mensaje: 'Local abierto y recibiendo pedidos.',
   }

@@ -173,11 +173,15 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
+    if (turnoActivo === false || esDomingoCerrado) {
+      alert(mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
+      return
+    }
     setProductoAPersonalizar(prod)
     setModsSeleccionados([])
     setCantidadModal(1)
     setNotaPersonalizacion('')
-  }, [])
+  }, [turnoActivo, esDomingoCerrado, mensajeCierre])
 
   const alternarModificador = useCallback((mod: ModificadorCatalogo) => {
     setModsSeleccionados(prev => 

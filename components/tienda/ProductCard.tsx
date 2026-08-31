@@ -6,6 +6,7 @@ import { Plus, Flame, Star, Leaf, Sparkles } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
+import { usarCarrito } from '@/contexto/CarritoContexto'
 
 interface ProductCardProps {
   prod:        ProductoCatalogo
@@ -27,6 +28,8 @@ function ProductCard({
   onAbrirModal
 }: ProductCardProps) {
   const { configuracion } = usarConfiguracionTienda()
+  const { turnoActivo, esDomingoCerrado, mensajeCierre } = usarCarrito()
+  const estaCerrado = turnoActivo === false || esDomingoCerrado
   
   const estiloTarjeta = configuracion?.estilo_tarjetas || 'glassmorphism'
   const mostrarBadges = configuracion?.mostrar_badges_automaticos !== false
@@ -88,7 +91,15 @@ function ProductCard({
   return (
     <div
       ref={ref}
-      onClick={() => !agotado && onAbrirModal(prod)}
+      onClick={() => {
+        if (estaCerrado) {
+          alert(mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
+          return
+        }
+        if (!agotado) {
+          onAbrirModal(prod)
+        }
+      }}
       style={{
         contentVisibility: 'auto',
         containIntrinsicSize: '0 90px',
@@ -98,8 +109,8 @@ function ProductCard({
         'group flex items-start gap-3.5 cursor-pointer touch-manipulation transition-all duration-300 select-none relative',
         contenedorEstilos,
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
-        agotado
-          ? 'opacity-50 grayscale'
+        agotado || estaCerrado
+          ? 'opacity-65 cursor-not-allowed'
           : 'active:scale-[0.98]'
       )}
     >

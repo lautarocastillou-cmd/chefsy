@@ -69,7 +69,10 @@ export default function TiendaMobile() {
     calcularPrecioUnitarioModal,
     agregarAlCarritoDesdeModal,
     pedidoCompletado,
-    setPedidoCompletado
+    setPedidoCompletado,
+    turnoActivo,
+    esDomingoCerrado,
+    mensajeCierre
   } = usarCarrito()
 
   // Cargar metadatos
@@ -308,6 +311,23 @@ export default function TiendaMobile() {
 
       {/* Contenido principal de la Tienda */}
       <div className="pb-32">
+          {/* Banner Bloqueante de Local Cerrado / Domingos */}
+          {(turnoActivo === false || esDomingoCerrado) && (
+            <div className="mx-4 my-3 p-3.5 bg-rose-950/80 border border-rose-500/40 rounded-2xl flex items-center gap-3 shadow-xl backdrop-blur-md animate-in fade-in">
+              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shrink-0 border border-rose-500/30">
+                🔒
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-black text-rose-300 leading-tight">
+                  {esDomingoCerrado ? 'Local Cerrado los Domingos' : 'Local Cerrado en este momento'}
+                </p>
+                <p className="text-[10px] text-rose-200/80 leading-tight mt-0.5">
+                  {mensajeCierre || 'Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Hero Section Dinámico (Parallax, Carrusel, Cinemático o Minimalista) */}
           {!categoriaSeleccionada && !busqueda && (
             <HeroManager
