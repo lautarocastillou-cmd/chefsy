@@ -25,19 +25,40 @@ function calcularRumbo(lat1: number, lon1: number, lat2: number, lon2: number): 
   return (brng + 360) % 360
 }
 
+// Helper: Camino angular más corto (-180° a +180°) para giros naturales
+function calcularRumboMasCorto(inicio: number, destino: number): number {
+  return ((destino - inicio + 540) % 360) - 180
+}
+
+// Helper: Curva de aceleración sinusoidal para deslizamiento ultra fluido
+function easeInOutSine(x: number): number {
+  return -(Math.cos(Math.PI * x) - 1) / 2
+}
+
 export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
   const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any }>({})
   const polylineRef = useRef<{ base?: any; dash?: any }>({})
   
-  const posicionAnteriorRef = useRef<{ latitud: number; longitud: number } | null>(null)
-  const rumboActualRef = useRef<number>(0)
-
+  // ── Referencias del Motor de Interpolación a 60 FPS ─────────────────────────
+  const animFrameRef = useRef<number | null>(null)
+  const posicionAnimadaRef = useRef<{ latitud: number; longitud: number; rumbo: number } | null>(null)
+  const posicionInicioRef = useRef<{ latitud: number; longitud: number; rumbo: number } | null>(null)
+  const posicionDestinoRef = useRef<{ latitud: number; longitud: number; rumbo: number } | null>(null)
+  const animStartTimeRef = useRef<number>(0)
+  const duracionAnimacionRef = useRef<number>(3500)
+  const tiempoUltimoUpdateRef = useRef<number>(0)
+  
   const [mapaListo, setMapaListo] = useState(false)
   const [etaText, setEtaText] = useState<string | null>(null)
   const [distanciaRestanteKm, setDistanciaRestanteKm] = useState<number | null>(null)
   const [modoCamara, setModoCamara] = useState<ModoCamara>('todo')
+  const modoCamaraRef = useRef<ModoCamara>('todo')
+
+  useEffect(() => {
+    modoCamaraRef.current = modoCamara
+  }, [modoCamara])
 
   // ── 1. Calcular ETA y Distancia en tiempo real ───────────────────────────────
   useEffect(() => {
@@ -87,7 +108,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
       L.control.zoom({ position: 'bottomright' }).addTo(mapa)
 
-      // Listener: Si el usuario mueve el mapa manualmente con el dedo, cambiar a modo manual
+      // Listener: Si el usuario mueve el mapa con el dedo/mouse, cambiar a modo manual
       mapa.on('dragstart', () => {
         setModoCamara('manual')
       })
@@ -139,6 +160,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     return () => {
       clearTimeout(timer1)
       clearTimeout(timer2)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+      }
       if (resizeObserver) resizeObserver.disconnect()
       if (leafletMapRef.current) {
         leafletMapRef.current.remove()
@@ -187,75 +211,180 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
   }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente])
 
-  // ── 4. Actualizar / Crear marcador del Cadete con Rumbo & Interpolación ─────
+  // ── 4. MOTOR DE INTERPOLACIÓN CONTINUO A 60 FPS (GLIDING ENGINE) ─────────────
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current || !pedido.cadete_coordenadas) return
 
     const L = require('leaflet')
-    const { latitud, longitud } = pedido.cadete_coordenadas
+    const { latitud: targetLat, longitud: targetLng } = pedido.cadete_coordenadas
+    const ahora = performance.now()
 
-    // Calcular rumbo si hubo movimiento anterior
-    if (posicionAnteriorRef.current) {
-      const { latitud: prevLat, longitud: prevLng } = posicionAnteriorRef.current
-      const dist = Math.sqrt(Math.pow(latitud - prevLat, 2) + Math.pow(longitud - prevLng, 2))
-      if (dist > 0.00005) { // Movimiento real > 5 metros
-        rumboActualRef.current = Math.round(calcularRumbo(prevLat, prevLng, latitud, longitud))
-      }
+    // Medir dinámicamente el intervalo entre reportes GPS para sincronizar la duración
+    if (tiempoUltimoUpdateRef.current > 0) {
+      const lapsoReal = ahora - tiempoUltimoUpdateRef.current
+      duracionAnimacionRef.current = Math.min(Math.max(lapsoReal * 1.05, 2200), 5500)
     }
-    posicionAnteriorRef.current = { latitud, longitud }
+    tiempoUltimoUpdateRef.current = ahora
 
-    const rumbo = rumboActualRef.current
+    // Helper para actualizar la rotación en el DOM sin recrear elementos
+    const aplicarRotacionAlElemento = (rumboGrados: number) => {
+      const markerInst = markersRef.current.cadete
+      if (!markerInst) return
+      const iconElement = markerInst.getElement()
+      if (!iconElement) return
 
-    const cadeteHtml = `
-      <div class="cadete-marker-outer" style="position:relative; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">
+      const rotatables = iconElement.querySelectorAll('.cadete-rotatable')
+      rotatables.forEach((el: any) => {
+        if (el.classList.contains('cadete-direction-arrow')) {
+          el.style.transform = `rotate(${rumboGrados}deg) translateY(-24px)`
+        } else {
+          el.style.transform = `rotate(${rumboGrados}deg)`
+        }
+      })
+    }
+
+    // Constructor de HTML del marcador con faro delantero y radar
+    const generarHtmlCadete = (rumboInicial: number) => `
+      <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; align-items:center; justify-content:center;">
+        <!-- Haz de luz / Faro delantero que ilumina la calle hacia donde va -->
+        <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumboInicial}deg);"></div>
+        <!-- Onda de radar de presencia -->
         <div class="cadete-radar-pulse"></div>
-        <div class="cadete-moto-badge" style="transform: rotate(${rumbo}deg); transition: transform 0.5s ease-out; width:38px; height:38px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 12px rgba(225,29,72,0.45); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer;">
+        <!-- Badge circular 3D de la moto con rotación en vivo -->
+        <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(${rumboInicial}deg); width:40px; height:40px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.5); display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer;">
           🛵
         </div>
-        <div class="cadete-direction-arrow" style="position:absolute; top:-2px; transform: rotate(${rumbo}deg); transition: transform 0.5s ease-out; font-size:10px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
+        <!-- Flecha direccional de navegación -->
+        <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumboInicial}deg) translateY(-24px); font-size:11px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
           ▲
         </div>
       </div>
     `
 
-    const cadeteIcon = L.divIcon({
-      html: cadeteHtml,
-      className: 'cadete-marker animated-cadete-marker',
-      iconSize: [48, 48],
-      iconAnchor: [24, 24],
-    })
+    // Caso 1: Primera vez que recibimos posición
+    if (!posicionAnimadaRef.current) {
+      posicionAnimadaRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
+      posicionInicioRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
+      posicionDestinoRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
 
-    if (markersRef.current.cadete) {
-      markersRef.current.cadete.setLatLng([latitud, longitud])
-      markersRef.current.cadete.setIcon(cadeteIcon)
-    } else {
-      markersRef.current.cadete = L.marker([latitud, longitud], {
+      const cadeteIcon = L.divIcon({
+        html: generarHtmlCadete(0),
+        className: 'cadete-marker-leaflet-container',
+        iconSize: [54, 54],
+        iconAnchor: [27, 27],
+      })
+
+      markersRef.current.cadete = L.marker([targetLat, targetLng], {
         icon: cadeteIcon,
         zIndexOffset: 300,
       }).addTo(leafletMapRef.current).bindPopup(`🛵 Repartidor: ${pedido.cadete_nombre || 'En camino'}`)
+      return
     }
 
-    // Si la cámara está en modo "cadete", seguir suavemente al cadete
-    if (modoCamara === 'cadete') {
-      leafletMapRef.current.panTo([latitud, longitud], { animate: true, duration: 0.8 })
-    }
-  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, modoCamara])
+    // Calcular distancia al nuevo punto
+    const distDelta = Math.sqrt(
+      Math.pow(targetLat - posicionAnimadaRef.current.latitud, 2) +
+      Math.pow(targetLng - posicionAnimadaRef.current.longitud, 2)
+    )
 
-  // ── 5. Trazado de Ruta Dinámica (Polilínea con Pulso/Dash) ───────────────────
+    // Si el cambio es microscópico (< 1 metro), no reiniciar bucle
+    if (distDelta < 0.00001) return
+
+    // Calcular nuevo rumbo hacia el nuevo destino
+    const targetHeading = Math.round(
+      calcularRumbo(
+        posicionAnimadaRef.current.latitud,
+        posicionAnimadaRef.current.longitud,
+        targetLat,
+        targetLng
+      )
+    )
+
+    // El punto de partida de la nueva animación es EXACTAMENTE donde se encuentra actualmente la moto (cero saltos)
+    posicionInicioRef.current = { ...posicionAnimadaRef.current }
+    posicionDestinoRef.current = { latitud: targetLat, longitud: targetLng, rumbo: targetHeading }
+    animStartTimeRef.current = performance.now()
+
+    // Si había una animación previa en curso, cancelarla para empalmar sin tirones
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+    }
+
+    // Bucle continuo a 60 fotogramas por segundo (RequestAnimationFrame)
+    const pasoGliding = (timestamp: number) => {
+      const inicio = posicionInicioRef.current
+      const destino = posicionDestinoRef.current
+      const cadeteMarker = markersRef.current.cadete
+
+      if (!inicio || !destino || !cadeteMarker) return
+
+      const tiempoTranscurrido = timestamp - animStartTimeRef.current
+      const progresoCrudo = Math.min(tiempoTranscurrido / duracionAnimacionRef.current, 1)
+      const progreso = easeInOutSine(progresoCrudo)
+
+      // 1. Interpolación de Latitud y Longitud
+      const latActual = inicio.latitud + (destino.latitud - inicio.latitud) * progreso
+      const lngActual = inicio.longitud + (destino.longitud - inicio.longitud) * progreso
+
+      // 2. Interpolación del Rumbo por el camino angular más corto
+      const deltaRumbo = calcularRumboMasCorto(inicio.rumbo, destino.rumbo)
+      const rumboActual = (inicio.rumbo + deltaRumbo * progreso + 360) % 360
+
+      // Almacenar posición animada actual
+      posicionAnimadaRef.current = {
+        latitud: latActual,
+        longitud: lngActual,
+        rumbo: rumboActual
+      }
+
+      // Actualizar posición del marcador en Leaflet
+      cadeteMarker.setLatLng([latActual, lngActual])
+
+      // Actualizar rotación del faro y la moto en CSS
+      aplicarRotacionAlElemento(rumboActual)
+
+      // 3. Acortar la polilínea de la ruta en vivo milisegundo a milisegundo
+      if (polylineRef.current.base && pedido.coordenadas) {
+        const rutaViva = [
+          [latActual, lngActual],
+          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+        ]
+        polylineRef.current.base.setLatLngs(rutaViva)
+        polylineRef.current.dash.setLatLngs(rutaViva)
+      }
+
+      // 4. Si la cámara está fijada en el cadete, acompañar suavemente a 60 FPS
+      if (modoCamaraRef.current === 'cadete' && leafletMapRef.current) {
+        leafletMapRef.current.panTo([latActual, lngActual], { animate: false })
+      }
+
+      // Continuar hasta completar el trayecto o hasta que llegue un nuevo punto
+      if (progresoCrudo < 1) {
+        animFrameRef.current = requestAnimationFrame(pasoGliding)
+      }
+    }
+
+    animFrameRef.current = requestAnimationFrame(pasoGliding)
+  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud])
+
+  // ── 5. Inicialización de Polilínea de Ruta ───────────────────────────────────
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current) return
     const L = require('leaflet')
 
     let puntosRuta: [number, number][] = []
 
-    if (pedido.cadete_coordenadas && pedido.coordenadas) {
-      // Cadete en camino hacia la casa
+    if (posicionAnimadaRef.current && pedido.coordenadas) {
+      puntosRuta = [
+        [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
+        [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+      ]
+    } else if (pedido.cadete_coordenadas && pedido.coordenadas) {
       puntosRuta = [
         [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
         [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
       ]
     } else if (pedido.coordenadas) {
-      // Desde el local hacia la casa
       puntosRuta = [
         [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
         [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
@@ -263,10 +392,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
 
     if (puntosRuta.length >= 2) {
-      if (polylineRef.current.base) {
-        polylineRef.current.base.setLatLngs(puntosRuta)
-        polylineRef.current.dash.setLatLngs(puntosRuta)
-      } else {
+      if (!polylineRef.current.base) {
         // Línea base con resplandor
         polylineRef.current.base = L.polyline(puntosRuta, {
           color: '#059669',
@@ -286,14 +412,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
           lineJoin: 'round',
         }).addTo(leafletMapRef.current)
       }
-    } else {
-      if (polylineRef.current.base) {
-        polylineRef.current.base.remove()
-        polylineRef.current.dash.remove()
-        polylineRef.current = {}
-      }
     }
-  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {
@@ -314,8 +434,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const enfocarCadete = () => {
     if (!leafletMapRef.current || !pedido.cadete_coordenadas) return
     setModoCamara('cadete')
+    const pos = posicionAnimadaRef.current || pedido.cadete_coordenadas
     leafletMapRef.current.flyTo(
-      [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
+      [pos.latitud, pos.longitud],
       16,
       { duration: 0.8 }
     )
@@ -329,8 +450,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     if (pedido.coordenadas) {
       bounds.extend([pedido.coordenadas.latitud, pedido.coordenadas.longitud])
     }
-    if (pedido.cadete_coordenadas) {
-      bounds.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
+    const pos = posicionAnimadaRef.current || pedido.cadete_coordenadas
+    if (pos) {
+      bounds.extend([pos.latitud, pos.longitud])
     }
     leafletMapRef.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: true, duration: 0.8 })
   }
@@ -352,19 +474,46 @@ export default function MapaSeguimiento({ pedido }: Props) {
     <div className="absolute inset-0 w-full h-full overflow-hidden z-0 bg-slate-100">
       <style dangerouslySetInnerHTML={{
         __html: `
-        .animated-cadete-marker {
-          transition: transform 0.9s cubic-bezier(0.25, 1, 0.5, 1) !important;
+        /* Haz de luz / Faro delantero de la moto */
+        .cadete-headlight-cone {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 54px;
+          height: 64px;
+          margin-left: -27px;
+          margin-top: -64px;
+          background: radial-gradient(ellipse at 50% 100%, rgba(254, 240, 138, 0.6) 0%, rgba(253, 224, 71, 0.3) 45%, rgba(253, 224, 71, 0) 80%);
+          clip-path: polygon(50% 100%, 12% 0%, 88% 0%);
+          transform-origin: 50% 100%;
+          pointer-events: none;
+          filter: blur(1px);
+          z-index: 1;
+          transition: transform 0.08s linear;
+        }
+        .cadete-moto-badge {
+          position: relative;
+          z-index: 2;
+          transform-origin: center center;
+          transition: transform 0.08s linear;
+        }
+        .cadete-direction-arrow {
+          position: absolute;
+          z-index: 3;
+          transform-origin: 50% 27px;
+          transition: transform 0.08s linear;
         }
         .cadete-radar-pulse {
           position: absolute;
-          inset: 0;
+          inset: 4px;
           border-radius: 50%;
           border: 2px solid rgba(225, 29, 72, 0.6);
           animation: cadete-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
           pointer-events: none;
+          z-index: 0;
         }
         @keyframes cadete-pulse {
-          0% { transform: scale(0.6); opacity: 0.9; }
+          0% { transform: scale(0.7); opacity: 0.9; }
           80%, 100% { transform: scale(1.6); opacity: 0; }
         }
         @keyframes polyline-dash {
@@ -407,7 +556,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       )}
 
       {/* HUD de Botones de Cámara Inteligente */}
-      <div className="absolute top-3.5 right-3.5 z-[400] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-none p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+      <div className="absolute top-3.5 right-3.5 z-[400] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
         {/* Seguir al Cadete */}
         <button
           type="button"
@@ -468,4 +617,5 @@ export default function MapaSeguimiento({ pedido }: Props) {
     </div>
   )
 }
+
 
