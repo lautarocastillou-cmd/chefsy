@@ -48,7 +48,7 @@ export function usePedidosRealtime({
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: 0,
+      refreshInterval: 30000, // Heartbeat de seguridad cada 30s para pantallas de cocina y mostrador
       dedupingInterval: 4000,
       fallbackData: [],
     }
