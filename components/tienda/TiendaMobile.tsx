@@ -193,11 +193,8 @@ export default function TiendaMobile() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }, 100)
     } else if (tab === 'profile') {
-      setActiveTab('profile')
+      setActiveTab('home')
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      if (!usuario) {
-        setMostrarLogin(true)
-      }
     } else {
       setActiveTab(tab)
       setBusqueda('')
