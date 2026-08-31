@@ -57,10 +57,32 @@ export default function HeroSection(props: HeroSectionProps) {
               />
             </div>
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
-            <BotonUbicacionLocal />
-            <BotonWhatsAppHeader />
           </div>
 
+          <div className="flex items-center gap-3">
+            <BotonUbicacionLocal />
+            <BotonWhatsAppHeader />
+
+            {usuario ? (
+              <button
+                onClick={() => setMostrarPerfil(true)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded-full bg-chefsy-500/30 flex items-center justify-center text-chefsy-400">
+                  <User size={12} />
+                </div>
+                <span className="max-w-[120px] truncate">{perfil?.nombre || usuario.telefono || 'Mi Cuenta'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setMostrarLogin(true)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-chefsy-600 hover:bg-chefsy-500 text-white font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <User size={13} />
+                <span>Ingresar / Mi Cuenta</span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

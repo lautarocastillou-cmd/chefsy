@@ -60,11 +60,6 @@ function CatalogoProductosComponente({
 }: CatalogoProductosProps) {
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
 
-  // Sin categoría ni búsqueda: no mostrar nada (el hero ya hace de pantalla principal)
-  if (!categoriaSeleccionada && !busqueda) {
-    return null
-  }
-
   const idPatys   = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
   const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
   const esCategoriaCombinada = categoriaSeleccionada === idPatys || categoriaSeleccionada === idBurgers

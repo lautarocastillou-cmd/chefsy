@@ -136,9 +136,8 @@ export default function TiendaDesktop() {
     // 1. Filtrar por categoría y estado activo
     const productosPorCategoria = productos.filter(p => {
       if (!p.activo) return false
-      if (!categoriaSeleccionada && !hayBusqueda) return false
 
-      const catFiltro = (hayBusqueda && !categoriaSeleccionada) ? 'todos' : (categoriaSeleccionada || 'todos')
+      const catFiltro = hayBusqueda ? 'todos' : (categoriaSeleccionada || 'todos')
       
       const esFiltroCombinado = catFiltro === idPatys || catFiltro === idBurgers
       const perteneceACategoria = catFiltro === 'todos' || p.categoriaId === catFiltro || (esFiltroCombinado && (p.categoriaId === idPatys || p.categoriaId === idBurgers))
