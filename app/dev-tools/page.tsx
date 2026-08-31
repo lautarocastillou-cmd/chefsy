@@ -80,6 +80,147 @@ function parsearFotosDeUrl(imagenUrl?: string | null): string[] {
     .filter(u => u.length > 0)
 }
 
+function SelectorProductoBuscableBanco({
+  productos,
+  categorias,
+  productoSeleccionadoId,
+  onSeleccionar,
+  onConfirmar,
+  onCancelar,
+  asignando,
+}: {
+  productos: any[]
+  categorias: any[]
+  productoSeleccionadoId: string
+  onSeleccionar: (id: string) => void
+  onConfirmar: () => void
+  onCancelar: () => void
+  asignando?: boolean
+}) {
+  const [busqueda, setBusqueda] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  const productosFiltrados = useMemo(() => {
+    const q = busqueda.toLowerCase().trim()
+    if (!q) return productos
+    return productos.filter(p => {
+      const matchNombre = p.nombre.toLowerCase().includes(q)
+      const cat = categorias.find(c => c.id === p.categoriaId)
+      const matchCat = cat ? cat.nombre.toLowerCase().includes(q) : false
+      return matchNombre || matchCat
+    })
+  }, [productos, categorias, busqueda])
+
+  const productoSeleccionado = productos.find(p => p.id === productoSeleccionadoId)
+
+  return (
+    <div className="space-y-2.5 bg-slate-950 p-3 rounded-2xl border border-indigo-500/50 shadow-2xl animate-in fade-in">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-black text-indigo-300 flex items-center gap-1.5">
+          <span>🔍</span>
+          <span>Buscar plato a asignar:</span>
+        </label>
+        <span className="text-[10px] text-slate-500 font-bold">
+          {productosFiltrados.length} encontrados
+        </span>
+      </div>
+
+      {/* Input de Búsqueda Rápida */}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Escribí ej: mila, burger, pizza..."
+          className="w-full py-1.5 pl-8 pr-3 bg-slate-900 border border-slate-700 focus:border-indigo-500 text-white text-xs rounded-xl outline-none transition-colors"
+        />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={13} />
+        {busqueda && (
+          <button
+            type="button"
+            onClick={() => setBusqueda('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs cursor-pointer"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Lista scrolleable de resultados con badges de categoría */}
+      <div className="max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+        {productosFiltrados.length === 0 ? (
+          <p className="text-[11px] text-slate-500 text-center py-3 italic">
+            No se encontró ningún plato con "{busqueda}"
+          </p>
+        ) : (
+          productosFiltrados.map(p => {
+            const isSelected = productoSeleccionadoId === p.id
+            const cat = categorias.find(c => c.id === p.categoriaId)
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onSeleccionar(p.id)}
+                className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer border ${
+                  isSelected
+                    ? 'bg-indigo-600/30 border-indigo-500 text-white font-bold shadow-xs'
+                    : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2 truncate pr-2">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-indigo-400 animate-pulse' : 'bg-slate-600'}`} />
+                  <span className="truncate">{p.nombre}</span>
+                </div>
+                {cat && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 shrink-0 font-medium">
+                    {cat.nombre}
+                  </span>
+                )}
+              </button>
+            )
+          })
+        )}
+      </div>
+
+      {/* Botones de acción */}
+      <div className="flex gap-1.5 pt-1 border-t border-slate-800">
+        <button
+          type="button"
+          onClick={onConfirmar}
+          disabled={!productoSeleccionadoId || asignando}
+          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-black disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
+        >
+          {asignando ? (
+            <>
+              <Loader2 size={13} className="animate-spin" />
+              <span>Guardando...</span>
+            </>
+          ) : (
+            <>
+              <Check size={13} />
+              <span className="truncate">
+                {productoSeleccionado ? `Asignar a "${productoSeleccionado.nombre}"` : 'Elegir y Asignar'}
+              </span>
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancelar}
+          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function DevToolsPage() {
   const router = useRouter()
   const { usuarioActivo, estaListoAuth } = usarAuth()
@@ -111,6 +252,7 @@ export default function DevToolsPage() {
   const [fotosLibresBanco, setFotosLibresBanco] = useState<string[]>([])
   const [asignandoFotoUrl, setAsignandoFotoUrl] = useState<string | null>(null)
   const [asignandoProductoId, setAsignandoProductoId] = useState<string>('')
+  const [asignandoFotoCargando, setAsignandoFotoCargando] = useState(false)
 
   // Estado del Modal de Edición
   const [productoEditandoId, setProductoEditandoId] = useState<string | null>(null)
@@ -1214,8 +1356,10 @@ export default function DevToolsPage() {
     })
   }, [bancoFotos, busquedaBanco, filtroCategoriaBanco, categorias])
 
-  // Asignar una foto del banco directamente a otro producto
+  // Asignar una foto del banco directamente a otro producto (Reactivo e Inmediato)
   const asignarFotoAProductoDirecto = async (fotoUrl: string, productoId: string) => {
+    if (!productoId) return
+    setAsignandoFotoCargando(true)
     try {
       const prod = productos.find(p => p.id === productoId)
       if (!prod) return
@@ -1230,39 +1374,54 @@ export default function DevToolsPage() {
       const fotosExistentes = parsearFotosDeUrl(metaActual.imagen_url).filter(u => !esImagenPlaceholder(u))
       if (fotosExistentes.includes(fotoUrl)) {
         mostrarToast(`"${prod.nombre}" ya tiene esta foto asignada`, 'info')
+        setAsignandoFotoUrl(null)
+        setAsignandoProductoId('')
         return
       }
 
       const todasLasFotos = [fotoUrl, ...fotosExistentes]
       const imagen_url_final = todasLasFotos.join(' | ')
 
+      // 1. Actualización optimista inmediata en estado local (sin recarga ni salto de scroll)
+      const nuevoMeta = {
+        ...metaActual,
+        producto_id: productoId,
+        nombre_publico: metaActual.nombre_publico || prod.nombre,
+        descripcion_publica: metaActual.descripcion_publica || '',
+        imagen_url: imagen_url_final,
+      }
+
+      setMetadata(prev => ({
+        ...prev,
+        [productoId]: nuevoMeta,
+      }))
+
+      setAsignandoFotoUrl(null)
+      setAsignandoProductoId('')
+
+      // 2. Persistir en base de datos en segundo plano
       const metaRes = await fetch('/api/admin/tienda-metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           producto_id: productoId,
-          nombre_publico: metaActual.nombre_publico || prod.nombre,
-          descripcion_publica: metaActual.descripcion_publica || '',
+          nombre_publico: nuevoMeta.nombre_publico,
+          descripcion_publica: nuevoMeta.descripcion_publica,
           imagen_url: imagen_url_final,
         }),
       })
 
       const metaData = await metaRes.json()
       if (!metaRes.ok || metaData.error) {
-        throw new Error(metaData.error || 'Error al guardar')
+        throw new Error(metaData.error || 'Error al guardar en el servidor')
       }
 
-      setMetadata(prev => ({
-        ...prev,
-        [productoId]: metaData.data,
-      }))
-
-      setAsignandoFotoUrl(null)
-      setAsignandoProductoId('')
       mostrarToast(`¡Foto asignada a "${prod.nombre}" con éxito! 📸`, 'success')
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al asignar foto: ' + (err.message || 'Error desconocido'), 'error')
+    } finally {
+      setAsignandoFotoCargando(false)
     }
   }
 
@@ -2229,47 +2388,22 @@ export default function DevToolsPage() {
 
                       <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
                         {asignandoFotoUrl === item.url ? (
-                          <div className="space-y-2 bg-slate-950 p-2.5 rounded-2xl border border-indigo-500/40 animate-in fade-in">
-                            <label className="text-[10px] font-bold text-indigo-300">
-                              Seleccionar plato a asignar:
-                            </label>
-                            <select
-                              value={asignandoProductoId}
-                              onChange={e => setAsignandoProductoId(e.target.value)}
-                              className="w-full p-2 bg-slate-900 border border-slate-700 text-white text-xs rounded-xl outline-none"
-                            >
-                              <option value="">-- Elegir producto --</option>
-                              {productos.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.nombre}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (asignandoProductoId) {
-                                    asignarFotoAProductoDirecto(item.url, asignandoProductoId)
-                                  }
-                                }}
-                                disabled={!asignandoProductoId}
-                                className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer"
-                              >
-                                Asignar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAsignandoFotoUrl(null)
-                                  setAsignandoProductoId('')
-                                }}
-                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg text-xs cursor-pointer"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          </div>
+                          <SelectorProductoBuscableBanco
+                            productos={productos}
+                            categorias={categorias}
+                            productoSeleccionadoId={asignandoProductoId}
+                            onSeleccionar={id => setAsignandoProductoId(id)}
+                            onConfirmar={() => {
+                              if (asignandoProductoId) {
+                                asignarFotoAProductoDirecto(item.url, asignandoProductoId)
+                              }
+                            }}
+                            onCancelar={() => {
+                              setAsignandoFotoUrl(null)
+                              setAsignandoProductoId('')
+                            }}
+                            asignando={asignandoFotoCargando}
+                          />
                         ) : (
                           <div className="flex gap-1.5">
                             <button
