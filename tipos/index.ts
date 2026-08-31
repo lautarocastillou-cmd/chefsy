@@ -37,6 +37,13 @@ export interface ProductoPedido {
   categoriaId?: string
 }
 
+export interface PuntoRutaBreadcrumb {
+  lat: number
+  lng: number
+  t: string // ISO timestamp
+  speed?: number | null
+}
+
 /** Estructura completa de un pedido */
 export interface Pedido {
   id: string
@@ -72,6 +79,7 @@ export interface Pedido {
   push_subscription?: any | null
   turno_tipo?: TipoTurno
   archivado?: boolean
+  ruta_historial?: PuntoRutaBreadcrumb[] | null
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

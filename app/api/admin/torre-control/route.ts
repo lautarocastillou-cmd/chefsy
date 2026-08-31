@@ -34,7 +34,7 @@ export async function GET() {
     // 3. Obtener pedidos activos para saber en qué andan y ubicar a los clientes en el mapa
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
-      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id')
+      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, ruta_historial, en_camino_at, created_at, entregado_at, productos, tipoEntrega, telefono, metodoPago, hora, fecha')
       .in('estado', ['listo', 'en_camino'])
       .eq('archivado', false)
 
@@ -102,12 +102,8 @@ export async function GET() {
         updated_at: cadete?.updated_at ?? null,
         segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
         pedidoActivo: pedidoActivo ? {
-          id: pedidoActivo.id,
-          cliente: pedidoActivo.cliente,
-          direccion: pedidoActivo.direccion || null,
+          ...pedidoActivo,
           coordenadas: coordsCliente,
-          estado: pedidoActivo.estado,
-          total: pedidoActivo.total ?? null,
         } : null
       }
     })

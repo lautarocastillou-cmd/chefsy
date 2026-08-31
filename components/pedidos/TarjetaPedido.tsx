@@ -12,7 +12,7 @@ import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
 import SwipeActionPedido from './SwipeActionPedido'
 import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt, MoreHorizontal, Phone, MessageCircle } from 'lucide-react'
+import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt, MoreHorizontal, Phone, MessageCircle, Bike } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
@@ -20,6 +20,9 @@ import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import dynamic from 'next/dynamic'
 const FormularioPedidoLazy = dynamic(() => import('./FormularioPedido'), {
   loading: () => <div className="p-8 text-center text-sm text-slate-400">Cargando formulario...</div>
+})
+const ModalBreadcrumbTrail = dynamic(() => import('@/components/cadeteria/ModalBreadcrumbTrail'), {
+  ssr: false
 })
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import BadgeSmartBatch from './BadgeSmartBatch'
@@ -58,6 +61,7 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [editandoNota, setEditandoNota] = useState(false)
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
   const [verMapa, setVerMapa] = useState(false)
+  const [verBreadcrumb, setVerBreadcrumb] = useState(false)
   const [editandoPedidoCompleto, setEditandoPedidoCompleto] = useState(false)
   const [ticketCopiado, setTicketCopiado] = useState(false)
   const [modalImpresion, setModalImpresion] = useState(false)
@@ -564,26 +568,47 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         )
       )}
 
-      {/* Botones de Seguimiento GPS */}
-      {pedido.cadete_id && !esFinal && (
-        <div className="flex gap-1.5 mt-1.5">
+      {/* Botones de Seguimiento GPS y Repetición de Ruta */}
+      {pedido.tipoEntrega === 'delivery' && (pedido.cadete_id || (pedido.ruta_historial && pedido.ruta_historial.length > 0)) && (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {!esFinal && (
+            <button
+              onClick={() => setVerMapa(true)}
+              className="flex-1 min-w-[80px] bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+            >
+              <MapPin size={13} /> En Vivo
+            </button>
+          )}
+
           <button
-            onClick={() => setVerMapa(true)}
-            className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+            onClick={() => setVerBreadcrumb(true)}
+            className="flex-1 min-w-[80px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+            title="Ver trayecto real recorrido por la moto"
           >
-            <MapPin size={14} /> Mapa (Admin)
+            <Bike size={13} /> Repetir Ruta
           </button>
-          <button
-            onClick={() => {
-              const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-              navigator.clipboard.writeText(url)
-              alert('Enlace de rastreo para el cliente copiado al portapapeles.')
-            }}
-            className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 py-1.5 px-3 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <Copy size={14} /> Link Cliente
-          </button>
+
+          {!esFinal && (
+            <button
+              onClick={() => {
+                const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+                navigator.clipboard.writeText(url)
+                alert('Enlace de rastreo para el cliente copiado al portapapeles.')
+              }}
+              className="flex-1 min-w-[80px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+            >
+              <Copy size={13} /> Link
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Modal Repetición de Ruta (Breadcrumb Trail) */}
+      {verBreadcrumb && (
+        <ModalBreadcrumbTrail
+          pedido={pedido}
+          onCerrar={() => setVerBreadcrumb(false)}
+        />
       )}
 
       {/* Modal del Mapa */}

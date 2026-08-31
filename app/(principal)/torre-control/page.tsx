@@ -7,13 +7,18 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
 const MapaGlobal = dynamic(
   () => import('@/components/torre-control/MapaGlobal'),
   { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center text-sm text-gray-500 font-medium">Cargando mapa en vivo...</div> }
+)
+
+const ModalBreadcrumbTrail = dynamic(
+  () => import('@/components/cadeteria/ModalBreadcrumbTrail'),
+  { ssr: false }
 )
 
 export default function TorreControlPage() {
@@ -23,6 +28,7 @@ export default function TorreControlPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [apagandoId, setApagandoId] = useState<string | null>(null)
+  const [pedidoParaBreadcrumb, setPedidoParaBreadcrumb] = useState<any | null>(null)
 
   const fetchTorreData = async () => {
     setIsRefreshing(true)
@@ -172,6 +178,23 @@ export default function TorreControlPage() {
                                 <span className="line-clamp-2">{cadete.pedidoActivo.direccion}</span>
                               </p>
                             ) : null}
+
+                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPedidoParaBreadcrumb({
+                                  ...cadete.pedidoActivo,
+                                  cadete_nombre: cadete.nombre,
+                                  cadete_id: cadete.id,
+                                })
+                              }}
+                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            >
+                              <Bike className="h-3.5 w-3.5 text-purple-700" />
+                              <span>Ver Trayectoria (Breadcrumb)</span>
+                            </button>
                           </div>
                         ) : (
                           <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 flex items-center justify-between text-emerald-700">
@@ -190,7 +213,7 @@ export default function TorreControlPage() {
                             e.stopPropagation()
                             setFocusedId(cadete.id)
                           }}
-                          className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
                         >
                           <Navigation className="h-3 w-3" />
                           <span>Ver en mapa</span>
@@ -245,6 +268,14 @@ export default function TorreControlPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Interactivo de Repetición de Ruta (Breadcrumb Trail) */}
+      {pedidoParaBreadcrumb && (
+        <ModalBreadcrumbTrail
+          pedido={pedidoParaBreadcrumb}
+          onCerrar={() => setPedidoParaBreadcrumb(null)}
+        />
+      )}
     </div>
   )
 }
