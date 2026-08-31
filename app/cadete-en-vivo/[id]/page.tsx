@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { supabaseAnon } from '@/lib/supabase'
+import { formatearPrecio } from '@/lib/utils'
 import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import { 
   Flame, 
@@ -15,6 +16,13 @@ import {
   AlertCircle, 
   ArrowLeft,
   Package,
+  MessageCircle,
+  ChevronUp,
+  ChevronDown,
+  MapPin,
+  CreditCard,
+  FileText,
+  DollarSign,
 } from 'lucide-react'
 
 const MapaSeguimiento = dynamic(
@@ -25,7 +33,7 @@ const MapaSeguimiento = dynamic(
       <div className="w-full h-full flex items-center justify-center bg-slate-100 animate-pulse">
         <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2A6348', borderTopColor: 'transparent' }} />
-          <span className="text-xs text-slate-400 font-medium">Cargando mapa...</span>
+          <span className="text-xs text-slate-400 font-medium">Cargando mapa en vivo...</span>
         </div>
       </div>
     )
@@ -33,6 +41,7 @@ const MapaSeguimiento = dynamic(
 )
 
 const BG = 'linear-gradient(150deg, #2A6348 0%, #1a3d2e 100%)'
+const WHATSAPP_NUMERO = '5493834225445'
 
 // ── Badge de estado ─────────────────────────────────────────────────────────
 function EtiquetaEstado({ estado }: { estado: string }) {
@@ -58,9 +67,16 @@ function ResumenProductos({ productos }: { productos: any[] }) {
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
       {productos.map((p: any, i: number) => (
-        <div key={i} className="flex items-start gap-2 text-xs">
-          <span className="font-black shrink-0 mt-0.5" style={{ color: '#2A6348' }}>{p.cantidad}×</span>
-          <span className="text-gray-700 leading-snug">{p.nombre}</span>
+        <div key={i} className="flex items-start justify-between gap-2 text-xs">
+          <div className="flex items-start gap-2 min-w-0">
+            <span className="font-black shrink-0 mt-0.5" style={{ color: '#2A6348' }}>{p.cantidad}×</span>
+            <span className="text-gray-700 leading-snug truncate">{p.nombre}</span>
+          </div>
+          {p.precio ? (
+            <span className="text-gray-500 font-mono text-[11px] shrink-0 font-bold">
+              {formatearPrecio(p.precio * p.cantidad)}
+            </span>
+          ) : null}
         </div>
       ))}
     </div>
@@ -71,7 +87,6 @@ function ResumenProductos({ productos }: { productos: any[] }) {
 interface PedidoExtra { id: string; estado: string; productos: any[] }
 
 function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
-  // Cada tarjeta está 12px más abajo y es ligeramente más pequeña
   const translateY = (index + 1) * 12
   const scale      = 1 - (index + 1) * 0.04
   const opacity    = 1 - (index + 1) * 0.18
@@ -107,6 +122,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [cargando, setCargando]       = useState(true)
   const [error, setError]             = useState<string | null>(null)
   const [cadeteOcupadoEnOtroViaje, setCadeteOcupadoEnOtroViaje] = useState(false)
+  const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
 
   // ── Fetch del pedido principal ──────────────────────────────────────────────
   useEffect(() => {
@@ -121,17 +137,20 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         setPedido({
           id: data.id,
           cliente: data.cliente,
+          telefono: data.telefono ?? '',
           estado: data.estado,
           cadete_nombre: data.cadete_nombre ?? null,
           cadete_coordenadas: data.cadete_coordenadas ?? null,
           coordenadas: data.destino_coordenadas ?? null,
           local_coordenadas: data.local_coordenadas ?? null,
           tipoEntrega: data.tipoEntrega ?? 'delivery',
-          productos: [],
-          total: 0,
-          metodoPago: 'efectivo',
-          telefono: '',
-          direccion: '',
+          productos: data.productos || [],
+          total: data.total ?? 0,
+          metodoPago: data.metodoPago ?? 'efectivo',
+          direccion: data.direccion ?? '',
+          observaciones: data.observaciones ?? '',
+          costoEnvio: data.costoEnvio ?? 0,
+          hora: data.hora ?? '',
         } as unknown as Pedido)
         setProductos(data.productos || [])
         setCadeteOcupadoEnOtroViaje(Boolean(data.cadete_ocupado_en_otro_viaje))
@@ -164,7 +183,6 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     // Polling inteligente cada 5 segundos
     const intervalo = setInterval(fetchPrincipal, 5000)
 
-    // Re-sincronizar al volver a la pestaña o recuperar conexión a internet
     const onReconectar = () => fetchPrincipal()
     window.addEventListener('online', onReconectar)
     window.addEventListener('focus', onReconectar)
@@ -190,7 +208,6 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             const res  = await fetch(`/api/public/rastreo?id=${p.id}`)
             if (!res.ok) return null
             const data = await res.json()
-            // Si está terminado, limpiar del localStorage
             if (data.estado === 'entregado' || data.estado === 'cancelado') {
               limpiarPedidoActivo(p.id)
               return null
@@ -202,7 +219,6 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       setPedidosExtra(resultados.filter(Boolean) as PedidoExtra[])
     }
 
-    // Cargar cuando montan y cada 20s
     cargarExtras()
     const t = setInterval(cargarExtras, 20000)
     return () => clearInterval(t)
@@ -232,9 +248,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const isTerminado     = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const isEnPreparacion = ['nuevo', 'en_cocina', 'listo'].includes(pedido.estado)
   const isEnCamino      = pedido.estado === 'en_camino'
-  const tieneUbicacion  = !!(pedido as any).cadete_coordenadas
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
   const cadeteNombre    = pedido.cadete_nombre || 'El cadete'
+
+  const idCorto = pedidoId ? pedidoId.slice(0, 5).toUpperCase() : ''
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(`Hola! Tengo una consulta sobre mi pedido #${idCorto}`)}`
 
   // ── Mapa interactivo + Overlays contextuales en tiempo real ─────────────────
   const bloqueContenido = (
@@ -334,9 +352,6 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Productos */}
-      <ResumenProductos productos={productos} />
-
       {/* Cadete asignado */}
       {pedido.cadete_nombre && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
@@ -351,12 +366,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   )
 
   // ── Stack de tarjetas (principal + adicionales) ─────────────────────────────
-  // El margen inferior evita que las tarjetas apiladas tapen el mapa
   const stackMarginBottom = pedidosExtra.length * 12
 
   const headerConStack = (
     <div className="relative" style={{ marginBottom: stackMarginBottom }}>
-      {/* Tarjetas de fondo (de la más al fondo a la más cercana) */}
+      {/* Tarjetas de fondo */}
       {[...pedidosExtra].reverse().map((extra, i) => (
         <TarjetaApilada
           key={extra.id}
@@ -371,29 +385,142 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </div>
   )
 
+  // ── BottomSheet Desplegable de Detalles ──────────────────────────────────────
+  const bottomSheet = (
+    <div className="w-full bg-white rounded-2xl shadow-2xl border border-white/30 overflow-hidden transition-all duration-300">
+      {/* Barra superior de despliegue / Toque táctil */}
+      <button
+        type="button"
+        onClick={() => setBottomSheetAbierto(!bottomSheetAbierto)}
+        className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100/80 flex items-center justify-between gap-3 border-b border-slate-100 cursor-pointer transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-[#2A6348] flex items-center justify-center font-bold">
+            <ShoppingBag size={16} />
+          </div>
+          <div className="text-left">
+            <span className="text-xs font-black text-slate-800 block">
+              {bottomSheetAbierto ? 'Ocultar detalle' : 'Ver detalle del pedido'}
+            </span>
+            <span className="text-[11px] font-bold text-[#2A6348]">
+              {productos.length} {productos.length === 1 ? 'producto' : 'productos'} • {formatearPrecio(pedido.total || 0)}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
+            {bottomSheetAbierto ? 'Cerrar' : 'Desplegar'}
+          </span>
+          <div className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs">
+            {bottomSheetAbierto ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </div>
+        </div>
+      </button>
+
+      {/* Contenido expandible */}
+      {bottomSheetAbierto && (
+        <div className="p-4 space-y-4 animate-in slide-in-from-bottom-2 duration-200 max-h-[350px] overflow-y-auto">
+          {/* Dirección y Pago */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            {pedido.direccion && (
+              <div className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <MapPin size={15} className="text-[#2A6348] shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Entrega en</span>
+                  <span className="font-semibold text-slate-700 leading-tight block truncate">{pedido.direccion}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <CreditCard size={15} className="text-[#2A6348] shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Método de pago</span>
+                <span className="font-semibold text-slate-700 capitalize block">{pedido.metodoPago || 'Efectivo'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Observaciones / Aclaraciones de cocina */}
+          {pedido.observaciones && (
+            <div className="bg-amber-50/80 border border-amber-200/80 p-2.5 rounded-xl text-xs flex items-start gap-2">
+              <FileText size={15} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Aclaración</span>
+                <span className="text-amber-900 font-medium leading-tight">{pedido.observaciones}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de Productos detallada */}
+          <div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Artículos</span>
+            <ResumenProductos productos={productos} />
+          </div>
+
+          {/* Desglose de totales */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+            <span className="text-slate-500">Total a pagar:</span>
+            <span className="text-base font-black font-mono text-[#2A6348]">{formatearPrecio(pedido.total || 0)}</span>
+          </div>
+
+          {/* Botón WhatsApp de ayuda */}
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
+          >
+            <MessageCircle size={16} />
+            <span>¿Dudas con tu pedido? Escribinos por WhatsApp</span>
+          </a>
+        </div>
+      )}
+    </div>
+  )
+
   const footerBloque = (
-    <div className="flex flex-col items-center gap-2 pt-2 pb-4">
+    <div className="flex flex-col items-center gap-2.5 pt-2 pb-2">
+      {/* Botón Flotante de WhatsApp Rápido si el bottomsheet está cerrado */}
+      {!bottomSheetAbierto && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-full text-xs font-black shadow-xl border border-emerald-400/30 transition-all active:scale-95 cursor-pointer"
+        >
+          <MessageCircle size={15} />
+          <span>¿Dudas con el pedido? Hablar por WhatsApp</span>
+        </a>
+      )}
+
       <a
         href="https://chefsy.xyz/"
-        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition-all shadow-lg active:scale-95 cursor-pointer"
+        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full border border-white/20 transition-all shadow-md active:scale-95 cursor-pointer"
       >
-        <ArrowLeft size={14} /><span>Volver a la tienda</span>
+        <ArrowLeft size={13} /><span>Volver a la tienda</span>
       </a>
-      <p className="text-center text-white/30 text-xs font-semibold tracking-wider">Powered by Chefsy</p>
+      <p className="text-center text-white/30 text-[10px] font-semibold tracking-wider">Powered by Chefsy</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 md:py-8" style={{ background: BG }}>
-      <div className="w-full max-w-xl flex flex-col gap-3 sm:gap-4 flex-1 h-full justify-between">
+    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 md:py-6" style={{ background: BG }}>
+      <div className="w-full max-w-xl flex flex-col gap-3 sm:gap-3.5 flex-1 h-full justify-between">
         {/* Tarjetas de información y estado */}
         <div className="z-20 w-full pt-1 sm:pt-0 shrink-0">
           {headerConStack}
         </div>
 
         {/* Contenedor adaptativo del Mapa interactivo (100% de alto y ancho) */}
-        <div className="w-full flex-1 relative min-h-[360px] sm:min-h-[440px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-100 dark:bg-slate-900">
+        <div className="w-full flex-1 relative min-h-[320px] sm:min-h-[420px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-100 dark:bg-slate-900">
           {bloqueContenido}
+        </div>
+
+        {/* Mini Ficha / BottomSheet Desplegable */}
+        <div className="z-20 w-full shrink-0">
+          {bottomSheet}
         </div>
 
         {/* Footer */}
@@ -404,3 +531,4 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </div>
   )
 }
+

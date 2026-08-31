@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega')
+      .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega, total, metodoPago, direccion, observaciones, hora, costoEnvio')
       .eq('id', pedidoId)
       .maybeSingle()
 
@@ -100,6 +100,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
+      telefono: data.telefono ?? '',
       estado: data.estado,
       cadete_nombre: data.cadete_nombre ?? null,
       cadete_coordenadas: coordsFinalesCadete,
@@ -109,6 +110,12 @@ export async function GET(request: Request) {
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },
       productos: data.productos ?? [],
       tipoEntrega: data.tipoEntrega ?? 'delivery',
+      total: data.total ?? 0,
+      metodoPago: data.metodoPago ?? 'efectivo',
+      direccion: data.direccion ?? '',
+      observaciones: data.observaciones ?? '',
+      costoEnvio: data.costoEnvio ?? 0,
+      hora: data.hora ?? '',
       pedidos_relacionados: pedidosRelacionados,
     })
   } catch (error) {
