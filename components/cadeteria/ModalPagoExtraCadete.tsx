@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, DollarSign, Bike, Sparkles, Plus, AlertCircle, Loader2 } from 'lucide-react'
 import { CadetePagoExtra } from '@/tipos'
@@ -38,18 +38,21 @@ export default function ModalPagoExtraCadete({
   onGuardado,
 }: PropsModalPagoExtraCadete) {
   const [montado, setMontado] = useState(false)
-  const [cadeteId, setCadeteId] = useState('')
+  const [cadeteId, setCadeteId] = useState(() => cadetePreseleccionadoId || '')
   const [monto, setMonto] = useState('')
   const [motivo, setMotivo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const abiertoAnteriorRef = useRef(false)
+
   useEffect(() => {
     setMontado(true)
   }, [])
 
+  // ÚNICAMENTE resetear cuando el modal se ABRE (transición de false a true)
   useEffect(() => {
-    if (abierto) {
+    if (abierto && !abiertoAnteriorRef.current) {
       setError(null)
       setMonto('')
       setMotivo('')
@@ -59,6 +62,7 @@ export default function ModalPagoExtraCadete({
         setCadeteId(cadetesDisponibles[0].id)
       }
     }
+    abiertoAnteriorRef.current = abierto
   }, [abierto, cadetePreseleccionadoId, cadetesDisponibles])
 
   if (!abierto || !montado || typeof document === 'undefined') return null
@@ -122,15 +126,15 @@ export default function ModalPagoExtraCadete({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[99999] bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-100"
       onClick={onCerrar}
     >
       <div
-        className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+        className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-100"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl shadow-inner">
               🥩
@@ -194,8 +198,8 @@ export default function ModalPagoExtraCadete({
             </label>
             <input
               type="number"
-              min="1"
-              step="50"
+              min="0"
+              step="any"
               placeholder="Ej: 2500"
               value={monto}
               onChange={e => setMonto(e.target.value)}

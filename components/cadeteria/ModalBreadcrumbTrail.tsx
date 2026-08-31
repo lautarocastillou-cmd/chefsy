@@ -255,7 +255,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
   if (!montado || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/85 animate-in fade-in duration-150">
       <div className="relative w-full max-w-4xl h-[90vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white">
         
         {/* Header */}
@@ -339,7 +339,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
           <div ref={mapContainerRef} className="w-full h-full" />
 
           {/* Info flotante de la posición actual */}
-          <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-3 shadow-xl text-xs space-y-1">
+          <div className="absolute top-3 right-3 z-[1000] bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-xs space-y-1">
             <p className="text-[11px] text-slate-400">
               Punto <strong className="text-white">{indiceActual + 1}</strong> de <strong className="text-white">{puntos.length}</strong>
             </p>
