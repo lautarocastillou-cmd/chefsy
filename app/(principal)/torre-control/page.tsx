@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
+import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
 const MapaGlobal = dynamic(
@@ -29,6 +30,8 @@ export default function TorreControlPage() {
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [apagandoId, setApagandoId] = useState<string | null>(null)
   const [pedidoParaBreadcrumb, setPedidoParaBreadcrumb] = useState<any | null>(null)
+  const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
+  const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
 
   const fetchTorreData = async () => {
     setIsRefreshing(true)
@@ -91,16 +94,30 @@ export default function TorreControlPage() {
               <Zap className="h-5 w-5 text-emerald-500" />
               Torre de Control
             </h1>
-            <button
-              onClick={fetchTorreData}
-              disabled={isRefreshing}
-              className={`p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors ${
-                isRefreshing ? 'animate-spin' : ''
-              }`}
-              title="Actualizar ahora"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setCadeteParaPagoExtra(null)
+                  setModalPagoExtraAbierto(true)
+                }}
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all active:scale-95 cursor-pointer"
+                title="Registrar viaje a la carnicería, insumos o pago extra"
+              >
+                <Plus size={14} />
+                <span>+ Pago Extra</span>
+              </button>
+              <button
+                onClick={fetchTorreData}
+                disabled={isRefreshing}
+                className={`p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors ${
+                  isRefreshing ? 'animate-spin' : ''
+                }`}
+                title="Actualizar ahora"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <p className="text-xs text-gray-500">
             Monitoreo en vivo de cadetes y entregas. Actualizado:{' '}
@@ -220,18 +237,33 @@ export default function TorreControlPage() {
                         </button>
                       </div>
 
-                      {/* Herramienta de Apagado Manual de GPS por Administrador */}
-                      {cadete.gps_activo && (
+                      {/* Botones de acción del Cadete */}
+                      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center gap-1.5">
                         <button
                           type="button"
-                          disabled={apagandoId === cadete.id}
-                          onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
-                          className="w-full mt-2 py-1.5 px-3 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCadeteParaPagoExtra(cadete.id)
+                            setModalPagoExtraAbierto(true)
+                          }}
+                          className="flex-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
                         >
-                          <PowerOff className={`h-3.5 w-3.5 ${apagandoId === cadete.id ? 'animate-spin' : ''}`} />
-                          <span>{apagandoId === cadete.id ? 'Apagando GPS...' : 'Apagar GPS manualmente'}</span>
+                          <span>🥩 + Viaje Extra</span>
                         </button>
-                      )}
+
+                        {cadete.gps_activo && (
+                          <button
+                            type="button"
+                            disabled={apagandoId === cadete.id}
+                            onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
+                            className="py-1.5 px-2.5 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50 cursor-pointer shadow-xs shrink-0"
+                            title="Apagar GPS manualmente"
+                          >
+                            <PowerOff className={`h-3 w-3 ${apagandoId === cadete.id ? 'animate-spin' : ''}`} />
+                            <span>{apagandoId === cadete.id ? 'Apagando...' : 'Apagar GPS'}</span>
+                          </button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )
@@ -276,6 +308,20 @@ export default function TorreControlPage() {
           onCerrar={() => setPedidoParaBreadcrumb(null)}
         />
       )}
+
+      {/* Modal Sumar Dinero / Viaje Extra al Cadete */}
+      <ModalPagoExtraCadete
+        abierto={modalPagoExtraAbierto}
+        onCerrar={() => {
+          setModalPagoExtraAbierto(false)
+          setCadeteParaPagoExtra(null)
+        }}
+        cadetesDisponibles={cadetes.map(c => ({ id: c.id, nombre: c.nombre }))}
+        cadetePreseleccionadoId={cadeteParaPagoExtra}
+        onGuardado={() => {
+          fetchTorreData()
+        }}
+      />
     </div>
   )
 }

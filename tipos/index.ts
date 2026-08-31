@@ -82,4 +82,16 @@ export interface Pedido {
   ruta_historial?: PuntoRutaBreadcrumb[] | null
 }
 
+export interface CadetePagoExtra {
+  id: string
+  cadete_id: string
+  cadete_nombre: string
+  monto: number
+  motivo: string
+  fecha: string
+  turno_tipo?: TipoTurno | string
+  creado_por?: string
+  created_at?: string
+}
+
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'

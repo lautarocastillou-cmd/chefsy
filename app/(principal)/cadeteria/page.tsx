@@ -8,7 +8,7 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus } from 'lucide-react'
 import { mutate } from 'swr'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
@@ -20,6 +20,7 @@ import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
 import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
 import BotonNotificaciones from '@/components/cadeteria/BotonNotificaciones'
 import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
+import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
@@ -253,11 +254,13 @@ function TarjetaPedidoCadete({
 }
 
 export default function PaginaCadeteria() {
-  const { pedidos, cambiarEstado, dbEstado, configuracionOperativa } = usarPedidos()
+  const { pedidos, cambiarEstado, dbEstado, configuracionOperativa, cadetes } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
   const [configCargada, setConfigCargada] = useState(false)
   const [portalHabilitadoLocal, setPortalHabilitadoLocal] = useState(true)
+  const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
+  const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
 
   useEffect(() => {
     if (configuracionOperativa) {
@@ -600,16 +603,31 @@ export default function PaginaCadeteria() {
               </span>
             </div>
           </div>
-          <a
-            href="/api/cadeteria/descargar-apk"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0"
-            title="Descargar última versión APK compilada por GitHub Actions"
-          >
-            <Download size={14} />
-            <span>Descargar APK Cadete</span>
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCadeteParaPagoExtra(null)
+                setModalPagoExtraAbierto(true)
+              }}
+              className="text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0 cursor-pointer"
+              title="Registrar viaje a la carnicería o pago extra al cadete"
+            >
+              <Plus size={14} />
+              <span>+ Viaje / Pago Extra</span>
+            </button>
+
+            <a
+              href="/api/cadeteria/descargar-apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-slate-700 shrink-0"
+              title="Descargar última versión APK compilada por GitHub Actions"
+            >
+              <Download size={14} />
+              <span>Descargar APK Cadete</span>
+            </a>
+          </div>
         </div>
       ) : (
         <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-30">
@@ -834,6 +852,21 @@ export default function PaginaCadeteria() {
         )}
       </main>
       <CalculadoraSutil />
+
+      {/* Modal Sumar Dinero / Viaje Extra al Cadete */}
+      <ModalPagoExtraCadete
+        abierto={modalPagoExtraAbierto}
+        onCerrar={() => {
+          setModalPagoExtraAbierto(false)
+          setCadeteParaPagoExtra(null)
+        }}
+        cadetesDisponibles={
+          cadetes && cadetes.length > 0
+            ? cadetes.map(c => ({ id: c.id, nombre: c.nombre }))
+            : Object.keys(estadoGpsCadetes).map(id => ({ id, nombre: id }))
+        }
+        cadetePreseleccionadoId={cadeteParaPagoExtra}
+      />
     </div>
   )
 }

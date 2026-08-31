@@ -25,18 +25,23 @@ import {
   Sun,
   Moon,
   Clock,
-  Zap
+  Zap,
+  Plus
 } from 'lucide-react'
-import { Pedido, TipoTurno } from '@/tipos'
+import { Pedido, TipoTurno, CadetePagoExtra } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 import ComparativaTurnoVivo from '@/components/cierre/ComparativaTurnoVivo'
+import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 
 export default function PaginaCierreCaja() {
-  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno, configuracionOperativa } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno, configuracionOperativa, cadetes } = usarPedidos()
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [modoOrigen, setModoOrigen] = useState<'en_vivo' | 'fecha'>('en_vivo')
   const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([])
+  const [pagosExtras, setPagosExtras] = useState<CadetePagoExtra[]>([])
+  const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
+  const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
@@ -107,6 +112,40 @@ export default function PaginaCierreCaja() {
     }
   }, [pedidos, fechaSeleccionada, estadoTurno.tipoTurno])
 
+  // Cargar pagos extras de cadetes correspondientes a la fecha y turno
+  useEffect(() => {
+    let activo = true
+    async function cargarExtras() {
+      try {
+        const fechaQ = modoOrigen === 'en_vivo' ? obtenerFechaNegocio() : fechaSeleccionada
+        const res = await fetch(`/api/admin/cadetes/pagos-extras?fecha=${fechaQ}&turno_tipo=${filtroTurno}`)
+        if (res.ok && activo) {
+          const data = await res.json()
+          setPagosExtras(Array.isArray(data) ? data : [])
+        }
+      } catch (e) {
+        console.error('Error cargando pagos extras:', e)
+      }
+    }
+    cargarExtras()
+    return () => {
+      activo = false
+    }
+  }, [modoOrigen, fechaSeleccionada, filtroTurno])
+
+  const handleEliminarPagoExtra = async (id: string) => {
+    const confirmar = window.confirm('¿Seguro que querés eliminar este pago extra?')
+    if (!confirmar) return
+    try {
+      const res = await fetch(`/api/admin/cadetes/pagos-extras?id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setPagosExtras(prev => prev.filter(p => p.id !== id))
+      }
+    } catch (e) {
+      console.error('Error eliminando pago extra:', e)
+    }
+  }
+
   // Cargar pedidos según el modo de origen seleccionado (En vivo vs Por fecha)
   useEffect(() => {
     let activo = true
@@ -157,10 +196,19 @@ export default function PaginaCierreCaja() {
     return pedidosFiltradosPorTurno.filter((p) => p.estado !== 'cancelado')
   }, [pedidosFiltradosPorTurno])
 
-  // ── Desglose y Liquidación por Cadete ───────────────
+  // ── Desglose y Liquidación por Cadete (con Viajes y Pagos Extras) ───────────────
   const resumenCadetes = useMemo(() => {
     const deliveryOrders = pedidosValidos.filter((p) => p.tipoEntrega === 'delivery')
-    const grupos: Record<string, { id: string; nombre: string; cantidadViajes: number; recaudadoViajes: number; base: number; total: number }> = {}
+    const grupos: Record<string, {
+      id: string
+      nombre: string
+      cantidadViajes: number
+      recaudadoViajes: number
+      base: number
+      extras: CadetePagoExtra[]
+      totalExtras: number
+      total: number
+    }> = {}
 
     deliveryOrders.forEach((p) => {
       const key = p.cadete_id || p.cadete_nombre || 'sin_asignar'
@@ -173,6 +221,8 @@ export default function PaginaCierreCaja() {
           cantidadViajes: 0,
           recaudadoViajes: 0,
           base: key === 'sin_asignar' ? 0 : montoBaseCadete,
+          extras: [],
+          totalExtras: 0,
           total: 0
         }
       }
@@ -180,12 +230,33 @@ export default function PaginaCierreCaja() {
       grupos[key].recaudadoViajes += (p.costoEnvio || 0)
     })
 
+    // Sumar pagos extras a los cadetes (incluso si no tuvieron pedidos normales en este turno)
+    pagosExtras.forEach((pago) => {
+      const key = pago.cadete_id
+      const nombre = pago.cadete_nombre || pago.cadete_id
+
+      if (!grupos[key]) {
+        grupos[key] = {
+          id: key,
+          nombre,
+          cantidadViajes: 0,
+          recaudadoViajes: 0,
+          base: key === 'sin_asignar' ? 0 : montoBaseCadete,
+          extras: [],
+          totalExtras: 0,
+          total: 0
+        }
+      }
+      grupos[key].extras.push(pago)
+      grupos[key].totalExtras += Number(pago.monto)
+    })
+
     Object.values(grupos).forEach((g) => {
-      g.total = g.recaudadoViajes + g.base
+      g.total = g.recaudadoViajes + g.base + g.totalExtras
     })
 
     return Object.values(grupos)
-  }, [pedidosValidos, montoBaseCadete])
+  }, [pedidosValidos, montoBaseCadete, pagosExtras])
 
   const totalPagoCadetesTotal = useMemo(() => {
     return resumenCadetes.reduce((acc, c) => acc + c.total, 0)
@@ -281,7 +352,17 @@ export default function PaginaCierreCaja() {
     })
 
     const desgloseCadetesTexto = resumenCadetes.length > 0
-      ? resumenCadetes.map(c => `- 🛵 ${c.nombre}: ${c.cantidadViajes} viajes (${formatearPrecio(c.recaudadoViajes)}) ${c.base > 0 ? `+ ${formatearPrecio(c.base)} base` : ''} = *${formatearPrecio(c.total)}*`).join('\n')
+      ? resumenCadetes.map(c => {
+          let str = `- 🛵 ${c.nombre}: ${c.cantidadViajes} viajes (${formatearPrecio(c.recaudadoViajes)})`
+          if (c.base > 0) str += ` + ${formatearPrecio(c.base)} base`
+          if (c.extras && c.extras.length > 0) {
+            c.extras.forEach(ext => {
+              str += ` + ${formatearPrecio(ext.monto)} (${ext.motivo})`
+            })
+          }
+          str += ` = *${formatearPrecio(c.total)}*`
+          return str
+        }).join('\n')
       : '- Sin entregas registradas'
 
     const mensaje = `*CIERRE DE CAJA - CHEFSY* 💰
@@ -727,37 +808,92 @@ _Generado automáticamente desde Chefsy_`.trim()
 
         {/* Liquidación Individual por Cadete */}
         <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Bike size={16} className="text-orange-500" />
-              <span>Liquidación a Cadetes (Viajes + Base)</span>
-            </span>
-            <span className="text-xs font-extrabold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-900/30">
-              Total: {formatearPrecio(totalPagoCadetesTotal)}
-            </span>
-          </h2>
+          <div className="border-b border-slate-100 dark:border-[#3d3d3d] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Bike size={18} className="text-orange-500" />
+              <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6]">
+                Liquidación a Cadetes (Viajes + Base + Extras)
+              </h2>
+            </div>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setCadeteParaPagoExtra(null)
+                  setModalPagoExtraAbierto(true)
+                }}
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>+ Sumar Dinero / Viaje Extra</span>
+              </button>
+
+              <span className="text-xs font-extrabold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-900/30">
+                Total: {formatearPrecio(totalPagoCadetesTotal)}
+              </span>
+            </div>
+          </div>
           
           {resumenCadetes.length === 0 ? (
             <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-4">
-              {cargando ? 'Cargando...' : 'No hay envíos asignados a cadetes en la fecha seleccionada.'}
+              {cargando ? 'Cargando...' : 'No hay envíos ni pagos extras registrados a cadetes en la fecha seleccionada.'}
             </p>
           ) : (
             <div className="space-y-3">
               {resumenCadetes.map((c) => (
-                <div key={c.id} className="bg-slate-50 dark:bg-[#2f2f2f] p-3.5 rounded-xl border border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-extrabold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
-                      <span>{c.nombre}</span>
+                <div key={c.id} className="bg-slate-50 dark:bg-[#2f2f2f] p-3.5 rounded-xl border border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-[#e6e6e6]">
+                        {c.nombre}
+                      </p>
                       <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md">
                         {c.cantidadViajes} {c.cantidadViajes === 1 ? 'viaje' : 'viajes'}
                       </span>
-                    </p>
+                      {c.id !== 'sin_asignar' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCadeteParaPagoExtra(c.id)
+                            setModalPagoExtraAbierto(true)
+                          }}
+                          className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                        >
+                          <Plus size={11} /> Extra
+                        </button>
+                      )}
+                    </div>
+
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Recaudado por viajes: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatearPrecio(c.recaudadoViajes)}</span>
                       {c.base > 0 && <> • Base fija: <span className="font-semibold text-amber-600 dark:text-amber-400">+{formatearPrecio(c.base)}</span></>}
                     </p>
+
+                    {/* Desglose de Pagos Extras (Carnicería, Insumos, etc.) */}
+                    {c.extras && c.extras.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {c.extras.map(ext => (
+                          <div
+                            key={ext.id}
+                            className="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-lg text-[11px] font-semibold"
+                          >
+                            <span>🥩 +{formatearPrecio(ext.monto)} <span className="font-normal opacity-90">({ext.motivo})</span></span>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarPagoExtra(ext.id)}
+                              title="Eliminar este pago extra"
+                              className="text-emerald-500 hover:text-rose-500 transition-colors cursor-pointer ml-0.5"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-700">
+
+                  <div className="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-700 shrink-0">
                     <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Total a Pagar</span>
                     <span className="text-base font-black text-emerald-600 dark:text-emerald-400">{formatearPrecio(c.total)}</span>
                   </div>
@@ -893,6 +1029,26 @@ _Generado automáticamente desde Chefsy_`.trim()
           </div>
         </div>
       )}
+
+      {/* Modal Sumar Dinero / Viaje Extra al Cadete */}
+      <ModalPagoExtraCadete
+        abierto={modalPagoExtraAbierto}
+        onCerrar={() => {
+          setModalPagoExtraAbierto(false)
+          setCadeteParaPagoExtra(null)
+        }}
+        cadetesDisponibles={
+          cadetes && cadetes.length > 0
+            ? cadetes.map(c => ({ id: c.id, nombre: c.nombre }))
+            : resumenCadetes.filter(c => c.id !== 'sin_asignar').map(c => ({ id: c.id, nombre: c.nombre }))
+        }
+        cadetePreseleccionadoId={cadeteParaPagoExtra}
+        fecha={modoOrigen === 'en_vivo' ? obtenerFechaNegocio() : fechaSeleccionada}
+        turno_tipo={filtroTurno === 'todos' ? detectarTipoTurnoActual() : filtroTurno}
+        onGuardado={(nuevo) => {
+          setPagosExtras(prev => [nuevo, ...prev])
+        }}
+      />
     </div>
   )
 }
