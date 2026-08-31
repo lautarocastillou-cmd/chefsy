@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, Home } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
@@ -22,6 +22,7 @@ export default function TorreControlPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [apagandoId, setApagandoId] = useState<string | null>(null)
 
   const fetchTorreData = async () => {
     setIsRefreshing(true)
@@ -46,6 +47,33 @@ export default function TorreControlPage() {
     const intervalId = setInterval(fetchTorreData, 6000)
     return () => clearInterval(intervalId)
   }, [])
+
+  const handleApagarGps = async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {
+    e.stopPropagation()
+    const confirmar = window.confirm(`¿Estás seguro de que querés apagarle el GPS a ${cadeteNombre}? El cadete figurará desconectado de inmediato.`)
+    if (!confirmar) return
+
+    setApagandoId(cadeteId)
+    try {
+      const res = await fetch('/api/admin/torre-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cadeteId, accion: 'apagar_gps' })
+      })
+      if (res.ok) {
+        setCadetes(prev => prev.map(c => c.id === cadeteId ? { ...c, gps_activo: false } : c))
+        await fetchTorreData()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || 'No se pudo apagar el GPS.')
+      }
+    } catch (error) {
+      console.error('Error apagando GPS:', error)
+      alert('Error de red al intentar apagar el GPS')
+    } finally {
+      setApagandoId(null)
+    }
+  }
 
   return (
     <div className="flex flex-col md:flex-row w-full h-[calc(100vh-7rem)] min-h-[550px] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -168,6 +196,19 @@ export default function TorreControlPage() {
                           <span>Ver en mapa</span>
                         </button>
                       </div>
+
+                      {/* Herramienta de Apagado Manual de GPS por Administrador */}
+                      {cadete.gps_activo && (
+                        <button
+                          type="button"
+                          disabled={apagandoId === cadete.id}
+                          onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
+                          className="w-full mt-2 py-1.5 px-3 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        >
+                          <PowerOff className={`h-3.5 w-3.5 ${apagandoId === cadete.id ? 'animate-spin' : ''}`} />
+                          <span>{apagandoId === cadete.id ? 'Apagando GPS...' : 'Apagar GPS manualmente'}</span>
+                        </button>
+                      )}
                     </CardContent>
                   </Card>
                 )
@@ -207,4 +248,3 @@ export default function TorreControlPage() {
     </div>
   )
 }
-

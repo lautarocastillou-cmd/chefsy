@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────
 // app/api/admin/torre-control/route.ts
 // Obtiene la ubicación en vivo de todos los cadetes y sus pedidos activos.
+// Permite apagar manualmente el GPS de un cadete desde Torre de Control.
 // ─────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server'
@@ -96,6 +97,7 @@ export async function GET() {
         lat: cadete?.lat ?? null,
         lng: cadete?.lng ?? null,
         gps_activo: gpsActivo,
+        gps_activo_db: Boolean(cadete?.gps_activo),
         bateria: cadete?.bateria ?? null,
         updated_at: cadete?.updated_at ?? null,
         segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
@@ -123,5 +125,53 @@ export async function GET() {
   } catch (error) {
     console.error('[API Torre Control] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+// ── POST: Apagar manualmente el GPS de un cadete (Kill Switch Admin) ──────────
+export async function POST(request: Request) {
+  try {
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Operación reservada para administradores.' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { cadeteId, accion } = body || {}
+
+    if (!cadeteId || accion !== 'apagar_gps') {
+      return NextResponse.json(
+        { error: 'Parámetros inválidos. Solo se permite apagar el GPS.' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = obtenerSupabaseAdmin()
+    const idNormalizado = String(cadeteId).trim().toLowerCase()
+
+    // Forzar gps_activo a false
+    const { error } = await supabase
+      .from('cadetes')
+      .update({
+        gps_activo: false,
+        updated_at: new Date().toISOString()
+      })
+      .ilike('id', idNormalizado)
+
+    if (error) {
+      console.error('[API Torre Control POST] Error al apagar GPS:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      mensaje: `GPS apagado manualmente para el cadete ${cadeteId}`
+    })
+  } catch (err: any) {
+    console.error('[API Torre Control POST]:', err)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
