@@ -347,23 +347,57 @@ class GestorImpresoraTermica {
    * Fallback visual con Iframe para navegadores sin hardware directo
    */
   public imprimirPorIframe(html: string): void {
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0;pointer-events:none'
-    document.body.appendChild(iframe)
-    const doc = iframe.contentWindow?.document
-    if (!doc) return
-    doc.open()
-    doc.write(html)
-    doc.close()
-    iframe.contentWindow?.focus()
-    setTimeout(() => {
-      iframe.contentWindow?.print()
+    if (typeof window === 'undefined') return
+
+    try {
+      // Limpiar iframes huérfanos anteriores
+      document.querySelectorAll('iframe.chefsy-print-iframe').forEach(el => el.remove())
+
+      const iframe = document.createElement('iframe')
+      iframe.className = 'chefsy-print-iframe'
+      // No usar width: 0 o display: none para evitar que Chrome bloquee el print
+      iframe.style.cssText = 'position:fixed;width:400px;height:400px;bottom:-9999px;left:-9999px;border:0;opacity:0.01;pointer-events:none;'
+      document.body.appendChild(iframe)
+
+      const doc = iframe.contentWindow?.document
+      if (!doc) {
+        window.print()
+        return
+      }
+
+      doc.open()
+      doc.write(html)
+      doc.close()
+
+      let impreso = false
+      const ejecutarPrint = () => {
+        if (impreso) return
+        impreso = true
+        try {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+        } catch (err) {
+          console.error('[Impresión] Error al invocar print() en iframe:', err)
+        }
+      }
+
+      // Disparar cuando cargue el documento interno
+      iframe.onload = () => {
+        setTimeout(ejecutarPrint, 100)
+      }
+
+      // Respaldo por si onload no dispara tras doc.close()
+      setTimeout(ejecutarPrint, 250)
+
+      // Remover iframe después de que termine
       setTimeout(() => {
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe)
         }
-      }, 2000)
-    }, 300)
+      }, 30000)
+    } catch (e) {
+      console.error('[Impresión] Error en imprimirPorIframe:', e)
+    }
   }
 
   /**

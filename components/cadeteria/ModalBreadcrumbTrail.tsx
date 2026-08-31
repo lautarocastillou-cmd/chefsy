@@ -1,6 +1,5 @@
-'use client'
-
 import React, { useEffect, useRef, useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
@@ -27,6 +26,7 @@ interface ModalBreadcrumbTrailProps {
 }
 
 export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcrumbTrailProps) {
+  const [montado, setMontado] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const polylineRef = useRef<any>(null)
@@ -35,6 +35,10 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
   const [indiceActual, setIndiceActual] = useState(0)
   const [estaReproduciendo, setEstaReproduciendo] = useState(false)
   const [velocidadReproduccion, setVelocidadReproduccion] = useState<1 | 2 | 5 | 10>(2)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   // Extraer puntos reales o fallback
   const puntos: PuntoRutaBreadcrumb[] = useMemo(() => {
@@ -248,7 +252,9 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     return `${m}m ${s.toString().padStart(2, '0')}s`
   }
 
-  return (
+  if (!montado || typeof document === 'undefined') return null
+
+  return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl h-[90vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white">
         
@@ -410,6 +416,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

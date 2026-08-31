@@ -1,6 +1,5 @@
-'use client'
-
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Printer,
   X,
@@ -29,11 +28,16 @@ export default function ModalConfiguracionImpresora({
   abierto,
   onCerrar,
 }: PropsModalConfiguracionImpresora) {
+  const [montado, setMontado] = useState(false)
   const [config, setConfig] = useState<ConfiguracionImpresora>(gestorImpresora.obtenerConfiguracion())
   const [info, setInfo] = useState(gestorImpresora.obtenerInfo())
   const [conectando, setConectando] = useState(false)
   const [probando, setProbando] = useState(false)
   const [mensajeFeedback, setMensajeFeedback] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   useEffect(() => {
     if (abierto) {
@@ -43,7 +47,7 @@ export default function ModalConfiguracionImpresora({
     }
   }, [abierto])
 
-  if (!abierto) return null
+  if (!abierto || !montado || typeof document === 'undefined') return null
 
   const handleConectar = async (tipo: 'usb' | 'serial' | 'hid' | 'bluetooth') => {
     setConectando(true)
@@ -99,9 +103,9 @@ export default function ModalConfiguracionImpresora({
     setMensajeFeedback({ tipo: 'ok', texto: 'Pulso de apertura enviado al cajón de dinero.' })
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[99999] bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150"
       onClick={onCerrar}
     >
       <div
@@ -360,6 +364,7 @@ export default function ModalConfiguracionImpresora({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

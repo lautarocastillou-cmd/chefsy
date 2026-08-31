@@ -1,5 +1,5 @@
-'use client'
-
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Pedido } from '@/tipos'
 import {
   Pencil,
@@ -40,7 +40,13 @@ export default function ModalAccionesPedidoMobile({
   onRevertirEstado,
   onCancelar,
 }: PropsModalAccionesPedidoMobile) {
-  if (!abierto) return null
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
+
+  if (!abierto || !montado || typeof document === 'undefined') return null
 
   const vibrar = (ms = 15) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -116,8 +122,8 @@ export default function ModalAccionesPedidoMobile({
     },
   ]
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex flex-col justify-end">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity animate-in fade-in"
@@ -192,6 +198,7 @@ export default function ModalAccionesPedidoMobile({
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

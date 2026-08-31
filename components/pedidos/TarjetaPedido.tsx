@@ -14,6 +14,7 @@ import SwipeActionPedido from './SwipeActionPedido'
 import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
 import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt, MoreHorizontal, Phone, MessageCircle, Bike } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
@@ -57,6 +58,7 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()
   const { modificadores: catalogoModificadores } = usarCatalogo()
   const siguienteEstado = obtenerSiguienteEstado(pedido.estado, pedido.tipoEntrega)
+  const [montado, setMontado] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [editandoNota, setEditandoNota] = useState(false)
   const [notaTemporal, setNotaTemporal] = useState(pedido.observaciones || '')
@@ -68,6 +70,10 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [modalConfigImpresora, setModalConfigImpresora] = useState(false)
   const [infoImpresora, setInfoImpresora] = useState(gestorImpresora.obtenerInfo())
   const [sheetMobileAbierto, setSheetMobileAbierto] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   const abrirWhatsAppDirecto = () => {
     if (!pedido.telefono || pedido.telefono === 'Sin especificar') {
@@ -254,10 +260,6 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
   return (
     <div 
-      style={{
-        contentVisibility: 'auto',
-        containIntrinsicSize: '0 280px',
-      }}
       className={cn(
         "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
         bordesPorEstado[pedido.estado]
@@ -612,9 +614,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       )}
 
       {/* Modal del Mapa */}
-      {verMapa && (
+      {verMapa && montado && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4"
           onClick={() => setVerMapa(false)}
         >
           <div 
@@ -636,12 +638,13 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               <MapaSeguimiento pedido={pedido} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal Edición de Pedido Completo */}
-      {editandoPedidoCompleto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
+      {editandoPedidoCompleto && montado && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative text-left will-change-transform">
             <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-6 pb-4 mb-4">
               <div>
@@ -663,7 +666,8 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Botones de acción con soporte táctil Swipe */}
@@ -743,13 +747,13 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
 
       {/* Modal de Selección de Impresión */}
-      {modalImpresion && (
+      {modalImpresion && montado && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 p-4 animate-in fade-in duration-150"
           onClick={() => setModalImpresion(false)}
         >
           <div
-            className="bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-[#3d3d3d] rounded-2xl shadow-2xl w-80 overflow-hidden"
+            className="bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-[#3d3d3d] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -824,7 +828,8 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Configuración de Impresora Térmica Directa */}
