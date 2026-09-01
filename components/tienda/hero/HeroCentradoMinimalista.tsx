@@ -76,7 +76,7 @@ export default function HeroCentradoMinimalista({
       {/* ── Badges de Confianza y Rating ⭐ 4.9 ───────────────────── */}
       <div className="flex flex-wrap items-center justify-center gap-2">
         {/* Rating Google */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 backdrop-blur-md shadow-md">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 shadow-md">
           <Star size={13} className="fill-amber-400 text-amber-400" />
           <span>{configuracion?.hero_badge_texto || '⭐ 4.9 en Google (+500 reseñas)'}</span>
         </div>
@@ -84,12 +84,12 @@ export default function HeroCentradoMinimalista({
         {/* Estado en Vivo / Horario */}
         {configuracion?.hero_mostrar_horario !== false && (
           turnoActivo ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md shadow-md">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 shadow-md">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>Abierto hoy • Recibiendo pedidos</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-rose-300 bg-rose-500/10 border border-rose-500/30 backdrop-blur-md shadow-md">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-rose-300 bg-rose-500/15 border border-rose-500/30 shadow-md">
               <span className="w-2 h-2 rounded-full bg-rose-500" />
               <span>{esDomingoCerrado ? 'Cerrado los domingos' : 'Cerrado en este momento'}</span>
             </div>
@@ -123,7 +123,7 @@ export default function HeroCentradoMinimalista({
           placeholder="Escribí para buscar en el menú..."
           value={busqueda}
           onChange={(e) => onBusquedaChange(e.target.value)}
-          className="w-full bg-zinc-900/90 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-full outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm backdrop-blur-md"
+          className="w-full bg-zinc-900 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-full outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm"
         />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
       </div>

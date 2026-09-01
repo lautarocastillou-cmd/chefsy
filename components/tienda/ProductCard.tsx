@@ -76,17 +76,17 @@ function ProductCard({
       ? Math.round(((precioAnterior - prod.precio) / precioAnterior) * 100)
       : null
 
-  // Estilos de Tarjeta Dinámicos
+  // Estilos de Tarjeta Dinámicos (Sin backdrop-blur para 60 FPS fluidos)
   const contenedorEstilos = {
     glassmorphism:
-      'bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-md border border-white/10 hover:border-white/20 p-3.5 rounded-2xl shadow-xl',
+      'bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 hover:border-white/20 p-3.5 rounded-2xl shadow-xl',
     neon_glow:
       'bg-zinc-950/90 border border-emerald-500/25 hover:border-emerald-400 p-3.5 rounded-2xl shadow-[0_0_15px_-4px_rgba(42,99,72,0.4)] hover:shadow-[0_0_25px_0px_rgba(42,99,72,0.6)]',
     minimalista_clean:
       'bg-transparent hover:bg-white/5 border border-transparent p-2.5 rounded-2xl',
     compacto_lista:
       'bg-zinc-900/70 hover:bg-zinc-900 border border-white/5 p-2.5 rounded-xl items-center',
-  }[estiloTarjeta] || 'bg-white/[0.04] p-3.5 rounded-2xl border border-white/10'
+  }[estiloTarjeta] || 'bg-white/[0.05] p-3.5 rounded-2xl border border-white/10'
 
   return (
     <div

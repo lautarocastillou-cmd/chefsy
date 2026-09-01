@@ -126,7 +126,7 @@ export default function HeroCarruselPromo({
             
             {/* Badge Promocional */}
             {slideActual.badge && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300 bg-amber-500/15 border border-amber-500/30 backdrop-blur-md shadow-md animate-in fade-in duration-300">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300 bg-amber-500/15 border border-amber-500/30 shadow-md animate-in fade-in duration-300">
                 <Sparkles size={13} className="text-amber-400 animate-pulse" />
                 <span>{slideActual.badge}</span>
               </div>
@@ -190,7 +190,7 @@ export default function HeroCarruselPromo({
               type="button"
               onClick={handleAnterior}
               aria-label="Slide anterior"
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all active:scale-90 shadow-lg cursor-pointer"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 transition-all active:scale-90 shadow-lg cursor-pointer"
             >
               <ChevronLeft size={18} />
             </button>
@@ -198,7 +198,7 @@ export default function HeroCarruselPromo({
               type="button"
               onClick={handleSiguiente}
               aria-label="Slide siguiente"
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all active:scale-90 shadow-lg cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 transition-all active:scale-90 shadow-lg cursor-pointer"
             >
               <ChevronRight size={18} />
             </button>
@@ -234,7 +234,7 @@ export default function HeroCarruselPromo({
           placeholder="¿Qué tenés ganas de comer hoy? (ej. Bacon, Mozzarella, Papas)..."
           value={busqueda}
           onChange={(e) => onBusquedaChange(e.target.value)}
-          className="w-full bg-zinc-900/90 border border-white/15 hover:border-white/30 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm backdrop-blur-md"
+          className="w-full bg-zinc-900/90 border border-white/15 hover:border-white/30 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm"
         />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
       </div>

@@ -7,6 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import {
+  Menu,
   X,
   MapPin,
   Clock,
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ── Botón Hamburguesa Animado que se transforma en X ────────────────────────
+// ── Botón de Menú / Hamburguesa Normal y Fluido ─────────────────────────────
 interface BotonHamburguesaProps {
   abierto: boolean
   onClick: () => void
@@ -33,32 +34,12 @@ export function BotonHamburguesa({ abierto, onClick, className = '' }: BotonHamb
       onClick={onClick}
       aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'}
       className={cn(
-        'relative w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10 shrink-0 select-none z-[110]',
-        abierto && 'bg-white/20 border-white/20',
+        'w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-colors cursor-pointer border border-white/10 shrink-0 select-none z-[110]',
+        abierto && 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300',
         className
       )}
     >
-      {/* Línea Superior */}
-      <span
-        className={cn(
-          'w-5 h-[2.5px] bg-white rounded-full transition-all duration-300 ease-in-out origin-center',
-          abierto && 'translate-y-[8.5px] rotate-45 bg-emerald-400'
-        )}
-      />
-      {/* Línea Central */}
-      <span
-        className={cn(
-          'w-5 h-[2.5px] bg-white rounded-full transition-all duration-300 ease-in-out',
-          abierto && 'opacity-0 scale-x-0'
-        )}
-      />
-      {/* Línea Inferior */}
-      <span
-        className={cn(
-          'w-5 h-[2.5px] bg-white rounded-full transition-all duration-300 ease-in-out origin-center',
-          abierto && '-translate-y-[8.5px] -rotate-45 bg-emerald-400'
-        )}
-      />
+      {abierto ? <X size={20} /> : <Menu size={20} />}
     </button>
   )
 }

@@ -319,7 +319,7 @@ export default function TiendaMobile() {
       <div className="pb-32">
           {/* Banner Bloqueante de Local Cerrado / Domingos */}
           {(turnoActivo === false || esDomingoCerrado) && (
-            <div className="mx-4 my-3 p-3.5 bg-rose-950/80 border border-rose-500/40 rounded-2xl flex items-center gap-3 shadow-xl backdrop-blur-md animate-in fade-in">
+            <div className="mx-4 my-3 p-3.5 bg-rose-950 border border-rose-500/40 rounded-2xl flex items-center gap-3 shadow-xl animate-in fade-in">
               <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shrink-0 border border-rose-500/30">
                 🔒
               </div>
@@ -353,16 +353,16 @@ export default function TiendaMobile() {
             />
           )}
 
-          {/* Chips Horizontales de Categorías (Acceso Rápido con 1 Toque) */}
-          <div className="sticky top-[108px] z-30 bg-[#141414]/95 backdrop-blur-md py-2.5 px-3 border-b border-white/5 overflow-x-auto scrollbar-none flex items-center gap-2">
+          {/* Botones Normales de Categorías (Sin deslizamiento horizontal, estáticos y fluidos) */}
+          <div className="sticky top-[108px] z-30 bg-[#141414] py-2 px-3 border-b border-white/10 flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setCategoriaSeleccionada(null)}
               className={cn(
-                'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95',
                 !categoriaSeleccionada
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'bg-zinc-900/90 text-slate-300 border border-white/10 hover:bg-zinc-800'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700 border border-white/5'
               )}
             >
               🍽️ Todos
@@ -373,10 +373,10 @@ export default function TiendaMobile() {
                 type="button"
                 onClick={() => setCategoriaSeleccionada(cat.id)}
                 className={cn(
-                  'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
+                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95',
                   categoriaSeleccionada === cat.id
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                    : 'bg-zinc-900/90 text-slate-300 border border-white/10 hover:bg-zinc-800'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700 border border-white/5'
                 )}
               >
                 {cat.nombre}

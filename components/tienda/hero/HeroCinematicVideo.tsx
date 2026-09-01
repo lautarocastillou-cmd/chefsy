@@ -105,7 +105,7 @@ export default function HeroCinematicVideo({
         <button
           type="button"
           onClick={toggleAudio}
-          className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-lg cursor-pointer"
+          className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/80 hover:bg-black text-white/80 hover:text-white border border-white/15 transition-all active:scale-90 shadow-lg cursor-pointer"
           title={estaMuteado ? 'Activar sonido' : 'Silenciar video'}
         >
           {estaMuteado ? <VolumeX size={15} /> : <Volume2 size={15} className="text-emerald-400" />}
@@ -116,7 +116,7 @@ export default function HeroCinematicVideo({
       <div className="relative z-20 max-w-4xl mx-auto w-full text-center flex flex-col items-center space-y-3 sm:space-y-4 my-auto">
         
         {/* Badge Gourmet */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300 bg-black/60 border border-amber-500/40 backdrop-blur-md shadow-xl">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300 bg-black/80 border border-amber-500/40 shadow-xl">
           <Flame size={13} className="text-amber-400 animate-bounce" />
           <span>{configuracion?.hero_badge_texto || 'COCINA EN VIVO • SABOR ARTESANAL'}</span>
         </div>
@@ -149,7 +149,7 @@ export default function HeroCinematicVideo({
             placeholder="Buscá tu plato favorito (ej. Doble Smash, Lomo, Mozzarella)..."
             value={busqueda}
             onChange={(e) => onBusquedaChange(e.target.value)}
-            className="w-full bg-black/60 border border-white/25 hover:border-white/50 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium text-xs sm:text-sm backdrop-blur-xl"
+            className="w-full bg-black/80 border border-white/25 hover:border-white/50 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium text-xs sm:text-sm"
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
         </div>
