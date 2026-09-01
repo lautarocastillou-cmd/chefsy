@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, generarSvgMotoCenital } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { Compass, Bike, Store, Maximize2, Layers } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -370,18 +370,19 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
             )}%</div>`
           : ''
 
-      // A) Marcador del Cadete con Haz de Luz y Rotación 3D
+      // A) Marcador del Cadete con Haz de Luz y Moto Cenital (Vista Superior GPS)
       const cadeteHtml = `
         <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; user-select:none;">
           <!-- Haz de luz delantero -->
           <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>
           <!-- Onda de radar -->
           <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
-          <!-- Badge 3D de la moto -->
-          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(${rumbo}deg); position:relative; width:40px; height:40px; background:${colorBg}; border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center; font-size:22px;">
-            🛵
-            ${batBadge}
+          <!-- Badge 3D de la moto con vista cenital que rota 360° fluidamente -->
+          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(${rumbo}deg); position:relative; width:42px; height:42px; background:rgba(15,23,42,0.92); border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
+            ${generarSvgMotoCenital(colorBg)}
           </div>
+          <!-- Badge de batería siempre derecho y legible -->
+          ${batBadge}
           <!-- Flecha direccional -->
           <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumbo}deg) translateY(-24px); font-size:11px; color:${colorBg}; font-weight:900; text-shadow:0 1px 2px #fff;">
             ▲

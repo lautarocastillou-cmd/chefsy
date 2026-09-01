@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, generarSvgMotoCenital } from '@/lib/ubicacion'
 import {
   X,
   Play,
@@ -316,8 +316,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; align-items:center; justify-content:center;">
           <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(0deg);"></div>
           <div class="cadete-radar-pulse"></div>
-          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(0deg); width:40px; height:40px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer;">
-            🛵
+          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(0deg); width:42px; height:42px; background:rgba(15,23,42,0.92); border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            ${generarSvgMotoCenital('#E11D48')}
           </div>
           <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-24px); font-size:11px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
             ▲
