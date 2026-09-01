@@ -1,12 +1,11 @@
 'use client'
 
 import { Pedido } from '@/tipos'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, cn } from '@/lib/utils'
 import { obtenerSiguienteEstado } from '@/lib/entrega'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
-import { cn } from '@/lib/utils'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChefHat, Package, Bike, CheckCircle2 } from 'lucide-react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 
 const bordesPorEstado: Record<Pedido['estado'], string> = {
@@ -118,15 +117,56 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
           )}
         </div>
 
-        {!esFinal && siguienteEstado && (
-          <button
-            onClick={manejarAvance}
-            className="p-1 rounded-full bg-chefsy-50 dark:bg-chefsy-900/30 text-chefsy hover:bg-chefsy hover:text-white transition-colors border border-chefsy/20 hover:scale-110 active:scale-95"
-            title="Avanzar pedido"
-          >
-            <ChevronRight size={14} strokeWidth={3} />
-          </button>
-        )}
+        {!esFinal && siguienteEstado && (() => {
+          const config = (() => {
+            switch (siguienteEstado) {
+              case 'en_cocina':
+                return {
+                  titulo: 'Enviar a Cocina',
+                  icono: <ChefHat size={14} />,
+                  clase: 'bg-orange-500 hover:bg-orange-600 text-white shadow-xs',
+                }
+              case 'listo':
+                return {
+                  titulo: pedido.tipoEntrega === 'delivery' ? 'Listo para Despacho' : 'Listo para Retiro',
+                  icono: <Package size={14} />,
+                  clase: 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs',
+                }
+              case 'en_camino':
+                return {
+                  titulo: 'Despachar a Reparto',
+                  icono: <Bike size={14} />,
+                  clase: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs',
+                }
+              case 'entregado':
+                return {
+                  titulo: 'Marcar Entregado',
+                  icono: <CheckCircle2 size={14} />,
+                  clase: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs',
+                }
+              default:
+                return {
+                  titulo: 'Avanzar Estado',
+                  icono: <ChevronRight size={14} strokeWidth={3} />,
+                  clase: 'bg-chefsy hover:bg-chefsy-700 text-white shadow-xs',
+                }
+            }
+          })()
+
+          return (
+            <button
+              type="button"
+              onClick={manejarAvance}
+              className={cn(
+                'p-1.5 rounded-lg transition-all active:scale-90 cursor-pointer flex items-center justify-center',
+                config.clase
+              )}
+              title={config.titulo}
+            >
+              {config.icono}
+            </button>
+          )
+        })()}
       </div>
     </div>
   )

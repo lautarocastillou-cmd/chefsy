@@ -10,9 +10,27 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
-import SwipeActionPedido from './SwipeActionPedido'
 import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
-import { Copy, Check, Printer, MapPin, X, Trash2, Pencil, Undo2, Receipt, MoreHorizontal, Phone, MessageCircle, Bike } from 'lucide-react'
+import {
+  Copy,
+  Check,
+  Printer,
+  MapPin,
+  X,
+  Trash2,
+  Pencil,
+  Undo2,
+  Receipt,
+  MoreHorizontal,
+  Phone,
+  MessageCircle,
+  Bike,
+  ChefHat,
+  Package,
+  CheckCircle2,
+  ArrowRight,
+  Loader2
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
@@ -260,6 +278,10 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
   return (
     <div 
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 260px',
+      }}
       className={cn(
         "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
         bordesPorEstado[pedido.estado]
@@ -670,52 +692,76 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         document.body
       )}
 
-      {/* Botones de acción con soporte táctil Swipe */}
+      {/* Botones de acción normales, directos y fluidos (1 Toque) */}
       {!soloLectura && !esFinal && (
         <div className="flex items-center gap-2 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
-          {siguienteEstado ? (
-            <div className="flex-1 min-w-0">
-              <SwipeActionPedido
-                texto={obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)}
-                textoConfirmado="¡Actualizado!"
-                colorFondo={
-                  siguienteEstado === 'en_cocina'
-                    ? 'bg-orange-500/10 border-orange-500/30 dark:bg-orange-950/20'
-                    : siguienteEstado === 'listo'
-                    ? 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20'
-                    : siguienteEstado === 'en_camino'
-                    ? 'bg-indigo-500/10 border-indigo-500/30 dark:bg-indigo-950/20'
-                    : 'bg-emerald-500/10 border-emerald-500/30 dark:bg-emerald-950/20'
-                }
-                colorThumb={
-                  siguienteEstado === 'en_cocina'
-                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                    : siguienteEstado === 'listo'
-                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
-                    : siguienteEstado === 'en_camino'
-                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
-                    : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                }
-                colorTexto={
-                  siguienteEstado === 'en_cocina'
-                    ? 'text-orange-700 dark:text-orange-300'
-                    : siguienteEstado === 'listo'
-                    ? 'text-amber-700 dark:text-amber-300'
-                    : siguienteEstado === 'en_camino'
-                    ? 'text-indigo-700 dark:text-indigo-300'
-                    : 'text-emerald-700 dark:text-emerald-300'
-                }
-                onConfirmar={manejarAvance}
-                deshabilitado={procesando}
-              />
-            </div>
-          ) : null}
+          {siguienteEstado ? (() => {
+            const config = (() => {
+              switch (siguienteEstado) {
+                case 'en_cocina':
+                  return {
+                    etiqueta: 'A Cocina (Preparar)',
+                    estilo: 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white shadow-sm shadow-orange-500/20 border border-orange-400/30',
+                    icono: <ChefHat size={16} className="shrink-0" />,
+                  }
+                case 'listo':
+                  return {
+                    etiqueta: pedido.tipoEntrega === 'delivery' ? 'Listo para Despachar' : 'Listo para Retiro',
+                    estilo: 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white shadow-sm shadow-amber-500/20 border border-amber-400/30',
+                    icono: <Package size={16} className="shrink-0" />,
+                  }
+                case 'en_camino':
+                  return {
+                    etiqueta: 'A Reparto (Despachar)',
+                    estilo: 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm shadow-indigo-500/20 border border-indigo-400/30',
+                    icono: <Bike size={16} className="shrink-0" />,
+                  }
+                case 'entregado':
+                  return {
+                    etiqueta: 'Marcar Entregado',
+                    estilo: 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm shadow-emerald-500/20 border border-emerald-400/30',
+                    icono: <CheckCircle2 size={16} className="shrink-0" />,
+                  }
+                default:
+                  return {
+                    etiqueta: 'Avanzar Estado',
+                    estilo: 'bg-chefsy hover:bg-chefsy-700 text-white shadow-sm border border-chefsy-400/30',
+                    icono: <ArrowRight size={16} className="shrink-0" />,
+                  }
+              }
+            })()
+
+            return (
+              <button
+                type="button"
+                onClick={manejarAvance}
+                disabled={procesando}
+                className={cn(
+                  'flex-1 h-10 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer select-none',
+                  config.estilo,
+                  procesando && 'opacity-60 cursor-wait'
+                )}
+              >
+                {procesando ? (
+                  <Loader2 size={15} className="animate-spin shrink-0" />
+                ) : (
+                  config.icono
+                )}
+                <span className="truncate">{procesando ? 'Actualizando...' : config.etiqueta}</span>
+              </button>
+            )
+          })() : null}
 
           {/* Botón rápido de cancelar */}
           <button
-            onClick={manejarCancelacion}
+            type="button"
+            onClick={() => {
+              if (window.confirm('¿Deseas cancelar este pedido?')) {
+                manejarCancelacion()
+              }
+            }}
             disabled={procesando}
-            className="h-11 px-3 border border-red-200 dark:border-red-900/40 text-red-500 hover:text-red-600 text-xs font-bold rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all shrink-0 disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            className="h-10 px-3 border border-red-200 dark:border-red-900/40 text-red-500 hover:text-red-600 text-xs font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all shrink-0 disabled:opacity-50 flex items-center justify-center cursor-pointer"
             title="Cancelar Pedido"
           >
             <X size={16} />

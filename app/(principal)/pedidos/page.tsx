@@ -5,7 +5,7 @@
 // Lista completa de pedidos con filtros por estado y fecha.
 // ─────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import VistaKanban from '@/components/pedidos/VistaKanban'
@@ -62,36 +62,42 @@ export default function PaginaPedidos() {
     onAbrirModal: handleAbrirNuevoPedido,
   })
 
-  // Cargar pedidos del día seleccionado cuando corresponda (sincronizado con cambios en tiempo real)
+  // Cargar pedidos del día seleccionado cuando corresponda (solo al cambiar fecha o entrar a historial)
   useEffect(() => {
     if (vista !== 'historial') return
     let activo = true
     async function cargar() {
       setCargandoHistorial(true)
-      const data = await obtenerPedidosPorFecha(fechaSeleccionada)
-      if (activo) {
-        setPedidosHistoricos(data)
-        setCargandoHistorial(false)
+      try {
+        const data = await obtenerPedidosPorFecha(fechaSeleccionada)
+        if (activo) {
+          setPedidosHistoricos(data)
+        }
+      } finally {
+        if (activo) {
+          setCargandoHistorial(false)
+        }
       }
     }
     cargar()
     return () => {
       activo = false
     }
-  }, [fechaSeleccionada, vista, obtenerPedidosPorFecha, pedidos])
+  }, [fechaSeleccionada, vista, obtenerPedidosPorFecha])
 
   // Determinar el conjunto base de pedidos según la pestaña activa
   const pedidosBase = vista === 'activos' ? pedidos : pedidosHistoricos
 
-  const pedidosFiltrados = pedidosBase.filter((p) => {
-    // Si estamos en activos, por defecto el filtro 'todos' excluye los cancelados.
-    // Si estamos en historial, el filtro 'todos' incluye absolutamente todo.
-    const coincideEstado = filtroActivo === 'todos' 
-      ? (vista === 'activos' ? p.estado !== 'cancelado' : true)
-      : p.estado === filtroActivo
-    const coincideEntrega = filtroEntrega === 'todos' || p.tipoEntrega === filtroEntrega
-    return coincideEstado && coincideEntrega
-  })
+  // Memorizar la lista filtrada para evitar recalcular en cada tick o render menor
+  const pedidosFiltrados = useMemo(() => {
+    return pedidosBase.filter((p) => {
+      const coincideEstado = filtroActivo === 'todos' 
+        ? (vista === 'activos' ? p.estado !== 'cancelado' : true)
+        : p.estado === filtroActivo
+      const coincideEntrega = filtroEntrega === 'todos' || p.tipoEntrega === filtroEntrega
+      return coincideEstado && coincideEntrega
+    })
+  }, [pedidosBase, filtroActivo, filtroEntrega, vista])
 
   return (
     <div className="space-y-5">
@@ -347,7 +353,7 @@ export default function PaginaPedidos() {
             onTouchMove={(e) => e.stopPropagation()}
           >
             {/* Header del Modal */}
-            <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
+            <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
               <div>
                 <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                   {pedidoAEditar ? '✏️ Editar Pedido' : '📝 Nuevo Pedido'}
