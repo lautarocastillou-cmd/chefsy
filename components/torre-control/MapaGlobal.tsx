@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { Compass, Bike, Store, Maximize2, Layers } from 'lucide-react'
-import { crearCapaSemaforos, CapaSemaforosControl } from '@/components/ubicacion/capaSemaforos'
 import 'leaflet/dist/leaflet.css'
 
 // Coordenadas del local Chefsy
@@ -75,8 +74,6 @@ interface CadeteAnimState {
 export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
-  const semaforosControlRef = useRef<CapaSemaforosControl | null>(null)
-  const [mostrarSemaforos, setMostrarSemaforos] = useState(true)
   const markersRef = useRef<{
     local?: any
     cadetes: Record<string, any>
@@ -150,10 +147,6 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-    // Capa de Semáforos Minimalistas
-    const semaforosCtrl = crearCapaSemaforos(L, map, true)
-    semaforosControlRef.current = semaforosCtrl
-
     map.on('dragstart', () => {
       setModoCamara('manual')
     })
@@ -203,10 +196,6 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       clearTimeout(t2)
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
       if (resizeObserver) resizeObserver.disconnect()
-      if (semaforosControlRef.current) {
-        semaforosControlRef.current.destruir()
-        semaforosControlRef.current = null
-      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
@@ -639,44 +628,6 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
           height: 100% !important;
           background-color: #e2e8f0;
         }
-        /* Semáforos Minimalistas */
-        .semaforo-mini-capsule {
-          width: 10px;
-          height: 20px;
-          background: rgba(15, 23, 42, 0.92);
-          border: 1px solid rgba(255, 255, 255, 0.4);
-          border-radius: 5px;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: space-evenly;
-          padding: 1px 0;
-          transition: transform 0.2s ease;
-          cursor: pointer;
-        }
-        .semaforo-mini-capsule:hover {
-          transform: scale(1.3);
-          background: #0f172a;
-          border-color: #ffffff;
-        }
-        .semaforo-led {
-          width: 3.5px;
-          height: 3.5px;
-          border-radius: 50%;
-        }
-        .semaforo-led.red {
-          background: #ef4444;
-          box-shadow: 0 0 2px #ef4444;
-        }
-        .semaforo-led.yellow {
-          background: #eab308;
-          box-shadow: 0 0 2px #eab308;
-        }
-        .semaforo-led.green {
-          background: #22c55e;
-          box-shadow: 0 0 2px #22c55e;
-        }
       `,
       }} />
 
@@ -711,24 +662,6 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
           title="Centrar en Local Chefsy"
         >
           <Store size={18} />
-        </button>
-
-        {/* Toggle Semáforos */}
-        <button
-          type="button"
-          onClick={() => {
-            const nuevo = !mostrarSemaforos
-            setMostrarSemaforos(nuevo)
-            semaforosControlRef.current?.toggle(nuevo)
-          }}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer text-xs ${
-            mostrarSemaforos
-              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
-              : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-          title={mostrarSemaforos ? 'Ocultar semáforos' : 'Mostrar semáforos'}
-        >
-          🚦
         </button>
       </div>
     </div>
