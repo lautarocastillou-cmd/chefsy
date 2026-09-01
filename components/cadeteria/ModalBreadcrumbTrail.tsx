@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, generarSvgMotoCenital } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import {
   X,
   Play,
@@ -192,11 +192,17 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       const rotatables = markerEl.querySelectorAll('.cadete-rotatable')
       rotatables.forEach((el: any) => {
         if (el.classList.contains('cadete-direction-arrow')) {
-          el.style.transform = `rotate(${rumbo}deg) translateY(-24px)`
+          el.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
         } else {
           el.style.transform = `rotate(${rumbo}deg)`
         }
       })
+
+      const motoIcon = markerEl.querySelector('.cadete-moto-flip') as HTMLElement
+      if (motoIcon) {
+        const esOeste = rumbo > 180 && rumbo < 360
+        motoIcon.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
+      }
     }
 
     // Actualizar polilínea recorrida (viva / iluminada)
@@ -316,10 +322,12 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; align-items:center; justify-content:center;">
           <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(0deg);"></div>
           <div class="cadete-radar-pulse"></div>
-          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(0deg); width:42px; height:42px; background:rgba(15,23,42,0.92); border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            ${generarSvgMotoCenital('#E11D48')}
+          <div class="cadete-moto-badge" style="width:44px; height:44px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <span class="cadete-moto-flip" style="display:inline-block; font-size:24px; line-height:1; transition:transform 0.15s ease-out; transform: scaleX(1);">
+              🛵
+            </span>
           </div>
-          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-24px); font-size:11px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
+          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-25px); font-size:12px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
             ▲
           </div>
         </div>

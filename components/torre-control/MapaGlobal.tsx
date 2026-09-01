@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm, generarSvgMotoCenital } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { Compass, Bike, Store, Maximize2, Layers } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -112,14 +112,23 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
     if (!marker) return
     const el = marker.getElement()
     if (!el) return
+
+    // 1. Rotar faro delantero y flecha direccional en 360° siguiendo la calle
     const rotatables = el.querySelectorAll('.cadete-rotatable')
     rotatables.forEach((item: any) => {
       if (item.classList.contains('cadete-direction-arrow')) {
-        item.style.transform = `rotate(${rumbo}deg) translateY(-24px)`
+        item.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
       } else {
         item.style.transform = `rotate(${rumbo}deg)`
       }
     })
+
+    // 2. Espejar la moto horizontalmente si va al Oeste (NUNCA patas para arriba)
+    const motoIcon = el.querySelector('.cadete-moto-flip') as HTMLElement
+    if (motoIcon) {
+      const esOeste = rumbo > 180 && rumbo < 360
+      motoIcon.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
+    }
   }, [])
 
   // ── 1. Inicializar Mapa Leaflet (1 sola vez al montar) ───────────────────────
@@ -363,32 +372,40 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
 
       const batBadge =
         cadete.bateria != null
-          ? `<div style="position:absolute;top:-6px;right:-8px;background:${
+          ? `<div style="position:absolute;top:-4px;right:-10px;background:${
               cadete.bateria > 20 ? '#10B981' : '#EF4444'
-            };color:#fff;font-size:9px;font-weight:900;padding:1px 4px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.25);">${Math.round(
+            };color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.25);z-index:25;">${Math.round(
               cadete.bateria
             )}%</div>`
           : ''
 
-      // A) Marcador del Cadete con Haz de Luz y Moto Cenital (Vista Superior GPS)
+      const esOeste = rumbo > 180 && rumbo < 360
+
+      // A) Marcador del Cadete con Haz de Luz 360°, Moto que nunca se da vuelta y Nombre nítido
       const cadeteHtml = `
-        <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; user-select:none;">
-          <!-- Haz de luz delantero -->
-          <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>
-          <!-- Onda de radar -->
-          <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
-          <!-- Badge 3D de la moto con vista cenital que rota 360° fluidamente -->
-          <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(${rumbo}deg); position:relative; width:42px; height:42px; background:rgba(15,23,42,0.92); border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
-            ${generarSvgMotoCenital(colorBg)}
+        <div class="cadete-marker-outer" style="position:relative; width:64px; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none;">
+          <!-- Contenedor del vehículo y faro de 44px -->
+          <div style="position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
+            <!-- Haz de luz delantero que apunta en 360° -->
+            <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>
+            <!-- Onda de radar -->
+            <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
+            <!-- Badge circular de la moto (siempre derecho, ruedas al suelo) -->
+            <div class="cadete-moto-badge" style="position:relative; width:44px; height:44px; background:${colorBg}; border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
+              <span class="cadete-moto-flip" style="display:inline-block; font-size:23px; line-height:1; transition:transform 0.15s ease-out; transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
+                🛵
+              </span>
+            </div>
+            <!-- Flecha direccional en 360° -->
+            <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumbo}deg) translateY(-25px); font-size:12px; color:${colorBg}; font-weight:900; text-shadow:0 1px 3px #fff;">
+              ▲
+            </div>
+            <!-- Badge de batería siempre derecho y legible -->
+            ${batBadge}
           </div>
-          <!-- Badge de batería siempre derecho y legible -->
-          ${batBadge}
-          <!-- Flecha direccional -->
-          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumbo}deg) translateY(-24px); font-size:11px; color:${colorBg}; font-weight:900; text-shadow:0 1px 2px #fff;">
-            ▲
-          </div>
-          <!-- Etiqueta de Nombre del Cadete -->
-          <div style="margin-top:2px; background:rgba(15,23,42,0.92); color:#ffffff; font-size:10px; font-weight:900; padding:1px 7px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.35); white-space:nowrap; max-width:110px; overflow:hidden; text-overflow:ellipsis; border:1px solid rgba(255,255,255,0.8); letter-spacing:0.2px;">
+
+          <!-- Etiqueta de Nombre del Cadete con separación adecuada para que nunca se tape -->
+          <div style="margin-top:8px; background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
             ${cadete.nombre}
           </div>
         </div>
@@ -397,9 +414,9 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       const cadeteIcon = L.divIcon({
         html: cadeteHtml,
         className: 'custom-cadete-animated-marker',
-        iconSize: [110, 74],
-        iconAnchor: [55, 27],
-        popupAnchor: [0, -27],
+        iconSize: [120, 80],
+        iconAnchor: [60, 22],
+        popupAnchor: [0, -25],
       })
 
       const popupContent = `

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Pedido } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, generarSvgMotoCenital } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -233,33 +233,46 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const iconElement = markerInst.getElement()
       if (!iconElement) return
 
+      // 1. Rotar faro delantero y flecha en 360° siguiendo la calle
       const rotatables = iconElement.querySelectorAll('.cadete-rotatable')
       rotatables.forEach((el: any) => {
         if (el.classList.contains('cadete-direction-arrow')) {
-          el.style.transform = `rotate(${rumboGrados}deg) translateY(-24px)`
+          el.style.transform = `rotate(${rumboGrados}deg) translateY(-25px)`
         } else {
           el.style.transform = `rotate(${rumboGrados}deg)`
         }
       })
+
+      // 2. Espejar la moto horizontalmente si va al Oeste (NUNCA patas para arriba)
+      const motoIcon = iconElement.querySelector('.cadete-moto-flip') as HTMLElement
+      if (motoIcon) {
+        const esOeste = rumboGrados > 180 && rumboGrados < 360
+        motoIcon.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
+      }
     }
 
-    // Constructor de HTML del marcador con faro delantero y moto cenital (vista desde arriba)
-    const generarHtmlCadete = (rumboInicial: number) => `
-      <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; align-items:center; justify-content:center;">
-        <!-- Haz de luz / Faro delantero que ilumina la calle hacia donde va -->
-        <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumboInicial}deg);"></div>
-        <!-- Onda de radar de presencia -->
-        <div class="cadete-radar-pulse"></div>
-        <!-- Badge circular con moto en vista cenital (aérea) que rota 360° sin darse vuelta -->
-        <div class="cadete-moto-badge cadete-rotatable" style="transform: rotate(${rumboInicial}deg); width:42px; height:42px; background:rgba(15,23,42,0.92); border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-          ${generarSvgMotoCenital('#E11D48')}
+    // Constructor de HTML del marcador con faro delantero en 360° y moto siempre al derecho
+    const generarHtmlCadete = (rumboInicial: number) => {
+      const esOesteInicial = rumboInicial > 180 && rumboInicial < 360
+      return `
+        <div class="cadete-marker-outer" style="position:relative; width:54px; height:54px; display:flex; align-items:center; justify-content:center;">
+          <!-- Haz de luz / Faro delantero que ilumina la calle hacia donde va en 360° -->
+          <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumboInicial}deg);"></div>
+          <!-- Onda de radar de presencia -->
+          <div class="cadete-radar-pulse"></div>
+          <!-- Badge circular 3D de la moto (permanece siempre derecho con ruedas al piso) -->
+          <div class="cadete-moto-badge" style="width:44px; height:44px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <span class="cadete-moto-flip" style="display:inline-block; font-size:24px; line-height:1; transition:transform 0.15s ease-out; transform:${esOesteInicial ? 'scaleX(-1)' : 'scaleX(1)'};">
+              🛵
+            </span>
+          </div>
+          <!-- Flecha direccional de navegación en 360° -->
+          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumboInicial}deg) translateY(-25px); font-size:12px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
+            ▲
+          </div>
         </div>
-        <!-- Flecha direccional de navegación -->
-        <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumboInicial}deg) translateY(-24px); font-size:11px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
-          ▲
-        </div>
-      </div>
-    `
+      `
+    }
 
     // Caso 1: Primera vez que recibimos posición
     if (!posicionAnimadaRef.current) {
