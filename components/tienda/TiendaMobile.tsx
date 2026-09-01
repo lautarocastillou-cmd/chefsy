@@ -24,6 +24,7 @@ import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroManager from '@/components/tienda/hero/HeroManager'
+import SidebarTienda, { BotonHamburguesa } from '@/components/tienda/SidebarTienda'
 import dynamic from 'next/dynamic'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
@@ -47,6 +48,7 @@ export default function TiendaMobile() {
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
+  const [sidebarAbierto, setSidebarAbierto] = useState(false)
 
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   
@@ -255,13 +257,20 @@ export default function TiendaMobile() {
       {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
       {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/75 -z-10 pointer-events-none" />}
       {/* Header App-like minimalista */}
-      <div className="bg-[#141414] sticky top-0 z-[100] px-4 py-3 shadow-md border-b border-white/5">
+      <div className="bg-[#141414] sticky top-0 z-[100] px-3.5 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <BotonHamburguesa
+              abierto={sidebarAbierto}
+              onClick={() => setSidebarAbierto(!sidebarAbierto)}
+            />
             <div className="w-8 h-8 rounded-lg overflow-hidden relative shadow-sm border border-white/10 shrink-0">
               <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
+          </div>
+
+          <div className="flex items-center gap-2">
             <BotonUbicacionLocal size="sm" />
             <BotonWhatsAppHeader size="sm" />
           </div>
@@ -446,7 +455,21 @@ export default function TiendaMobile() {
           onCerrar={() => setMostrarHistorial(false)}
         />
       )}
+
+      {/* Barra Lateral (Sidebar) Mobile con Navegación de Categorías y Soporte */}
+      <SidebarTienda
+        abierto={sidebarAbierto}
+        onCerrar={() => setSidebarAbierto(false)}
+        categorias={categoriasActivas}
+        categoriaSeleccionada={categoriaSeleccionada}
+        onSeleccionarCategoria={(id) => {
+          setCategoriaSeleccionada(id)
+          if (id && busqueda) setBusqueda('')
+        }}
+      />
+
       <BotonPedidoFlotante />
     </div>
   )
 }
+

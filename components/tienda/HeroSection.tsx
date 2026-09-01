@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Lock, Search, LogOut, User } from 'lucide-react'
@@ -11,6 +11,7 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import dynamic from 'next/dynamic'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
 import BotonWhatsAppHeader from '@/components/tienda/BotonWhatsAppHeader'
+import SidebarTienda, { BotonHamburguesa } from '@/components/tienda/SidebarTienda'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
 const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr: false })
@@ -35,18 +36,23 @@ interface HeroSectionProps {
 export default function HeroSection(props: HeroSectionProps) {
   const { configuracion } = usarConfiguracionTienda()
   const { usuario, perfil, cerrarSesion } = usarClienteAuth()
-  const [mostrarLogin, setMostrarLogin] = React.useState(false)
-  const [mostrarConfirmLogout, setMostrarConfirmLogout] = React.useState(false)
-  const [mostrarHistorial, setMostrarHistorial] = React.useState(false)
-  const [mostrarPerfil, setMostrarPerfil] = React.useState(false)
+  const [mostrarLogin, setMostrarLogin] = useState(false)
+  const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
+  const [mostrarHistorial, setMostrarHistorial] = useState(false)
+  const [mostrarPerfil, setMostrarPerfil] = useState(false)
+  const [sidebarAbierto, setSidebarAbierto] = useState(false)
 
   return (
     <>
       {/* --- CABECERA DE LA TIENDA --- */}
       <header className="bg-transparent px-4 py-6 relative z-[100] border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl overflow-hidden relative shadow-md border border-white/10">
+          <div className="flex items-center gap-3.5">
+            <BotonHamburguesa
+              abierto={sidebarAbierto}
+              onClick={() => setSidebarAbierto(!sidebarAbierto)}
+            />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl overflow-hidden relative shadow-md border border-white/10 shrink-0">
               <Image 
                 src={configuracion?.logo_url || "/logo.jpg"} 
                 alt="Chefsy" 
@@ -68,6 +74,18 @@ export default function HeroSection(props: HeroSectionProps) {
 
       {/* --- RENDERIZADO DINÁMICO DEL HERO SEGÚN EL LAYOUT SELECCIONADO --- */}
       <HeroManager {...props} />
+
+      {/* Barra Lateral (Sidebar) Desktop & Mobile */}
+      <SidebarTienda
+        abierto={sidebarAbierto}
+        onCerrar={() => setSidebarAbierto(false)}
+        categorias={props.categoriasActivas}
+        categoriaSeleccionada={props.categoriaSeleccionada}
+        onSeleccionarCategoria={(id) => {
+          props.onSeleccionarCategoria(id)
+          if (id && props.busqueda) props.onBusquedaChange('')
+        }}
+      />
 
       {mostrarLogin && (
         <ModalLoginCliente 
@@ -105,3 +123,4 @@ export default function HeroSection(props: HeroSectionProps) {
     </>
   )
 }
+
