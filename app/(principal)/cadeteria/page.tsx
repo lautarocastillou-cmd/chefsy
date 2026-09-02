@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Pedido, EstadoPedido, Coordenadas } from '@/tipos'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from '@/components/pedidos/BadgeEstado'
@@ -21,6 +21,9 @@ import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
 import BotonNotificaciones from '@/components/cadeteria/BotonNotificaciones'
 import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
+import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
+import { UBICACION_LOCAL } from '@/lib/ubicacion'
+import { ListOrdered } from 'lucide-react'
 
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
@@ -46,9 +49,19 @@ function redireccionarWhatsApp(telefono: string, cliente: string) {
 function TarjetaPedidoCadete({
   pedido,
   cambiarEstado,
+  esAdmin,
+  posicionParada,
+  totalParadas,
+  distanciaLocalTexto,
+  onAbrirOrganizar,
 }: {
   pedido: Pedido
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
+  esAdmin?: boolean
+  posicionParada?: number
+  totalParadas?: number
+  distanciaLocalTexto?: string
+  onAbrirOrganizar?: () => void
 }) {
   const [metodoOriginal, setMetodoOriginal] = useState<string | null>(null)
 
@@ -122,6 +135,46 @@ function TarjetaPedidoCadete({
           <BadgeEstado estado={pedido.estado} />
         </div>
       </div>
+
+      {/* Indicador de Parada / Turno del Recorrido */}
+      {totalParadas !== undefined && totalParadas > 1 && (
+        <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl p-2.5 flex items-center justify-between gap-2 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base shrink-0">📍</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-black text-emerald-900 dark:text-emerald-200">
+                  Parada {posicionParada} de {totalParadas}
+                </span>
+                {pedido.orden_entrega != null ? (
+                  <span className="text-[9px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-1.5 py-0.2 rounded font-bold">
+                    Turno Manual
+                  </span>
+                ) : (
+                  <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                    Por cercanía {distanciaLocalTexto ? `(${distanciaLocalTexto})` : ''}
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 truncate">
+                {posicionParada === 1
+                  ? 'Próxima parada (destino actual del cadete)'
+                  : `Entrega #${posicionParada} (el cliente sabe que tiene ${Number(posicionParada) - 1} entrega${Number(posicionParada) - 1 === 1 ? '' : 's'} antes)`}
+              </p>
+            </div>
+          </div>
+
+          {esAdmin && onAbrirOrganizar && (
+            <button
+              type="button"
+              onClick={onAbrirOrganizar}
+              className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors shadow-2xs shrink-0 cursor-pointer"
+            >
+              Cambiar turno
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Línea de Tiempos del Pedido */}
       <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/60 rounded-xl p-2 flex items-center justify-between gap-2 transition-all">
@@ -261,6 +314,8 @@ export default function PaginaCadeteria() {
   const [portalHabilitadoLocal, setPortalHabilitadoLocal] = useState(true)
   const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
+  const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
+  const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: Pedido[] } | null>(null)
 
   useEffect(() => {
     if (configuracionOperativa) {
@@ -322,6 +377,24 @@ export default function PaginaCadeteria() {
       (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino') &&
       (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
   )
+
+  // Agrupar pedidos activos por cadete para detectar multi-batching (2 o más pedidos simultáneos)
+  const pedidosPorCadete = useMemo(() => {
+    const mapa = new Map<string, { id: string; nombre: string; pedidos: Pedido[] }>()
+    for (const p of pedidosCadeteria) {
+      if (p.cadete_id) {
+        const cid = p.cadete_id.toLowerCase()
+        const actual = mapa.get(cid) || {
+          id: p.cadete_id,
+          nombre: p.cadete_nombre || p.cadete_id,
+          pedidos: []
+        }
+        actual.pedidos.push(p)
+        mapa.set(cid, actual)
+      }
+    }
+    return Array.from(mapa.values())
+  }, [pedidosCadeteria])
 
   const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo' || p.estado === 'en_camino')
   const hayPedidosListos = pedidosListos.length > 0
@@ -811,15 +884,89 @@ export default function PaginaCadeteria() {
         {/* Panel de Diagnóstico GPS Detallado — solo para admins */}
         {esAdmin && <PanelDiagnosticoGPS />}
 
+        {/* Banner de multi-pedidos / Organización de Recorrido */}
+        {esAdmin && pedidosPorCadete.some(c => c.pedidos.length >= 2) && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-2 mb-3 animate-[slideIn_0.2s_ease-out]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <ListOrdered size={15} />
+                </div>
+                <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  Recorridos Activos (Multi-Pedidos)
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium">Por cercanía al local</span>
+            </div>
+            
+            <div className="space-y-2 pt-1">
+              {pedidosPorCadete.filter(c => c.pedidos.length >= 2).map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Bike size={16} className="text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                        {c.nombre}
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {c.pedidos.length} pedidos simultáneos en curso
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCadeteParaOrganizar(c)
+                      setModalOrganizarAbierto(true)
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <ListOrdered size={13} />
+                    <span>Acomodar turno</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {esAdmin || pestaña === 'activos' ? (
           pedidosCadeteria.length === 0 ? (
             <div className="text-center py-20 text-gray-400 text-sm">
               No hay pedidos delivery para repartir en este momento.
             </div>
           ) : (
-            pedidosCadeteria.map((pedido) => (
-              <TarjetaPedidoCadete key={pedido.id} pedido={pedido} cambiarEstado={cambiarEstado} />
-            ))
+            pedidosCadeteria.map((pedido) => {
+              const infoCadete = pedido.cadete_id
+                ? pedidosPorCadete.find(c => c.id.toLowerCase() === pedido.cadete_id?.toLowerCase())
+                : null
+              const ordenadosCadete = infoCadete ? ordenarPedidosPorCercaniaOManual(infoCadete.pedidos) : []
+              const pos = ordenadosCadete.findIndex(p => p.id === pedido.id) + 1
+              const dist = pedido.coordenadas ? calcularDistanciaKm(UBICACION_LOCAL, pedido.coordenadas) : null
+              const distTxt = dist !== null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : undefined
+
+              return (
+                <TarjetaPedidoCadete
+                  key={pedido.id}
+                  pedido={pedido}
+                  cambiarEstado={cambiarEstado}
+                  esAdmin={esAdmin}
+                  posicionParada={pos > 0 ? pos : undefined}
+                  totalParadas={ordenadosCadete.length > 1 ? ordenadosCadete.length : undefined}
+                  distanciaLocalTexto={distTxt}
+                  onAbrirOrganizar={() => {
+                    if (infoCadete) {
+                      setCadeteParaOrganizar(infoCadete)
+                      setModalOrganizarAbierto(true)
+                    }
+                  }}
+                />
+              )
+            })
           )
         ) : null}
 
@@ -867,6 +1014,20 @@ export default function PaginaCadeteria() {
         }
         cadetePreseleccionadoId={cadeteParaPagoExtra}
       />
+
+      {/* Modal Organizar / Acomodar Recorrido de Cadete */}
+      {cadeteParaOrganizar && (
+        <ModalOrganizarRecorridoCadete
+          abierto={modalOrganizarAbierto}
+          onCerrar={() => {
+            setModalOrganizarAbierto(false)
+            setCadeteParaOrganizar(null)
+          }}
+          cadeteId={cadeteParaOrganizar.id}
+          cadeteNombre={cadeteParaOrganizar.nombre}
+          pedidos={cadeteParaOrganizar.pedidos}
+        />
+      )}
     </div>
   )
 }

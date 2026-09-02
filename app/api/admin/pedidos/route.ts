@@ -470,6 +470,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
 
+      case 'actualizar_orden_entrega': {
+        const { id, orden_entrega } = body
+        if (!id) {
+          return NextResponse.json({ error: 'ID de pedido requerido.' }, { status: 400 })
+        }
+        const { error } = await supabaseAdmin
+          .from('pedidos')
+          .update({ orden_entrega: orden_entrega ?? null })
+          .eq('id', id)
+
+        if (error) throw error
+        return NextResponse.json({ ok: true })
+      }
+
+      case 'actualizar_ordenes_cadete': {
+        const { pedidosOrdenados } = body
+        if (!Array.isArray(pedidosOrdenados)) {
+          return NextResponse.json({ error: 'pedidosOrdenados inválido.' }, { status: 400 })
+        }
+        for (const item of pedidosOrdenados) {
+          await supabaseAdmin
+            .from('pedidos')
+            .update({ orden_entrega: item.orden_entrega ?? null })
+            .eq('id', item.id)
+        }
+        return NextResponse.json({ ok: true })
+      }
+
       default:
         return NextResponse.json(
           { error: `Acción '${accion}' no válida.` },

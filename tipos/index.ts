@@ -80,6 +80,7 @@ export interface Pedido {
   turno_tipo?: TipoTurno
   archivado?: boolean
   ruta_historial?: PuntoRutaBreadcrumb[] | null
+  orden_entrega?: number | null
 }
 
 export interface CadetePagoExtra {

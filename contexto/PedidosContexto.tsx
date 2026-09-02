@@ -169,6 +169,8 @@ interface ValorContextoPedidosInterno {
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
+  asignarOrdenEntrega: (id: string, orden: number | null) => Promise<void>
+  reordenarPedidosCadete: (cadeteId: string, nuevosPedidosOrdenados: { id: string; orden_entrega: number }[]) => Promise<void>
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -694,6 +696,66 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
+  // ── Asignar Orden de Entrega de Cadete ───────────────
+
+  const asignarOrdenEntrega = async (id: string, orden: number | null) => {
+    const pedido = estado.pedidos.find((p) => p.id === id)
+    if (!pedido) return
+
+    const pedidoActualizado = { ...pedido, orden_entrega: orden }
+    despachar({
+      tipo: 'EDITAR_PEDIDO',
+      pedido: pedidoActualizado,
+    })
+    mutateSWR((current) => {
+      if (!current) return [pedidoActualizado]
+      return current.map((p) => (p.id === id ? pedidoActualizado : p))
+    }, false)
+
+    try {
+      await enviarAccionPedido({ accion: 'actualizar_orden_entrega', id, orden_entrega: orden })
+    } catch (e) {
+      console.error('[Servidor/Supabase] Error al actualizar orden de entrega', e)
+      agregarNotificacion('Error al actualizar orden de entrega en el servidor.', 'warning')
+    }
+  }
+
+  const reordenarPedidosCadete = async (cadeteId: string, nuevosPedidosOrdenados: { id: string; orden_entrega: number }[]) => {
+    const mapaOrden = new Map<string, number>()
+    nuevosPedidosOrdenados.forEach((it) => mapaOrden.set(it.id, it.orden_entrega))
+
+    nuevosPedidosOrdenados.forEach((it) => {
+      const p = estado.pedidos.find((x) => x.id === it.id)
+      if (p) {
+        despachar({
+          tipo: 'EDITAR_PEDIDO',
+          pedido: { ...p, orden_entrega: it.orden_entrega },
+        })
+      }
+    })
+
+    mutateSWR((current) => {
+      if (!current) return current
+      return current.map((p) => {
+        if (mapaOrden.has(p.id)) {
+          return { ...p, orden_entrega: mapaOrden.get(p.id)! }
+        }
+        return p
+      })
+    }, false)
+
+    try {
+      await enviarAccionPedido({
+        accion: 'actualizar_ordenes_cadete',
+        pedidosOrdenados: nuevosPedidosOrdenados,
+      })
+      agregarNotificacion('Orden de entrega actualizado.', 'success')
+    } catch (e) {
+      console.error('[Servidor/Supabase] Error al reordenar pedidos del cadete', e)
+      agregarNotificacion('Error al guardar el nuevo orden de entrega.', 'warning')
+    }
+  }
+
   // ── Finalizar turno ───────────────────────────────────
 
   const finalizarTurno = async () => {
@@ -833,6 +895,8 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         refrescarCadetes,
         estadoTurno,
         iniciarTurno,
+        asignarOrdenEntrega,
+        reordenarPedidosCadete,
       }}
     >
       {children}
@@ -879,6 +943,8 @@ interface ValorContextoPedidos {
   refrescarCadetes: () => Promise<void>
   estadoTurno: EstadoTurno
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
+  asignarOrdenEntrega: (id: string, orden: number | null) => Promise<void>
+  reordenarPedidosCadete: (cadeteId: string, nuevosPedidosOrdenados: { id: string; orden_entrega: number }[]) => Promise<void>
   actualizarCategorias: (categorias: CategoriaCatalogo[]) => void
   actualizarProductos: (productos: ProductoCatalogo[]) => void
   actualizarModificadores: (modificadores: ModificadorCatalogo[]) => void
@@ -919,6 +985,8 @@ export function usarPedidos(): ValorContextoPedidos {
     refrescarCadetes: contextoPedidos.refrescarCadetes,
     estadoTurno: contextoPedidos.estadoTurno,
     iniciarTurno: contextoPedidos.iniciarTurno,
+    asignarOrdenEntrega: contextoPedidos.asignarOrdenEntrega,
+    reordenarPedidosCadete: contextoPedidos.reordenarPedidosCadete,
 
     // Catálogo
     categorias: contextoCatalogo.categorias,

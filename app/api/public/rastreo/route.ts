@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { calcularDistanciaKm } from '@/lib/ubicacion'
 
 // Coordenadas del local Chefsy (San Fernando del Valle de Catamarca)
 const LOCAL_LAT = -28.462809031658047
@@ -90,16 +91,44 @@ export async function GET(request: Request) {
     if (data.cadete_id && data.estado !== 'entregado' && data.estado !== 'cancelado') {
       const { data: pedidosActivosCadete } = await supabase
         .from('pedidos')
-        .select('id, estado, hora, created_at, coordenadas')
+        .select('id, estado, hora, created_at, coordenadas, orden_entrega')
         .ilike('cadete_id', data.cadete_id)
         .in('estado', ['en_cocina', 'listo', 'en_camino'])
         .eq('archivado', false)
         .eq('tipoEntrega', 'delivery')
-        .order('created_at', { ascending: true })
 
       if (pedidosActivosCadete && pedidosActivosCadete.length > 1) {
         totalParadas = pedidosActivosCadete.length
-        const enCamino = pedidosActivosCadete.filter(p => p.estado === 'en_camino')
+
+        // Ordenar la cola de entregas:
+        // 1. Manual si existe 'orden_entrega' asignado desde /cadeteria
+        // 2. Cercanía geográfica al local (la casa más cercana primero)
+        // 3. Fallback a created_at
+        const ordenarCola = (lista: any[]) => {
+          return [...lista].sort((a, b) => {
+            const ordA = a.orden_entrega != null ? Number(a.orden_entrega) : null
+            const ordB = b.orden_entrega != null ? Number(b.orden_entrega) : null
+            if (ordA !== null && ordB !== null) return ordA - ordB
+            if (ordA !== null) return -1
+            if (ordB !== null) return 1
+
+            const distA = a.coordenadas?.latitud && a.coordenadas?.longitud
+              ? calcularDistanciaKm({ latitud: LOCAL_LAT, longitud: LOCAL_LNG }, a.coordenadas)
+              : 9999
+            const distB = b.coordenadas?.latitud && b.coordenadas?.longitud
+              ? calcularDistanciaKm({ latitud: LOCAL_LAT, longitud: LOCAL_LNG }, b.coordenadas)
+              : 9999
+
+            if (Math.abs(distA - distB) > 0.05) {
+              return distA - distB
+            }
+
+            return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+          })
+        }
+
+        const colaOrdenada = ordenarCola(pedidosActivosCadete)
+        const enCamino = colaOrdenada.filter(p => p.estado === 'en_camino')
 
         if (data.estado === 'en_camino') {
           if (enCamino.length > 1) {
@@ -125,14 +154,13 @@ export async function GET(request: Request) {
           }
         } else {
           // El pedido está en 'listo' o 'en_cocina'
+          const indice = colaOrdenada.findIndex(p => p.id === pedidoId)
           if (enCamino.length > 0) {
-            const indice = pedidosActivosCadete.findIndex(p => p.id === pedidoId)
             paradaActual = indice >= 0 ? indice + 1 : totalParadas
             paradasPrevias = Math.max(1, enCamino.length)
             esProximaEntrega = false
             cadeteOcupadoEnOtroViaje = true
           } else {
-            const indice = pedidosActivosCadete.findIndex(p => p.id === pedidoId)
             paradaActual = indice >= 0 ? indice + 1 : 1
             paradasPrevias = indice > 0 ? indice : 0
             esProximaEntrega = indice === 0
