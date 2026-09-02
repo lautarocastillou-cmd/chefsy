@@ -24,12 +24,7 @@ import {
   MoreHorizontal,
   Phone,
   MessageCircle,
-  Bike,
-  ChefHat,
-  Package,
-  CheckCircle2,
-  ArrowRight,
-  Loader2
+  Bike
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -62,6 +57,15 @@ const bordesPorEstado: Record<Pedido['estado'], string> = {
   en_camino:  'border-l-[4px] border-l-indigo-500',
   entregado:  'border-l-[4px] border-l-green-500',
   cancelado:  'border-l-[4px] border-l-red-500',
+}
+
+const colorBotonPorEstado: Record<Pedido['estado'], string> = {
+  nuevo:      'bg-chefsy hover:bg-chefsy-700 text-white',
+  en_cocina:  'bg-[#5c4a36] hover:bg-[#4d3e2d] text-white',
+  listo:      'bg-chefsy hover:bg-chefsy-700 text-white',
+  en_camino:  'bg-[#284f60] hover:bg-[#1e3e4c] text-white',
+  entregado:  'bg-[#20563e] hover:bg-[#174330] text-white',
+  cancelado:  'bg-slate-600 hover:bg-slate-700 text-white',
 }
 
 interface PropsTarjetaPedido {
@@ -692,80 +696,56 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         document.body
       )}
 
-      {/* Botones de acción normales, directos y fluidos (1 Toque) */}
+      {/* Botones de acción clásicos con diferenciación sutil y botón Cancelar */}
       {!soloLectura && !esFinal && (
-        <div className="flex items-center gap-2 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
-          {siguienteEstado ? (() => {
-            const config = (() => {
-              switch (siguienteEstado) {
-                case 'en_cocina':
-                  return {
-                    etiqueta: 'A Cocina (Preparar)',
-                    estilo: 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white shadow-sm shadow-orange-500/20 border border-orange-400/30',
-                    icono: <ChefHat size={16} className="shrink-0" />,
-                  }
-                case 'listo':
-                  return {
-                    etiqueta: pedido.tipoEntrega === 'delivery' ? 'Listo para Despachar' : 'Listo para Retiro',
-                    estilo: 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white shadow-sm shadow-amber-500/20 border border-amber-400/30',
-                    icono: <Package size={16} className="shrink-0" />,
-                  }
-                case 'en_camino':
-                  return {
-                    etiqueta: 'A Reparto (Despachar)',
-                    estilo: 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm shadow-indigo-500/20 border border-indigo-400/30',
-                    icono: <Bike size={16} className="shrink-0" />,
-                  }
-                case 'entregado':
-                  return {
-                    etiqueta: 'Marcar Entregado',
-                    estilo: 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm shadow-emerald-500/20 border border-emerald-400/30',
-                    icono: <CheckCircle2 size={16} className="shrink-0" />,
-                  }
-                default:
-                  return {
-                    etiqueta: 'Avanzar Estado',
-                    estilo: 'bg-chefsy hover:bg-chefsy-700 text-white shadow-sm border border-chefsy-400/30',
-                    icono: <ArrowRight size={16} className="shrink-0" />,
-                  }
-              }
-            })()
-
-            return (
+        <div className="flex gap-1.5 border-t border-slate-100 dark:border-[#3d3d3d] pt-2">
+          {siguienteEstado ? (
+            <>
               <button
                 type="button"
                 onClick={manejarAvance}
                 disabled={procesando}
                 className={cn(
-                  'flex-1 h-10 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer select-none',
-                  config.estilo,
-                  procesando && 'opacity-60 cursor-wait'
+                  'flex-1 px-3 py-1.5 text-white text-xs font-semibold rounded-md shadow-xs active:scale-[0.98] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 select-none',
+                  colorBotonPorEstado[siguienteEstado] || 'bg-chefsy hover:bg-chefsy-700 text-white'
                 )}
               >
                 {procesando ? (
-                  <Loader2 size={15} className="animate-spin shrink-0" />
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Actualizando...</span>
+                  </span>
                 ) : (
-                  config.icono
+                  obtenerEtiquetaAccionEstado(siguienteEstado, pedido.tipoEntrega)
                 )}
-                <span className="truncate">{procesando ? 'Actualizando...' : config.etiqueta}</span>
               </button>
-            )
-          })() : null}
-
-          {/* Botón rápido de cancelar */}
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('¿Deseas cancelar este pedido?')) {
-                manejarCancelacion()
-              }
-            }}
-            disabled={procesando}
-            className="h-10 px-3 border border-red-200 dark:border-red-900/40 text-red-500 hover:text-red-600 text-xs font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all shrink-0 disabled:opacity-50 flex items-center justify-center cursor-pointer"
-            title="Cancelar Pedido"
-          >
-            <X size={16} />
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('¿Deseas cancelar este pedido?')) {
+                    manejarCancelacion()
+                  }
+                }}
+                disabled={procesando}
+                className="px-2.5 py-1.5 border border-red-100 dark:border-red-900/50 text-red-500 hover:text-red-650 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition-colors shrink-0 disabled:opacity-50 cursor-pointer select-none"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('¿Deseas cancelar este pedido?')) {
+                  manejarCancelacion()
+                }
+              }}
+              disabled={procesando}
+              className="w-full px-3 py-1.5 border border-red-100 dark:border-red-900/50 text-red-550 text-xs font-medium rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 cursor-pointer select-none"
+            >
+              Cancelar Pedido
+            </button>
+          )}
         </div>
       )}
 

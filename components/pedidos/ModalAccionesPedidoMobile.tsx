@@ -126,7 +126,7 @@ export default function ModalAccionesPedidoMobile({
     <div className="fixed inset-0 z-[99999] flex flex-col justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-slate-950/80 transition-opacity animate-in fade-in"
         onClick={onClose}
       />
 
