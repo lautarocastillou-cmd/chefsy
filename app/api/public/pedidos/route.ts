@@ -35,7 +35,19 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    return NextResponse.json({ pedidos: data || [] })
+    // Consultar viajes y pagos extras asignados al cadete en el turno/fecha de negocio actual
+    const cadeteIdNorm = cadeteId.trim().toLowerCase()
+    const { data: extrasData } = await supabase
+      .from('cadetes_pagos_extras')
+      .select('*')
+      .or(`cadete_id.ilike.${cadeteIdNorm},cadete_nombre.ilike.${cadeteIdNorm}`)
+      .eq('fecha', fechaHoy)
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({
+      pedidos: data || [],
+      pagos_extras: extrasData || []
+    })
   } catch (error) {
     console.error('[API Pública Pedidos GET] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
