@@ -30,7 +30,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
-import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
+import ModalVistaMapa from './ModalVistaMapa'
 import dynamic from 'next/dynamic'
 const FormularioPedidoLazy = dynamic(() => import('./FormularioPedido'), {
   loading: () => <div className="p-8 text-center text-sm text-slate-400">Cargando formulario...</div>
@@ -640,32 +640,11 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       )}
 
       {/* Modal del Mapa */}
-      {verMapa && montado && typeof document !== 'undefined' && createPortal(
-        <div 
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setVerMapa(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative animate-[slideIn_0.2s_ease-out] border border-slate-200 dark:border-slate-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shrink-0">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <MapPin className="text-indigo-500" /> Seguimiento: {pedido.cliente}
-              </h3>
-              <button 
-                onClick={() => setVerMapa(false)}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="relative p-0 bg-slate-50 dark:bg-slate-950 h-[400px] overflow-hidden">
-              <MapaSeguimiento pedido={pedido} />
-            </div>
-          </div>
-        </div>,
-        document.body
+      {verMapa && (
+        <ModalVistaMapa
+          pedido={pedido}
+          onClose={() => setVerMapa(false)}
+        />
       )}
 
       {/* Modal Edición de Pedido Completo */}
