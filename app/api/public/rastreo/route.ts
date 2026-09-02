@@ -80,20 +80,65 @@ export async function GET(request: Request) {
       }
     }
 
-    // Verificar si el cadete asignado está realizando actualmente otro viaje en camino
+    // Detección inteligente de paradas múltiples y orden de entrega del cadete
+    let paradasPrevias = 0
+    let totalParadas = 1
+    let paradaActual = 1
     let cadeteOcupadoEnOtroViaje = false
-    if (data.cadete_id && data.estado !== 'en_camino' && data.estado !== 'entregado' && data.estado !== 'cancelado') {
-      const { data: otroPedidoEnCamino } = await supabase
-        .from('pedidos')
-        .select('id')
-        .ilike('cadete_id', data.cadete_id)
-        .eq('estado', 'en_camino')
-        .neq('id', pedidoId)
-        .limit(1)
-        .maybeSingle()
+    let esProximaEntrega = true
 
-      if (otroPedidoEnCamino) {
-        cadeteOcupadoEnOtroViaje = true
+    if (data.cadete_id && data.estado !== 'entregado' && data.estado !== 'cancelado') {
+      const { data: pedidosActivosCadete } = await supabase
+        .from('pedidos')
+        .select('id, estado, hora, created_at, coordenadas')
+        .ilike('cadete_id', data.cadete_id)
+        .in('estado', ['en_cocina', 'listo', 'en_camino'])
+        .eq('archivado', false)
+        .eq('tipoEntrega', 'delivery')
+        .order('created_at', { ascending: true })
+
+      if (pedidosActivosCadete && pedidosActivosCadete.length > 1) {
+        totalParadas = pedidosActivosCadete.length
+        const enCamino = pedidosActivosCadete.filter(p => p.estado === 'en_camino')
+
+        if (data.estado === 'en_camino') {
+          if (enCamino.length > 1) {
+            // Múltiples pedidos en camino simultáneamente
+            const indice = enCamino.findIndex(p => p.id === pedidoId)
+            if (indice > 0) {
+              paradaActual = indice + 1
+              paradasPrevias = indice
+              esProximaEntrega = false
+              cadeteOcupadoEnOtroViaje = true
+            } else {
+              paradaActual = 1
+              paradasPrevias = 0
+              esProximaEntrega = true
+              cadeteOcupadoEnOtroViaje = false
+            }
+          } else {
+            // Este pedido es el único en camino
+            paradaActual = 1
+            paradasPrevias = 0
+            esProximaEntrega = true
+            cadeteOcupadoEnOtroViaje = false
+          }
+        } else {
+          // El pedido está en 'listo' o 'en_cocina'
+          if (enCamino.length > 0) {
+            const indice = pedidosActivosCadete.findIndex(p => p.id === pedidoId)
+            paradaActual = indice >= 0 ? indice + 1 : totalParadas
+            paradasPrevias = Math.max(1, enCamino.length)
+            esProximaEntrega = false
+            cadeteOcupadoEnOtroViaje = true
+          } else {
+            const indice = pedidosActivosCadete.findIndex(p => p.id === pedidoId)
+            paradaActual = indice >= 0 ? indice + 1 : 1
+            paradasPrevias = indice > 0 ? indice : 0
+            esProximaEntrega = indice === 0
+            cadeteOcupadoEnOtroViaje = indice > 0
+          }
+        }
       }
     }
 
@@ -107,6 +152,10 @@ export async function GET(request: Request) {
       destino_coordenadas: data.coordenadas ?? null,
       cadete_gps_activo: gpsActivo,
       cadete_ocupado_en_otro_viaje: cadeteOcupadoEnOtroViaje,
+      paradas_previas: paradasPrevias,
+      total_paradas: totalParadas,
+      parada_actual: paradaActual,
+      es_proxima_entrega: esProximaEntrega,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },
       productos: data.productos ?? [],
       tipoEntrega: data.tipoEntrega ?? 'delivery',

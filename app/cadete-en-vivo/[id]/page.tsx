@@ -122,6 +122,10 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [cargando, setCargando]       = useState(true)
   const [error, setError]             = useState<string | null>(null)
   const [cadeteOcupadoEnOtroViaje, setCadeteOcupadoEnOtroViaje] = useState(false)
+  const [paradasPrevias, setParadasPrevias] = useState(0)
+  const [totalParadas, setTotalParadas]     = useState(1)
+  const [paradaActual, setParadaActual]     = useState(1)
+  const [esProximaEntrega, setEsProximaEntrega] = useState(true)
   const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
 
   // ── Fetch del pedido principal ──────────────────────────────────────────────
@@ -151,9 +155,17 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           observaciones: data.observaciones ?? '',
           costoEnvio: data.costoEnvio ?? 0,
           hora: data.hora ?? '',
+          paradas_previas: data.paradas_previas ?? 0,
+          total_paradas: data.total_paradas ?? 1,
+          parada_actual: data.parada_actual ?? 1,
+          es_proxima_entrega: data.es_proxima_entrega ?? true,
         } as unknown as Pedido)
         setProductos(data.productos || [])
         setCadeteOcupadoEnOtroViaje(Boolean(data.cadete_ocupado_en_otro_viaje))
+        setParadasPrevias(Number(data.paradas_previas ?? 0))
+        setTotalParadas(Number(data.total_paradas ?? 1))
+        setParadaActual(Number(data.parada_actual ?? 1))
+        setEsProximaEntrega(Boolean(data.es_proxima_entrega ?? true))
 
         // Sincronizar localStorage
         if (data.estado === 'entregado' || data.estado === 'cancelado') {
@@ -270,8 +282,32 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Overlay: Cadete en viaje previo antes de salir con este pedido */}
-      {cadeteOcupadoEnOtroViaje && !isEnCamino && (
+      {/* Overlay: Cadete con entregas previas en la zona */}
+      {paradasPrevias > 0 && !isTerminado ? (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+            <Bike size={22} className="animate-bounce" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black text-amber-900 dark:text-amber-200">
+              ¡{cadeteNombre} está realizando {paradasPrevias === 1 ? '1 entrega previa' : `${paradasPrevias} entregas previas`} en tu zona!
+            </h3>
+            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+              Tu pedido es la <strong>Parada #{paradaActual} de {totalParadas}</strong>. Podés seguir la ubicación del cadete en vivo en el mapa. Apenas se dirija a tu casa, te avisaremos.
+            </p>
+          </div>
+        </div>
+      ) : esProximaEntrega && isEnCamino && !gpsApagado ? (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <Bike size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black">¡{cadeteNombre} va directo a tu casa!</h3>
+            <p className="text-[11px] text-emerald-100">Tu domicilio es el próximo destino en su recorrido.</p>
+          </div>
+        </div>
+      ) : cadeteOcupadoEnOtroViaje && !isEnCamino ? (
         <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
@@ -285,10 +321,10 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             </p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Overlay: Cocina / Preparación */}
-      {isEnPreparacion && !cadeteOcupadoEnOtroViaje && (
+      {isEnPreparacion && !cadeteOcupadoEnOtroViaje && paradasPrevias === 0 && (
         <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
             <Flame size={22} className="animate-pulse" />
@@ -337,9 +373,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
               {isTerminado
                 ? '¡Pedido entregado!'
                 : isEnCamino
-                ? `¡${cadeteNombre} está en camino a tu dirección!`
+                ? (paradasPrevias > 0
+                    ? `¡${cadeteNombre} está en viaje con paradas previas!`
+                    : `¡${cadeteNombre} está en camino a tu dirección!`)
                 : cadeteOcupadoEnOtroViaje
-                ? `¡${cadeteNombre} está en otro viaje!`
+                ? `¡${cadeteNombre} está completando otra entrega!`
                 : isEnPreparacion
                 ? 'Preparando tu pedido'
                 : 'Procesando tu pedido'}
@@ -352,13 +390,32 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Cadete asignado */}
+      {/* Cadete asignado y estado del recorrido */}
       {pedido.cadete_nombre && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-500">Cadete asignado:</span>
-          <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+          <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs">
             <span>🛵</span>
             <span>{pedido.cadete_nombre}</span>
+          </span>
+        </div>
+      )}
+
+      {/* Indicador de Parada / Entrega Conjunta */}
+      {totalParadas > 1 && !isTerminado && (
+        <div className="mt-2.5 pt-2.5 border-t border-dashed border-gray-200 flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-gray-500">Recorrido del cadete:</span>
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs border ${
+            esProximaEntrega
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-amber-50 text-amber-800 border-amber-200'
+          }`}>
+            <span>📍</span>
+            <span>
+              {esProximaEntrega
+                ? 'Próxima parada (destino actual)'
+                : `Parada ${paradaActual} de ${totalParadas} (${paradasPrevias} ${paradasPrevias === 1 ? 'entrega antes' : 'entregas antes'})`}
+            </span>
           </span>
         </div>
       )}

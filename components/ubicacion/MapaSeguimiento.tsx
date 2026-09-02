@@ -51,36 +51,29 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const tiempoUltimoUpdateRef = useRef<number>(0)
   
   const [mapaListo, setMapaListo] = useState(false)
-  const [etaText, setEtaText] = useState<string | null>(null)
   const [distanciaRestanteKm, setDistanciaRestanteKm] = useState<number | null>(null)
   const [modoCamara, setModoCamara] = useState<ModoCamara>('todo')
   const modoCamaraRef = useRef<ModoCamara>('todo')
+
+  // Datos de entrega conjunta / paradas múltiples
+  const paradasPrevias = Number((pedido as any).paradas_previas ?? 0)
+  const totalParadas = Number((pedido as any).total_paradas ?? 1)
+  const paradaActual = Number((pedido as any).parada_actual ?? 1)
+  const esProximaEntrega = (pedido as any).es_proxima_entrega !== undefined 
+    ? Boolean((pedido as any).es_proxima_entrega) 
+    : (paradasPrevias === 0)
 
   useEffect(() => {
     modoCamaraRef.current = modoCamara
   }, [modoCamara])
 
-  // ── 1. Calcular ETA y Distancia en tiempo real ───────────────────────────────
+  // ── 1. Calcular distancia en tiempo real (sin ETA de minutos para no generar ansiedad) ──
   useEffect(() => {
     if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
       const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
       const distRuta = distDirecta * 1.3 // Factor de aproximación de calles
       setDistanciaRestanteKm(distRuta)
-
-      if (distRuta < 0.1) {
-        setEtaText('¡Llegando! (en la puerta)')
-      } else {
-        const minEstimados = Math.round(distRuta * 3 + 1)
-        const kmMostrados = distRuta.toFixed(1)
-
-        if (minEstimados <= 1) {
-          setEtaText(`Llegando en < 1 min (${kmMostrados} km)`)
-        } else {
-          setEtaText(`Llegando en ~${minEstimados} min (${kmMostrados} km)`)
-        }
-      }
     } else {
-      setEtaText(null)
       setDistanciaRestanteKm(null)
     }
   }, [pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.estado])
@@ -356,14 +349,17 @@ export default function MapaSeguimiento({ pedido }: Props) {
       // Actualizar rotación del faro y la moto en CSS
       aplicarRotacionAlElemento(rumboActual)
 
-      // 3. Acortar la polilínea de la ruta en vivo milisegundo a milisegundo
-      if (polylineRef.current.base && pedido.coordenadas) {
+      // 3. Acortar la polilínea de la ruta en vivo milisegundo a milisegundo (solo si es próxima entrega directa)
+      if (polylineRef.current.base && pedido.coordenadas && esProximaEntrega) {
         const rutaViva = [
           [latActual, lngActual],
           [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
         ]
         polylineRef.current.base.setLatLngs(rutaViva)
         polylineRef.current.dash.setLatLngs(rutaViva)
+      } else if (polylineRef.current.base && !esProximaEntrega) {
+        polylineRef.current.base.setLatLngs([])
+        polylineRef.current.dash.setLatLngs([])
       }
 
       // 4. Si la cámara está fijada en el cadete, acompañar suavemente a 60 FPS
@@ -378,7 +374,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
 
     animFrameRef.current = requestAnimationFrame(pasoGliding)
-  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud])
+  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega])
 
   // ── 5. Inicialización de Polilínea de Ruta ───────────────────────────────────
   useEffect(() => {
@@ -387,21 +383,23 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     let puntosRuta: [number, number][] = []
 
-    if (posicionAnimadaRef.current && pedido.coordenadas) {
-      puntosRuta = [
-        [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
-        [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
-      ]
-    } else if (pedido.cadete_coordenadas && pedido.coordenadas) {
-      puntosRuta = [
-        [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
-        [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
-      ]
-    } else if (pedido.coordenadas) {
-      puntosRuta = [
-        [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
-        [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
-      ]
+    if (esProximaEntrega) {
+      if (posicionAnimadaRef.current && pedido.coordenadas) {
+        puntosRuta = [
+          [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
+          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+        ]
+      } else if (pedido.cadete_coordenadas && pedido.coordenadas) {
+        puntosRuta = [
+          [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
+          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+        ]
+      } else if (pedido.coordenadas) {
+        puntosRuta = [
+          [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
+          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+        ]
+      }
     }
 
     if (puntosRuta.length >= 2) {
@@ -546,7 +544,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* Contenedor del Mapa Leaflet (100% absoluto) */}
       <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
 
-      {/* HUD Superior con ETA / Aviso de "En la puerta" */}
+      {/* HUD Superior con Estado Claro (Sin ETA numérico que genere ansiedad) */}
       {enLaPuerta ? (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
           <div className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-bounce border-2 border-white">
@@ -557,16 +555,25 @@ export default function MapaSeguimiento({ pedido }: Props) {
             </div>
           </div>
         </div>
-      ) : (
-        etaText && !esperandoGps && (
-          <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-            <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 border border-emerald-400/40">
-              <span className="text-base">🛵</span>
-              <span className="text-xs sm:text-sm font-black tracking-wide">{etaText}</span>
-            </div>
+      ) : paradasPrevias > 0 && !esperandoGps ? (
+        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
+          <div className="bg-amber-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 border border-amber-400/40">
+            <span className="text-sm">🛵</span>
+            <span className="text-xs sm:text-sm font-black tracking-wide">
+              Entrega previa en curso • Tu turno: Parada {paradaActual} de {totalParadas}
+            </span>
           </div>
-        )
-      )}
+        </div>
+      ) : esProximaEntrega && pedido.cadete_coordenadas && ['listo', 'en_camino'].includes(pedido.estado) && !esperandoGps ? (
+        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
+          <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 border border-emerald-400/40">
+            <span className="text-sm">🛵</span>
+            <span className="text-xs sm:text-sm font-black tracking-wide">
+              {pedido.cadete_nombre ? `${pedido.cadete_nombre} va directo a tu domicilio` : 'Repartidor en camino directo a tu domicilio'}
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       {/* HUD de Botones de Cámara Inteligente */}
       <div className="absolute top-3.5 right-3.5 z-[400] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
