@@ -66,11 +66,10 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   }
 
   const elementosFiltrados = elementosNavegacion.filter((item) => {
-    if (usuarioActivo?.rol === 'cadete') {
-      return item.href === '/cadeteria'
-    }
-    if (usuarioActivo?.rol !== 'admin' && item.href === '/dev-tools') {
-      return false
+    if (usuarioActivo?.rol !== 'admin') {
+      if (item.href === '/cadeteria' || item.href === '/dev-tools') {
+        return false
+      }
     }
     return true
   })

@@ -310,21 +310,10 @@ export default function PaginaCadeteria() {
   const { pedidos, cambiarEstado, dbEstado, configuracionOperativa, cadetes } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
-  const [configCargada, setConfigCargada] = useState(false)
-  const [portalHabilitadoLocal, setPortalHabilitadoLocal] = useState(true)
   const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
   const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
   const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: Pedido[] } | null>(null)
-
-  useEffect(() => {
-    if (configuracionOperativa) {
-      const data = configuracionOperativa as any
-      const habilitado = data?.portalCadeteriaHabilitado ?? data?.prioridades?.portalCadeteriaHabilitado ?? true
-      setPortalHabilitadoLocal(habilitado)
-      setConfigCargada(true)
-    }
-  }, [configuracionOperativa])
 
   // Estado GPS de los cadetes activos (para el admin)
   const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
@@ -592,12 +581,11 @@ export default function PaginaCadeteria() {
   }
 
   const esAdmin = usuarioActivo.rol === 'admin'
-  const portalHabilitado = configCargada
-    ? portalHabilitadoLocal
-    : ((configuracionOperativa as any)?.portalCadeteriaHabilitado ?? true)
-  const [bypassAdmin, setBypassAdmin] = useState(false)
 
-  if (!portalHabilitado && (!esAdmin || !bypassAdmin)) {
+  // Acceso EXCLUSIVO para Administradores.
+  // Cadetes, empleados y usuarios generales tienen el acceso web bloqueado.
+  // Deben gestionar repartos exclusivamente desde la App Móvil oficial (APK).
+  if (!esAdmin) {
     return (
       <div className="min-h-screen bg-chefsy-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
@@ -606,10 +594,10 @@ export default function PaginaCadeteria() {
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
-              Acceso Web Deshabilitado
+              Acceso Exclusivo para Administrador
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              El portal web se encuentra cerrado por administración. Los repartos y el rastreo deben gestionarse desde la <strong>App Oficial de Chefsy</strong>.
+              El portal web de cadetería está reservado exclusivamente para la administración de Chefsy. Los repartos y pedidos deben gestionarse desde la <strong>App Oficial de Cadetes</strong>.
             </p>
           </div>
           <div className="pt-2 flex flex-col gap-2.5">
@@ -620,21 +608,12 @@ export default function PaginaCadeteria() {
               <Download size={16} />
               <span>Descargar App de Cadete (APK)</span>
             </a>
-            {esAdmin ? (
-              <button
-                onClick={() => setBypassAdmin(true)}
-                className="text-xs text-chefsy-600 hover:text-chefsy-800 dark:text-chefsy-400 py-2 cursor-pointer font-bold border-t border-slate-100 dark:border-slate-800 mt-2"
-              >
-                🛠️ Ver pedidos como Administrador
-              </button>
-            ) : (
-              <button
-                onClick={() => cerrarSesion()}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-2 cursor-pointer font-medium"
-              >
-                Cerrar Sesión
-              </button>
-            )}
+            <button
+              onClick={() => cerrarSesion()}
+              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-2 cursor-pointer font-medium"
+            >
+              Cerrar Sesión / Ingresar como Admin
+            </button>
           </div>
         </div>
       </div>

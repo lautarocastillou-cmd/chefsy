@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarAuth } from '@/contexto/AuthContexto'
 import { cn } from '@/lib/utils'
 import { useState, useMemo } from 'react'
 import { esPedidoDelivery } from '@/lib/entrega'
@@ -34,6 +35,7 @@ export default function BottomNavMobile({
   const pathname = usePathname()
   const router = useRouter()
   const { pedidos, estadoTurno } = usarPedidos()
+  const { usuarioActivo } = usarAuth()
   const [menuMasAbierto, setMenuMasAbierto] = useState(false)
 
   const vibrar = (ms = 15) => {
@@ -76,14 +78,18 @@ export default function BottomNavMobile({
       badge: pedidosActivosCount > 0 ? pedidosActivosCount : null,
       badgeColor: 'bg-amber-500 text-white',
     },
-    {
-      id: 'cadeteria',
-      label: 'Cadetería',
-      href: '/cadeteria',
-      icon: Bike,
-      badge: enviosActivosCount > 0 ? enviosActivosCount : null,
-      badgeColor: 'bg-emerald-500 text-white',
-    },
+    ...(usuarioActivo?.rol === 'admin'
+      ? [
+          {
+            id: 'cadeteria',
+            label: 'Cadetería',
+            href: '/cadeteria',
+            icon: Bike,
+            badge: enviosActivosCount > 0 ? enviosActivosCount : null,
+            badgeColor: 'bg-emerald-500 text-white',
+          },
+        ]
+      : []),
     // Botón central Nuevo Pedido (renderizado especial)
     {
       id: 'nuevo',
