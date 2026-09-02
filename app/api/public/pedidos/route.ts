@@ -44,9 +44,25 @@ export async function GET(request: Request) {
       .eq('fecha', fechaHoy)
       .order('created_at', { ascending: false })
 
+    // Consultar estado del turno y monto base configurado para cadetes
+    const [turnoRes, configRes] = await Promise.all([
+      supabase.from('turnos').select('activo, tipo_turno').eq('id', 1).maybeSingle(),
+      supabase.from('configuracion_operativa').select('prioridades').eq('id', 1).maybeSingle()
+    ])
+
+    const turnoActivo = turnoRes.data?.activo ?? false
+    const prioridades = configRes.data?.prioridades || {}
+    const montoBaseConfigurado = Number(prioridades.montoBaseCadete ?? 4000)
+
+    // La base aplica desde que se inicia el turno (activo) O si el cadete ya tiene actividad hoy
+    const tieneActividad = (data && data.length > 0) || (extrasData && extrasData.length > 0)
+    const montoBaseEfectivo = (turnoActivo || tieneActividad) ? montoBaseConfigurado : 0
+
     return NextResponse.json({
       pedidos: data || [],
-      pagos_extras: extrasData || []
+      pagos_extras: extrasData || [],
+      monto_base: montoBaseEfectivo,
+      turno_activo: turnoActivo,
     })
   } catch (error) {
     console.error('[API Pública Pedidos GET] Error:', error)
