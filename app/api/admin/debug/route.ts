@@ -16,18 +16,18 @@ export async function GET(request: Request) {
   if (accion === 'tablas') {
     const supabaseAdmin = obtenerSupabaseAdmin()
     const tablasAProbar = [
-      { id: 'pedidos', nombre: 'Pedidos' },
-      { id: 'turnos', nombre: 'Turnos' },
-      { id: 'cadetes', nombre: 'Cadetes' },
-      { id: 'stock_insumos', nombre: 'Stock Insumos' },
-      { id: 'usuarios', nombre: 'Usuarios' },
+      { id: 'pedidos', nombre: 'Pedidos', columna: 'id' },
+      { id: 'turnos', nombre: 'Turnos', columna: 'id' },
+      { id: 'cadetes', nombre: 'Cadetes', columna: 'id' },
+      { id: 'stock_insumos', nombre: 'Stock Insumos', columna: 'id' },
+      { id: 'usuarios', nombre: 'Usuarios', columna: 'usuario' },
     ]
 
     const resultados = await Promise.all(
-      tablasAProbar.map(async ({ id, nombre }) => {
+      tablasAProbar.map(async ({ id, nombre, columna }) => {
         const tInicio = performance.now()
         try {
-          const { error } = await supabaseAdmin.from(id).select('id').limit(1)
+          const { error } = await supabaseAdmin.from(id).select(columna).limit(1)
           const latenciaMs = Math.round(performance.now() - tInicio)
           if (error) {
             return { id, nombre, ok: false, latenciaMs, error: error.message }

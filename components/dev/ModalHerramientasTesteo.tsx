@@ -1349,14 +1349,21 @@ export default function ModalHerramientasTesteo() {
                           key={t.id}
                           className="bg-slate-950/60 border border-white/5 px-2.5 py-1.5 rounded-xl flex items-center justify-between"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span
-                              className={`w-2 h-2 rounded-full ${t.ok ? 'bg-emerald-400' : 'bg-rose-500 animate-ping'}`}
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                t.ok ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]'
+                              }`}
                             />
-                            <span className="font-semibold text-slate-200">{t.nombre}</span>
+                            <span className="font-semibold text-slate-200 truncate">{t.nombre}</span>
+                            {!t.ok && t.error && (
+                              <span className="text-[10px] text-rose-400 truncate max-w-[140px]" title={t.error}>
+                                ({t.error})
+                              </span>
+                            )}
                           </div>
                           <span
-                            className={`font-mono text-[11px] font-bold ${
+                            className={`font-mono text-[11px] font-bold shrink-0 ${
                               t.latenciaMs < 50
                                 ? 'text-emerald-400'
                                 : t.latenciaMs < 120
