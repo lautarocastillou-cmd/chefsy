@@ -14,23 +14,14 @@ interface PropsAtajo {
 export function useAtajoNuevoPedido({ modalAbierto = false, onAbrirModal }: PropsAtajo = {}) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Detectar teclas < y > por todos sus caracteres, códigos físicos y keyCode en Windows/Mac/Linux
+      // Detectar exclusivamente teclas < y >
       const esTeclaMenorMayor = 
         e.key === '<' || 
         e.key === '>' || 
-        e.code === 'IntlBackslash' || 
-        e.code === 'Backslash' || 
-        e.code === 'Backquote' ||
-        e.code === 'Comma' ||
-        e.code === 'Period' ||
-        e.keyCode === 226 ||
-        e.keyCode === 188 ||
-        e.keyCode === 190 ||
-        e.keyCode === 60 ||
-        e.keyCode === 62;
+        e.code === 'IntlBackslash'
 
-      // Acceso directo universal Ctrl + K
-      const esBuscarAlternativo = e.key.toLowerCase() === 'k' || e.code === 'KeyK' || e.keyCode === 75;
+      // Acceso directo oficial universal Ctrl + K
+      const esBuscarAlternativo = e.key.toLowerCase() === 'k' || e.code === 'KeyK' || e.keyCode === 75
 
       if ((e.ctrlKey || e.metaKey) && (esTeclaMenorMayor || esBuscarAlternativo)) {
         // Si el formulario de pedido ya está abierto en pantalla (creando o editando), no hacer nada

@@ -97,13 +97,15 @@ export default function ModalHerramientasTesteo() {
   // Listener global de atajo de teclado: Ctrl + , (Control + Coma)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+      const esComa = e.key === ',' || e.code === 'Comma' || e.keyCode === 188
+      if ((e.ctrlKey || e.metaKey) && esComa) {
         e.preventDefault()
+        e.stopPropagation()
         setAbierto((prev) => !prev)
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [])
 
   // ── Lógica de Arrastre (Drag) sin Backdrop a 60 FPS ───────────────────────
