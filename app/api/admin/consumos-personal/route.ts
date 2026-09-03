@@ -144,7 +144,12 @@ export async function POST(request: Request) {
           .eq('id', id)
 
         if (error) {
-          const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+          console.error('[Consumos] Error en update marcar_saldado:', error)
+        }
+
+        // Mantener también sincronizado el fallback en configuracion_operativa
+        const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+        if (consumosActuales.length > 0) {
           const actualizados = consumosActuales.map((c) =>
             c.id === id ? { ...c, saldado: Boolean(saldado) } : c
           )
@@ -167,7 +172,12 @@ export async function POST(request: Request) {
           .eq('tipo_pago', 'anotado')
 
         if (error) {
-          const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+          console.error('[Consumos] Error en update saldar_persona:', error)
+        }
+
+        // Mantener también sincronizado el fallback en configuracion_operativa
+        const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+        if (consumosActuales.length > 0) {
           const actualizados = consumosActuales.map((c) =>
             c.persona_nombre.toLowerCase() === persona_nombre.trim().toLowerCase() &&
             c.tipo_pago === 'anotado'
@@ -190,7 +200,12 @@ export async function POST(request: Request) {
           .eq('id', id)
 
         if (error) {
-          const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+          console.error('[Consumos] Error en delete eliminar:', error)
+        }
+
+        // Mantener también sincronizado el fallback en configuracion_operativa
+        const consumosActuales = await leerConsumosFallback(supabaseAdmin)
+        if (consumosActuales.length > 0) {
           const actualizados = consumosActuales.filter((c) => c.id !== id)
           await guardarConsumosFallback(supabaseAdmin, actualizados)
         }

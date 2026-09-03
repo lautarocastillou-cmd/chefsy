@@ -115,14 +115,18 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
     })
 
     try {
-      await fetch('/api/admin/consumos-personal', {
+      const res = await fetch('/api/admin/consumos-personal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'marcar_saldado', id, saldado }),
       })
+      if (!res.ok) {
+        throw new Error('El servidor respondió con error')
+      }
       toast.success(saldado ? '✅ Marcado como saldado' : '↩️ Marcado como pendiente')
     } catch (err) {
       console.error('[Consumos] Error al saldar:', err)
+      toast.error('Error al guardar en base de datos')
       refrescarConsumos()
     }
   }
@@ -140,14 +144,18 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
     })
 
     try {
-      await fetch('/api/admin/consumos-personal', {
+      const res = await fetch('/api/admin/consumos-personal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'saldar_persona', persona_nombre: personaNombre }),
       })
+      if (!res.ok) {
+        throw new Error('El servidor respondió con error')
+      }
       toast.success(`🎉 Se saldaron todos los consumos anotados de ${personaNombre}`)
     } catch (err) {
       console.error('[Consumos] Error al saldar persona:', err)
+      toast.error('Error al saldar en base de datos')
       refrescarConsumos()
     }
   }
@@ -161,14 +169,18 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
     })
 
     try {
-      await fetch('/api/admin/consumos-personal', {
+      const res = await fetch('/api/admin/consumos-personal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'eliminar', id }),
       })
+      if (!res.ok) {
+        throw new Error('El servidor respondió con error')
+      }
       toast.success('🗑️ Registro de consumo eliminado')
     } catch (err) {
       console.error('[Consumos] Error al eliminar:', err)
+      toast.error('Error al eliminar en base de datos')
       refrescarConsumos()
     }
   }
