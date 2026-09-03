@@ -37,6 +37,7 @@ import {
   ProveedorTemaNotificacion,
   reproducirSonidoNotificacion,
   reproducirSonidoCampanaCocina,
+  reproducirSonidoEntregaExitosa,
 } from './TemaNotificacionContexto'
 import { usarCatalogo, ProveedorCatalogo } from './CatalogoContexto'
 import { ProveedorConsumosPersonal } from './ConsumosPersonalContexto'
@@ -398,17 +399,27 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
               let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
               if (nuevo.estado === 'listo') {
                 mensaje = `🛵 ¡El pedido de ${nuevo.cliente} está listo para llevar!`
+              } else if (nuevo.estado === 'entregado') {
+                mensaje = `🛵 ¡Entrega completada! Pedido de ${nuevo.cliente} entregado.`
               }
               agregarNotificacion(mensaje, nuevo.estado === 'entregado' ? 'success' : 'info')
-              reproducirSonidoNotificacion()
+              if (nuevo.estado === 'entregado') {
+                reproducirSonidoEntregaExitosa()
+              } else {
+                reproducirSonidoNotificacion()
+              }
             }
           }
 
           if (!esCadete && !esVistaCadeteria) {
             if (nuevo.estado === 'entregado') {
               if (!esCambioReciente) {
-                agregarNotificacion(`¡El pedido de ${nuevo.cliente} fue entregado! 🛵`, 'success')
-                reproducirSonidoNotificacion()
+                const cadeteTexto = nuevo.cadete_nombre ? ` (Cadete: ${nuevo.cadete_nombre})` : ''
+                agregarNotificacion(
+                  `🛵 ¡Pedido entregado! ${nuevo.cliente} recibió su pedido${cadeteTexto}.`,
+                  'success'
+                )
+                reproducirSonidoEntregaExitosa()
               }
             } else {
               if (!esCambioReciente) {

@@ -1,24 +1,22 @@
-'use client'
-// ─────────────────────────────────────────────────────
-// hooks/usePedidosRealtime.ts
 // Responsabilidad única: carga inicial de pedidos con SWR
-// y suscripción al canal realtime para recibir cambios
-// en tiempo real de otros dispositivos, mutando el caché.
-// ─────────────────────────────────────────────────────
+// y suscripción a cambios en tiempo real con Supabase Realtime.
+// Aísla la sincronización de datos de la lógica de negocio.
 
-import { useState, useEffect, MutableRefObject } from 'react'
+'use client'
+
+import { useState, useEffect, useRef, MutableRefObject } from 'react'
 import useSWR from 'swr'
 import { Pedido } from '@/tipos'
 import { obtenerPedidosActivos, suscribirAPedidos } from '@/servicios/supabase/pedidos'
 
-type AccionDespachar =
+export type AccionDespachar =
   | { tipo: 'CARGAR_PEDIDOS'; pedidos: Pedido[] }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
   | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido }
 
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
-  prevPedidosRef: MutableRefObject<Pedido[]>
+  prevPedidosRef?: MutableRefObject<Pedido[]>
   cambiosLocalesRef: MutableRefObject<Record<string, number>>
   eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
   habilitado?: boolean
@@ -41,6 +39,9 @@ export function usePedidosRealtime({
     habilitado ? 'cargando' : 'conectado'
   )
 
+  // Ref interna para comparar si la data de SWR cambió, SIN mutar prevPedidosRef del contexto
+  const swrPrevRef = useRef<Pedido[]>([])
+
   // 1) Carga inicial y caché con SWR (solo se ejecuta si es staff)
   const { data: pedidosSWR, error, mutate } = useSWR(
     habilitado ? 'pedidosActivos' : null,
@@ -48,13 +49,12 @@ export function usePedidosRealtime({
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: 30000, // Heartbeat de seguridad cada 30s para pantallas de cocina y mostrador
-      dedupingInterval: 4000,
+      refreshInterval: 10000,
+      dedupingInterval: 3000,
       fallbackData: [],
     }
   )
 
-  // Sincronizar SWR con el estado local
   useEffect(() => {
     if (!habilitado) {
       setEstaListo(true)
@@ -63,10 +63,8 @@ export function usePedidosRealtime({
     }
 
     if (error) {
-      console.error('[SWR] Error cargando pedidos:', error)
       setDbEstado('desconectado')
-      setEstaListo(true)
-      return
+      console.error('[SWR] Error cargando pedidos:', error)
     }
 
     if (pedidosSWR) {
@@ -81,7 +79,7 @@ export function usePedidosRealtime({
       const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
 
       // Evitar bucle infinito de re-render si los pedidos no cambiaron
-      const prev = prevPedidosRef.current || []
+      const prev = swrPrevRef.current
       const sonIguales = prev.length === pedidosSWRFiltrados.length &&
         prev.every((p, i) => {
           const s = pedidosSWRFiltrados[i]
@@ -89,13 +87,13 @@ export function usePedidosRealtime({
         })
 
       if (!sonIguales) {
+        swrPrevRef.current = pedidosSWRFiltrados
         despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
-        prevPedidosRef.current = pedidosSWRFiltrados
       }
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, prevPedidosRef, eliminadosLocalesRef, habilitado])
+  }, [pedidosSWR, error, despachar, eliminadosLocalesRef, habilitado])
 
   // 2) Suscripción a Supabase Realtime (solo si está habilitado y autenticado)
   useEffect(() => {
@@ -115,7 +113,7 @@ export function usePedidosRealtime({
 
         if (archivado) {
           despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
-          prevPedidosRef.current = prevPedidosRef.current.filter((p) => p.id !== pedido.id)
+          swrPrevRef.current = swrPrevRef.current.filter((p) => p.id !== pedido.id)
           mutate((current) => current ? current.filter((p) => p.id !== pedido.id) : [], false)
         } else {
           despachar({ tipo: 'UPSERT_PEDIDO', pedido })
@@ -130,7 +128,7 @@ export function usePedidosRealtime({
       },
       (id) => {
         despachar({ tipo: 'ELIMINAR_PEDIDO', id })
-        prevPedidosRef.current = prevPedidosRef.current.filter((p) => p.id !== id)
+        swrPrevRef.current = swrPrevRef.current.filter((p) => p.id !== id)
         mutate((current) => current ? current.filter((p) => p.id !== id) : [], false)
       }
     )

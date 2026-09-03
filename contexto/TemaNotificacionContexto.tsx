@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell } from 'lucide-react'
+import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell, Bike } from 'lucide-react'
 
 export interface Notificacion {
   id: string
@@ -27,11 +27,18 @@ export interface ValorContextoTemaNotificacion {
 
 const ContextoTemaNotificacion = createContext<ValorContextoTemaNotificacion | undefined>(undefined)
 
-// Sonidos
+// ── Sonidos de Notificaciones con reactivación de AudioContext ───────────────
+
 export function reproducirSonidoNotificacion() {
   if (typeof window === 'undefined') return
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
     const playTone = (freq: number, start: number, duration: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -53,7 +60,13 @@ export function reproducirSonidoNotificacion() {
 export function reproducirSonidoCampanaCocina() {
   if (typeof window === 'undefined') return
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
     const playTone = (freq: number, start: number, duration: number, volume: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -75,6 +88,41 @@ export function reproducirSonidoCampanaCocina() {
     playTone(1975.53, t2, 0.6, 0.08)
   } catch (e) {}
 }
+
+/**
+ * Sonido distintivo para cuando un pedido es entregado con éxito por el cadete.
+ * Tono armónico ascendente y brillante (D5 -> F#5 -> A5).
+ */
+export function reproducirSonidoEntregaExitosa() {
+  if (typeof window === 'undefined') return
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
+    const playTone = (freq: number, start: number, duration: number, volume: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, start)
+      gain.gain.setValueAtTime(volume, start)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + duration)
+    }
+    const t = ctx.currentTime
+    playTone(587.33, t, 0.18, 0.16)
+    playTone(739.99, t + 0.09, 0.20, 0.18)
+    playTone(880.00, t + 0.18, 0.40, 0.20)
+  } catch (e) {}
+}
+
+// ── Proveedor de Tema y Notificaciones ─────────────────────────────────────
 
 export function ProveedorTemaNotificacion({ children }: { children: ReactNode }) {
   const [modoOscuro, setModoOscuro] = useState(false)
@@ -111,15 +159,27 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
     tipo: 'info' | 'success' | 'warning' = 'success',
     accion?: { etiqueta: string; alHacerClick: () => void }
   ) => {
+    // Si la ventana está en segundo plano y hay permisos de escritorio, notificar al sistema nativo
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted' &&
+      document.visibilityState !== 'visible'
+    ) {
+      try {
+        new Notification('Chefsy', {
+          body: mensaje.replace(/[🛵🔔💵📍💬]/g, '').trim(),
+          icon: '/logo.jpg',
+        })
+      } catch {}
+    }
+
     setNotificaciones((prev) => {
       // Evitar notificaciones duplicadas idénticas activas en pantalla
       if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
         return prev
       }
       const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-      setTimeout(() => {
-        setNotificaciones((p) => p.filter((n) => n.id !== id))
-      }, 6000)
       return [...prev, { id, mensaje, tipo, accion }]
     })
   }
@@ -144,6 +204,127 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
   )
 }
 
+// ── Componente Toast individual moderno con pausa onHover ──────────────────
+
+function ToastItem({
+  notificacion: n,
+  onEliminar,
+}: {
+  notificacion: Notificacion
+  onEliminar: (id: string) => void
+}) {
+  const [pausado, setPausado] = useState(false)
+  const duracionMs = n.accion ? 4800 : 3800
+
+  useEffect(() => {
+    if (pausado) return
+    const timer = setTimeout(() => {
+      onEliminar(n.id)
+    }, duracionMs)
+    return () => clearTimeout(timer)
+  }, [pausado, n.id, onEliminar, duracionMs])
+
+  const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
+
+  const Icono = esEntrega
+    ? Bike
+    : n.tipo === 'success'
+    ? CheckCircle2
+    : n.tipo === 'warning'
+    ? AlertTriangle
+    : Bell
+
+  const badgeEstilo = esEntrega
+    ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
+    : n.tipo === 'success'
+    ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
+    : n.tipo === 'warning'
+    ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30'
+    : 'text-sky-400 bg-sky-500/15 border border-sky-500/30'
+
+  const barraColor = esEntrega
+    ? 'from-emerald-500 to-teal-400'
+    : n.tipo === 'success'
+    ? 'from-emerald-500 to-emerald-400'
+    : n.tipo === 'warning'
+    ? 'from-amber-500 to-amber-400'
+    : 'from-sky-500 to-sky-400'
+
+  const etiquetaCategoria = esEntrega
+    ? 'PEDIDO ENTREGADO'
+    : n.tipo === 'success'
+    ? 'ÉXITO'
+    : n.tipo === 'warning'
+    ? 'AVISO'
+    : 'NOVEDAD'
+
+  return (
+    <div
+      onMouseEnter={() => setPausado(true)}
+      onMouseLeave={() => setPausado(false)}
+      className="relative overflow-hidden bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/80 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-all duration-200 transform hover:scale-[1.01] animate-in slide-in-from-right-5 fade-in-0 duration-200 select-none"
+    >
+      {/* Icono temático */}
+      <div className={`p-2 rounded-xl shrink-0 ${badgeEstilo}`}>
+        <Icono size={17} strokeWidth={2.2} />
+      </div>
+
+      {/* Contenido del texto */}
+      <div className="flex-1 min-w-0 pr-1 text-left">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            {etiquetaCategoria}
+          </span>
+          {pausado && (
+            <span className="text-[9px] text-slate-500 font-medium">
+              (pausado)
+            </span>
+          )}
+        </div>
+        <p className="text-xs sm:text-[13px] font-medium text-slate-100 mt-1 leading-snug">
+          {n.mensaje}
+        </p>
+
+        {/* Botón de acción opcional (ej: Deshacer) */}
+        {n.accion && (
+          <button
+            type="button"
+            onClick={() => {
+              n.accion?.alHacerClick()
+              onEliminar(n.id)
+            }}
+            className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <RotateCcw size={11} />
+            <span>{n.accion.etiqueta}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Botón de descartar */}
+      <button
+        type="button"
+        onClick={() => onEliminar(n.id)}
+        className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 shrink-0 -mr-1 cursor-pointer"
+        title="Cerrar notificación"
+      >
+        <X size={14} />
+      </button>
+
+      {/* Barra de progreso animada al pie */}
+      <div
+        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor}`}
+        style={{
+          animation: `toast-progress ${duracionMs}ms linear forwards`,
+          animationPlayState: pausado ? 'paused' : 'running',
+        }}
+      />
+    </div>
+  )
+}
+
+// ── Contenedor alineado a la DERECHA ─────────────────────────────────────────
+
 function ContenedorToasts({
   notificaciones,
   onEliminar,
@@ -159,71 +340,10 @@ function ContenedorToasts({
           to { width: 0%; }
         }
       `}</style>
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 max-w-sm w-full px-4 sm:px-0">
-        {notificaciones.map((n) => {
-          const Icono = {
-            success: CheckCircle2,
-            warning: AlertTriangle,
-            info: Bell
-          }[n.tipo] || Bell
-
-          const colorTema = {
-            success: 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-500',
-            warning: 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-500',
-            info: 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-500',
-          }[n.tipo] || 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-500'
-
-          return (
-            <div
-              key={n.id}
-              className="relative overflow-hidden bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-zinc-800 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.25)] rounded-2xl p-4 flex gap-3.5 items-start transition-all duration-350 transform hover:scale-[1.02] border-l-4"
-              style={{
-                borderLeftColor: n.tipo === 'success' ? '#10B981' : n.tipo === 'warning' ? '#F59E0B' : '#3B82F6'
-              }}
-            >
-              <div className={`p-2 rounded-xl shrink-0 ${colorTema}`}>
-                <Icono size={18} />
-              </div>
-              
-              <div className="flex-1 min-w-0 pr-1 text-left">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  {n.tipo === 'success' ? 'Éxito' : n.tipo === 'warning' ? 'Advertencia' : 'Información'}
-                </span>
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1 leading-relaxed">
-                  {n.mensaje}
-                </p>
-                {n.accion && (
-                  <button
-                    onClick={() => {
-                      n.accion?.alHacerClick()
-                      onEliminar(n.id)
-                    }}
-                    className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-black text-sky-700 hover:text-sky-800 bg-sky-50 dark:bg-sky-950/30 dark:text-sky-400 hover:bg-sky-100 px-2.5 py-1.5 rounded-lg transition-colors shadow-sm"
-                  >
-                    <RotateCcw size={10} /> {n.accion.etiqueta}
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={() => onEliminar(n.id)}
-                className="text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800/50 shrink-0 -mr-1"
-              >
-                <X size={14} />
-              </button>
-
-              {/* Barra de progreso de autodestrucción */}
-              <div 
-                className={`absolute bottom-0 left-0 h-[3px] ${
-                  n.tipo === 'success' ? 'bg-emerald-500' : n.tipo === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-                }`}
-                style={{ 
-                  animation: 'toast-progress 6000ms linear forwards' 
-                }} 
-              />
-            </div>
-          )
-        })}
+      <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none">
+        {notificaciones.map((n) => (
+          <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
+        ))}
       </div>
     </>
   )
