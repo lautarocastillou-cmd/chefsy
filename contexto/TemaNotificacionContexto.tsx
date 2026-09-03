@@ -1,7 +1,15 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell, Bike } from 'lucide-react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react'
+import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell, Bike, Trash2 } from 'lucide-react'
 
 export interface Notificacion {
   id: string
@@ -23,6 +31,7 @@ export interface ValorContextoTemaNotificacion {
     accion?: { etiqueta: string; alHacerClick: () => void }
   ) => void
   eliminarNotificacion: (id: string) => void
+  eliminarTodasNotificaciones: () => void
 }
 
 const ContextoTemaNotificacion = createContext<ValorContextoTemaNotificacion | undefined>(undefined)
@@ -89,10 +98,6 @@ export function reproducirSonidoCampanaCocina() {
   } catch (e) {}
 }
 
-/**
- * Sonido distintivo para cuando un pedido es entregado con éxito por el cadete.
- * Tono armónico ascendente y brillante (D5 -> F#5 -> A5).
- */
 export function reproducirSonidoEntregaExitosa() {
   if (typeof window === 'undefined') return
   try {
@@ -128,7 +133,6 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
   const [modoOscuro, setModoOscuro] = useState(false)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
 
-  // Cargar tema
   useEffect(() => {
     const temaGuardado = localStorage.getItem('chefsy-tema')
     if (temaGuardado === 'dark') {
@@ -140,7 +144,7 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
     }
   }, [])
 
-  const alternarModoOscuro = () => {
+  const alternarModoOscuro = useCallback(() => {
     setModoOscuro((prev) => {
       const nuevo = !prev
       if (nuevo) {
@@ -152,41 +156,48 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       }
       return nuevo
     })
-  }
+  }, [])
 
-  const agregarNotificacion = (
-    mensaje: string,
-    tipo: 'info' | 'success' | 'warning' = 'success',
-    accion?: { etiqueta: string; alHacerClick: () => void }
-  ) => {
-    // Si la ventana está en segundo plano y hay permisos de escritorio, notificar al sistema nativo
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      Notification.permission === 'granted' &&
-      document.visibilityState !== 'visible'
-    ) {
-      try {
-        new Notification('Chefsy', {
-          body: mensaje.replace(/[🛵🔔💵📍💬]/g, '').trim(),
-          icon: '/logo.jpg',
-        })
-      } catch {}
-    }
-
-    setNotificaciones((prev) => {
-      // Evitar notificaciones duplicadas idénticas activas en pantalla
-      if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
-        return prev
+  const agregarNotificacion = useCallback(
+    (
+      mensaje: string,
+      tipo: 'info' | 'success' | 'warning' = 'success',
+      accion?: { etiqueta: string; alHacerClick: () => void }
+    ) => {
+      // Si la ventana está en segundo plano y hay permisos de escritorio, notificar al sistema nativo
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        Notification.permission === 'granted' &&
+        document.visibilityState !== 'visible'
+      ) {
+        try {
+          new Notification('Chefsy', {
+            body: mensaje.replace(/[🛵🔔💵📍💬]/g, '').trim(),
+            icon: '/logo.jpg',
+          })
+        } catch {}
       }
-      const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-      return [...prev, { id, mensaje, tipo, accion }]
-    })
-  }
 
-  const eliminarNotificacion = (id: string) => {
+      setNotificaciones((prev) => {
+        // Evitar duplicadas idénticas activas simultáneamente
+        if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
+          return prev
+        }
+        const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+        return [...prev, { id, mensaje, tipo, accion }]
+      })
+    },
+    []
+  )
+
+  const eliminarNotificacion = useCallback((id: string) => {
     setNotificaciones((prev) => prev.filter((n) => n.id !== id))
-  }
+  }, [])
+
+  const eliminarTodasNotificaciones = useCallback(() => {
+    setNotificaciones([])
+  }, [])
 
   return (
     <ContextoTemaNotificacion.Provider
@@ -196,15 +207,20 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
         notificaciones,
         agregarNotificacion,
         eliminarNotificacion,
+        eliminarTodasNotificaciones,
       }}
     >
       {children}
-      <ContenedorToasts notificaciones={notificaciones} onEliminar={eliminarNotificacion} />
+      <ContenedorToasts
+        notificaciones={notificaciones}
+        onEliminar={eliminarNotificacion}
+        onEliminarTodas={eliminarTodasNotificaciones}
+      />
     </ContextoTemaNotificacion.Provider>
   )
 }
 
-// ── Componente Toast individual moderno con pausa onHover ──────────────────
+// ── Toast Individual con Sincronización rAF (60 FPS sin bugs de hover) ──────
 
 function ToastItem({
   notificacion: n,
@@ -213,16 +229,41 @@ function ToastItem({
   notificacion: Notificacion
   onEliminar: (id: string) => void
 }) {
+  const duracionTotal = n.accion ? 5000 : 3800
+  const tiempoRestanteRef = useRef(duracionTotal)
+  const [porcentaje, setPorcentaje] = useState(100)
   const [pausado, setPausado] = useState(false)
-  const duracionMs = n.accion ? 4800 : 3800
+  const pausadoRef = useRef(false)
+  pausadoRef.current = pausado
 
   useEffect(() => {
-    if (pausado) return
-    const timer = setTimeout(() => {
-      onEliminar(n.id)
-    }, duracionMs)
-    return () => clearTimeout(timer)
-  }, [pausado, n.id, onEliminar, duracionMs])
+    let animationFrameId: number
+    let ultimoTimestamp = performance.now()
+
+    const step = (timestamp: number) => {
+      const delta = timestamp - ultimoTimestamp
+      ultimoTimestamp = timestamp
+
+      if (!pausadoRef.current) {
+        tiempoRestanteRef.current -= delta
+        const pct = Math.max(0, (tiempoRestanteRef.current / duracionTotal) * 100)
+        setPorcentaje(pct)
+
+        if (tiempoRestanteRef.current <= 0) {
+          onEliminar(n.id)
+          return
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(step)
+    }
+
+    animationFrameId = requestAnimationFrame(step)
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [n.id, duracionTotal, onEliminar])
 
   const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
 
@@ -269,14 +310,14 @@ function ToastItem({
         <Icono size={17} strokeWidth={2.2} />
       </div>
 
-      {/* Contenido del texto */}
+      {/* Contenido */}
       <div className="flex-1 min-w-0 pr-1 text-left">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
             {etiquetaCategoria}
           </span>
           {pausado && (
-            <span className="text-[9px] text-slate-500 font-medium">
+            <span className="text-[9px] text-amber-400/90 font-bold tracking-tight">
               (pausado)
             </span>
           )}
@@ -285,7 +326,7 @@ function ToastItem({
           {n.mensaje}
         </p>
 
-        {/* Botón de acción opcional (ej: Deshacer) */}
+        {/* Botón de acción (ej: Deshacer) */}
         {n.accion && (
           <button
             type="button"
@@ -311,41 +352,52 @@ function ToastItem({
         <X size={14} />
       </button>
 
-      {/* Barra de progreso animada al pie */}
+      {/* Barra de progreso sincronizada al 100% con JS (sin bugs de CSS) */}
       <div
-        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor}`}
+        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor} transition-[width] ease-linear`}
         style={{
-          animation: `toast-progress ${duracionMs}ms linear forwards`,
-          animationPlayState: pausado ? 'paused' : 'running',
+          width: `${porcentaje}%`,
         }}
       />
     </div>
   )
 }
 
-// ── Contenedor alineado a la DERECHA ─────────────────────────────────────────
+// ── Contenedor alineado a la DERECHA con Botón 'Borrar todas' (>3 notis) ─────
 
 function ContenedorToasts({
   notificaciones,
   onEliminar,
+  onEliminarTodas,
 }: {
   notificaciones: Notificacion[]
   onEliminar: (id: string) => void
+  onEliminarTodas: () => void
 }) {
   return (
-    <>
-      <style>{`
-        @keyframes toast-progress {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
-      <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none">
+    <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none transition-all duration-300 ease-out">
+      {/* Botón flotante 'Borrar todas' si hay más de 3 notificaciones */}
+      {notificaciones.length > 3 && (
+        <div className="flex justify-end pb-0.5 pointer-events-auto transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-3 duration-250">
+          <button
+            type="button"
+            onClick={onEliminarTodas}
+            className="group flex items-center gap-1.5 bg-[#0f172a] hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-white/15 hover:border-rose-500/50 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-2xl shadow-black/90 transition-all duration-200 cursor-pointer active:scale-95"
+            title="Descartar todas las notificaciones activas"
+          >
+            <Trash2 size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
+            <span>Borrar todas ({notificaciones.length})</span>
+          </button>
+        </div>
+      )}
+
+      {/* Lista de Notificaciones activas con límite de scroll si hay muchas */}
+      <div className="flex flex-col gap-2.5 max-h-[75vh] overflow-y-auto no-scrollbar pr-0.5 transition-all duration-300 ease-out">
         {notificaciones.map((n) => (
           <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
         ))}
       </div>
-    </>
+    </div>
   )
 }
 
