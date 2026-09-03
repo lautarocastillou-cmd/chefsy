@@ -266,51 +266,14 @@ export default function TiendaV2() {
         </div>
       </header>
 
-      {/* ── BANNER GIGANTE DE PROMOS (Reemplaza el texto viejo) ───────────── */}
+      {/* ── BANNER GIGANTE DE PROMOS (Limpio, sin textos invasivos) ─────── */}
       <main className="pb-32">
         <BannerGigantePromos
           onSeleccionarCategoria={(catId) => setCategoriaSeleccionada(catId)}
         />
 
-        {/* ── Barra de Categorías en Píldoras ───────────────────────────────── */}
-        <section className="sticky top-[69px] md:top-[73px] z-30 bg-[#07090E]/95 backdrop-blur-md border-y border-white/5 py-3 px-4 sm:px-6 shadow-sm">
-          <div className="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <button
-              type="button"
-              onClick={() => setCategoriaSeleccionada(null)}
-              className={cn(
-                'px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer flex items-center gap-1.5',
-                categoriaSeleccionada === null
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-102'
-                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/5'
-              )}
-            >
-              <span>🔥 Todos</span>
-            </button>
-
-            {categoriasActivas.map((cat) => {
-              const activa = categoriaSeleccionada === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategoriaSeleccionada(cat.id)}
-                  className={cn(
-                    'px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer flex items-center gap-1.5',
-                    activa
-                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-102'
-                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/5'
-                  )}
-                >
-                  <span>{cat.nombre}</span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-
         {/* ── Catálogo de Productos ────────────────────────────────────────── */}
-        <section id="catalogo-productos" className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        <section id="catalogo-productos" className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
