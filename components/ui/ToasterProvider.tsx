@@ -8,18 +8,27 @@ export default function ToasterProvider() {
       position="bottom-center"
       gutter={8}
       containerStyle={{
-        bottom: 40,
+        bottom: 36,
+        left: 0,
+        right: 0,
+        margin: '0 auto',
+        display: 'flex',
+        justifyContent: 'center',
+        zIndex: 999999,
       }}
       toastOptions={{
         duration: 2200,
         style: {
-          background: '#0f172a',
+          background: '#0b1120',
           color: '#f8fafc',
-          border: '1px solid rgba(255, 255, 255, 0.14)',
-          borderRadius: '16px',
-          padding: '10px 18px',
+          border: '1px solid rgba(255, 255, 255, 0.16)',
+          borderRadius: '9999px',
+          padding: '10px 22px',
           fontSize: '13px',
           fontWeight: '600',
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+          margin: '0 auto',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
         },
         success: {
