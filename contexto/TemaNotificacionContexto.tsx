@@ -6,7 +6,6 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useRef,
   ReactNode,
 } from 'react'
 import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell, Bike, Trash2 } from 'lucide-react'
@@ -36,24 +35,37 @@ export interface ValorContextoTemaNotificacion {
 
 const ContextoTemaNotificacion = createContext<ValorContextoTemaNotificacion | undefined>(undefined)
 
-// ── Sonidos de Notificaciones con reactivación de AudioContext ───────────────
+// ── AudioContext Singleton: Reutilización sin fuga de memoria ni sobrecarga ─
 
-export function reproducirSonidoNotificacion() {
-  if (typeof window === 'undefined') return
+let audioCtxSingleton: AudioContext | null = null
+
+function obtenerAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioContextClass) return
-    const ctx = new AudioContextClass()
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
+    if (!AudioContextClass) return null
+    if (!audioCtxSingleton || audioCtxSingleton.state === 'closed') {
+      audioCtxSingleton = new AudioContextClass()
     }
+    if (audioCtxSingleton.state === 'suspended') {
+      audioCtxSingleton.resume().catch(() => {})
+    }
+    return audioCtxSingleton
+  } catch {
+    return null
+  }
+}
 
+export function reproducirSonidoNotificacion() {
+  const ctx = obtenerAudioContext()
+  if (!ctx) return
+  try {
     const playTone = (freq: number, start: number, duration: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = 'sine'
       osc.frequency.setValueAtTime(freq, start)
-      gain.gain.setValueAtTime(0.12, start)
+      gain.gain.setValueAtTime(0.1, start)
       gain.gain.exponentialRampToValueAtTime(0.001, start + duration)
       osc.connect(gain)
       gain.connect(ctx.destination)
@@ -61,21 +73,15 @@ export function reproducirSonidoNotificacion() {
       osc.stop(start + duration)
     }
     const t = ctx.currentTime
-    playTone(523.25, t, 0.25)
-    playTone(659.25, t + 0.08, 0.35)
-  } catch (e) {}
+    playTone(523.25, t, 0.22)
+    playTone(659.25, t + 0.07, 0.3)
+  } catch {}
 }
 
 export function reproducirSonidoCampanaCocina() {
-  if (typeof window === 'undefined') return
+  const ctx = obtenerAudioContext()
+  if (!ctx) return
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioContextClass) return
-    const ctx = new AudioContextClass()
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
-    }
-
     const playTone = (freq: number, start: number, duration: number, volume: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -89,25 +95,19 @@ export function reproducirSonidoCampanaCocina() {
       osc.stop(start + duration)
     }
     const t = ctx.currentTime
-    playTone(1567.98, t, 1.0, 0.15)
-    playTone(1975.53, t, 0.8, 0.10)
-    playTone(2637.02, t, 0.6, 0.05)
-    const t2 = t + 0.12
-    playTone(1567.98, t2, 0.8, 0.12)
-    playTone(1975.53, t2, 0.6, 0.08)
-  } catch (e) {}
+    playTone(1567.98, t, 0.8, 0.14)
+    playTone(1975.53, t, 0.6, 0.09)
+    playTone(2637.02, t, 0.5, 0.05)
+    const t2 = t + 0.11
+    playTone(1567.98, t2, 0.6, 0.1)
+    playTone(1975.53, t2, 0.5, 0.07)
+  } catch {}
 }
 
 export function reproducirSonidoEntregaExitosa() {
-  if (typeof window === 'undefined') return
+  const ctx = obtenerAudioContext()
+  if (!ctx) return
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioContextClass) return
-    const ctx = new AudioContextClass()
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
-    }
-
     const playTone = (freq: number, start: number, duration: number, volume: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -121,10 +121,10 @@ export function reproducirSonidoEntregaExitosa() {
       osc.stop(start + duration)
     }
     const t = ctx.currentTime
-    playTone(587.33, t, 0.18, 0.16)
-    playTone(739.99, t + 0.09, 0.20, 0.18)
-    playTone(880.00, t + 0.18, 0.40, 0.20)
-  } catch (e) {}
+    playTone(587.33, t, 0.15, 0.15)
+    playTone(739.99, t + 0.08, 0.18, 0.16)
+    playTone(880.0, t + 0.16, 0.35, 0.18)
+  } catch {}
 }
 
 // ── Proveedor de Tema y Notificaciones ─────────────────────────────────────
@@ -164,7 +164,6 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       tipo: 'info' | 'success' | 'warning' = 'success',
       accion?: { etiqueta: string; alHacerClick: () => void }
     ) => {
-      // Si la ventana está en segundo plano y hay permisos de escritorio, notificar al sistema nativo
       if (
         typeof window !== 'undefined' &&
         'Notification' in window &&
@@ -180,7 +179,6 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       }
 
       setNotificaciones((prev) => {
-        // Evitar duplicadas idénticas activas simultáneamente
         if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
           return prev
         }
@@ -220,7 +218,7 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
   )
 }
 
-// ── Toast Individual con Sincronización rAF (60 FPS sin bugs de hover) ──────
+// ── Toast Individual con Animación CSS Nativa en GPU (0 CPU / 0 Re-renders) ─
 
 function ToastItem({
   notificacion: n,
@@ -229,41 +227,8 @@ function ToastItem({
   notificacion: Notificacion
   onEliminar: (id: string) => void
 }) {
-  const duracionTotal = n.accion ? 5000 : 3800
-  const tiempoRestanteRef = useRef(duracionTotal)
-  const [porcentaje, setPorcentaje] = useState(100)
   const [pausado, setPausado] = useState(false)
-  const pausadoRef = useRef(false)
-  pausadoRef.current = pausado
-
-  useEffect(() => {
-    let animationFrameId: number
-    let ultimoTimestamp = performance.now()
-
-    const step = (timestamp: number) => {
-      const delta = timestamp - ultimoTimestamp
-      ultimoTimestamp = timestamp
-
-      if (!pausadoRef.current) {
-        tiempoRestanteRef.current -= delta
-        const pct = Math.max(0, (tiempoRestanteRef.current / duracionTotal) * 100)
-        setPorcentaje(pct)
-
-        if (tiempoRestanteRef.current <= 0) {
-          onEliminar(n.id)
-          return
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(step)
-    }
-
-    animationFrameId = requestAnimationFrame(step)
-
-    return () => {
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [n.id, duracionTotal, onEliminar])
+  const duracionMs = n.accion ? 4800 : 3800
 
   const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
 
@@ -303,7 +268,7 @@ function ToastItem({
     <div
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
-      className="relative overflow-hidden bg-[#0f172a] border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/90 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-all duration-200 transform hover:scale-[1.01] animate-in slide-in-from-right-5 fade-in-0 duration-200 select-none"
+      className="relative overflow-hidden bg-[#0f172a] border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/90 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-transform duration-150 transform hover:scale-[1.01] animate-in slide-in-from-right-4 fade-in-0 duration-200 select-none"
     >
       {/* Icono temático */}
       <div className={`p-2 rounded-xl shrink-0 ${badgeEstilo}`}>
@@ -326,7 +291,7 @@ function ToastItem({
           {n.mensaje}
         </p>
 
-        {/* Botón de acción (ej: Deshacer) */}
+        {/* Botón de acción opcional */}
         {n.accion && (
           <button
             type="button"
@@ -342,7 +307,7 @@ function ToastItem({
         )}
       </div>
 
-      {/* Botón de descartar */}
+      {/* Botón de descarte inmediato */}
       <button
         type="button"
         onClick={() => onEliminar(n.id)}
@@ -352,18 +317,22 @@ function ToastItem({
         <X size={14} />
       </button>
 
-      {/* Barra de progreso sincronizada al 100% con JS (sin bugs de CSS) */}
+      {/* Barra de progreso en GPU pura (sin renders de React; se elimina al terminar la animación) */}
       <div
-        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor} transition-[width] ease-linear`}
+        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor}`}
         style={{
-          width: `${porcentaje}%`,
+          width: '100%',
+          animation: `toast-progress ${duracionMs}ms linear forwards`,
+          animationPlayState: pausado ? 'paused' : 'running',
+          willChange: 'transform, width',
         }}
+        onAnimationEnd={() => onEliminar(n.id)}
       />
     </div>
   )
 }
 
-// ── Contenedor alineado a la DERECHA con Botón 'Borrar todas' (>3 notis) ─────
+// ── Contenedor de Toasts a la Derecha con Animaciones a 60/120 FPS ──────────
 
 function ContenedorToasts({
   notificaciones,
@@ -375,29 +344,37 @@ function ContenedorToasts({
   onEliminarTodas: () => void
 }) {
   return (
-    <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none transition-all duration-300 ease-out">
-      {/* Botón flotante 'Borrar todas' si hay más de 3 notificaciones */}
-      {notificaciones.length > 3 && (
-        <div className="flex justify-end pb-0.5 pointer-events-auto transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-3 duration-250">
-          <button
-            type="button"
-            onClick={onEliminarTodas}
-            className="group flex items-center gap-1.5 bg-[#0f172a] hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-white/15 hover:border-rose-500/50 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-2xl shadow-black/90 transition-all duration-200 cursor-pointer active:scale-95"
-            title="Descartar todas las notificaciones activas"
-          >
-            <Trash2 size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
-            <span>Borrar todas ({notificaciones.length})</span>
-          </button>
-        </div>
-      )}
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          0% { width: 100%; }
+          100% { width: 0%; }
+        }
+      `}</style>
+      <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none">
+        {/* Botón flotante 'Borrar todas' si hay más de 3 notificaciones */}
+        {notificaciones.length > 3 && (
+          <div className="flex justify-end pb-0.5 pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <button
+              type="button"
+              onClick={onEliminarTodas}
+              className="group flex items-center gap-1.5 bg-[#0f172a] hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-white/15 hover:border-rose-500/50 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-2xl shadow-black/90 transition-all duration-150 cursor-pointer active:scale-95"
+              title="Descartar todas las notificaciones activas"
+            >
+              <Trash2 size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
+              <span>Borrar todas ({notificaciones.length})</span>
+            </button>
+          </div>
+        )}
 
-      {/* Lista de Notificaciones activas con límite de scroll si hay muchas */}
-      <div className="flex flex-col gap-2.5 max-h-[75vh] overflow-y-auto no-scrollbar pr-0.5 transition-all duration-300 ease-out">
-        {notificaciones.map((n) => (
-          <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
-        ))}
+        {/* Lista de notificaciones con scroll suave si hay muchas */}
+        <div className="flex flex-col gap-2.5 max-h-[75vh] overflow-y-auto no-scrollbar pr-0.5">
+          {notificaciones.map((n) => (
+            <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

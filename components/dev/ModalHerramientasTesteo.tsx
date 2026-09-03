@@ -201,20 +201,35 @@ export default function ModalHerramientasTesteo() {
     [agregarNotificacion]
   )
 
-  // Ráfaga masiva (burst)
+  // Ráfaga masiva (burst) ultra fluida
   const dispararRafaga = (cantidad: number) => {
-    const tipos: Array<'nuevo' | 'entregado' | 'exito' | 'info' | 'warning' | 'deshacer'> = [
-      'nuevo',
-      'entregado',
-      'exito',
-      'warning',
-      'deshacer',
-    ]
+    reproducirSonidoNotificacion()
+    const tipos = ['nuevo', 'entregado', 'exito', 'warning', 'deshacer']
     for (let i = 0; i < cantidad; i++) {
       setTimeout(() => {
+        const cliente = NOMBRES_MOCK[Math.floor(Math.random() * NOMBRES_MOCK.length)]
+        const cadete = CADETES_MOCK[Math.floor(Math.random() * CADETES_MOCK.length)]
+        const numPedido = Math.floor(1000 + Math.random() * 9000)
         const tipoRandom = tipos[Math.floor(Math.random() * tipos.length)]
-        dispararNotificacion(tipoRandom)
-      }, i * 60)
+
+        if (tipoRandom === 'nuevo') {
+          agregarNotificacion(`🔔 ¡Nuevo pedido de ${cliente}! (#${numPedido})`, 'info')
+        } else if (tipoRandom === 'entregado') {
+          agregarNotificacion(
+            `🛵 ¡Pedido entregado! ${cliente} (#${numPedido}) (Cadete: ${cadete}).`,
+            'success'
+          )
+        } else if (tipoRandom === 'warning') {
+          agregarNotificacion(`⚠️ Stock bajo: Quedan solo 2 paquetes de Pan de Papa.`, 'warning')
+        } else if (tipoRandom === 'deshacer') {
+          agregarNotificacion(`Pedido #${numPedido} de ${cliente} actualizado.`, 'info', {
+            etiqueta: 'Deshacer',
+            alHacerClick: () => {},
+          })
+        } else {
+          agregarNotificacion(`Cierre de caja guardado con éxito.`, 'success')
+        }
+      }, i * 35)
     }
   }
 
@@ -222,19 +237,14 @@ export default function ModalHerramientasTesteo() {
   useEffect(() => {
     if (!spamActivo) return
     const interval = setInterval(() => {
-      const tipos: Array<'nuevo' | 'entregado' | 'exito' | 'info' | 'warning'> = [
-        'nuevo',
-        'entregado',
-        'exito',
-        'info',
-        'warning',
-      ]
-      const tipoRandom = tipos[Math.floor(Math.random() * tipos.length)]
-      dispararNotificacion(tipoRandom)
-    }, 450)
+      const cliente = NOMBRES_MOCK[Math.floor(Math.random() * NOMBRES_MOCK.length)]
+      const numPedido = Math.floor(1000 + Math.random() * 9000)
+      agregarNotificacion(`🔔 ¡Nuevo pedido de ${cliente}! (#${numPedido})`, 'info')
+      reproducirSonidoCampanaCocina()
+    }, 600)
 
     return () => clearInterval(interval)
-  }, [spamActivo, dispararNotificacion])
+  }, [spamActivo, agregarNotificacion])
 
   if (!abierto) return null
 
