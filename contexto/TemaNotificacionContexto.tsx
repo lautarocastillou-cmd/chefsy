@@ -262,7 +262,7 @@ function ToastItem({
     <div
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
-      className="relative overflow-hidden bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/80 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-all duration-200 transform hover:scale-[1.01] animate-in slide-in-from-right-5 fade-in-0 duration-200 select-none"
+      className="relative overflow-hidden bg-[#0f172a] border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/90 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-all duration-200 transform hover:scale-[1.01] animate-in slide-in-from-right-5 fade-in-0 duration-200 select-none"
     >
       {/* Icono temático */}
       <div className={`p-2 rounded-xl shrink-0 ${badgeEstilo}`}>
