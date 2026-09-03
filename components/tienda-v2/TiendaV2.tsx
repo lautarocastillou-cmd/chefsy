@@ -22,7 +22,7 @@ import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 
 // Componentes V2 y Tienda
 import BannerGigantePromos from './BannerGigantePromos'
-import CatalogoProductos from '@/components/tienda/CatalogoProductos'
+import CatalogoV2 from './CatalogoV2'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
 import BotonUbicacionLocal from '@/components/tienda/BotonUbicacionLocal'
@@ -272,30 +272,18 @@ export default function TiendaV2() {
           onSeleccionarCategoria={(catId) => setCategoriaSeleccionada(catId)}
         />
 
-        {/* ── Catálogo de Productos ────────────────────────────────────────── */}
-        <section id="catalogo-productos" className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
-                {categoriaSeleccionada
-                  ? categoriasActivas.find((c) => c.id === categoriaSeleccionada)?.nombre || 'Productos'
-                  : 'Carta Completa'}
-              </h3>
-              <p className="text-xs text-slate-400 font-medium">
-                {productosFiltrados.length} opciones listas para disfrutar
-              </p>
-            </div>
-          </div>
-
-          <CatalogoProductos
+        {/* ── Catálogo de Productos Minimalista ──────────────────────────── */}
+        <div id="catalogo-productos" className="pt-2">
+          <CatalogoV2
             categoriasActivas={categoriasActivas}
             productosFiltrados={productosFiltrados}
             categoriaSeleccionada={categoriaSeleccionada}
             busqueda={busqueda}
             metadata={metadata}
             onAbrirModal={abrirModalPersonalizacion}
+            onSeleccionarCategoria={setCategoriaSeleccionada}
           />
-        </section>
+        </div>
 
         <FooterTienda />
       </main>
