@@ -19,6 +19,7 @@ import {
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 import ToasterProvider from '@/components/ui/ToasterProvider'
+import ModalHerramientasTesteo from '@/components/dev/ModalHerramientasTesteo'
 
 const bebas = Bebas_Neue({
   weight: '400',
@@ -129,6 +130,7 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
                 <SmoothScrollProvider>
                   <GlobalEvents />
                   <ToasterProvider />
+                  <ModalHerramientasTesteo />
                   {children}
                 </SmoothScrollProvider>
               </ProveedorPedidos>
