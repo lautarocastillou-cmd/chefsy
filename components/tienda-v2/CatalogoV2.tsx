@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import ProductCard from '@/components/tienda/ProductCard'
+import ProductCardV2 from './ProductCardV2'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 import { cn } from '@/lib/utils'
@@ -173,8 +173,8 @@ export default function CatalogoV2({
                       </h2>
                     </div>
 
-                    {/* Grilla de Productos */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Grilla de Productos Verticales estilo UberEats / McDonald's */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
                       {productosDeCat.map((prodOriginal) => {
                         const props = buildCardProps(
                           prodOriginal,
@@ -182,7 +182,7 @@ export default function CatalogoV2({
                           totalIndex++,
                           onAbrirModal
                         )
-                        return <ProductCard key={props.prod.id} {...props} />
+                        return <ProductCardV2 key={props.prod.id} {...props} />
                       })}
                     </div>
                   </section>
