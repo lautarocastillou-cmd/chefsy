@@ -139,5 +139,24 @@ export function usePedidosRealtime({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estaListo, habilitado])
 
+  // Difundir estado de conexión para herramientas de diagnóstico
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('chefsy:realtime-estado', { detail: dbEstado }))
+    }
+  }, [dbEstado])
+
+  // Escuchar evento de reconexión forzada desde DevTools
+  useEffect(() => {
+    const handleReconectar = () => {
+      setDbEstado('cargando')
+      mutate().then(() => {
+        setDbEstado('conectado')
+      })
+    }
+    window.addEventListener('chefsy:forzar-reconexion-realtime', handleReconectar)
+    return () => window.removeEventListener('chefsy:forzar-reconexion-realtime', handleReconectar)
+  }, [mutate])
+
   return { estaListo, dbEstado, setDbEstado, mutate }
 }

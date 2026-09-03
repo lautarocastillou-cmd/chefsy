@@ -17,22 +17,19 @@ import {
   Square,
   GripHorizontal,
   Package,
-  Compass,
   Activity,
-  Store,
-  Layers,
   Flame,
   ShieldCheck,
   BatteryCharging,
-  Wifi,
-  WifiOff,
   RefreshCw,
-  Search,
-  ExternalLink,
-  MapPin,
   Clock,
   DollarSign,
-  UserCheck,
+  AlertCircle,
+  Database,
+  Terminal,
+  Check,
+  Layers,
+  ArrowRight,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
@@ -42,10 +39,13 @@ import {
   reproducirSonidoNotificacion,
 } from '@/contexto/TemaNotificacionContexto'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { Pedido, EstadoPedido } from '@/tipos'
-import { UBICACION_LOCAL, calcularCostoEnvio, calcularDistanciaKm } from '@/lib/ubicacion'
+import { Pedido } from '@/tipos'
+import { UBICACION_LOCAL, calcularCostoEnvio } from '@/lib/ubicacion'
+import { obtenerStockInsumos } from '@/servicios/supabase/stock'
+import { Insumo } from '@/tipos/stock'
+import { obtenerLogsSistema, limpiarLogsSistema, registrarLogSistema, EntradaLog } from '@/lib/logger'
 
-type TabDevTools = 'notificaciones' | 'pedidos' | 'cadetes' | 'sistema' | 'tienda'
+type TabDevTools = 'notificaciones' | 'pedidos' | 'cadetes' | 'salud' | 'stock' | 'caja'
 
 const NOMBRES_MOCK = [
   'Juan Pérez',
@@ -75,6 +75,9 @@ export default function ModalHerramientasTesteo() {
     cadetes,
     agregarPedido,
     eliminarPedido,
+    marcarPagoConfirmado,
+    dbEstado,
+    estadoTurno,
   } = usarPedidos()
 
   const [abierto, setAbierto] = useState(false)
@@ -98,19 +101,19 @@ export default function ModalHerramientasTesteo() {
     posYInicial: 0,
   })
 
-  // Estados específicos de herramientas
+  // 1. Notificaciones
   const [spamActivo, setSpamActivo] = useState(false)
+
+  // 2. Pedidos
   const [inyectando, setInyectando] = useState(false)
   const [limpiandoTests, setLimpiandoTests] = useState(false)
 
-  // GPS Simulado
+  // 3. Cadetes & GPS
   const [cadeteGpsSeleccionado, setCadeteGpsSeleccionado] = useState<string>('')
   const [simulandoGps, setSimulandoGps] = useState(false)
   const [gpsProgreso, setGpsProgreso] = useState<number>(0)
   const [gpsVelocidad, setGpsVelocidad] = useState<number>(28)
   const gpsIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Calculador de Envíos
   const [direccionCalculo, setDireccionCalculo] = useState('')
   const [resultadoCalculo, setResultadoCalculo] = useState<{
     distanciaKm: number
@@ -118,14 +121,18 @@ export default function ModalHerramientasTesteo() {
     zona: string
   } | null>(null)
 
-  // Salud y Ping de Supabase
-  const [pingMs, setPingMs] = useState<number | null>(null)
-  const [midiendoPing, setMidiendoPing] = useState(false)
-  const [simulandoOffline, setSimulandoOffline] = useState(false)
+  // 4. Salud & Diagnóstico de Backend
+  const [tablasSalud, setTablasSalud] = useState<
+    Array<{ id: string; nombre: string; ok: boolean; latenciaMs: number; error?: string }>
+  >([])
+  const [escaneandoTablas, setEscaneandoTablas] = useState(false)
+  const [logsSistema, setLogsSistema] = useState<EntradaLog[]>([])
+  const [estadoWsLocal, setEstadoWsLocal] = useState<string>(dbEstado || 'conectado')
 
-  // Banners Tienda V2
-  const [bannerDesktopUrl, setBannerDesktopUrl] = useState('')
-  const [bannerMobileUrl, setBannerMobileUrl] = useState('')
+  // 5. Stock & Kardex
+  const [insumosNegativos, setInsumosNegativos] = useState<Insumo[]>([])
+  const [escaneandoStock, setEscaneandoStock] = useState(false)
+  const [ajustandoStock, setAjustandoStock] = useState(false)
 
   // Cargar estado inicial y atajo
   useEffect(() => {
@@ -134,20 +141,19 @@ export default function ModalHerramientasTesteo() {
       if (posGuardada) {
         const parsed = JSON.parse(posGuardada)
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-          const x = Math.max(10, Math.min(window.innerWidth - 380, parsed.x))
+          const x = Math.max(10, Math.min(window.innerWidth - 420, parsed.x))
           const y = Math.max(10, Math.min(window.innerHeight - 200, parsed.y))
           setPosicion({ x, y })
         }
       }
       const estadoGuardado = localStorage.getItem('chefsy_devtools_abierto')
-      if (estadoGuardado === 'true') {
-        setAbierto(true)
-      }
+      if (estadoGuardado === 'true') setAbierto(true)
       const tabGuardada = localStorage.getItem('chefsy_devtools_tab') as TabDevTools
-      if (tabGuardada) {
-        setTabActiva(tabGuardada)
-      }
+      if (tabGuardada) setTabActiva(tabGuardada)
     } catch {}
+
+    // Cargar logs iniciales
+    setLogsSistema(obtenerLogsSistema())
   }, [])
 
   useEffect(() => {
@@ -161,6 +167,22 @@ export default function ModalHerramientasTesteo() {
       localStorage.setItem('chefsy_devtools_tab', tabActiva)
     } catch {}
   }, [tabActiva])
+
+  // Escuchar logs del sistema y cambios de WS
+  useEffect(() => {
+    const handleNuevoLog = () => setLogsSistema(obtenerLogsSistema())
+    const handleWs = (e: any) => {
+      if (e.detail) setEstadoWsLocal(e.detail)
+    }
+
+    window.addEventListener('chefsy:nuevo-log', handleNuevoLog)
+    window.addEventListener('chefsy:realtime-estado', handleWs)
+
+    return () => {
+      window.removeEventListener('chefsy:nuevo-log', handleNuevoLog)
+      window.removeEventListener('chefsy:realtime-estado', handleWs)
+    }
+  }, [])
 
   // Atajo global Ctrl + ,
   useEffect(() => {
@@ -176,14 +198,13 @@ export default function ModalHerramientasTesteo() {
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [])
 
-  // Auto-seleccionar primer cadete si está disponible
   useEffect(() => {
     if (!cadeteGpsSeleccionado && cadetes && cadetes.length > 0) {
       setCadeteGpsSeleccionado(cadetes[0].id)
     }
   }, [cadetes, cadeteGpsSeleccionado])
 
-  // Arrastre con Pointer Events
+  // Arrastre con Pointer Events (60/120 FPS)
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return
     arrastreRef.current = {
@@ -201,7 +222,7 @@ export default function ModalHerramientasTesteo() {
 
       const nuevoX = Math.max(
         10,
-        Math.min(window.innerWidth - (modalRef.current?.offsetWidth || 380) - 10, arrastreRef.current.posXInicial + dx)
+        Math.min(window.innerWidth - (modalRef.current?.offsetWidth || 410) - 10, arrastreRef.current.posXInicial + dx)
       )
       const nuevoY = Math.max(
         10,
@@ -302,7 +323,6 @@ export default function ModalHerramientasTesteo() {
     }
   }
 
-  // Spam continuo
   useEffect(() => {
     if (!spamActivo) return
     const interval = setInterval(() => {
@@ -317,19 +337,18 @@ export default function ModalHerramientasTesteo() {
 
   // ── 2. INYECTOR DE PEDIDOS REALES Y CASOS EXTREMOS ───────────────────────
 
-  const crearPedidoEstructurado = async (
-    config: {
-      cliente: string
-      direccion: string
-      telefono: string
-      tipoEntrega: 'delivery' | 'retiro'
-      productos: Array<{ id: string; nombre: string; cantidad: number; precio: number }>
-      costoEnvio?: number
-      total: number
-      metodoPago: 'efectivo' | 'transferencia' | 'tarjeta'
-      observaciones?: string
-    }
-  ) => {
+  const crearPedidoEstructurado = async (config: {
+    cliente: string
+    direccion: string
+    telefono: string
+    tipoEntrega: 'delivery' | 'retiro'
+    productos: Array<{ id: string; nombre: string; cantidad: number; precio: number }>
+    costoEnvio?: number
+    total: number
+    metodoPago: 'efectivo' | 'transferencia' | 'tarjeta'
+    observaciones?: string
+    pagoConfirmado?: boolean
+  }) => {
     const ahora = new Date()
     const id = `TEST-${Date.now().toString().slice(-6)}`
     const hora = ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
@@ -354,13 +373,12 @@ export default function ModalHerramientasTesteo() {
       hora,
       fecha,
       created_at: ahora.toISOString(),
-      pago_confirmado: config.metodoPago !== 'efectivo',
+      pago_confirmado: config.pagoConfirmado !== undefined ? config.pagoConfirmado : config.metodoPago !== 'efectivo',
     }
 
     await agregarPedido(pedido)
   }
 
-  // Inyectar pedido estándar
   const inyectarPedidoEstandar = async () => {
     setInyectando(true)
     try {
@@ -380,13 +398,13 @@ export default function ModalHerramientasTesteo() {
       })
       agregarNotificacion('Pedido de prueba insertado correctamente en cocina y base de datos.', 'success')
     } catch (e: any) {
+      registrarLogSistema('error', 'Inyector Pedido', e.message)
       agregarNotificacion(`Error al inyectar pedido: ${e.message}`, 'warning')
     } finally {
       setInyectando(false)
     }
   }
 
-  // Inyector de Hora Pico (10 Pedidos)
   const inyectarHoraPico = async () => {
     setInyectando(true)
     try {
@@ -408,6 +426,7 @@ export default function ModalHerramientasTesteo() {
           costoEnvio: 0,
           total: 8500,
           metodoPago: 'transferencia' as const,
+          pagoConfirmado: false, // Pago en el limbo intencional
         },
         {
           cliente: 'Esteban Morales (Test)',
@@ -432,16 +451,15 @@ export default function ModalHerramientasTesteo() {
         })
         await new Promise((r) => setTimeout(r, 120))
       }
-
       agregarNotificacion('Se han inyectado 10 pedidos variados en cocina con éxito.', 'success')
     } catch (e: any) {
+      registrarLogSistema('error', 'Hora Pico', e.message)
       agregarNotificacion(`Error en hora pico: ${e.message}`, 'warning')
     } finally {
       setInyectando(false)
     }
   }
 
-  // Casos Extremos (Edge Cases)
   const inyectarCasoExtremo = async (caso: 'nombre_largo' | 'muchas_notas' | 'importe_gigante') => {
     setInyectando(true)
     try {
@@ -469,6 +487,7 @@ export default function ModalHerramientasTesteo() {
           costoEnvio: 2000,
           total: 35000,
           metodoPago: 'transferencia',
+          pagoConfirmado: false,
           observaciones:
             'Sin mayonesa, extra queso cheddar fundido, papas muy crocantes, carne a punto medio, salsa tártara aparte en pote térmico, sin lechuga, sin tomate fresco, doble huevo bien cocido, pan ligeramente tostado, cubiertos descartables y tres sobrecitos de mostaza dulce.',
         })
@@ -493,13 +512,13 @@ export default function ModalHerramientasTesteo() {
       }
       agregarNotificacion('Caso extremo generado y enviado al tablero.', 'success')
     } catch (e: any) {
+      registrarLogSistema('error', 'Caso Extremo', e.message)
       agregarNotificacion(`Error en caso extremo: ${e.message}`, 'warning')
     } finally {
       setInyectando(false)
     }
   }
 
-  // Eliminar todos los pedidos de test
   const limpiarPedidosDePrueba = async () => {
     const pedidosTest = pedidos.filter(
       (p) => p.id.startsWith('TEST-') || p.cliente.includes('(Test)')
@@ -518,6 +537,7 @@ export default function ModalHerramientasTesteo() {
       }
       agregarNotificacion(`Se eliminaron ${count} pedidos de prueba del sistema.`, 'success')
     } catch (e: any) {
+      registrarLogSistema('error', 'Limpieza Tests', e.message)
       agregarNotificacion(`Error al limpiar pruebas: ${e.message}`, 'warning')
     } finally {
       setLimpiandoTests(false)
@@ -544,7 +564,6 @@ export default function ModalHerramientasTesteo() {
 
     let step = 0
     const totalSteps = 25
-    // Coordenadas origen (local) y destino (2.5 km al norte)
     const latOrigen = UBICACION_LOCAL.latitud
     const lngOrigen = UBICACION_LOCAL.longitud
     const latDestino = UBICACION_LOCAL.latitud + 0.022
@@ -577,20 +596,18 @@ export default function ModalHerramientasTesteo() {
             gps_activo: true,
           }),
         })
-      } catch (err) {
-        console.warn('[Simulador GPS] Error al enviar coordenadas:', err)
+      } catch (err: any) {
+        registrarLogSistema('warn', 'Simulador GPS', err.message || 'Error de red en GPS')
       }
     }, 2000)
   }
 
-  // Detener intervalo al desmontar
   useEffect(() => {
     return () => {
       if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current)
     }
   }, [])
 
-  // Simular corte de batería / señal baja
   const simularCadeteSinBateria = async () => {
     if (!cadeteGpsSeleccionado) {
       agregarNotificacion('Seleccioná un cadete.', 'warning')
@@ -615,17 +632,16 @@ export default function ModalHerramientasTesteo() {
       })
       agregarNotificacion(`Señal de GPS apagada y batería al 4% enviada para ${cadeteGpsSeleccionado}.`, 'warning')
     } catch (e: any) {
+      registrarLogSistema('error', 'GPS Batería', e.message)
       agregarNotificacion(`Error: ${e.message}`, 'warning')
     }
   }
 
-  // Calculador de envíos al vuelo
   const ejecutarCalculoEnvio = () => {
     if (!direccionCalculo.trim()) {
       agregarNotificacion('Ingresá una dirección para calcular la tarifa.', 'warning')
       return
     }
-    // Simulación precisa basada en distancia Catamarca
     const hash = direccionCalculo.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const kmSimulado = Number(((hash % 45) / 10 + 0.8).toFixed(1))
     const costo = calcularCostoEnvio(kmSimulado)
@@ -638,114 +654,165 @@ export default function ModalHerramientasTesteo() {
     })
   }
 
-  // ── 4. TURNOS, SALUD & SISTEMA ────────────────────────────────────────────
+  // ── 4. DIAGNÓSTICO DE BACKEND, LOGS Y SALUD DE TABLAS ─────────────────────
 
-  const cambiarEstadoTurno = async (activo: boolean, tipoTurno: 'noche' | 'mediodia' = 'noche') => {
+  const escanearSaludTablas = async () => {
+    setEscaneandoTablas(true)
     try {
-      const res = await fetch('/api/admin/turno', {
+      const res = await fetch('/api/admin/debug?accion=tablas')
+      if (!res.ok) {
+        throw new Error(`Error en endpoint de diagnóstico: HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      if (data.tablas) {
+        setTablasSalud(data.tablas)
+        agregarNotificacion('Escaneo de tablas completado con éxito.', 'info')
+      }
+    } catch (e: any) {
+      registrarLogSistema('error', 'Escáner Tablas', e.message)
+      agregarNotificacion(`Fallo en escaneo: ${e.message}`, 'warning')
+    } finally {
+      setEscaneandoTablas(false)
+    }
+  }
+
+  const forzarReconexionRealtime = () => {
+    setEstadoWsLocal('cargando')
+    window.dispatchEvent(new CustomEvent('chefsy:forzar-reconexion-realtime'))
+    agregarNotificacion('Canal WebSocket reconectado y revalidado con éxito.', 'success')
+    setTimeout(() => {
+      setEstadoWsLocal('conectado')
+    }, 800)
+  }
+
+  // ── 5. AUDITOR DE STOCK E INSUMOS (KARDEX) ───────────────────────────────
+
+  const escanearStockNegativo = async () => {
+    setEscaneandoStock(true)
+    try {
+      const insumos = await obtenerStockInsumos()
+      const negativos = (insumos || []).filter((i) => (Number(i.stock_actual) || 0) < 0)
+      setInsumosNegativos(negativos)
+      if (negativos.length > 0) {
+        agregarNotificacion(`Se detectaron ${negativos.length} insumos con stock negativo.`, 'warning')
+      } else {
+        agregarNotificacion('Escaneo finalizado: inventario íntegro sin insumos negativos.', 'success')
+      }
+    } catch (e: any) {
+      registrarLogSistema('error', 'Auditor Stock', e.message)
+      agregarNotificacion(`Error al escanear stock: ${e.message}`, 'warning')
+    } finally {
+      setEscaneandoStock(false)
+    }
+  }
+
+  const ajustarStockNegativoACero = async () => {
+    if (insumosNegativos.length === 0) return
+    setAjustandoStock(true)
+    try {
+      for (const insumo of insumosNegativos) {
+        const delta = Math.abs(Number(insumo.stock_actual) || 0)
+        await fetch('/api/admin/stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: 'update_stock',
+            payload: {
+              id: insumo.id,
+              stock_actual: 0,
+              delta,
+              tipo_movimiento: 'ajuste_manual',
+              motivo: 'Ajuste de emergencia desde DevTools (corrección de stock negativo)',
+            },
+          }),
+        })
+      }
+      agregarNotificacion(`Se ajustaron ${insumosNegativos.length} insumos negativos a 0.`, 'success')
+      setInsumosNegativos([])
+      await escanearStockNegativo()
+    } catch (e: any) {
+      registrarLogSistema('error', 'Ajuste Stock', e.message)
+      agregarNotificacion(`Error al ajustar stock: ${e.message}`, 'warning')
+    } finally {
+      setAjustandoStock(false)
+    }
+  }
+
+  const simularDescuentoReceta = async () => {
+    try {
+      const insumos = await obtenerStockInsumos()
+      if (!insumos || insumos.length === 0) {
+        agregarNotificacion('No hay insumos registrados para simular la receta.', 'warning')
+        return
+      }
+      const insumoObjetivo = insumos[0]
+      const stockAnterior = Number(insumoObjetivo.stock_actual) || 0
+
+      await fetch('/api/admin/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          activo,
-          cajaInicial: activo ? 10000 : 0,
-          fechaInicio: activo ? new Date().toISOString() : null,
-          tipoTurno,
+          accion: 'update_stock',
+          payload: {
+            id: insumoObjetivo.id,
+            delta: -1,
+            stock_actual: stockAnterior - 1,
+            tipo_movimiento: 'venta',
+            motivo: `Simulación de venta de 1 Burger desde DevTools (${insumoObjetivo.nombre})`,
+          },
         }),
       })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Error al actualizar el turno')
-      }
-      agregarNotificacion(
-        activo ? `Turno de ${tipoTurno} abierto con éxito ($10.000 caja inicial).` : 'Turno cerrado correctamente.',
-        'success'
-      )
+      agregarNotificacion(`Descuento simulado (-1 ${insumoObjetivo.nombre}) registrado en Kardex.`, 'success')
     } catch (e: any) {
-      agregarNotificacion(`Error de turno: ${e.message}`, 'warning')
+      registrarLogSistema('error', 'Simular Receta', e.message)
+      agregarNotificacion(`Error al simular receta: ${e.message}`, 'warning')
     }
   }
 
-  const medirPingSupabase = async () => {
-    setMidiendoPing(true)
-    const inicio = performance.now()
-    try {
-      const res = await fetch('/api/admin/turno', { method: 'GET', cache: 'no-store' })
-      const delta = Math.round(performance.now() - inicio)
-      if (res.ok) {
-        setPingMs(delta)
-        agregarNotificacion(`Latencia de Supabase: ${delta} ms (Conexión óptima).`, 'info')
-      } else {
-        setPingMs(delta)
-        agregarNotificacion(`Respuesta con código ${res.status} en ${delta} ms.`, 'warning')
-      }
-    } catch {
-      setPingMs(null)
-      agregarNotificacion('Fallo en la prueba de conexión a la base de datos.', 'warning')
-    } finally {
-      setMidiendoPing(false)
+  // ── 6. COMPROBADOR DE ARQUEO DE CAJA Y DISCREPANCIAS ──────────────────────
+
+  const metricasCaja = useMemo(() => {
+    const pedidosActivos = pedidos.filter((p) => p.estado !== 'cancelado')
+
+    const totalEfectivo = pedidosActivos
+      .filter((p) => p.metodoPago === 'efectivo')
+      .reduce((sum, p) => sum + (Number(p.total) || 0), 0)
+
+    const totalTransferencias = pedidosActivos
+      .filter((p) => p.metodoPago === 'transferencia')
+      .reduce((sum, p) => sum + (Number(p.total) || 0), 0)
+
+    const totalTarjetas = pedidosActivos
+      .filter((p) => p.metodoPago === 'tarjeta')
+      .reduce((sum, p) => sum + (Number(p.total) || 0), 0)
+
+    const totalVentas = totalEfectivo + totalTransferencias + totalTarjetas
+    const cajaInicial = Number(estadoTurno?.cajaInicial) || 0
+    const efectivoEsperado = cajaInicial + totalEfectivo
+
+    const pedidosEnElLimbo = pedidosActivos.filter(
+      (p) => (p.metodoPago === 'transferencia' || p.metodoPago === 'tarjeta') && !p.pago_confirmado
+    )
+
+    return {
+      totalEfectivo,
+      totalTransferencias,
+      totalTarjetas,
+      totalVentas,
+      cajaInicial,
+      efectivoEsperado,
+      pedidosEnElLimbo,
     }
-  }
+  }, [pedidos, estadoTurno])
 
-  // Inspector de Pedidos Fantasma
-  const pedidosFantasma = useMemo(() => {
-    const cadetesIds = new Set(cadetes.map((c) => c.id.toLowerCase()))
-    return pedidos.filter((p) => {
-      if (p.estado === 'en_camino' && !p.cadete_id) return true
-      if (p.cadete_id && !cadetesIds.has(p.cadete_id.toLowerCase())) return true
-      return false
-    })
-  }, [pedidos, cadetes])
-
-  const limpiarCacheNuclear = () => {
+  const confirmarPagoEnElLimbo = async (pedidoId: string) => {
     try {
-      localStorage.removeItem('chefsy_pedidos_cache')
-      localStorage.removeItem('chefsy-offline-queue')
-      localStorage.removeItem('chefsy_admin_sesion_cache')
-      agregarNotificacion('Caché local y colas reseteadas con éxito. Recargando página...', 'success')
-      setTimeout(() => {
-        window.location.reload()
-      }, 800)
-    } catch {
-      window.location.reload()
-    }
-  }
-
-  // ── 5. TIENDA V2 & BANNERS EN VIVO ────────────────────────────────────────
-
-  const aplicarBannersTienda = () => {
-    if (!bannerDesktopUrl.trim() && !bannerMobileUrl.trim()) {
-      agregarNotificacion('Ingresá al menos una URL de imagen para el banner.', 'warning')
-      return
-    }
-
-    try {
-      const nuevaPromo = {
-        id: `promo-test-${Date.now()}`,
-        titulo: 'Banner de Prueba V2',
-        imagenUrl: bannerDesktopUrl.trim() || '/burger-loca.webp',
-        imagenUrlMobile: bannerMobileUrl.trim() || bannerDesktopUrl.trim() || '/burger-loca.webp',
-        categoriaId: 'burgers',
-      }
-
-      const promosActualesStr = localStorage.getItem('chefsy_tienda_v2_promos')
-      const promosActuales = promosActualesStr ? JSON.parse(promosActualesStr) : []
-      const actualizadas = [nuevaPromo, ...promosActuales]
-
-      localStorage.setItem('chefsy_tienda_v2_promos', JSON.stringify(actualizadas))
-      window.dispatchEvent(new CustomEvent('chefsy:promos-actualizadas'))
-
-      agregarNotificacion('Banner inyectado con éxito en Tienda V2.', 'success')
+      await marcarPagoConfirmado(pedidoId, true)
+      agregarNotificacion(`Pago confirmado correctamente para el pedido #${pedidoId}.`, 'success')
     } catch (e: any) {
-      agregarNotificacion(`Error al inyectar banner: ${e.message}`, 'warning')
+      registrarLogSistema('error', 'Confirmar Pago', e.message)
+      agregarNotificacion(`Error al confirmar pago: ${e.message}`, 'warning')
     }
-  }
-
-  const restaurarBannersPorDefecto = () => {
-    localStorage.removeItem('chefsy_tienda_v2_promos')
-    window.dispatchEvent(new CustomEvent('chefsy:promos-actualizadas'))
-    setBannerDesktopUrl('')
-    setBannerMobileUrl('')
-    agregarNotificacion('Banners de la Tienda V2 restaurados a los originales.', 'info')
   }
 
   if (!abierto) return null
@@ -762,7 +829,7 @@ export default function ModalHerramientasTesteo() {
         left: 0,
         zIndex: 9999998,
       }}
-      className="w-84 sm:w-[410px] bg-[#0f172a] text-slate-100 border border-white/15 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150"
+      className="w-84 sm:w-[425px] bg-[#0f172a] text-slate-100 border border-white/15 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150"
     >
       {/* ── Barra Superior Draggable ────────────────────────────────────────── */}
       <div
@@ -786,7 +853,7 @@ export default function ModalHerramientasTesteo() {
           <button
             type="button"
             onClick={() => setMinimizado(!minimizado)}
-            className="text-slate-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors"
+            className="text-slate-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
             title={minimizado ? 'Expandir' : 'Minimizar'}
           >
             {minimizado ? <Maximize2 size={12} /> : <Minus size={12} />}
@@ -797,7 +864,7 @@ export default function ModalHerramientasTesteo() {
               setAbierto(false)
               setSpamActivo(false)
             }}
-            className="text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-white/10 transition-colors"
+            className="text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
             title="Cerrar panel (Ctrl + ,)"
           >
             <X size={13} />
@@ -805,81 +872,86 @@ export default function ModalHerramientasTesteo() {
         </div>
       </div>
 
-      {/* ── Contenido Completo ──────────────────────────────────────────────── */}
+      {/* ── Contenido de las pestañas ───────────────────────────────────────── */}
       {!minimizado && (
         <div>
           {/* Navegación por pestañas */}
-          <div className="flex border-b border-white/10 bg-slate-950/60 p-1 gap-1 text-[11px] font-bold">
+          <div className="flex border-b border-white/10 bg-slate-950/60 p-1 gap-1 text-[11px] font-bold overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setTabActiva('notificaciones')}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all ${
-                tabActiva === 'notificaciones'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                tabActiva === 'notificaciones' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Bell size={12} />
+              <Bell size={11} />
               <span>Notis</span>
             </button>
 
             <button
               type="button"
               onClick={() => setTabActiva('pedidos')}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all relative ${
-                tabActiva === 'pedidos'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer relative ${
+                tabActiva === 'pedidos' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Package size={12} />
+              <Package size={11} />
               <span>Pedidos</span>
-              {countTests > 0 && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1 right-1" />
-              )}
+              {countTests > 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1 right-1" />}
             </button>
 
             <button
               type="button"
               onClick={() => setTabActiva('cadetes')}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all ${
-                tabActiva === 'cadetes'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                tabActiva === 'cadetes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Bike size={12} />
+              <Bike size={11} />
               <span>Cadetes</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setTabActiva('sistema')}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all ${
-                tabActiva === 'sistema'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              onClick={() => setTabActiva('salud')}
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                tabActiva === 'salud' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Activity size={12} />
-              <span>Sistema</span>
+              <Activity size={11} />
+              <span>Salud</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setTabActiva('tienda')}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all ${
-                tabActiva === 'tienda'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              onClick={() => setTabActiva('stock')}
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer relative ${
+                tabActiva === 'stock' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Store size={12} />
-              <span>Tienda V2</span>
+              <Database size={11} />
+              <span>Stock</span>
+              {insumosNegativos.length > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 absolute top-1 right-1" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTabActiva('caja')}
+              className={`flex-1 min-w-[58px] flex items-center justify-center gap-1 py-1.5 rounded-lg transition-all cursor-pointer relative ${
+                tabActiva === 'caja' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <DollarSign size={11} />
+              <span>Caja</span>
+              {metricasCaja.pedidosEnElLimbo.length > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute top-1 right-1" />
+              )}
             </button>
           </div>
 
-          <div className="p-3.5 max-h-[70vh] overflow-y-auto no-scrollbar space-y-3.5 text-xs">
+          <div className="p-3.5 max-h-[72vh] overflow-y-auto no-scrollbar space-y-3.5 text-xs">
             {/* ── TAB 1: NOTIFICACIONES ────────────────────────────────────────── */}
             {tabActiva === 'notificaciones' && (
               <div className="space-y-3">
@@ -989,9 +1061,7 @@ export default function ModalHerramientasTesteo() {
                     type="button"
                     onClick={() => setSpamActivo(!spamActivo)}
                     className={`w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl font-bold transition-all cursor-pointer active:scale-98 ${
-                      spamActivo
-                        ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse'
-                        : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                      spamActivo ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                     }`}
                   >
                     {spamActivo ? (
@@ -1131,7 +1201,7 @@ export default function ModalHerramientasTesteo() {
                   <select
                     value={cadeteGpsSeleccionado}
                     onChange={(e) => setCadeteGpsSeleccionado(e.target.value)}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
                     <option value="">Seleccionar cadete...</option>
                     {cadetes.map((c) => (
@@ -1142,7 +1212,6 @@ export default function ModalHerramientasTesteo() {
                   </select>
                 </div>
 
-                {/* Recorrido Virtual */}
                 <div className="bg-slate-950/60 border border-white/5 p-3 rounded-xl space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-200">Simulador de Cadete en Ruta</span>
@@ -1162,9 +1231,7 @@ export default function ModalHerramientasTesteo() {
                       type="button"
                       onClick={toggleSimulacionGps}
                       className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-                        simulandoGps
-                          ? 'bg-rose-600 hover:bg-rose-500 text-white'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        simulandoGps ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                       }`}
                     >
                       {simulandoGps ? (
@@ -1182,7 +1249,6 @@ export default function ModalHerramientasTesteo() {
                       type="button"
                       onClick={simularCadeteSinBateria}
                       className="flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-3 py-2 rounded-xl font-bold transition-all cursor-pointer"
-                      title="Simula batería al 4% y corte de señal"
                     >
                       <BatteryCharging size={13} />
                       <span>Batería 4%</span>
@@ -1190,7 +1256,6 @@ export default function ModalHerramientasTesteo() {
                   </div>
                 </div>
 
-                {/* Calculador de Tarifas al Vuelo */}
                 <div className="space-y-1.5 pt-2 border-t border-white/10">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Calculador de Tarifas de Envío al Vuelo
@@ -1214,7 +1279,7 @@ export default function ModalHerramientasTesteo() {
                   </div>
 
                   {resultadoCalculo && (
-                    <div className="bg-slate-950/60 border border-white/5 p-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in">
+                    <div className="bg-slate-950/60 border border-white/5 p-2.5 rounded-xl flex items-center justify-between text-xs">
                       <div>
                         <p className="font-bold text-slate-200">{resultadoCalculo.zona}</p>
                         <p className="text-[10px] text-slate-400">{resultadoCalculo.distanciaKm} km desde el local</p>
@@ -1228,165 +1293,310 @@ export default function ModalHerramientasTesteo() {
               </div>
             )}
 
-            {/* ── TAB 4: SISTEMA, TURNOS & SALUD ───────────────────────────────── */}
-            {tabActiva === 'sistema' && (
+            {/* ── TAB 4: SALUD & DIAGNÓSTICO DE BACKEND ─────────────────────────── */}
+            {tabActiva === 'salud' && (
               <div className="space-y-3">
-                {/* Control de Turno */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Simulador de Apertura / Cierre de Turno
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => cambiarEstadoTurno(true, 'noche')}
-                      className="bg-slate-800 hover:bg-slate-700 border border-white/5 py-2 px-1 rounded-xl text-center font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      Turno Noche
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => cambiarEstadoTurno(true, 'mediodia')}
-                      className="bg-slate-800 hover:bg-slate-700 border border-white/5 py-2 px-1 rounded-xl text-center font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      Turno Mediodía
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => cambiarEstadoTurno(false)}
-                      className="bg-rose-950/40 hover:bg-rose-900/50 border border-rose-500/30 py-2 px-1 rounded-xl text-center font-bold text-rose-300 transition-all cursor-pointer"
-                    >
-                      Cerrar Turno
-                    </button>
-                  </div>
-                </div>
-
-                {/* Monitor de Latencia Supabase */}
+                {/* WebSocket Realtime */}
                 <div className="bg-slate-950/60 border border-white/5 p-2.5 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Activity size={14} className="text-sky-400" />
+                    <div
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        estadoWsLocal === 'conectado'
+                          ? 'bg-emerald-400 animate-pulse'
+                          : estadoWsLocal === 'cargando'
+                          ? 'bg-amber-400 animate-pulse'
+                          : 'bg-rose-500'
+                      }`}
+                    />
                     <div>
-                      <p className="font-bold text-slate-200">Salud de Supabase</p>
-                      <p className="text-[10px] text-slate-400">
-                        {pingMs !== null ? `Latencia: ${pingMs} ms` : 'Sin medir'}
+                      <p className="font-bold text-slate-200">WebSocket Realtime</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
+                        {estadoWsLocal === 'conectado' ? 'Canal en Vivo Conectado' : estadoWsLocal}
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
-                    disabled={midiendoPing}
-                    onClick={medirPingSupabase}
-                    className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                    onClick={forzarReconexionRealtime}
+                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                   >
-                    <RefreshCw size={11} className={midiendoPing ? 'animate-spin' : ''} />
-                    <span>Test Ping</span>
+                    <RefreshCw size={11} />
+                    <span>Forzar Reconexión</span>
                   </button>
                 </div>
 
-                {/* Inspector de Pedidos Fantasma */}
-                <div className="bg-slate-950/60 border border-white/5 p-2.5 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={14} className={pedidosFantasma.length > 0 ? 'text-amber-400' : 'text-emerald-400'} />
-                    <div>
-                      <p className="font-bold text-slate-200">Inspector de Inconsistencias</p>
-                      <p className="text-[10px] text-slate-400">
-                        {pedidosFantasma.length > 0
-                          ? `${pedidosFantasma.length} pedidos con anomalías`
-                          : '0 pedidos fantasma detectados'}
-                      </p>
-                    </div>
-                  </div>
-                  {pedidosFantasma.length > 0 && (
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded">
-                      Revisar
+                {/* Escáner de Tablas de Supabase */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Salud de Tablas de Supabase
                     </span>
+                    <button
+                      type="button"
+                      disabled={escaneandoTablas}
+                      onClick={escanearSaludTablas}
+                      className="flex items-center gap-1 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer"
+                    >
+                      <RefreshCw size={10} className={escaneandoTablas ? 'animate-spin' : ''} />
+                      <span>{escaneandoTablas ? 'Escaneando...' : 'Escanear Tablas'}</span>
+                    </button>
+                  </div>
+
+                  {tablasSalud.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-1">
+                      {tablasSalud.map((t) => (
+                        <div
+                          key={t.id}
+                          className="bg-slate-950/60 border border-white/5 px-2.5 py-1.5 rounded-xl flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-2 h-2 rounded-full ${t.ok ? 'bg-emerald-400' : 'bg-rose-500 animate-ping'}`}
+                            />
+                            <span className="font-semibold text-slate-200">{t.nombre}</span>
+                          </div>
+                          <span
+                            className={`font-mono text-[11px] font-bold ${
+                              t.latenciaMs < 50
+                                ? 'text-emerald-400'
+                                : t.latenciaMs < 120
+                                ? 'text-amber-400'
+                                : 'text-rose-400'
+                            }`}
+                          >
+                            {t.latenciaMs} ms
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-950/40 border border-white/5 p-3 rounded-xl text-center text-slate-500 text-[11px]">
+                      Presioná "Escanear Tablas" para medir la latencia individual en Supabase.
+                    </div>
                   )}
                 </div>
 
-                {/* Reset Nuclear */}
-                <div className="pt-2 border-t border-white/10 flex gap-2">
+                {/* Visor de Últimos Errores del Sistema */}
+                <div className="space-y-1.5 pt-2 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Últimos Errores del Sistema (Log en Vivo)
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          registrarLogSistema('error', 'Test DevTools', 'Error de prueba forzado manualmente')
+                        }
+                        className="text-[10px] text-slate-400 hover:text-slate-200 px-1.5 py-0.5 rounded hover:bg-white/5 cursor-pointer"
+                      >
+                        Simular Error
+                      </button>
+                      {logsSistema.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            limpiarLogsSistema()
+                            setLogsSistema([])
+                          }}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 px-1.5 py-0.5 rounded hover:bg-white/5 cursor-pointer"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-black/60 border border-white/10 rounded-xl p-2 max-h-32 overflow-y-auto no-scrollbar font-mono text-[10.5px] space-y-1">
+                    {logsSistema.length > 0 ? (
+                      logsSistema.map((log) => (
+                        <div key={log.id} className="leading-tight text-slate-300 flex items-start gap-1.5">
+                          <span className="text-slate-500 shrink-0">[{log.hora}]</span>
+                          <span
+                            className={`px-1 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+                              log.nivel === 'error'
+                                ? 'bg-rose-500/20 text-rose-400'
+                                : 'bg-amber-500/20 text-amber-400'
+                            }`}
+                          >
+                            {log.modulo}
+                          </span>
+                          <span className="truncate text-slate-200">{log.mensaje}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-600 text-center py-2">
+                        Sin errores registrados en esta sesión. Todo estable.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 5: AUDITOR DE STOCK E INSUMOS (KARDEX) ───────────────────── */}
+            {tabActiva === 'stock' && (
+              <div className="space-y-3">
+                {/* Detector de Negativos */}
+                <div className="bg-slate-950/60 border border-white/5 p-3 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck
+                        size={14}
+                        className={insumosNegativos.length > 0 ? 'text-rose-400' : 'text-emerald-400'}
+                      />
+                      <span className="font-bold text-slate-200">Detector de Stock Negativo</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={escaneandoStock}
+                      onClick={escanearStockNegativo}
+                      className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer"
+                    >
+                      <RefreshCw size={10} className={escaneandoStock ? 'animate-spin' : ''} />
+                      <span>{escaneandoStock ? 'Escaneando...' : 'Escanear'}</span>
+                    </button>
+                  </div>
+
+                  {insumosNegativos.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="bg-rose-950/30 border border-rose-500/30 p-2 rounded-lg space-y-1">
+                        <p className="text-[10px] font-bold text-rose-300">
+                          Se detectaron {insumosNegativos.length} insumos con valores por debajo de 0:
+                        </p>
+                        <div className="max-h-24 overflow-y-auto no-scrollbar space-y-0.5">
+                          {insumosNegativos.map((i) => (
+                            <div key={i.id} className="flex items-center justify-between text-[11px] text-slate-300">
+                              <span className="truncate">{i.nombre}</span>
+                              <span className="font-mono font-bold text-rose-400">
+                                {i.stock_actual} {i.unidad_medida}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={ajustandoStock}
+                        onClick={ajustarStockNegativoACero}
+                        className="w-full flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-98"
+                      >
+                        <Wrench size={12} />
+                        <span>{ajustandoStock ? 'Ajustando...' : 'Ajustar Stock Negativo a Cero'}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400">
+                      Presioná "Escanear" para auditar el inventario y detectar insumos en negativo.
+                    </p>
+                  )}
+                </div>
+
+                {/* Simulador de Descuento de Receta */}
+                <div className="space-y-1.5 pt-1 border-t border-white/10">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Simulador de Deducción en Kardex
+                  </span>
                   <button
                     type="button"
-                    onClick={limpiarCacheNuclear}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 py-2 rounded-xl font-bold transition-all cursor-pointer active:scale-95"
+                    onClick={simularDescuentoReceta}
+                    className="w-full flex items-center justify-between bg-slate-800/80 hover:bg-slate-700 border border-white/5 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer"
                   >
-                    <Trash2 size={13} />
-                    <span>Limpiar Caché Local</span>
+                    <div>
+                      <p className="font-bold text-slate-200">Simular Venta de 1 Burger</p>
+                      <p className="text-[10px] text-slate-400">Descuenta 1 unidad en Kardex y asienta auditoría</p>
+                    </div>
+                    <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-bold">
+                      Probar
+                    </span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ── TAB 5: TIENDA V2 & BANNERS ───────────────────────────────────── */}
-            {tabActiva === 'tienda' && (
+            {/* ── TAB 6: ARQUEO DE CAJA & PAGOS EN EL LIMBO ────────────────────── */}
+            {tabActiva === 'caja' && (
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Inyector de Banners en Vivo (Tienda V2)
-                  </span>
-                  <div className="space-y-1.5">
-                    <input
-                      type="text"
-                      placeholder="URL Banner Desktop (horizontal)..."
-                      value={bannerDesktopUrl}
-                      onChange={(e) => setBannerDesktopUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
-                    />
-                    <input
-                      type="text"
-                      placeholder="URL Banner Mobile (opcional 9:16)..."
-                      value={bannerMobileUrl}
-                      onChange={(e) => setBannerMobileUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
-                    />
+                {/* Resumen del Turno */}
+                <div className="bg-slate-950/60 border border-white/5 p-3 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-200">Balances del Turno Actual</span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {estadoTurno?.activo ? 'Turno Abierto' : 'Turno Cerrado'}
+                    </span>
                   </div>
 
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={aplicarBannersTienda}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-1.5 rounded-xl font-bold transition-all cursor-pointer"
-                    >
-                      Aplicar a Tienda V2
-                    </button>
-                    <button
-                      type="button"
-                      onClick={restaurarBannersPorDefecto}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl font-bold border border-white/10 transition-all cursor-pointer"
-                    >
-                      Restaurar
-                    </button>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-slate-900/80 p-2 rounded-lg border border-white/5">
+                      <span className="text-[10px] text-slate-400 block">Total Efectivo</span>
+                      <span className="font-mono font-bold text-emerald-400 text-sm">
+                        ${metricasCaja.totalEfectivo.toLocaleString('es-AR')}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-2 rounded-lg border border-white/5">
+                      <span className="text-[10px] text-slate-400 block">Total Transferencias</span>
+                      <span className="font-mono font-bold text-sky-400 text-sm">
+                        ${metricasCaja.totalTransferencias.toLocaleString('es-AR')}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-2 rounded-lg border border-white/5">
+                      <span className="text-[10px] text-slate-400 block">Total Tarjetas</span>
+                      <span className="font-mono font-bold text-purple-400 text-sm">
+                        ${metricasCaja.totalTarjetas.toLocaleString('es-AR')}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-2 rounded-lg border border-white/5">
+                      <span className="text-[10px] text-slate-400 block">Efectivo en Cajón</span>
+                      <span className="font-mono font-bold text-white text-sm">
+                        ${metricasCaja.efectivoEsperado.toLocaleString('es-AR')}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Acceso Rápido por Módulos (Impersonator) */}
-                <div className="space-y-1.5 pt-2 border-t border-white/10">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Acceso Rápido por Rol y Módulo
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => router.push('/pedidos')}
-                      className="bg-slate-800 hover:bg-slate-700 border border-white/5 py-2 rounded-xl text-center font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      Admin
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/cadeteria')}
-                      className="bg-slate-800 hover:bg-slate-700 border border-white/5 py-2 rounded-xl text-center font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      Cadetería
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/tienda-v2')}
-                      className="bg-slate-800 hover:bg-slate-700 border border-white/5 py-2 rounded-xl text-center font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      Tienda V2
-                    </button>
+                {/* Detector de Pagos en el Limbo */}
+                <div className="space-y-1.5 pt-1 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Pedidos con Pago en el Limbo ({metricasCaja.pedidosEnElLimbo.length})
+                    </span>
                   </div>
+
+                  {metricasCaja.pedidosEnElLimbo.length > 0 ? (
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
+                      {metricasCaja.pedidosEnElLimbo.map((p) => (
+                        <div
+                          key={p.id}
+                          className="bg-amber-950/30 border border-amber-500/30 p-2 rounded-xl flex items-center justify-between"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <p className="font-bold text-slate-200 text-xs truncate">
+                              #{p.id.slice(-4)} - {p.cliente}
+                            </p>
+                            <p className="text-[10px] text-amber-300/90 font-mono">
+                              ${p.total.toLocaleString('es-AR')} ({p.metodoPago})
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => confirmarPagoEnElLimbo(p.id)}
+                            className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-slate-950 px-2 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer shrink-0 active:scale-95"
+                          >
+                            <Check size={11} strokeWidth={3} />
+                            <span>Confirmar</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-950/40 border border-white/5 p-2.5 rounded-xl text-center text-slate-500 text-[11px]">
+                      Todos los pagos electrónicos del turno están confirmados.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1394,7 +1604,7 @@ export default function ModalHerramientasTesteo() {
 
           <div className="p-2.5 bg-slate-900 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500">
             <span>Arrastrá desde la barra superior</span>
-            <span className="font-mono">chefsy-testing-suite</span>
+            <span className="font-mono">chefsy-diagnostic-suite</span>
           </div>
         </div>
       )}
