@@ -1,6 +1,4 @@
-import React from 'react'
 import toast from 'react-hot-toast'
-import { Check } from 'lucide-react'
 
 /**
  * Copia texto al portapapeles con 100% de efectividad utilizando:
@@ -43,7 +41,8 @@ export async function copiarAlPortapapeles(texto: string): Promise<boolean> {
 }
 
 /**
- * Muestra la notificación animada bonita, perfectamente centrada abajo y sin cortes de texto.
+ * Muestra la notificación nativa de react-hot-toast perfectamente centrada abajo
+ * y con formato píldora en una sola línea.
  */
 export function notificarCopiado(mensaje: string) {
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -52,27 +51,28 @@ export function notificarCopiado(mensaje: string) {
     } catch {}
   }
 
-  toast.custom(
-    (t) => (
-      <div
-        className={`flex items-center justify-center gap-2.5 bg-[#0b1120] text-slate-100 border border-white/20 px-5 py-2.5 rounded-full shadow-2xl shadow-black/90 text-xs sm:text-sm font-semibold tracking-wide transition-all duration-200 pointer-events-none mx-auto select-none ${
-          t.visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'
-        }`}
-      >
-        <div className="w-5 h-5 rounded-full bg-emerald-500/25 border border-emerald-400/50 text-emerald-400 flex items-center justify-center shrink-0">
-          <Check size={12} strokeWidth={3} />
-        </div>
-        <span className="text-center whitespace-nowrap text-slate-100">
-          {mensaje}
-        </span>
-      </div>
-    ),
-    {
-      id: mensaje,
-      duration: 2200,
-      position: 'bottom-center',
-    }
-  )
+  toast.success(mensaje, {
+    id: 'toast-copiado',
+    duration: 2200,
+    position: 'bottom-center',
+    style: {
+      background: '#0f172a',
+      color: '#ffffff',
+      border: '1px solid rgba(255, 255, 255, 0.18)',
+      borderRadius: '9999px',
+      padding: '10px 24px',
+      fontSize: '13.5px',
+      fontWeight: '600',
+      textAlign: 'center',
+      maxWidth: '90vw',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
+    },
+    iconTheme: {
+      primary: '#10b981',
+      secondary: '#ffffff',
+    },
+  })
 }
 
 /**
@@ -85,16 +85,17 @@ export async function copiarConNotificacion(texto: string, mensajeExito: string)
   } else {
     toast.error('No se pudo copiar automáticamente', {
       duration: 2200,
+      position: 'bottom-center',
       style: {
-        background: '#0b1120',
+        background: '#0f172a',
         color: '#f8fafc',
         border: '1px solid rgba(239, 68, 68, 0.3)',
         borderRadius: '9999px',
-        padding: '10px 18px',
+        padding: '10px 20px',
         fontSize: '13px',
         fontWeight: '600',
         textAlign: 'center',
-        margin: '0 auto',
+        whiteSpace: 'nowrap',
       },
     })
   }
