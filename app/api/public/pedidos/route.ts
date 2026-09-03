@@ -80,14 +80,46 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { accion, id, estado } = body
+    const { accion, id, estado, metodo_pago, metodoPago, pago_confirmado } = body
 
-    if (accion !== 'actualizar_estado' || !id || !estado) {
-      return NextResponse.json({ error: 'Petición inválida' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'ID de pedido requerido' }, { status: 400 })
     }
 
     const supabase = obtenerSupabaseAdmin()
+
+    // 1. Caso: Cambio directo de método de pago o confirmación desde la puerta
+    if (accion === 'cambiar_metodo_pago') {
+      const metodoFinal = metodo_pago || metodoPago
+      const updatePayload: any = {}
+      if (metodoFinal) updatePayload.metodoPago = metodoFinal
+      if (pago_confirmado !== undefined) updatePayload.pago_confirmado = Boolean(pago_confirmado)
+
+      const { error } = await supabase
+        .from('pedidos')
+        .update(updatePayload)
+        .eq('id', id)
+
+      if (error) throw error
+      return NextResponse.json({ ok: true })
+    }
+
+    // 2. Caso: Actualización de estado del pedido
+    if (accion !== 'actualizar_estado' || !estado) {
+      return NextResponse.json({ error: 'Petición inválida' }, { status: 400 })
+    }
+
     const updatePayload: any = { estado }
+    if (metodo_pago || metodoPago) {
+      updatePayload.metodoPago = metodo_pago || metodoPago
+    }
+    if (pago_confirmado !== undefined) {
+      updatePayload.pago_confirmado = Boolean(pago_confirmado)
+    } else if (estado === 'entregado') {
+      // Si se marca como entregado y no se especificó lo contrario, se asume cobrado
+      updatePayload.pago_confirmado = true
+    }
+
     if (estado === 'entregado') {
       updatePayload.cadete_coordenadas = null
       updatePayload.entregado_at = new Date().toISOString()
