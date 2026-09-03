@@ -353,37 +353,6 @@ export default function TiendaMobile() {
             />
           )}
 
-          {/* Botones Normales de Categorías (Sin deslizamiento horizontal, estáticos y fluidos) */}
-          <div className="sticky top-[108px] z-30 bg-[#141414] py-2 px-3 border-b border-white/10 flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCategoriaSeleccionada(null)}
-              className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95',
-                !categoriaSeleccionada
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700 border border-white/5'
-              )}
-            >
-              🍽️ Todos
-            </button>
-            {categoriasActivas.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setCategoriaSeleccionada(cat.id)}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95',
-                  categoriaSeleccionada === cat.id
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700 border border-white/5'
-                )}
-              >
-                {cat.nombre}
-              </button>
-            ))}
-          </div>
-
           {/* Catálogo de Productos */}
           <div className="px-2.5 mt-3">
             <CatalogoProductos

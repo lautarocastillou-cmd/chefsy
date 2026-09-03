@@ -294,7 +294,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         contain: 'layout style paint',
       }}
       className={cn(
-        "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-colors duration-150",
+        "bg-white dark:bg-[#1e1e1e] border border-slate-100/80 dark:border-white/[0.07] hover:border-slate-200/90 dark:hover:border-white/[0.12] rounded-xl p-3 flex flex-col gap-2.5 shadow-[0_1px_4px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset] relative overflow-hidden transition-colors duration-150",
         bordesPorEstado[pedido.estado]
       )}
     >

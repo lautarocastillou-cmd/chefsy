@@ -17,7 +17,7 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
       { rootMargin: '-20% 0px -70% 0px' }
     )
 
-    const secciones = document.querySelectorAll('section[id]')
+    const secciones = document.querySelectorAll('.categoria-seccion[id], section[id]')
     secciones.forEach((seccion) => observador.observe(seccion))
 
     return () => observador.disconnect()
