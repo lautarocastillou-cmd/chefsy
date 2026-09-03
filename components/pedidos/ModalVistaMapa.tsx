@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { Pedido } from '@/tipos'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import { X, ExternalLink, MapPin, Copy, Bike, Check } from 'lucide-react'
-import { notificarCopiado } from '@/lib/notificaciones'
+import { copiarConNotificacion } from '@/lib/notificaciones'
 
 interface Props {
   pedido: Pedido
@@ -34,14 +34,11 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
   if (!montado || typeof document === 'undefined') return null
 
   const copiarLinkRastreo = async () => {
-    try {
-      const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-      await navigator.clipboard.writeText(url)
+    const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+    const ok = await copiarConNotificacion(url, '¡Link de seguimiento copiado al portapapeles!')
+    if (ok) {
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
-      notificarCopiado('¡Link de seguimiento copiado al portapapeles!')
-    } catch {
-      // Fallback
     }
   }
 

@@ -43,7 +43,7 @@ import BadgeSmartBatch from './BadgeSmartBatch'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
 import { Sliders, Zap } from 'lucide-react'
-import { notificarCopiado } from '@/lib/notificaciones'
+import { copiarConNotificacion } from '@/lib/notificaciones'
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -150,7 +150,7 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     }
   }
 
-  const copiarParaWhatsApp = () => {
+  const copiarParaWhatsApp = async () => {
     const productosText = pedido.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('\n')
     
     let direccionTexto = ''
@@ -173,13 +173,14 @@ ${productosText}
 💵 Total: ${formatearPrecio(pedido.total)} (${etiquetaMetodoPago[pedido.metodoPago]})
 ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
 
-    navigator.clipboard.writeText(texto)
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 2000)
-    notificarCopiado('¡Pedido para WhatsApp copiado al portapapeles!')
+    const ok = await copiarConNotificacion(texto, '¡Pedido para WhatsApp copiado al portapapeles!')
+    if (ok) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
   }
 
-  const copiarTicketCliente = () => {
+  const copiarTicketCliente = async () => {
     let subtotal = 0
 
     const lineasProductos = pedido.productos.map(p => {
@@ -273,10 +274,11 @@ Total: ${formatearPrecio(total)}
 ----------------------------------
 ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(/\n-+$/, '')
 
-    navigator.clipboard.writeText(texto)
-    setTicketCopiado(true)
-    setTimeout(() => setTicketCopiado(false), 2000)
-    notificarCopiado('¡Ticket de cliente copiado al portapapeles!')
+    const ok = await copiarConNotificacion(texto, '¡Ticket de cliente copiado al portapapeles!')
+    if (ok) {
+      setTicketCopiado(true)
+      setTimeout(() => setTicketCopiado(false), 2000)
+    }
   }
 
   const imprimirSilencioso = async (tipo: 'ticket' | 'cocina') => {
@@ -622,10 +624,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
           {!esFinal && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-                navigator.clipboard.writeText(url)
-                notificarCopiado('¡Link de seguimiento copiado al portapapeles!')
+                await copiarConNotificacion(url, '¡Link de seguimiento copiado al portapapeles!')
               }}
               className="flex-1 min-w-[80px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
             >
