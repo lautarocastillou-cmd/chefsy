@@ -24,19 +24,19 @@ export async function GET(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
     const fechaHoy = obtenerFechaNegocio()
+    const cadeteIdNorm = cadeteId.trim().toLowerCase()
 
     const { data, error } = await supabase
       .from('pedidos')
       .select('*')
-      .eq('cadete_id', cadeteId)
-      .in('estado', ['en_cocina', 'listo', 'en_camino', 'entregado'])
+      .or(`cadete_id.ilike.${cadeteIdNorm},cadete_nombre.ilike.${cadeteIdNorm}`)
+      .in('estado', ['nuevo', 'en_cocina', 'listo', 'en_camino', 'entregado'])
       .eq('archivado', false)
       .order('hora', { ascending: true })
 
     if (error) throw error
 
     // Consultar viajes y pagos extras asignados al cadete en el turno/fecha de negocio actual
-    const cadeteIdNorm = cadeteId.trim().toLowerCase()
     const { data: extrasData } = await supabase
       .from('cadetes_pagos_extras')
       .select('*')

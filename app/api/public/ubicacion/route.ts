@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     // 1. Verificar estado actual en tabla cadetes
     const { data: cadeteExistente } = await adminClient
       .from('cadetes')
-      .select('id, gps_activo, apagado_por_admin')
+      .select('id, gps_activo, apagado_por_admin, updated_at')
       .ilike('id', idNormalizado)
       .maybeSingle()
 
@@ -57,6 +57,16 @@ export async function POST(request: Request) {
         .eq('id', cadeteExistente.id)
 
       // Responder con la orden de apagado para que la app móvil detenga el servicio
+      return NextResponse.json({
+        success: true,
+        gps_activo: false,
+        comando: 'apagar_gps'
+      })
+    }
+
+    // Si el GPS del cadete está apagado y llega un paquete residual de fondo (sin iniciar_gps_manual explícito),
+    // no reactivarlo y ordenar a la app detener el servicio de segundo plano
+    if (cadeteExistente && cadeteExistente.gps_activo === false && !iniciar_gps_manual) {
       return NextResponse.json({
         success: true,
         gps_activo: false,

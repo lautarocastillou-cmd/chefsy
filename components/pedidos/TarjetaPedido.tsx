@@ -477,13 +477,11 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
             >
               <option value="">🛵 Sin Cadete</option>
-              {cadetes
-                .filter(c => c.gps_activo || c.id === pedido.cadete_id)
-                .map(c => (
-                  <option key={c.id} value={c.id}>
-                    🛵 {c.nombre}
-                  </option>
-                ))}
+              {cadetes.map(c => (
+                <option key={c.id} value={c.id}>
+                  🛵 {c.nombre} {c.gps_activo ? '🟢 (GPS)' : '⚪ (GPS apagado)'}
+                </option>
+              ))}
             </select>
           )}
           {pedido.metodoPago === 'transferencia' && !soloLectura && (
