@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Edit3, X, Check, ImageIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Edit3, X, Check, ImageIcon, Smartphone, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface PromoSlide {
   id: string
   titulo: string
-  imagenUrl: string
+  imagenUrl: string // Desktop (Banner horizontal)
+  imagenUrlMobile?: string // Mobile (Historia vertical 9:16)
   categoriaId?: string
 }
 
@@ -17,18 +18,21 @@ const PROMOS_INICIALES: PromoSlide[] = [
     id: 'promo-1',
     titulo: 'Doble Smash Promo',
     imagenUrl: '/burger-loca.webp',
+    imagenUrlMobile: '/burger-loca.webp',
     categoriaId: 'burgers',
   },
   {
     id: 'promo-2',
     titulo: 'Promo Burgers 2x1',
     imagenUrl: '/burger-hero.png',
+    imagenUrlMobile: '/burger-hero.png',
     categoriaId: 'burgers',
   },
   {
     id: 'promo-3',
     titulo: 'Combos Nocturnos',
     imagenUrl: '/burger-loca.webp',
+    imagenUrlMobile: '/burger-loca.webp',
     categoriaId: 'lomos',
   },
 ]
@@ -127,20 +131,26 @@ export default function BannerGigantePromos({
   }
 
   return (
-    <div className="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Contenedor principal del Banner Gigante (Limpio, sin texto superpuesto) */}
+    <div className="w-full px-2 sm:px-4 md:px-6 py-2 sm:py-4">
+      <div className="max-w-7xl mx-auto">
+        {/* 
+          Contenedor Adaptativo:
+          - Móvil: Formato Historia de Instagram (aspect-[9/16], máx 80vh para que se vea el inicio del menú)
+          - PC: Formato Panorámico / Banner YouTube (aspect-[21/9] o altura 400px - 480px, ancho completo)
+        */}
         <div
           onMouseEnter={() => setEstaPausado(true)}
           onMouseLeave={() => setEstaPausado(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onClick={() => handleAccionPromo(slideActual)}
-          className="relative w-full h-[220px] sm:h-[320px] md:h-[400px] lg:h-[440px] rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 select-none group cursor-pointer"
+          className="relative w-full aspect-[9/16] max-h-[78vh] md:aspect-[21/9] md:max-h-[460px] md:h-[420px] rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 select-none group cursor-pointer"
         >
-          {/* Imágenes de fondo que ocupan el 100% del banner con transición suave */}
           {promos.map((slide, idx) => {
             const esActivo = idx === indiceActual
+            const imgDesktop = slide.imagenUrl
+            const imgMobile = slide.imagenUrlMobile || slide.imagenUrl
+
             return (
               <div
                 key={slide.id}
@@ -149,19 +159,34 @@ export default function BannerGigantePromos({
                   esActivo ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                 )}
               >
-                <Image
-                  src={slide.imagenUrl}
-                  alt={slide.titulo}
-                  fill
-                  priority={idx === 0}
-                  sizes="(max-width: 768px) 100vw, 1200px"
-                  className="object-cover object-center scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
-                />
+                {/* Imagen para Celular (Formato Historia 9:16) */}
+                <div className="block md:hidden absolute inset-0 w-full h-full">
+                  <Image
+                    src={imgMobile}
+                    alt={slide.titulo}
+                    fill
+                    priority={idx === 0}
+                    sizes="(max-width: 768px) 100vw, 1px"
+                    className="object-cover object-center"
+                  />
+                </div>
+
+                {/* Imagen para PC / Tablet (Formato Panorámico YouTube Banner) */}
+                <div className="hidden md:block absolute inset-0 w-full h-full">
+                  <Image
+                    src={imgDesktop}
+                    alt={slide.titulo}
+                    fill
+                    priority={idx === 0}
+                    sizes="(min-width: 769px) 100vw, 1400px"
+                    className="object-cover object-center scale-100 group-hover:scale-101 transition-transform duration-700 ease-out"
+                  />
+                </div>
               </div>
             )
           })}
 
-          {/* Flechas de navegación (visibles en hover en desktop) */}
+          {/* Flechas de navegación (Desktop en hover) */}
           {promos.length > 1 && (
             <>
               <button
@@ -170,10 +195,10 @@ export default function BannerGigantePromos({
                   e.stopPropagation()
                   cambiarSlide(indiceActual - 1)
                 }}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
+                className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
                 title="Banner anterior"
               >
-                <ChevronLeft size={22} />
+                <ChevronLeft size={24} />
               </button>
               <button
                 type="button"
@@ -181,17 +206,17 @@ export default function BannerGigantePromos({
                   e.stopPropagation()
                   cambiarSlide(indiceActual + 1)
                 }}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
+                className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
                 title="Siguiente banner"
               >
-                <ChevronRight size={22} />
+                <ChevronRight size={24} />
               </button>
             </>
           )}
 
           {/* Indicadores de diapositiva (Pills con progreso sutil) */}
           {promos.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-xs border border-white/10">
+            <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 md:gap-2 bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-xs border border-white/10">
               {promos.map((slide, idx) => {
                 const esActivo = idx === indiceActual
                 return (
@@ -202,8 +227,8 @@ export default function BannerGigantePromos({
                       e.stopPropagation()
                       cambiarSlide(idx)
                     }}
-                    className="relative h-2 rounded-full overflow-hidden transition-all duration-300 cursor-pointer bg-white/30"
-                    style={{ width: esActivo ? '32px' : '8px' }}
+                    className="relative h-1.5 md:h-2 rounded-full overflow-hidden transition-all duration-300 cursor-pointer bg-white/30"
+                    style={{ width: esActivo ? '28px' : '7px' }}
                     title={`Ir a banner ${idx + 1}`}
                   >
                     {esActivo && (
@@ -225,7 +250,7 @@ export default function BannerGigantePromos({
               e.stopPropagation()
               setModalEditorAbierto(true)
             }}
-            className="absolute top-3 right-3 z-30 bg-black/70 hover:bg-black/90 border border-white/20 text-slate-200 hover:text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-xs opacity-80 hover:opacity-100"
+            className="absolute top-3 right-3 z-30 bg-black/70 hover:bg-black/90 border border-white/20 text-slate-200 hover:text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-xs opacity-75 hover:opacity-100"
             title="Administrar imágenes de los banners"
           >
             <Edit3 size={13} className="text-amber-400" />
@@ -274,6 +299,7 @@ function ModalEditorBanners({
       id: `banner-${Date.now()}`,
       titulo: 'Nuevo Banner',
       imagenUrl: '/burger-loca.webp',
+      imagenUrlMobile: '/burger-loca.webp',
       categoriaId: '',
     }
     setLista([...lista, nueva])
@@ -329,7 +355,7 @@ function ModalEditorBanners({
                 </button>
               </div>
 
-              <div className="space-y-2 text-xs">
+              <div className="space-y-2.5 text-xs">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 mb-1">
                     Nombre de referencia:
@@ -343,15 +369,32 @@ function ModalEditorBanners({
                   />
                 </div>
 
+                {/* Imagen para PC / Banner YouTube */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                    URL de la Imagen (archivo en /public o link directo):
+                  <label className="block text-[11px] font-bold text-emerald-400 mb-1 flex items-center gap-1.5">
+                    <Monitor size={13} />
+                    <span>Imagen para PC (Panorámica 1920x600 o YouTube Banner):</span>
                   </label>
                   <input
                     type="text"
                     value={banner.imagenUrl}
                     onChange={(e) => actualizarCampo(banner.id, 'imagenUrl', e.target.value)}
-                    placeholder="Ej: /burger-loca.webp o link de imagen"
+                    placeholder="Ej: /burger-loca.webp o URL externa"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-[11px]"
+                  />
+                </div>
+
+                {/* Imagen para Celular / Historia Instagram */}
+                <div>
+                  <label className="block text-[11px] font-bold text-amber-400 mb-1 flex items-center gap-1.5">
+                    <Smartphone size={13} />
+                    <span>Imagen para Celular (Historia Instagram 9:16 / 1080x1920):</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={banner.imagenUrlMobile || ''}
+                    onChange={(e) => actualizarCampo(banner.id, 'imagenUrlMobile', e.target.value)}
+                    placeholder="Opcional: Si se deja vacío, usa la de PC"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono text-[11px]"
                   />
                 </div>
@@ -363,7 +406,7 @@ function ModalEditorBanners({
                   <input
                     type="text"
                     value={banner.categoriaId || ''}
-                    placeholder="Ej: burgers, lomos, pizzas (dejar vacío si no filtra)"
+                    placeholder="Ej: burgers, lomos, pizzas"
                     onChange={(e) => actualizarCampo(banner.id, 'categoriaId', e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
                   />
