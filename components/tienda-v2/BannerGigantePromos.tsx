@@ -53,17 +53,34 @@ export default function BannerGigantePromos({
   const [progreso, setProgreso] = useState(0)
   const [modalEditorAbierto, setModalEditorAbierto] = useState(false)
 
-  // Cargar promos desde localStorage si existen
+  // Cargar promos desde localStorage si existen y escuchar cambios en tiempo real
   useEffect(() => {
-    try {
-      const guardado = localStorage.getItem(STORAGE_KEY_PROMOS)
-      if (guardado) {
-        const parsed = JSON.parse(guardado)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPromos(parsed)
+    const cargar = () => {
+      try {
+        const guardado = localStorage.getItem(STORAGE_KEY_PROMOS)
+        if (guardado) {
+          const parsed = JSON.parse(guardado)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setPromos(parsed)
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+
+    cargar()
+
+    const handleCustom = () => cargar()
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY_PROMOS) cargar()
+    }
+
+    window.addEventListener('chefsy:promos-actualizadas', handleCustom)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      window.removeEventListener('chefsy:promos-actualizadas', handleCustom)
+      window.removeEventListener('storage', handleStorage)
+    }
   }, [])
 
   const guardarPromos = (nuevas: PromoSlide[]) => {
