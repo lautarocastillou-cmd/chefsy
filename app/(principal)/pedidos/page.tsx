@@ -99,6 +99,17 @@ export default function PaginaPedidos() {
     })
   }, [pedidosBase, filtroActivo, filtroEntrega, vista])
 
+  // Conteos por estado en una sola pasada O(n) — evita N filtros inline en el render
+  const conteosPorEstado = useMemo(() => {
+    const conteos: Record<string, number> = { todos: 0 }
+    for (const p of pedidosBase) {
+      if (vista === 'activos' && p.estado === 'cancelado') continue
+      conteos.todos = (conteos.todos || 0) + 1
+      conteos[p.estado] = (conteos[p.estado] || 0) + 1
+    }
+    return conteos
+  }, [pedidosBase, vista])
+
   return (
     <div className="space-y-5">
 
@@ -205,9 +216,7 @@ export default function PaginaPedidos() {
             {/* Carrusel Horizontal de Estados con Conteo y Badges */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none snap-x py-1 -mx-3 px-3 md:mx-0 md:px-0">
               {opcionesFiltro.map((opcion) => {
-                const count = opcion.valor === 'todos'
-                  ? pedidosBase.filter(p => vista === 'activos' ? p.estado !== 'cancelado' : true).length
-                  : pedidosBase.filter(p => p.estado === opcion.valor).length
+                const count = conteosPorEstado[opcion.valor] || 0
                 const activo = filtroActivo === opcion.valor
 
                 return (

@@ -120,9 +120,9 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   }, [pedido.observaciones])
 
   useEffect(() => {
-    if (ticketCopiado) {
-      const t = setTimeout(() => setTicketCopiado(false), 2000)
-    }
+    if (!ticketCopiado) return
+    const t = setTimeout(() => setTicketCopiado(false), 2000)
+    return () => clearTimeout(t)
   }, [ticketCopiado])
 
   const esFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
@@ -291,9 +291,10 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       style={{
         contentVisibility: 'auto',
         containIntrinsicSize: '0 260px',
+        contain: 'layout style paint',
       }}
       className={cn(
-        "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm hover:shadow transition-all duration-200 relative overflow-hidden",
+        "bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] hover:border-slate-200 dark:hover:border-[#4d4d4d] rounded-xl p-3 flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-colors duration-150",
         bordesPorEstado[pedido.estado]
       )}
     >
@@ -348,7 +349,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
           <div className="hidden md:flex items-center gap-1">
             <button 
               onClick={() => onEditarPedido ? onEditarPedido(pedido) : setEditandoPedidoCompleto(true)}
-              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+              className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Editar Pedido"
             >
               <Pencil size={11} />
@@ -360,7 +361,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                     revertirEstado(pedido.id)
                   }
                 }}
-                className="text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-all p-1 rounded-md border border-orange-100 dark:border-orange-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+                className="text-orange-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors p-1 rounded-md border border-orange-100 dark:border-orange-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
                 title="Revertir al estado anterior"
               >
                 <Undo2 size={11} />
@@ -372,28 +373,28 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                   eliminarPedido(pedido.id)
                 }
               }}
-              className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all p-1 rounded-md border border-red-100 dark:border-red-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+              className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors p-1 rounded-md border border-red-100 dark:border-red-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Eliminar Pedido Definitivamente"
             >
               <Trash2 size={11} />
             </button>
             <button 
               onClick={copiarParaWhatsApp}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-colors p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Copiar para WhatsApp"
             >
               {copiado ? <Check size={11} className="text-green-500" /> : <Copy size={11} className="dark:text-[#a8a8a8]" />}
             </button>
             <button 
               onClick={() => setModalImpresion(true)}
-              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-all p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+              className="text-slate-450 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-[#3a3a3a] transition-colors p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Imprimir Ticket / Comanda"
             >
               <Printer size={11} className="dark:text-[#a8a8a8]" />
             </button>
             <button 
               onClick={copiarTicketCliente}
-              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all p-1 rounded-md border border-amber-100 dark:border-amber-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
+              className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors p-1 rounded-md border border-amber-100 dark:border-amber-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
               title="Copiar Ticket / Desglose para el Cliente"
             >
               {ticketCopiado ? (
@@ -520,7 +521,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                   total: nuevoTotal,
                 })
               }}
-              className="inline-flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md transition-all animate-pulse cursor-pointer ml-1"
+              className="inline-flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ml-1"
               title="Este pedido de delivery no tiene costo de envío sumado. Hacé clic para sumarle el costo en 1 clic."
             >
               <span>⚠️ + Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
@@ -733,26 +734,28 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         </div>
       )}
 
-      {/* Action Sheet Inferior para Mobile */}
-      <ModalAccionesPedidoMobile
-        pedido={pedido}
-        abierto={sheetMobileAbierto}
-        onClose={() => setSheetMobileAbierto(false)}
-        onEditar={() => {
-          if (onEditarPedido) onEditarPedido(pedido)
-          else setEditandoPedidoCompleto(true)
-        }}
-        onImprimir={() => setModalImpresion(true)}
-        onCopiarTicket={copiarTicketCliente}
-        onCopiarWhatsApp={copiarParaWhatsApp}
-        onVerMapa={() => setVerMapa(true)}
-        onRevertirEstado={() => revertirEstado(pedido.id)}
-        onCancelar={() => {
-          if (window.confirm('¿Estás seguro de cancelar este pedido?')) {
-            manejarCancelacion()
-          }
-        }}
-      />
+      {/* Action Sheet Inferior para Mobile — montado solo cuando está abierto */}
+      {sheetMobileAbierto && (
+        <ModalAccionesPedidoMobile
+          pedido={pedido}
+          abierto={sheetMobileAbierto}
+          onClose={() => setSheetMobileAbierto(false)}
+          onEditar={() => {
+            if (onEditarPedido) onEditarPedido(pedido)
+            else setEditandoPedidoCompleto(true)
+          }}
+          onImprimir={() => setModalImpresion(true)}
+          onCopiarTicket={copiarTicketCliente}
+          onCopiarWhatsApp={copiarParaWhatsApp}
+          onVerMapa={() => setVerMapa(true)}
+          onRevertirEstado={() => revertirEstado(pedido.id)}
+          onCancelar={() => {
+            if (window.confirm('¿Estás seguro de cancelar este pedido?')) {
+              manejarCancelacion()
+            }
+          }}
+        />
+      )}
 
       {/* Opción de revertir eliminada (se movió al botón Undo en la cabecera) */}
 
