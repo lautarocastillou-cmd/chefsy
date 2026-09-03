@@ -18,6 +18,7 @@ import {
 } from 'next/font/google'
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
+import ToasterProvider from '@/components/ui/ToasterProvider'
 
 const bebas = Bebas_Neue({
   weight: '400',
@@ -127,6 +128,7 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
               <ProveedorPedidos>
                 <SmoothScrollProvider>
                   <GlobalEvents />
+                  <ToasterProvider />
                   {children}
                 </SmoothScrollProvider>
               </ProveedorPedidos>

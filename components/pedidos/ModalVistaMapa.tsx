@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Pedido } from '@/tipos'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import { X, ExternalLink, MapPin, Copy, Bike, Check } from 'lucide-react'
+import { notificarCopiado } from '@/lib/notificaciones'
 
 interface Props {
   pedido: Pedido
@@ -38,6 +39,7 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
       await navigator.clipboard.writeText(url)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
+      notificarCopiado('¡Link de seguimiento copiado al portapapeles!')
     } catch {
       // Fallback
     }
