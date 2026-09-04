@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pedido } from '@/tipos'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
-import { Navigation, Compass, Home, Bike, CheckCircle2, Layers } from 'lucide-react'
+import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
@@ -547,28 +547,38 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* HUD Superior con Estado Claro (Sin ETA numérico que genere ansiedad) */}
       {enLaPuerta ? (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-bounce border-2 border-white">
-            <span className="text-xl">🎉</span>
+          <div className="bg-[#102a20]/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-[0_12px_32px_-4px_rgba(0,0,0,0.4)] flex items-center gap-3 border border-emerald-400/30 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shrink-0">
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+              <BellRing size={16} className="text-emerald-300" />
+            </div>
             <div className="text-left">
-              <span className="text-xs font-black uppercase tracking-wider block">¡El repartidor está en tu puerta!</span>
-              <span className="text-[11px] font-bold text-slate-900">Por favor salí a recibir tu pedido</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 block">
+                ¡El repartidor está en tu puerta!
+              </span>
+              <span className="text-xs font-semibold text-white/90 block">
+                Por favor salí a recibir tu pedido
+              </span>
             </div>
           </div>
         </div>
       ) : paradasPrevias > 0 && !esperandoGps ? (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-amber-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 border border-amber-400/40">
-            <span className="text-sm">🛵</span>
-            <span className="text-xs sm:text-sm font-black tracking-wide">
+          <div className="bg-[#102a20]/90 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/30">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-white/90 tracking-wide">
               Entrega previa en curso • Tu turno: Parada {paradaActual} de {totalParadas}
             </span>
           </div>
         </div>
       ) : esProximaEntrega && pedido.cadete_coordenadas && ['listo', 'en_camino'].includes(pedido.estado) && !esperandoGps ? (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 border border-emerald-400/40">
-            <span className="text-sm">🛵</span>
-            <span className="text-xs sm:text-sm font-black tracking-wide">
+          <div className="bg-[#102a20]/90 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/30">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-white/90 tracking-wide">
               {pedido.cadete_nombre ? `${pedido.cadete_nombre} va directo a tu domicilio` : 'Repartidor en camino directo a tu domicilio'}
             </span>
           </div>
