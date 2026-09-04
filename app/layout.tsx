@@ -20,6 +20,8 @@ import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 import ToasterProvider from '@/components/ui/ToasterProvider'
 import ModalHerramientasTesteo from '@/components/dev/ModalHerramientasTesteo'
+import JsonLdLocalBusiness from '@/components/seo/JsonLdLocalBusiness'
+import SeoFallbackContent from '@/components/seo/SeoFallbackContent'
 
 const bebas = Bebas_Neue({
   weight: '400',
@@ -93,36 +95,80 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chefsy.xyz'),
-  title: 'Chefsy | Tienda Online',
-  description: 'Pedí online las mejores burgers, lomos, pizzas y milas en Chefsy. ¡Rápido, fácil y riquísimo!',
-  keywords: 'chefsy, hamburguesas, lomos, pizzas, milanesas, delivery, pedir comida, fast food',
+  title: {
+    default: 'Chefsy | Hamburguesas, Lomos y Pizzas en Catamarca - Pedí Online',
+    template: '%s | Chefsy Catamarca',
+  },
+  description:
+    'Pedí online en Chefsy las mejores hamburguesas artesanales smash, lomitos completos, pizzas y milanesas en San Fernando del Valle de Catamarca. Delivery rápido a tu puerta y retiro en local.',
+  applicationName: 'Chefsy',
+  authors: [{ name: 'Chefsy Catamarca', url: 'https://chefsy.xyz' }],
+  generator: 'Next.js',
+  keywords: [
+    'chefsy',
+    'chefsy catamarca',
+    'delivery catamarca',
+    'hamburguesas catamarca',
+    'lomitos catamarca',
+    'lomos catamarca',
+    'pizzas catamarca',
+    'milanesas catamarca',
+    'comida rapida catamarca',
+    'pedir comida catamarca',
+    'san fernando del valle de catamarca',
+    'sandwicheria catamarca',
+    'fast food catamarca',
+    'delivery de comida catamarca',
+  ],
+  alternates: {
+    canonical: 'https://chefsy.xyz',
+  },
   openGraph: {
-    title: 'Chefsy | Tienda Online',
-    description: 'Pedí online las mejores burgers, lomos, pizzas y milas en Chefsy. ¡Rápido, fácil y riquísimo!',
+    title: 'Chefsy | Hamburguesas, Lomos y Pizzas en Catamarca',
+    description:
+      'Pedí online las mejores hamburguesas, lomitos, pizzas y milanesas en San Fernando del Valle de Catamarca. Delivery rápido a tu puerta.',
     url: 'https://chefsy.xyz',
-    siteName: 'Chefsy',
+    siteName: 'Chefsy Catamarca',
     images: [
       {
         url: '/logo.jpg',
         width: 800,
         height: 600,
-        alt: 'Chefsy Logo',
+        alt: 'Chefsy Catamarca - Hamburguesas & Lomos',
       },
     ],
     locale: 'es_AR',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chefsy | Hamburguesas, Lomos y Pizzas en Catamarca',
+    description:
+      'Pedí online las mejores hamburguesas, lomitos y pizzas en Catamarca. Delivery rápido.',
+    images: ['/logo.jpg'],
+  },
   icons: {
     icon: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
+  other: {
+    'geo.region': 'AR-K',
+    'geo.placename': 'San Fernando del Valle de Catamarca',
+    'geo.position': '-28.462809;-65.778500',
+    'ICBM': '-28.462809, -65.778500',
   },
 }
 
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
+      <head>
+        <JsonLdLocalBusiness />
+      </head>
       <body
         className={`font-sans antialiased overflow-x-clip ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable} ${playfair.variable} ${outfit.variable} ${plusJakarta.variable} ${syne.variable} ${permanentMarker.variable} ${cinzel.variable}`}
       >
+        <SeoFallbackContent />
         <ConfiguracionTiendaProvider>
           <ProveedorAuth>
             <ProveedorClienteAuth>
