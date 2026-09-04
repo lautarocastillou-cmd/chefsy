@@ -2,36 +2,31 @@ import type { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://chefsy.xyz'
-  const ahora = new Date()
+  // Fecha del último deploy relevante — actualizar al hacer cambios significativos de contenido
+  const ultimaActualizacion = new Date('2026-09-04')
 
   return [
     {
       url: `${baseUrl}/`,
-      lastModified: ahora,
+      lastModified: ultimaActualizacion,
       changeFrequency: 'daily',
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/sobre-nosotros`,
-      lastModified: ahora,
+      url: `${baseUrl}/tienda`,
+      lastModified: ultimaActualizacion,
       changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/tienda-v2`,
-      lastModified: ahora,
-      changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/terminos`,
-      lastModified: ahora,
+      lastModified: ultimaActualizacion,
       changeFrequency: 'monthly',
       priority: 0.3,
     },
     {
       url: `${baseUrl}/privacidad`,
-      lastModified: ahora,
+      lastModified: ultimaActualizacion,
       changeFrequency: 'monthly',
       priority: 0.3,
     },

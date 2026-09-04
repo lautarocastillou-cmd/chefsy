@@ -1,7 +1,7 @@
 import React from 'react'
 
 export default function JsonLdLocalBusiness() {
-  const jsonLd = {
+  const localBusiness = {
     '@context': 'https://schema.org',
     '@type': ['FastFoodRestaurant', 'Restaurant'],
     '@id': 'https://chefsy.xyz/#restaurant',
@@ -29,6 +29,7 @@ export default function JsonLdLocalBusiness() {
     paymentAccepted: 'Efectivo, Transferencia Bancaria, Mercado Pago',
     address: {
       '@type': 'PostalAddress',
+      streetAddress: 'San Fernando del Valle de Catamarca',
       addressLocality: 'San Fernando del Valle de Catamarca',
       addressRegion: 'Catamarca',
       postalCode: '4700',
@@ -53,7 +54,7 @@ export default function JsonLdLocalBusiness() {
         name: 'Valle Viejo',
       },
     ],
-    hasMenu: 'https://chefsy.xyz',
+    hasMenu: 'https://chefsy.xyz/tienda',
     openingHoursSpecification: [
       {
         '@type': 'OpeningHoursSpecification',
@@ -79,14 +80,14 @@ export default function JsonLdLocalBusiness() {
           'Saturday',
         ],
         opens: '20:30',
-        closes: '01:00',
+        closes: '25:00',
       },
     ],
     potentialAction: {
       '@type': 'OrderAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://chefsy.xyz',
+        urlTemplate: 'https://chefsy.xyz/tienda',
         inLanguage: 'es-AR',
         actionPlatform: [
           'http://schema.org/DesktopWebPlatform',
@@ -102,10 +103,37 @@ export default function JsonLdLocalBusiness() {
     },
   }
 
+  const webSite = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': 'https://chefsy.xyz/#website',
+    url: 'https://chefsy.xyz',
+    name: 'Chefsy',
+    description: 'Hamburguesas, Lomos y Pizzas en Catamarca — Delivery Online',
+    inLanguage: 'es-AR',
+    publisher: {
+      '@id': 'https://chefsy.xyz/#restaurant',
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://chefsy.xyz/tienda',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusiness) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSite) }}
+      />
+    </>
   )
 }

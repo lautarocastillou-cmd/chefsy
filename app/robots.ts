@@ -7,8 +7,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: [
           '/',
-          '/sobre-nosotros',
-          '/tienda-v2',
+          '/tienda',
           '/terminos',
           '/privacidad',
         ],
