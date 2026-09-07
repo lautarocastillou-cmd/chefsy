@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Plus, Flame, Star, Leaf, Sparkles } from 'lucide-react'
+import { Plus, Flame, Star, Leaf, Sparkles, Utensils } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -38,6 +38,7 @@ function ProductCard({
   // ── Animación de entrada escalonada con IntersectionObserver ──────────────
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(index < 4)
+  const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
     if (index < 4) return
@@ -121,18 +122,31 @@ function ProductCard({
           ? 'h-16 w-16 md:h-18 md:w-18 rounded-lg'
           : 'h-20 w-20 sm:h-24 sm:w-24 md:h-26 md:w-26 rounded-xl'
       )}>
-        <Image
-          src={optimizedSrc}
-          alt={nombreVisible ?? prod.nombre}
-          fill
-          priority={esPrioritario}
-          loading={esPrioritario ? undefined : 'lazy'}
-          unoptimized={isCdnOptimized}
-          placeholder="blur"
-          blurDataURL={blurSrc}
-          sizes="(max-width: 768px) 50vw, 250px"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {(!imagenFinal || !rawSrc || imgError) ? (
+          /* Placeholder para productos sin imagen — mismo estilo que tienda-v2 */
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center gap-1.5">
+            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <Utensils size={16} className="text-slate-500" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+              Chefsy
+            </span>
+          </div>
+        ) : (
+          <Image
+            src={optimizedSrc}
+            alt={nombreVisible ?? prod.nombre}
+            fill
+            priority={esPrioritario}
+            loading={esPrioritario ? undefined : 'lazy'}
+            unoptimized={isCdnOptimized}
+            placeholder="blur"
+            blurDataURL={blurSrc}
+            sizes="(max-width: 768px) 50vw, 250px"
+            onError={() => setImgError(true)}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )}
 
         {/* Badge de Descuento Porcentual */}
         {mostrarDescuento && porcentajeDescuento && (
