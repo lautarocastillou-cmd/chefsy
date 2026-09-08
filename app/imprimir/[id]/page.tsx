@@ -81,8 +81,8 @@ function TicketContenido() {
                 <td className="py-1 align-top">
                   <div>{prod.nombre}</div>
                   {prod.coccion && (
-                    <div className="text-[10px] font-bold text-gray-800 uppercase tracking-wider mt-0.5">
-                      ↳ {prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}
+                    <div className="text-[11px] uppercase tracking-wider mt-0.5" style={{ color: '#000000', fontWeight: 900 }}>
+                      ↳ [{prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}]
                     </div>
                   )}
                 </td>

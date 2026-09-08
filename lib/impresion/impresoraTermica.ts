@@ -439,7 +439,7 @@ class GestorImpresoraTermica {
 
     const htmlTicket = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{margin:0!important;size:auto}
   html,body{margin:0!important;padding:0!important;font-family:monospace;font-size:12px;width:${this.config.anchoMm}mm;color:#000;background:#fff}
   body{padding:0 2px!important}
@@ -451,7 +451,7 @@ class GestorImpresoraTermica {
   .big{font-size:14px;font-weight:bold}
   .center{text-align:center}
   table{width:100%;border-collapse:collapse}
-  td{padding:2px 0;vertical-align:top;font-size:11px}
+  td{padding:2px 0;vertical-align:top;font-size:11px;color:#000}
   td:last-child{text-align:right;white-space:nowrap}
   .nota{font-size:10px;background:#f5f5f5;padding:3px 5px;border-radius:3px;margin-top:3px}
   @media print{@page{margin:0!important;size:auto}html,body{margin:0!important;padding:0 2px!important}}
@@ -466,7 +466,7 @@ ${p.telefono && p.telefono !== 'Sin especificar' ? `<div class="row"><span><b>Te
 ${p.direccion ? `<div class="row"><span><b>Dir:</b> ${p.direccion}</span></div>` : ''}
 <div class="sep"></div>
 <table>
-${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}${prod.coccion ? `<br><small style="margin-left:8px;font-weight:bold;font-size:10px;text-transform:uppercase">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</small>` : ''}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
+${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}${prod.coccion ? `<div style="margin-left:8px;font-weight:900;font-size:11px;color:#000;text-transform:uppercase;letter-spacing:0.5px">↳ [${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}]</div>` : ''}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
 </table>
 <div class="sep"></div>
 ${p.costoEnvio ? `<div class="row"><span>Subtotal:</span><span>${f(p.total - (p.costoEnvio ?? 0))}</span></div><div class="row"><span>Envío:</span><span>${f(p.costoEnvio)}</span></div>` : ''}
@@ -479,14 +479,14 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold">NOTAS: ${p.ob
 
     const htmlCocina = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{margin:0!important;size:auto}
   html,body{margin:0!important;padding:0!important;font-family:monospace;font-size:17px;width:${this.config.anchoMm}mm;color:#000;background:#fff}
   body{padding:0 2px!important}
   h1{font-size:26px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;text-align:center;margin:0 0 2px 0}
   .sub{text-align:center;font-size:14px;margin-bottom:3px}
   .sep{border-top:2px dashed #000;margin:6px 0}
-  .prod{display:flex;align-items:baseline;gap:6px;margin:5px 0;font-size:18px;font-weight:bold}
+  .prod{display:flex;align-items:baseline;gap:6px;margin:6px 0;font-size:18px;font-weight:bold}
   .cant{font-size:26px;min-width:32px;text-align:right;line-height:1}
   .pname{flex:1}
   .nota{font-size:15px;font-weight:bold;text-transform:uppercase;background:#eee;padding:4px 6px;border-radius:3px;margin-top:6px}
@@ -497,7 +497,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold">NOTAS: ${p.ob
 <div class="sub">${p.hora}</div>
 <div class="sub"><b>${p.cliente}</b></div>
 <div class="sep"></div>
-${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><div class="pname"><div>${prod.nombre}</div>${prod.coccion ? `<div style="display:inline-block;background:#000;color:#fff;padding:1px 6px;border-radius:3px;font-size:14px;font-weight:bold;margin-top:2px;letter-spacing:1px">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</div>` : ''}</div></div>`).join('')}
+${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><div class="pname"><div>${prod.nombre}</div>${prod.coccion ? `<div style="display:inline-block;border:2px solid #000;color:#000;font-weight:900;font-size:16px;padding:1px 8px;margin-top:4px;border-radius:3px;letter-spacing:1px">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</div>` : ''}</div></div>`).join('')}
 ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observaciones.toUpperCase()}</div>` : ''}
 <div class="sep"></div>
 <div class="tipo">${p.tipoEntrega === 'delivery' ? '🛵 DELIVERY' : p.tipoEntrega === 'retiro' ? '🏠 RETIRO EN LOCAL' : '🍽 CONSUMO EN LOCAL'}</div>
