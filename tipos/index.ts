@@ -35,6 +35,7 @@ export interface ProductoPedido {
   precio: number
   idCatalogo?: string
   categoriaId?: string
+  coccion?: 'fritas' | 'al_horno' | string
 }
 
 export interface PuntoRutaBreadcrumb {

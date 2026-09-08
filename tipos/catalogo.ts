@@ -42,6 +42,7 @@ export interface FilaProductoPedido {
   cantidad: number
   precio: number
   modificadoresSeleccionadosIds?: string[]
+  coccion?: 'fritas' | 'al_horno'
 }
 
 export interface ModificadorCatalogo {

@@ -5,11 +5,14 @@
 // Una fila: categoría + producto + cantidad + precio + modificadores.
 // ─────────────────────────────────────────────────────
 
+import { useState } from 'react'
 import { FilaProductoPedido as FilaProducto, ModificadorCatalogo } from '@/tipos/catalogo'
-import { obtenerProductoCatalogoPorId } from '@/lib/catalogo'
+import { obtenerProductoCatalogoPorId, esProductoEmpanada } from '@/lib/catalogo'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { cn } from '@/lib/utils'
 import SelectorCategoria from './SelectorCategoria'
 import SelectorProducto from './SelectorProducto'
+import ModalCoccionEmpanada from './ModalCoccionEmpanada'
 
 interface PropsFilaProductoPedido {
   fila: FilaProducto
@@ -33,6 +36,7 @@ export default function FilaProductoPedido({
   onEliminar,
 }: PropsFilaProductoPedido) {
   const { modificadores, categorias, productos } = usarPedidos()
+  const [modalCoccionAbierto, setModalCoccionAbierto] = useState(false)
 
   const actualizar = (parcial: Partial<FilaProducto>) => {
     onCambio(indice, { ...fila, ...parcial })
@@ -48,6 +52,7 @@ export default function FilaProductoPedido({
       nombreProducto: undefined,
       precio: 0,
       modificadoresSeleccionadosIds: [],
+      coccion: undefined,
     })
   }
 
@@ -59,6 +64,7 @@ export default function FilaProductoPedido({
         nombreProducto: undefined,
         precio: 0,
         modificadoresSeleccionadosIds: [],
+        coccion: undefined,
       })
       return
     }
@@ -66,6 +72,8 @@ export default function FilaProductoPedido({
     const producto = productos.find(p => p.id === idProductoCatalogo) || obtenerProductoCatalogoPorId(idProductoCatalogo)
     const targetCatId = categoriaIdOpt || producto?.categoriaId || fila.idCategoria
     const cat = categorias.find(c => c.id === targetCatId)
+
+    const esEmpanada = esProductoEmpanada(producto?.nombre, cat?.nombre, targetCatId)
 
     onCambio(indice, {
       ...fila,
@@ -75,7 +83,12 @@ export default function FilaProductoPedido({
       nombreProducto: producto?.nombre,
       precio: producto?.precio ?? 0,
       modificadoresSeleccionadosIds: [],
+      coccion: esEmpanada ? fila.coccion : undefined,
     })
+
+    if (esEmpanada) {
+      setModalCoccionAbierto(true)
+    }
   }
 
   // Cargar modificadores asociados al producto seleccionado
@@ -174,6 +187,31 @@ export default function FilaProductoPedido({
         </button>
       </div>
 
+      {/* Selector / Indicador de Cocción para Empanadas */}
+      {esProductoEmpanada(fila.nombreProducto, fila.nombreCategoria, fila.idCategoria) && (
+        <div className="flex items-center gap-2 px-1 py-1 mt-0.5 border-t border-dashed border-slate-100 dark:border-slate-800/60 sm:border-0 sm:pt-0">
+          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none">
+            Cocción:
+          </span>
+          <button
+            type="button"
+            onClick={() => setModalCoccionAbierto(true)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95",
+              fila.coccion === 'fritas'
+                ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 hover:bg-amber-200"
+                : fila.coccion === 'al_horno'
+                ? "bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-800 hover:bg-orange-200"
+                : "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 animate-pulse"
+            )}
+            title="Hacé clic para cambiar la cocción"
+          >
+            <span>{fila.coccion === 'fritas' ? '🥟 FRITAS' : fila.coccion === 'al_horno' ? '🔥 AL HORNO' : '⚠️ ELEGIR: ¿FRITAS O HORNO?'}</span>
+            <span className="text-[10px] underline font-semibold opacity-70 ml-0.5">Cambiar</span>
+          </button>
+        </div>
+      )}
+
       {/* Modificadores */}
       {listadoModificadores.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-1 py-1 mt-0.5 border-t border-dashed border-slate-100 dark:border-slate-800/60 sm:border-0 sm:pt-0">
@@ -218,6 +256,18 @@ export default function FilaProductoPedido({
       >
         ✕ Quitar producto
       </button>
+
+      {/* Modal de selección de cocción */}
+      <ModalCoccionEmpanada
+        abierto={modalCoccionAbierto}
+        nombreProducto={fila.nombreProducto || 'Empanadas'}
+        coccionActual={fila.coccion}
+        onSeleccionar={(coccion) => {
+          actualizar({ coccion })
+          setModalCoccionAbierto(false)
+        }}
+        onCerrar={() => setModalCoccionAbierto(false)}
+      />
     </div>
   )
 }

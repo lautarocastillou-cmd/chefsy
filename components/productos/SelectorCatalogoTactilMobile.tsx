@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { FilaProductoPedido, ProductoCatalogo } from '@/tipos/catalogo'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { formatearPrecio, generarIdProducto } from '@/lib/utils'
+import { esProductoEmpanada } from '@/lib/catalogo'
+import ModalCoccionEmpanada from './ModalCoccionEmpanada'
 import { Search, Plus, Minus, Check, Sparkles, X, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -50,23 +52,40 @@ export default function SelectorCatalogoTactilMobile({
     return mapa
   }, [filas])
 
+  const [modalTarget, setModalTarget] = useState<{
+    id: string
+    nombre: string
+    coccion?: 'fritas' | 'al_horno'
+  } | null>(null)
+
   const agregarOIncrementar = (producto: ProductoCatalogo) => {
     vibrar(20)
     const cat = categorias.find((c) => c.id === producto.categoriaId)
+    const esEmp = esProductoEmpanada(producto.nombre, cat?.nombre, producto.categoriaId)
 
     // Buscar si ya está en las filas
     const indexExistente = filas.findIndex((f) => f.idProductoCatalogo === producto.id)
 
     if (indexExistente >= 0) {
       const copia = [...filas]
+      const filaExistente = copia[indexExistente]
       copia[indexExistente] = {
-        ...copia[indexExistente],
-        cantidad: (copia[indexExistente].cantidad || 1) + 1,
+        ...filaExistente,
+        cantidad: (filaExistente.cantidad || 1) + 1,
       }
       onFilasChange(copia)
+      if (esEmp && !filaExistente.coccion) {
+        setModalTarget({
+          id: filaExistente.id,
+          nombre: producto.nombre,
+          coccion: filaExistente.coccion,
+        })
+      }
     } else {
+      let nuevoId = ''
       // Si la única fila existente está vacía, la usamos
       if (filas.length === 1 && !filas[0].idProductoCatalogo) {
+        nuevoId = filas[0].id
         onFilasChange([
           {
             id: filas[0].id,
@@ -79,10 +98,11 @@ export default function SelectorCatalogoTactilMobile({
           },
         ])
       } else {
+        nuevoId = generarIdProducto()
         onFilasChange([
           ...filas,
           {
-            id: generarIdProducto(),
+            id: nuevoId,
             idCategoria: producto.categoriaId,
             idProductoCatalogo: producto.id,
             nombreProducto: producto.nombre,
@@ -91,6 +111,13 @@ export default function SelectorCatalogoTactilMobile({
             precio: producto.precio,
           },
         ])
+      }
+
+      if (esEmp) {
+        setModalTarget({
+          id: nuevoId,
+          nombre: producto.nombre,
+        })
       }
     }
   }
@@ -231,6 +258,34 @@ export default function SelectorCatalogoTactilMobile({
                   <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
                     {formatearPrecio(producto.precio)}
                   </span>
+                  {esProductoEmpanada(producto.nombre, undefined, producto.categoriaId) && seleccionado && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const f = filas.find((item) => item.idProductoCatalogo === producto.id)
+                        if (f) {
+                          setModalTarget({ id: f.id, nombre: producto.nombre, coccion: f.coccion })
+                        }
+                      }}
+                      className={cn(
+                        'mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-2xs',
+                        filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'fritas'
+                          ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                          : filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'al_horno'
+                          ? 'bg-orange-100 dark:bg-orange-950/70 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-800'
+                          : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 animate-pulse'
+                      )}
+                    >
+                      <span>
+                        {filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'fritas'
+                          ? '🥟 Fritas'
+                          : filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'al_horno'
+                          ? '🔥 Al Horno'
+                          : '⚠️ Elegir cocción'}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Controles Táctiles: Stepper si ya está agregado, o botón + */}
@@ -268,6 +323,23 @@ export default function SelectorCatalogoTactilMobile({
             )
           })}
         </div>
+      )}
+
+      {/* Modal de selección de cocción */}
+      {modalTarget && (
+        <ModalCoccionEmpanada
+          abierto={Boolean(modalTarget)}
+          nombreProducto={modalTarget.nombre}
+          coccionActual={modalTarget.coccion}
+          onSeleccionar={(coccion) => {
+            const actualizadas = filas.map((f) =>
+              f.id === modalTarget.id ? { ...f, coccion } : f
+            )
+            onFilasChange(actualizadas)
+            setModalTarget(null)
+          }}
+          onCerrar={() => setModalTarget(null)}
+        />
       )}
     </div>
   )

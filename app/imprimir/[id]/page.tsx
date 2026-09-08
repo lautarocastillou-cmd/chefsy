@@ -77,8 +77,15 @@ function TicketContenido() {
           <tbody>
             {pedido.productos.map((prod) => (
               <tr key={prod.id}>
-                <td className="py-1 align-top">{prod.cantidad}</td>
-                <td className="py-1 align-top">{prod.nombre}</td>
+                <td className="py-1 align-top font-bold">{prod.cantidad}</td>
+                <td className="py-1 align-top">
+                  <div>{prod.nombre}</div>
+                  {prod.coccion && (
+                    <div className="text-[10px] font-bold text-gray-800 uppercase tracking-wider mt-0.5">
+                      ↳ {prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}
+                    </div>
+                  )}
+                </td>
                 <td className="py-1 align-top text-right">{formatearPrecio(prod.precio * prod.cantidad)}</td>
               </tr>
             ))}

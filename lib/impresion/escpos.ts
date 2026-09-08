@@ -254,6 +254,11 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
     const precioStr = f(item.precio * item.cantidad)
     builder.negrita(true).filaDosColumnas(cantidadStr + item.nombre, precioStr, '.')
 
+    if (item.coccion) {
+      const coccionStr = item.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'
+      builder.negrita(true).linea(`   ↳ [${coccionStr}]`)
+    }
+
     if ((item as any).modificadores && Array.isArray((item as any).modificadores)) {
       for (const mod of (item as any).modificadores) {
         builder.negrita(false).linea(`   + ${mod.nombre || mod}`)
@@ -339,6 +344,16 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
       .linea(`[ ${item.cantidad}x ] ${item.nombre}`)
       .tamano('normal')
       .negrita(false)
+
+    if (item.coccion) {
+      const coccionStr = item.coccion === 'fritas' ? '*** FRITAS ***' : '*** AL HORNO ***'
+      builder
+        .tamano('doble')
+        .negrita(true)
+        .linea(`   >> ${coccionStr}`)
+        .tamano('normal')
+        .negrita(false)
+    }
 
     if ((item as any).modificadores && Array.isArray((item as any).modificadores)) {
       for (const mod of (item as any).modificadores) {

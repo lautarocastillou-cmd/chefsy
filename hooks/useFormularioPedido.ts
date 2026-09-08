@@ -106,7 +106,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
         idProductoCatalogo: p.idCatalogo || '',
         cantidad: p.cantidad,
         precio: p.precio,
-        modificadoresSeleccionadosIds: []
+        modificadoresSeleccionadosIds: [],
+        coccion: (p.coccion === 'fritas' || p.coccion === 'al_horno') ? p.coccion : undefined,
       }))
       setFilasProductos(filas.length > 0 ? filas : [crearFilaProductoVacia()])
     }

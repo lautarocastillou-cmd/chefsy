@@ -137,7 +137,38 @@ export function filasAProductosPedido(
         precio: fila.precio,
         idCatalogo: fila.idProductoCatalogo,
         categoriaId: fila.idCategoria,
+        coccion: fila.coccion,
       }
     })
 }
+
+/**
+ * Detecta si un producto o su categoría corresponde a empanadas o árabes
+ */
+export function esProductoEmpanada(
+  nombreProducto?: string,
+  nombreCategoria?: string,
+  idCategoria?: string
+): boolean {
+  const normalizar = (s?: string) =>
+    (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+
+  const p = normalizar(nombreProducto)
+  const c = normalizar(nombreCategoria)
+  const cid = normalizar(idCategoria)
+
+  return (
+    p.includes('empanada') ||
+    c.includes('empanada') ||
+    cid.includes('empanada') ||
+    p.includes('arabe') ||
+    c.includes('arabe') ||
+    cid.includes('arabe')
+  )
+}
+
 

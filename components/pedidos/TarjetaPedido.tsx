@@ -151,7 +151,10 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   }
 
   const copiarParaWhatsApp = async () => {
-    const productosText = pedido.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('\n')
+    const productosText = pedido.productos.map(p => {
+      const coccionTag = p.coccion ? ` (${p.coccion === 'fritas' ? 'Fritas' : 'Al Horno'})` : ''
+      return `${p.cantidad}x ${p.nombre}${coccionTag}`
+    }).join('\n')
     
     let direccionTexto = ''
     if (pedido.direccion && pedido.direccion.trim() !== '') {
@@ -233,7 +236,9 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       const totalProducto = p.precio * p.cantidad
       subtotal += totalProducto
 
-      return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${extrasTexto}`
+      const coccionTexto = p.coccion ? `\n   ↳ ${p.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}` : ''
+
+      return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${coccionTexto}${extrasTexto}`
     }).join('\n\n')
 
     let costoEnvio = pedido.costoEnvio || 0
@@ -417,10 +422,15 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       {/* Lista de productos (muy compacta) */}
       <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 space-y-0.5">
         {pedido.productos.map((producto) => (
-          <div key={producto.id} className="flex justify-between text-xs py-0.5">
-            <span className="text-gray-600 dark:text-[#a8a8a8] font-medium truncate max-w-[200px]" title={`${producto.cantidad}x ${producto.nombre}`}>
+          <div key={producto.id} className="flex justify-between items-center text-xs py-0.5">
+            <span className="text-gray-600 dark:text-[#a8a8a8] font-medium truncate max-w-[220px] flex items-center" title={`${producto.cantidad}x ${producto.nombre}${producto.coccion ? ` (${producto.coccion})` : ''}`}>
               <span className="font-bold text-chefsy-700 dark:text-chefsy-300 mr-1">{producto.cantidad}×</span> 
-              {producto.nombre}
+              <span className="truncate">{producto.nombre}</span>
+              {producto.coccion && (
+                <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
+                  {producto.coccion === 'fritas' ? '🥟 Fritas' : '🔥 Al Horno'}
+                </span>
+              )}
             </span>
             <span className="text-gray-400 dark:text-[#686868] font-mono shrink-0 ml-2">
               {formatearPrecio(producto.precio * producto.cantidad)}

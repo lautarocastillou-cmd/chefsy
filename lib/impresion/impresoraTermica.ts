@@ -466,7 +466,7 @@ ${p.telefono && p.telefono !== 'Sin especificar' ? `<div class="row"><span><b>Te
 ${p.direccion ? `<div class="row"><span><b>Dir:</b> ${p.direccion}</span></div>` : ''}
 <div class="sep"></div>
 <table>
-${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
+${p.productos.map(prod => `<tr><td><b>${prod.cantidad}x</b> ${prod.nombre}${prod.coccion ? `<br><small style="margin-left:8px;font-weight:bold;font-size:10px;text-transform:uppercase">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</small>` : ''}</td><td>${f(prod.precio * prod.cantidad)}</td></tr>`).join('')}
 </table>
 <div class="sep"></div>
 ${p.costoEnvio ? `<div class="row"><span>Subtotal:</span><span>${f(p.total - (p.costoEnvio ?? 0))}</span></div><div class="row"><span>Envío:</span><span>${f(p.costoEnvio)}</span></div>` : ''}
@@ -497,7 +497,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold">NOTAS: ${p.ob
 <div class="sub">${p.hora}</div>
 <div class="sub"><b>${p.cliente}</b></div>
 <div class="sep"></div>
-${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><span class="pname">${prod.nombre}</span></div>`).join('')}
+${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><div class="pname"><div>${prod.nombre}</div>${prod.coccion ? `<div style="display:inline-block;background:#000;color:#fff;padding:1px 6px;border-radius:3px;font-size:14px;font-weight:bold;margin-top:2px;letter-spacing:1px">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</div>` : ''}</div></div>`).join('')}
 ${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observaciones.toUpperCase()}</div>` : ''}
 <div class="sep"></div>
 <div class="tipo">${p.tipoEntrega === 'delivery' ? '🛵 DELIVERY' : p.tipoEntrega === 'retiro' ? '🏠 RETIRO EN LOCAL' : '🍽 CONSUMO EN LOCAL'}</div>
