@@ -73,15 +73,24 @@ export default function SidebarTienda({
     }
   }, [abierto])
 
-  // Bloquear scroll de fondo cuando el sidebar está abierto
+  // Bloquear scroll de fondo cuando el sidebar está abierto y pausar Lenis
   useEffect(() => {
     if (abierto) {
+      const origHtmlOverflow = document.documentElement.style.overflow
+      const origBodyOverflow = document.body.style.overflow
+      document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
+      if (typeof window !== 'undefined' && (window as any).__lenis) {
+        ;(window as any).__lenis.stop()
+      }
+
+      return () => {
+        document.documentElement.style.overflow = origHtmlOverflow
+        document.body.style.overflow = origBodyOverflow
+        if (typeof window !== 'undefined' && (window as any).__lenis) {
+          ;(window as any).__lenis.start()
+        }
+      }
     }
   }, [abierto])
 
@@ -104,10 +113,16 @@ export default function SidebarTienda({
           abierto ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
         onClick={onCerrar}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-lenis-prevent="true"
       />
 
       {/* Panel Lateral Deslizable (Sidebar) */}
       <aside
+        data-lenis-prevent="true"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
         className={cn(
           'fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-[#141414] text-white z-[200] shadow-2xl border-r border-white/10 flex flex-col justify-between transition-transform duration-300 ease-out overflow-hidden',
           abierto ? 'translate-x-0' : '-translate-x-full'
@@ -152,7 +167,10 @@ export default function SidebarTienda({
         </div>
 
         {/* Contenido Scrolleable */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+        <div 
+          data-lenis-prevent="true"
+          className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10"
+        >
           {/* SECCIÓN 1: Pedidos Activos (si hay alguno en camino) */}
           {pedidosActivos.length > 0 && (
             <div>
@@ -353,7 +371,12 @@ export default function SidebarTienda({
 
       {/* Modal "¿Quiénes somos?" informativo */}
       {mostrarQuienesSomosModal && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200">
+        <div 
+          className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200"
+          data-lenis-prevent="true"
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           <div className="bg-[#1c1c1c] border border-white/15 rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative space-y-4">
             <button
               type="button"
