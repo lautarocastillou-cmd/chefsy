@@ -45,25 +45,32 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   }
 
   const determinarEnvioManual = (p?: Pedido): boolean => {
-    if (!p || p.costoEnvio === undefined) return false
+    if (!p || p.tipoEntrega !== 'delivery' || p.costoEnvio === undefined) return false
     if (p.envioManual !== undefined) return p.envioManual
-    if (p.distanciaKm === undefined) return true
+    if (!p.distanciaKm || p.distanciaKm === 0) {
+      return p.costoEnvio !== 1500 && p.costoEnvio > 0
+    }
     return p.costoEnvio !== calcularCostoEnvio(p.distanciaKm)
   }
 
   const [costoEnvio, setCostoEnvio] = useState(() => {
-    if (pedidoInicial?.costoEnvio !== undefined) return pedidoInicial.costoEnvio
+    if (pedidoInicial?.tipoEntrega === 'delivery' && pedidoInicial?.costoEnvio !== undefined) {
+      return pedidoInicial.costoEnvio
+    }
     return pedidoInicial?.tipoEntrega === 'delivery' || !pedidoInicial ? 1500 : 0
   })
   const [distanciaKm, setDistanciaKm] = useState(pedidoInicial?.distanciaKm || 0)
   const [cargandoEnvio, setCargandoEnvio] = useState(false)
   const [envioManual, setEnvioManualState] = useState(() => determinarEnvioManual(pedidoInicial))
-  const [costoEnvioManualInput, setCostoEnvioManualInput] = useState(pedidoInicial?.costoEnvio?.toString() || '')
+  const [costoEnvioManualInput, setCostoEnvioManualInput] = useState(() => {
+    const isManual = determinarEnvioManual(pedidoInicial)
+    return isManual && pedidoInicial?.costoEnvio !== undefined ? pedidoInicial.costoEnvio.toString() : ''
+  })
 
   const manejarSetEnvioManual = (manual: boolean) => {
     setEnvioManualState(manual)
     if (manual && (!costoEnvioManualInput || Number(costoEnvioManualInput) === 0)) {
-      const val = costoEnvioFinal || costoEnvio || 1500
+      const val = costoEnvio > 0 ? costoEnvio : (costoEnvioFinal > 0 ? costoEnvioFinal : 1500)
       setCostoEnvioManualInput(val.toString())
     }
   }
@@ -85,12 +92,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       // Sincronizar estados de envío manual y costos
       const isManual = determinarEnvioManual(pedidoInicial)
       setEnvioManualState(isManual)
-      setCostoEnvioManualInput(pedidoInicial.costoEnvio?.toString() || '')
+      setCostoEnvioManualInput(isManual && pedidoInicial.costoEnvio !== undefined ? pedidoInicial.costoEnvio.toString() : '')
       setDistanciaKm(pedidoInicial.distanciaKm || 0)
-      if (pedidoInicial.costoEnvio !== undefined) {
-        setCostoEnvio(pedidoInicial.costoEnvio)
-      } else if (pedidoInicial.tipoEntrega === 'delivery') {
-        setCostoEnvio(1500)
+      if (pedidoInicial.tipoEntrega === 'delivery') {
+        setCostoEnvio(pedidoInicial.costoEnvio !== undefined ? pedidoInicial.costoEnvio : 1500)
+      } else {
+        setCostoEnvio(0)
       }
 
       const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
@@ -162,23 +169,38 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const aplicarDatosCRM = () => {
     if (clienteEncontrado) {
       setCliente(clienteEncontrado.cliente)
-      setTipoEntrega(clienteEncontrado.tipoEntrega)
-      if (clienteEncontrado.direccion) setDireccion(clienteEncontrado.direccion)
-      if (clienteEncontrado.coordenadas) setCoordenadas(clienteEncontrado.coordenadas)
+      manejarTipoEntrega(clienteEncontrado.tipoEntrega)
+      if (clienteEncontrado.tipoEntrega === 'delivery') {
+        if (clienteEncontrado.direccion) setDireccion(clienteEncontrado.direccion)
+        if (clienteEncontrado.coordenadas) setCoordenadas(clienteEncontrado.coordenadas)
+      }
       setMetodoPago(clienteEncontrado.metodoPago)
       setClienteEncontrado(null)
     }
   }
 
   const manejarTipoEntrega = (nuevoTipo: TipoEntrega) => {
+    const eraDelivery = requiereDireccion(tipoEntrega)
+    const seraDelivery = requiereDireccion(nuevoTipo)
+
     setTipoEntrega(nuevoTipo)
-    if (!requiereDireccion(nuevoTipo)) {
+
+    if (!seraDelivery) {
       setDireccion('')
       setCoordenadas(null)
       setCostoEnvio(0)
       setDistanciaKm(0)
+      setEnvioManualState(false)
+      setCostoEnvioManualInput('')
     } else {
-      if (costoEnvio === 0) setCostoEnvio(1500)
+      if (!eraDelivery) {
+        // Al pasar de retiro/consumo a delivery, la casilla de envío manual jamás debe marcarse sola
+        setEnvioManualState(false)
+        setCostoEnvioManualInput('')
+        if (costoEnvio === 0) setCostoEnvio(1500)
+      } else if (costoEnvio === 0) {
+        setCostoEnvio(1500)
+      }
     }
   }
 
@@ -193,13 +215,24 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
           else if (prev === 'retiro') siguiente = 'consumo_local'
           else if (prev === 'consumo_local') siguiente = 'delivery'
 
-          if (!requiereDireccion(siguiente)) {
+          const eraDelivery = requiereDireccion(prev)
+          const seraDelivery = requiereDireccion(siguiente)
+
+          if (!seraDelivery) {
             setDireccion('')
             setCoordenadas(null)
             setCostoEnvio(0)
             setDistanciaKm(0)
+            setEnvioManualState(false)
+            setCostoEnvioManualInput('')
           } else {
-            if (costoEnvio === 0) setCostoEnvio(1500)
+            if (!eraDelivery) {
+              setEnvioManualState(false)
+              setCostoEnvioManualInput('')
+              setCostoEnvio(1500)
+            } else if (costoEnvio === 0) {
+              setCostoEnvio(1500)
+            }
           }
           return siguiente
         })
