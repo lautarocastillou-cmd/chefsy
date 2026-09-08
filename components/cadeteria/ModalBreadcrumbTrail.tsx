@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
 import {
   X,
   Play,
@@ -110,57 +111,10 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     return samplePoints
   }, [pedido])
 
-  // ── Métricas de telemetría calculadas ───────────────────────────────────────
+  // ── Métricas de telemetría calculadas con precisión cinemática ──────────────
   const metricas = useMemo(() => {
-    if (puntos.length < 2) {
-      return {
-        distanciaTotalKm: 0,
-        duracionSegundos: 0,
-        velocidadMaxima: 0,
-        velocidadPromedio: 0,
-        paradasLargas: 0
-      }
-    }
-
-    let distanciaTotalKm = 0
-    let velMax = 0
-    let sumaVelocidades = 0
-    let cantVelocidades = 0
-    let paradasLargas = 0
-
-    for (let i = 1; i < puntos.length; i++) {
-      const pAnt = puntos[i - 1]
-      const pAct = puntos[i]
-      distanciaTotalKm += calcularDistanciaKm(
-        { latitud: pAnt.lat, longitud: pAnt.lng },
-        { latitud: pAct.lat, longitud: pAct.lng }
-      )
-
-      if (pAct.speed != null) {
-        velMax = Math.max(velMax, pAct.speed)
-        sumaVelocidades += pAct.speed
-        cantVelocidades++
-      }
-
-      const tAnt = new Date(pAnt.t).getTime()
-      const tAct = new Date(pAct.t).getTime()
-      if (tAct - tAnt > 180000 && pAct.speed != null && pAct.speed < 3) {
-        paradasLargas++
-      }
-    }
-
-    const tInicio = new Date(puntos[0].t).getTime()
-    const tFin = new Date(puntos[puntos.length - 1].t).getTime()
-    const duracionSegundos = Math.max(0, Math.floor((tFin - tInicio) / 1000))
-
-    return {
-      distanciaTotalKm: Number(distanciaTotalKm.toFixed(2)),
-      duracionSegundos,
-      velocidadMaxima: Math.round(velMax),
-      velocidadPromedio: cantVelocidades > 0 ? Math.round(sumaVelocidades / cantVelocidades) : 0,
-      paradasLargas
-    }
-  }, [puntos])
+    return calcularTelemetriaRuta(puntos, pedido)
+  }, [puntos, pedido])
 
   // ── Helper: Aplicar posición, rumbo y traza en tiempo real ──────────────────
   const aplicarFrameEnMapa = useCallback((progreso: number) => {
@@ -436,14 +390,16 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     const segIdx = Math.floor(clampedProg)
     const segFrac = clampedProg - segIdx
 
-    const p1 = puntos[segIdx]
-    const p2 = puntos[Math.min(segIdx + 1, maxIdx)]
+    const pNorm1 = metricas.puntosNormalizados[segIdx]
+    const pNorm2 = metricas.puntosNormalizados[Math.min(segIdx + 1, maxIdx)]
 
-    const v1 = p1?.speed ?? 0
-    const v2 = p2?.speed ?? 0
+    const v1 = pNorm1?.velocidadKmH ?? (puntos[segIdx]?.speed ?? 0)
+    const v2 = pNorm2?.velocidadKmH ?? (puntos[Math.min(segIdx + 1, maxIdx)]?.speed ?? 0)
     const velocidad = Math.round(v1 + (v2 - v1) * segFrac)
 
     let hora = '--:--'
+    const p1 = puntos[segIdx]
+    const p2 = puntos[Math.min(segIdx + 1, maxIdx)]
     if (p1?.t && p2?.t) {
       const t1 = new Date(p1.t).getTime()
       const t2 = new Date(p2.t).getTime()
@@ -459,7 +415,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       indice: segIdx + 1,
       porcentaje
     }
-  }, [progresoDecimal, puntos])
+  }, [progresoDecimal, puntos, metricas.puntosNormalizados])
 
   // ── Handlers de Controles ──────────────────────────────────────────────────
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -592,7 +548,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
             </div>
             <div>
               <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">Duración Total</p>
-              <p className="text-sm font-black text-slate-100">{formatearSegundosMin(metricas.duracionSegundos)}</p>
+              <p className="text-sm font-black text-slate-100">{formatearSegundosMin(metricas.duracionTotalSegundos)}</p>
+              <p className="text-[9px] text-emerald-400 font-semibold">{metricas.porcentajeTiempoMovimiento}% en movimiento</p>
             </div>
           </div>
 
@@ -603,6 +560,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
             <div>
               <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">Distancia</p>
               <p className="text-sm font-black text-slate-100">{metricas.distanciaTotalKm} km</p>
+              <p className="text-[9px] text-slate-400">recorrido real</p>
             </div>
           </div>
 
@@ -611,8 +569,9 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
               <Gauge size={16} />
             </div>
             <div>
-              <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">Vel. Máx / Prom</p>
-              <p className="text-sm font-black text-slate-100">{metricas.velocidadMaxima} / {metricas.velocidadPromedio} km/h</p>
+              <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">Vel. Rodando / Máx</p>
+              <p className="text-sm font-black text-slate-100">{metricas.velocidadMediaMovimiento} / {metricas.velocidadMaxima} <span className="text-[10px] font-normal text-slate-400">km/h</span></p>
+              <p className="text-[9px] text-purple-300 font-medium">Comercial: {metricas.velocidadComercial} km/h</p>
             </div>
           </div>
 
@@ -625,8 +584,11 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
             <div>
               <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">Detenciones &gt;3m</p>
               <p className={`text-sm font-black ${metricas.paradasLargas > 0 ? 'text-amber-300' : 'text-slate-300'}`}>
-                {metricas.paradasLargas === 0 ? 'Sin desvíos' : `${metricas.paradasLargas} parada(s)`}
+                {metricas.paradasLargas === 0 ? 'Sin demoras' : `${metricas.paradasLargas} parada(s)`}
               </p>
+              {metricas.alertasExcesoVelocidad > 0 && (
+                <p className="text-[9px] text-rose-400 font-semibold">{metricas.alertasExcesoVelocidad} &gt; 60 km/h</p>
+              )}
             </div>
           </div>
         </div>
