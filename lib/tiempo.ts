@@ -168,3 +168,64 @@ export function formatearSegundos(segundosTotales: number): string {
 
   return `${strMinutos}:${strSegundos}`
 }
+
+export interface RangoSemanaISO {
+  anio: number
+  semanaNumero: number
+  fechaInicio: string // YYYY-MM-DD (Lunes)
+  fechaFin: string // YYYY-MM-DD (Domingo)
+  fechasSemana: string[] // Array de 7 días YYYY-MM-DD
+}
+
+/**
+ * Obtiene el rango de la semana ISO-8601 (Lunes a Domingo) para una fecha dada,
+ * considerando la fecha de negocio si no se pasa ninguna fecha específica.
+ */
+export function obtenerRangoSemanaISO(fechaRef?: Date | string): RangoSemanaISO {
+  let baseDate: Date
+  if (typeof fechaRef === 'string') {
+    const [y, m, d] = fechaRef.split('-').map(Number)
+    baseDate = new Date(y, m - 1, d, 12, 0, 0)
+  } else if (fechaRef) {
+    baseDate = new Date(fechaRef)
+  } else {
+    const fn = obtenerFechaNegocio()
+    const [y, m, d] = fn.split('-').map(Number)
+    baseDate = new Date(y, m - 1, d, 12, 0, 0)
+  }
+
+  // Encontrar el lunes de esa semana
+  const day = baseDate.getDay() // 0 = Dom, 1 = Lun, ..., 6 = Sab
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  const lunes = new Date(baseDate)
+  lunes.setDate(baseDate.getDate() + diffToMonday)
+
+  const fechasSemana: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(lunes)
+    d.setDate(lunes.getDate() + i)
+    const yStr = d.getFullYear()
+    const mStr = String(d.getMonth() + 1).padStart(2, '0')
+    const dStr = String(d.getDate()).padStart(2, '0')
+    fechasSemana.push(`${yStr}-${mStr}-${dStr}`)
+  }
+
+  // Número de semana ISO
+  const target = new Date(lunes.valueOf())
+  target.setDate(target.getDate() + 3) // Jueves de esa semana
+  const thursdayYear = target.getFullYear()
+  const firstThursday = target.valueOf()
+  target.setMonth(0, 1)
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7)
+  }
+  const semanaNumero = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000)
+
+  return {
+    anio: thursdayYear,
+    semanaNumero,
+    fechaInicio: fechasSemana[0],
+    fechaFin: fechasSemana[6],
+    fechasSemana
+  }
+}
