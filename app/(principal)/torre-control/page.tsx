@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
+import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
@@ -139,6 +140,7 @@ export default function TorreControlPage() {
             ) : (
               cadetes.map((cadete) => {
                 const isSelected = focusedId === cadete.id
+                const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
                 return (
                   <Card
                     key={cadete.id}
@@ -154,7 +156,24 @@ export default function TorreControlPage() {
                           <span>🛵</span>
                           <span>{cadete.nombre}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                          {cadete.gps_activo && (
+                            <Badge
+                              variant="secondary"
+                              className={`flex items-center gap-1 text-[10px] px-1.5 py-0 font-bold ${
+                                velKmH >= 4
+                                  ? velKmH > 60
+                                    ? 'bg-red-100 text-red-800'
+                                    : velKmH > 40
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              <Gauge className="h-3 w-3" />
+                              {velKmH} km/h
+                            </Badge>
+                          )}
                           {cadete.bateria != null && (
                             <Badge
                               variant="secondary"
@@ -275,7 +294,7 @@ export default function TorreControlPage() {
 
       {/* Main Area: Mapa */}
       <div className="flex-1 h-[50vh] md:h-full min-h-[400px] relative border-t md:border-t-0 md:border-l border-gray-200">
-        <MapaGlobal cadetes={cadetes} focusedId={focusedId} />
+        <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
 
         {/* Overlay Legend */}
         <div className="absolute bottom-6 right-6 z-[1000] bg-white p-3.5 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-none">

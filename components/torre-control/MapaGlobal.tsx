@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
-import { Compass, Bike, Store, Maximize2, Layers } from 'lucide-react'
+import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
+import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Coordenadas del local Chefsy
@@ -15,6 +16,8 @@ export interface CadeteData {
   nombre: string
   lat: number | null
   lng: number | null
+  speed?: number | null
+  heading?: number | null
   gps_activo: boolean
   bateria?: number | null
   updated_at: string | null
@@ -32,6 +35,7 @@ export interface CadeteData {
 interface MapaGlobalProps {
   cadetes: CadeteData[]
   focusedId?: string | null
+  onSelectCadete?: (id: string) => void
 }
 
 // Helper: Calcular ángulo de rumbo geográfico (0° a 360°)
@@ -71,7 +75,7 @@ interface CadeteAnimState {
   duracion: number
 }
 
-export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
+export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaGlobalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<{
@@ -90,6 +94,11 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
   const focusedIdRef = useRef<string | null | undefined>(focusedId)
   const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
   const modoCamaraRef = useRef<'todo' | 'cadete' | 'manual'>('todo')
+  const [mostrarPanelVelocidad, setMostrarPanelVelocidad] = useState(true)
+
+  const cadetesActivosConGps = useMemo(() => {
+    return cadetes.filter((c) => c.gps_activo && c.lat != null && c.lng != null)
+  }, [cadetes])
 
   useEffect(() => {
     cadetesDataRef.current = cadetes
@@ -369,6 +378,27 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       }
 
       const rumbo = animStatesRef.current[cadete.id]?.rumboActual || 0
+      const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
+      const esEnMovimiento = velKmH >= 4
+
+      let velBadgeBg = '#334155'
+      let velBadgeColor = '#94a3b8'
+      let velIconTexto = '⏸️'
+      if (esEnMovimiento) {
+        if (velKmH > 60) {
+          velBadgeBg = '#dc2626'
+          velBadgeColor = '#ffffff'
+          velIconTexto = '⚠️'
+        } else if (velKmH > 40) {
+          velBadgeBg = '#d97706'
+          velBadgeColor = '#ffffff'
+          velIconTexto = '⚡'
+        } else {
+          velBadgeBg = '#10b981'
+          velBadgeColor = '#ffffff'
+          velIconTexto = '⚡'
+        }
+      }
 
       const batBadge =
         cadete.bateria != null
@@ -404,9 +434,15 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
             ${batBadge}
           </div>
 
-          <!-- Etiqueta de Nombre del Cadete con separación adecuada para que nunca se tape -->
-          <div style="margin-top:8px; background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
-            ${cadete.nombre}
+          <!-- Etiqueta de Nombre del Cadete y Velocidad en Tiempo Real -->
+          <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:2px;">
+            <div style="background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
+              ${cadete.nombre}
+            </div>
+            <div style="background:${velBadgeBg}; color:${velBadgeColor}; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:9999px; box-shadow:0 2px 5px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.85); display:flex; align-items:center; gap:2px; letter-spacing:0.2px; z-index:21;">
+              <span>${velIconTexto}</span>
+              <span>${velKmH} km/h</span>
+            </div>
           </div>
         </div>
       `
@@ -414,7 +450,7 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       const cadeteIcon = L.divIcon({
         html: cadeteHtml,
         className: 'custom-cadete-animated-marker',
-        iconSize: [120, 80],
+        iconSize: [120, 96],
         iconAnchor: [60, 22],
         popupAnchor: [0, -25],
       })
@@ -432,6 +468,12 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
                   };padding:2px 6px;border-radius:6px;">${Math.round(cadete.bateria)}%</span>`
                 : ''
             }
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:5px 8px;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Velocidad actual:</span>
+            <span style="font-size:12px;font-weight:900;color:${esEnMovimiento ? (velKmH > 60 ? '#dc2626' : '#16a34a') : '#64748b'};">
+              ${esEnMovimiento ? `⚡ ${velKmH} km/h (En marcha)` : '0 km/h (Detenido)'}
+            </span>
           </div>
           <div style="font-size:12px;margin-bottom:6px;">
             ${
@@ -681,6 +723,99 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         >
           <Store size={18} />
         </button>
+      </div>
+
+      {/* Widget Flotante: Velocímetro y Telemetría en Vivo */}
+      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[280px] sm:max-w-xs bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
+        <div
+          onClick={() => setMostrarPanelVelocidad(!mostrarPanelVelocidad)}
+          className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Gauge size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                  Velocidad en Vivo
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              </div>
+              <p className="text-[10px] text-slate-400 truncate">
+                {cadetesActivosConGps.length} cadete(s) transmitiendo
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+            title={mostrarPanelVelocidad ? 'Minimizar' : 'Expandir'}
+          >
+            {mostrarPanelVelocidad ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {mostrarPanelVelocidad && (
+          <div className="px-3 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800 space-y-2 max-h-[260px] overflow-y-auto">
+            {cadetesActivosConGps.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic py-2 text-center">
+                Sin cadetes con GPS activo en este momento.
+              </p>
+            ) : (
+              cadetesActivosConGps.map((c) => {
+                const vel = calcularVelocidadEnVivoKmH(c.speed)
+                const enMarcha = vel >= 4
+                const isSelected = focusedId === c.id
+
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      if (onSelectCadete) onSelectCadete(c.id)
+                      if (mapInstanceRef.current && c.lat != null && c.lng != null) {
+                        setModoCamara('cadete')
+                        mapInstanceRef.current.flyTo([c.lat, c.lng], 16, { duration: 0.6 })
+                      }
+                    }}
+                    className={`p-2 rounded-xl flex items-center justify-between gap-2 text-xs transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className="text-base shrink-0">🛵</span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {c.nombre}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {c.pedidoActivo ? `📦 A: ${c.pedidoActivo.cliente}` : '🟢 Libre'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${
+                        enMarcha
+                          ? vel > 60
+                            ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:border-red-900/40'
+                            : vel > 40
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/40'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/40'
+                          : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                      }`}>
+                        {enMarcha && <Zap size={10} className="fill-current" />}
+                        <span>{vel} km/h</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

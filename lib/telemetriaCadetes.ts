@@ -493,3 +493,28 @@ export function consolidarMetricasCadetes(
     cadetes: cadetesConsolidados
   }
 }
+
+/**
+ * Normaliza y calcula la velocidad instantánea en tiempo real (en km/h)
+ * a partir del valor reportado por el dispositivo del cadete.
+ * Maneja la conversión de m/s de Flutter/Android a km/h y filtra reposo/ruido.
+ */
+export function calcularVelocidadEnVivoKmH(rawSpeed: number | null | undefined): number {
+  if (rawSpeed == null || isNaN(rawSpeed) || rawSpeed <= 0) return 0
+
+  // Si viene en m/s (Flutter geolocator):
+  // Ej: 10 m/s * 3.6 = 36 km/h
+  const enKmH = rawSpeed * 3.6
+  if (enKmH <= LIMITE_VELOCIDAD_MAXIMA_FISICA) {
+    const val = Math.round(enKmH)
+    return val >= UMBRAL_MOVIMIENTO_KMH ? val : 0
+  }
+
+  // Si ya venía en km/h (ej: simuladores o mock data <= 85)
+  if (rawSpeed <= LIMITE_VELOCIDAD_MAXIMA_FISICA) {
+    const val = Math.round(rawSpeed)
+    return val >= UMBRAL_MOVIMIENTO_KMH ? val : 0
+  }
+
+  return 0
+}
