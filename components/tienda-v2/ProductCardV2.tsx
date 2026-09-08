@@ -6,6 +6,7 @@ import { Plus, Utensils, Flame } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import { esImagenValida } from '@/lib/tienda-helpers'
 
 interface ProductCardV2Props {
   prod: ProductoCatalogo
@@ -49,13 +50,14 @@ export default function ProductCardV2({
   }, [index])
 
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
+  const tieneImagenValida = esImagenValida(rawSrc) && !imgError
   const isCdnOptimized =
-    rawSrc.includes('res.cloudinary.com') ||
-    rawSrc.includes('supabase.co') ||
-    rawSrc.includes('unsplash.com') ||
-    rawSrc.includes('lh3.googleusercontent.com')
+    tieneImagenValida &&
+    (rawSrc.includes('res.cloudinary.com') ||
+      rawSrc.includes('supabase.co') ||
+      rawSrc.includes('lh3.googleusercontent.com'))
 
-  const optimizedSrc = isCdnOptimized ? optimizarUrlImagen(rawSrc, 400) : rawSrc
+  const optimizedSrc = tieneImagenValida ? optimizarUrlImagen(rawSrc, 400) : ''
   const esPrioritario = index < 4
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
@@ -91,7 +93,7 @@ export default function ProductCardV2({
     >
       {/* ── 1. Foto Superior Grande (16:10) ─────────────────────────────────── */}
       <div className="relative w-full aspect-[16/10] bg-slate-950 overflow-hidden">
-        {!imgError && optimizedSrc ? (
+        {tieneImagenValida && optimizedSrc ? (
           <Image
             src={optimizedSrc}
             alt={nombreVisible}

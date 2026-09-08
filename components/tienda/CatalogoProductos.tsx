@@ -4,18 +4,11 @@ import React from 'react'
 import { ScrollSpyNavBar } from '@/components/tienda/ScrollSpyNavBar'
 import ProductCard from '@/components/tienda/ProductCard'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
-import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA, resolverImagen } from '@/lib/tienda-helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Si imagen_url es un base64 crudo (no configurado Cloudinary), usar fallback
-function resolverImagen(imagenUrl: string | null | undefined, fallback: string): string {
-  if (!imagenUrl) return fallback
-  if (imagenUrl.startsWith('data:')) return fallback  // base64 enormes — fallan en Chrome moderno
-  return imagenUrl
-}
 
 // Helper interno: construye los props de ProductCard para un producto dado
 function buildCardProps(

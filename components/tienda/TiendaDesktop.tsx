@@ -9,7 +9,7 @@ import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
@@ -365,12 +365,10 @@ export default function TiendaDesktop() {
           <Suspense fallback={null}>
             <ModalPersonalizacion
               producto={productoAPersonalizar}
-              imagenFinal={(() => {
-                const url = metadata[productoAPersonalizar.id]?.imagen_url
-                const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
-                if (!url || url.startsWith('data:')) return fallback
-                return url
-              })()}
+              imagenFinal={resolverImagen(
+                metadata[productoAPersonalizar.id]?.imagen_url,
+                OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
+              )}
               modificadoresDisponibles={
                 (productoAPersonalizar.modificadoresIds ?? [])
                   .map(id => modificadores.find(m => m.id === id))

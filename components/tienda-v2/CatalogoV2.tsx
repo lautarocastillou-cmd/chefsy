@@ -3,14 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import ProductCardV2 from './ProductCardV2'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
 import { cn } from '@/lib/utils'
-
-function resolverImagen(imagenUrl: string | null | undefined, fallback: string): string {
-  if (!imagenUrl) return fallback
-  if (imagenUrl.startsWith('data:')) return fallback
-  return imagenUrl
-}
 
 function buildCardProps(
   prodOriginal: ProductoCatalogo,

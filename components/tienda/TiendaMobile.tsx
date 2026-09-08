@@ -9,7 +9,7 @@ import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { Search, ChevronRight, LogOut, User } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
 import Fuse from 'fuse.js'
@@ -380,11 +380,10 @@ export default function TiendaMobile() {
         <Suspense fallback={null}>
           <ModalPersonalizacion
             producto={productoAPersonalizar}
-            imagenFinal={(() => {
-              const url = metadata[productoAPersonalizar.id]?.imagen_url
-              if (!url || url.startsWith('data:')) return OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
-              return url
-            })()}
+            imagenFinal={resolverImagen(
+              metadata[productoAPersonalizar.id]?.imagen_url,
+              OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
+            )}
             modificadoresDisponibles={
               (productoAPersonalizar.modificadoresIds ?? [])
                 .map(id => modificadores.find(m => m.id === id))

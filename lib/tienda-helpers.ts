@@ -6,91 +6,66 @@
 
 import { metadataRespaldo } from '@/datos/productos'
 
+// --- VALIDACIÓN Y RESOLUCIÓN DE IMÁGENES ---
+
+/**
+ * Valida si una URL es una imagen propia cargada por el negocio (Supabase, Cloudinary, Drive, etc.).
+ * Rechaza URLs nulas, vacías, de stock de Unsplash, placeholders de prueba y base64 corruptos.
+ */
+export function esImagenValida(url?: string | null): boolean {
+  if (!url || typeof url !== 'string') return false
+  const limpia = url.trim()
+  if (!limpia) return false
+  const lower = limpia.toLowerCase()
+  if (
+    lower.includes('unsplash.com') ||
+    lower.includes('ly8iup') ||
+    lower.includes('placeholder') ||
+    lower.includes('sacandole-fotos') ||
+    lower.startsWith('data:')
+  ) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Resuelve la imagen final de un producto. Si no tiene foto propia válida, retorna '' (vacío)
+ * para que se muestre el logo/icono oficial de Chefsy para productos sin imagen.
+ */
+export function resolverImagen(imagenUrl: string | null | undefined, fallback?: string): string {
+  if (esImagenValida(imagenUrl)) {
+    return imagenUrl!.trim()
+  }
+  if (fallback && esImagenValida(fallback)) {
+    return fallback.trim()
+  }
+  return ''
+}
+
 // --- DESCRIPCIONES E IMÁGENES COMPLEMENTARIAS DE PRODUCTOS ---
 export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: string, idProducto?: string) => {
   if (idProducto && metadataRespaldo[idProducto]) {
     const meta = metadataRespaldo[idProducto]
-    if (meta.descripcion_publica || meta.imagen_url) {
+    if (meta.descripcion_publica || esImagenValida(meta.imagen_url)) {
       return {
         desc: meta.descripcion_publica || '',
-        img: meta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+        img: esImagenValida(meta.imagen_url) ? meta.imagen_url.trim() : ''
       }
     }
   }
   const foundMeta = Object.entries(metadataRespaldo).find(([k, v]) => k.startsWith(categoriaId) && v.nombre_publico?.toLowerCase().trim() === nombre.toLowerCase().trim())?.[1]
-  if (foundMeta && (foundMeta.descripcion_publica || foundMeta.imagen_url)) {
+  if (foundMeta && (foundMeta.descripcion_publica || esImagenValida(foundMeta.imagen_url))) {
     return {
       desc: foundMeta.descripcion_publica || '',
-      img: foundMeta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+      img: esImagenValida(foundMeta.imagen_url) ? foundMeta.imagen_url.trim() : ''
     }
   }
 
-  if (categoriaId === 'lomos-y-milas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'patys') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'pizzas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'zapping') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'choripan') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'mila-al-plato') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'tartas-xl') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'bebidas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'promos') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
+  // Sin foto genérica de stock ni IA — devuelve imagen vacía para usar el logo de producto sin imagen
   return {
     desc: '',
-    img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+    img: ''
   }
 }
 

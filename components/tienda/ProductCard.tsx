@@ -7,6 +7,7 @@ import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/u
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import { esImagenValida } from '@/lib/tienda-helpers'
 
 interface ProductCardProps {
   prod:        ProductoCatalogo
@@ -57,14 +58,15 @@ function ProductCard({
 
   // Optimización de imágenes inteligente
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
+  const tieneImagenValida = esImagenValida(rawSrc) && !imgError
   const isCdnOptimized =
-    rawSrc.includes('res.cloudinary.com') ||
-    rawSrc.includes('supabase.co') ||
-    rawSrc.includes('unsplash.com') ||
-    rawSrc.includes('lh3.googleusercontent.com')
+    tieneImagenValida &&
+    (rawSrc.includes('res.cloudinary.com') ||
+      rawSrc.includes('supabase.co') ||
+      rawSrc.includes('lh3.googleusercontent.com'))
   
-  const optimizedSrc = optimizarUrlImagen(rawSrc, 250)
-  const blurSrc = generarBlurUrl(rawSrc)
+  const optimizedSrc = tieneImagenValida ? optimizarUrlImagen(rawSrc, 250) : ''
+  const blurSrc = tieneImagenValida ? generarBlurUrl(rawSrc) : ''
   const esPrioritario = index < 4
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
@@ -122,7 +124,7 @@ function ProductCard({
           ? 'h-16 w-16 md:h-18 md:w-18 rounded-lg'
           : 'h-20 w-20 sm:h-24 sm:w-24 md:h-26 md:w-26 rounded-xl'
       )}>
-        {(!imagenFinal || !rawSrc || imgError) ? (
+        {(!tieneImagenValida || !optimizedSrc) ? (
           /* Placeholder para productos sin imagen — mismo estilo que tienda-v2 */
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center gap-1.5">
             <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">

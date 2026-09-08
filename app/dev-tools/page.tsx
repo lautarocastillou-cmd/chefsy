@@ -1278,7 +1278,7 @@ export default function DevToolsPage() {
         productoActualEditando.id
       ).img
     }
-    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+    return ''
   }, [galeriaFotos, productoActualEditando])
 
   // Banco de Fotos Únicas de la Casa

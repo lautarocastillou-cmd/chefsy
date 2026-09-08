@@ -18,7 +18,7 @@ import { ProductoCatalogo, MetaProducto, ModificadorCatalogo } from '@/tipos/cat
 import { Pedido } from '@/tipos'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { metadataRespaldo } from '@/datos/productos'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
 
 // Componentes V2 y Tienda
 import BannerGigantePromos from './BannerGigantePromos'
@@ -303,16 +303,14 @@ export default function TiendaV2() {
         <Suspense fallback={null}>
           <ModalPersonalizacion
             producto={productoAPersonalizar}
-            imagenFinal={(() => {
-              const url = metadata[productoAPersonalizar.id]?.imagen_url
-              const fallback = OBTENER_DETALLES_COMPLEMENTARIOS(
+            imagenFinal={resolverImagen(
+              metadata[productoAPersonalizar.id]?.imagen_url,
+              OBTENER_DETALLES_COMPLEMENTARIOS(
                 productoAPersonalizar.categoriaId,
                 productoAPersonalizar.nombre,
                 productoAPersonalizar.id
               ).img
-              if (!url || url.startsWith('data:')) return fallback
-              return url
-            })()}
+            )}
             modificadoresDisponibles={
               (productoAPersonalizar.modificadoresIds ?? [])
                 .map((id) => modificadores.find((m) => m.id === id))
