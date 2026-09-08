@@ -9,6 +9,7 @@ import React, {
   ReactNode,
 } from 'react'
 import { X, CheckCircle2, AlertTriangle, Bell, Bike } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface Notificacion {
   id: string
@@ -18,6 +19,7 @@ export interface Notificacion {
     etiqueta: string
     alHacerClick: () => void
   }
+  saliendo?: boolean
 }
 
 export interface ValorContextoTemaNotificacion {
@@ -179,15 +181,21 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       }
 
       setNotificaciones((prev) => {
-        if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
+        if (prev.some((n) => !n.saliendo && n.mensaje === mensaje && n.tipo === tipo)) {
           return prev
         }
         const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-        const nueva: Notificacion = { id, mensaje, tipo, accion }
-        // Cola FIFO de máximo 3 en pantalla:
-        // Si ya hay 3 o más, descartamos las más viejas para conservar como máximo 3 en total
-        const base = prev.length >= 3 ? prev.slice(prev.length - 2) : prev
-        return [...base, nueva]
+        const nueva: Notificacion = { id, mensaje, tipo, accion, saliendo: false }
+
+        // Contamos cuántas notificaciones no están todavía saliendo
+        const activas = prev.filter((n) => !n.saliendo)
+        if (activas.length >= 3) {
+          // Marcamos la más vieja activa para que inicie su salida suave y elegante
+          const idAMarcar = activas[0].id
+          return prev.map((n) => (n.id === idAMarcar ? { ...n, saliendo: true } : n)).concat(nueva)
+        }
+
+        return [...prev, nueva]
       })
     },
     []
@@ -222,7 +230,7 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
   )
 }
 
-// ── Toast Individual en Formato Píldora Centrada (Ultra limpia y minimalista) ─
+// ── Toast Individual en Formato Píldora Centrada con Animación Soft de Salida ──
 
 function ToastItem({
   notificacion: n,
@@ -231,6 +239,8 @@ function ToastItem({
   notificacion: Notificacion
   onEliminar: (id: string) => void
 }) {
+  const [saliendoLocal, setSaliendoLocal] = useState(false)
+  const saliendo = Boolean(n.saliendo || saliendoLocal)
   const duracionMs = n.accion ? 4200 : 2600
 
   const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
@@ -249,16 +259,41 @@ function ToastItem({
     ? 'text-amber-400 bg-amber-500/20 border-amber-500/40'
     : 'text-sky-400 bg-sky-500/20 border-sky-500/40'
 
+  // Auto-cierre con timer si aún no está saliendo
   useEffect(() => {
+    if (saliendo) return
+
     const timer = setTimeout(() => {
-      onEliminar(n.id)
+      setSaliendoLocal(true)
     }, duracionMs)
+
     return () => clearTimeout(timer)
-  }, [n.id, duracionMs, onEliminar])
+  }, [duracionMs, saliendo])
+
+  // Desmontar de estado una vez terminada la animación suave de salida (280ms)
+  useEffect(() => {
+    if (!saliendo) return
+
+    const timerDesmontar = setTimeout(() => {
+      onEliminar(n.id)
+    }, 280)
+
+    return () => clearTimeout(timerDesmontar)
+  }, [saliendo, n.id, onEliminar])
+
+  const manejarCerrar = () => {
+    setSaliendoLocal(true)
+  }
 
   return (
     <div
-      className="flex items-center gap-2.5 bg-[#0f172a]/95 backdrop-blur-md border border-white/20 text-white rounded-full px-4 sm:px-5 py-2 sm:py-2.5 shadow-[0_20px_30px_-5px_rgba(0,0,0,0.8),0_0_15px_0_rgba(0,0,0,0.4)] pointer-events-auto select-none transition-all duration-200 animate-in slide-in-from-bottom-3 fade-in-0 max-w-[92vw]"
+      style={{ willChange: 'transform, opacity' }}
+      className={cn(
+        'flex items-center gap-2.5 bg-[#0f172a]/95 backdrop-blur-md border border-white/20 text-white rounded-full px-4 sm:px-5 py-2 sm:py-2.5 shadow-[0_20px_30px_-5px_rgba(0,0,0,0.8),0_0_15px_0_rgba(0,0,0,0.4)] pointer-events-auto select-none max-w-[92vw] transform-gpu transition-all duration-300 ease-out',
+        saliendo
+          ? 'opacity-0 translate-y-3 scale-95 pointer-events-none'
+          : 'opacity-100 translate-y-0 scale-100 animate-in slide-in-from-bottom-3 fade-in-0 duration-200'
+      )}
     >
       {/* Icono temático circular */}
       <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0 border ${iconoEstilo}`}>
@@ -276,7 +311,7 @@ function ToastItem({
           type="button"
           onClick={() => {
             n.accion?.alHacerClick()
-            onEliminar(n.id)
+            manejarCerrar()
           }}
           className="ml-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 underline cursor-pointer shrink-0"
         >
@@ -284,10 +319,10 @@ function ToastItem({
         </button>
       )}
 
-      {/* Botón de descarte inmediato */}
+      {/* Botón de descarte inmediato con salida suave */}
       <button
         type="button"
-        onClick={() => onEliminar(n.id)}
+        onClick={manejarCerrar}
         className="text-slate-400 hover:text-white transition-colors p-0.5 rounded-full hover:bg-white/10 shrink-0 ml-0.5 cursor-pointer"
         title="Cerrar notificación"
       >
