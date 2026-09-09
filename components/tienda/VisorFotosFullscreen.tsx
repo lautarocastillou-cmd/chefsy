@@ -354,9 +354,11 @@ export default function VisorFotosFullscreen({
             <h4 className="font-bebas text-lg sm:text-xl text-white tracking-wide truncate">
               {nombreProducto}
             </h4>
-            <p className="text-[11px] font-semibold text-neutral-400">
-              {fotos.length > 1 ? `Foto ${indiceActivo + 1} de ${fotos.length}` : 'Alta definición'}
-            </p>
+            {fotos.length > 1 && (
+              <p className="text-[11px] font-semibold text-neutral-400">
+                Foto {indiceActivo + 1} de {fotos.length}
+              </p>
+            )}
           </div>
         </div>
 

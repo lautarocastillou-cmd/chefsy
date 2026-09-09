@@ -419,7 +419,7 @@ export default function ModalPersonalizacion({
                         value={notaPersonalizacion}
                         onChange={(e) => onSetNota(e.target.value)}
                         placeholder="Ej: Sin cebolla, con extra mayonesa..."
-                        className="w-full border border-[#3d3d3d] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-[#161616] text-white placeholder:text-slate-500 resize-none transition-all"
+                        className="w-full border border-[#3d3d3d] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-[#161616] text-white placeholder:text-slate-500 placeholder:text-[10.5px] resize-none transition-all"
                         rows={2}
                       />
                     </div>
@@ -554,7 +554,7 @@ export default function ModalPersonalizacion({
                       value={notaPersonalizacion}
                       onChange={(e) => onSetNota(e.target.value)}
                       placeholder="Ej: Sin cebolla, con extra mayonesa..."
-                      className="w-full border border-[#3d3d3d] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-[#1a1a1a] text-white placeholder:text-slate-500 resize-none transition-all"
+                      className="w-full border border-[#3d3d3d] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-chefsy-500/60 focus:border-chefsy-500/50 bg-[#1a1a1a] text-white placeholder:text-slate-500 placeholder:text-[10.5px] resize-none transition-all"
                       rows={2}
                     />
                   </div>
