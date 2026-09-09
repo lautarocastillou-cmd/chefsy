@@ -95,7 +95,7 @@ function CatalogoProductosComponente({
             />
           )}
 
-          <div className="flex flex-col gap-10">
+          <div className="flex flex-col gap-10 pb-20 md:pb-28">
             {(() => {
               let totalCardIndex = 0
               return categoriasActivas.map(cat => {

@@ -104,8 +104,6 @@ function ProductCard({
         }
       }}
       style={{
-        contentVisibility: 'auto',
-        containIntrinsicSize: '0 90px',
         transitionDelay: visible ? `${(index % 5) * 55}ms` : '0ms',
       }}
       className={cn(

@@ -73,23 +73,17 @@ export default function SidebarTienda({
     }
   }, [abierto])
 
-  // Bloquear scroll de fondo cuando el sidebar está abierto y pausar Lenis
+  // Bloquear scroll de fondo cuando el sidebar está abierto
   useEffect(() => {
     if (abierto) {
       const origHtmlOverflow = document.documentElement.style.overflow
       const origBodyOverflow = document.body.style.overflow
       document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
-      if (typeof window !== 'undefined' && (window as any).__lenis) {
-        ;(window as any).__lenis.stop()
-      }
 
       return () => {
         document.documentElement.style.overflow = origHtmlOverflow
         document.body.style.overflow = origBodyOverflow
-        if (typeof window !== 'undefined' && (window as any).__lenis) {
-          ;(window as any).__lenis.start()
-        }
       }
     }
   }, [abierto])
@@ -98,14 +92,11 @@ export default function SidebarTienda({
     // 1. Cerrar el sidebar
     onCerrar()
 
-    // 2. Desbloquear de inmediato overflow del body y reanudar Lenis para permitir scroll
+    // 2. Desbloquear de inmediato overflow del body para permitir scroll
     document.documentElement.style.overflow = ''
     document.body.style.overflow = ''
-    if (typeof window !== 'undefined' && (window as any).__lenis) {
-      ;(window as any).__lenis.start()
-    }
 
-    // 3. Notificar selección para iniciar desplazamiento
+    // 3. Notificar selección para iniciar desplazamiento fluido
     onSeleccionarCategoria(id)
   }
 

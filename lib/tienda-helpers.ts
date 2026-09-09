@@ -119,7 +119,13 @@ export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
 export function scrollHaciaCategoria(catId: string | null) {
   if (typeof window === 'undefined') return
 
-  // 1. Si es null o 'todos', scrollear suavemente a la cabecera del catálogo / inicio
+  // Asegurar que el scroll del body no esté bloqueado
+  if (document.body.style.overflow === 'hidden') {
+    document.body.style.overflow = ''
+    document.documentElement.style.overflow = ''
+  }
+
+  // 1. Si es null o 'todos', scrollear suavemente al inicio absoluto
   if (!catId || catId === 'todos') {
     const lenis = (window as any).__lenis
     if (lenis && typeof lenis.scrollTo === 'function') {
@@ -161,21 +167,54 @@ export function scrollHaciaCategoria(catId: string | null) {
     } else if (idLower.includes('promo')) {
       el = document.getElementById('promos') || 
            (document.querySelector('[id*="promo"]') as HTMLElement | null)
+    } else if (idLower.includes('tarta')) {
+      el = document.getElementById('tartas-xl') ||
+           (document.querySelector('[id*="tarta"]') as HTMLElement | null)
+    } else if (idLower.includes('zapping')) {
+      el = document.getElementById('zapping') ||
+           (document.querySelector('[id*="zapping"]') as HTMLElement | null)
+    }
+  }
+
+  // Si todavía no se encuentra, buscar por coincidencia en el texto del h3
+  if (!el) {
+    const todosH3 = Array.from(document.querySelectorAll('.categoria-seccion h3, h3')) as HTMLElement[]
+    const targetH3 = todosH3.find(h3 => h3.textContent?.trim().toLowerCase().includes(catId.toLowerCase()))
+    if (targetH3) {
+      el = (targetH3.closest('.categoria-seccion') as HTMLElement) || targetH3
     }
   }
 
   if (!el) return
 
-  // 3. Calcular posición exacta compensando la barra sticky
-  const isMobile = window.innerWidth < 768
-  // En mobile: header sticky (~110px) + margen cómodo = 120px
-  // En desktop: header / banner = 130px
-  const stickyOffset = isMobile ? 120 : 130
-  const rect = el.getBoundingClientRect()
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-  const targetY = Math.max(0, Math.round(rect.top + scrollTop - stickyOffset))
+  // 3. Localizar el título h3 exacto de la categoría (o el elemento contenedor)
+  const targetTitle = (el.querySelector('h3') || el) as HTMLElement
 
-  // 4. Ejecutar scroll suave (utilizando Lenis si está activo o nativo)
+  // 4. Medir dinámicamente la altura real de la cabecera sticky si está presente
+  const isMobile = window.innerWidth < 768
+  const stickyHeader = document.getElementById('tienda-sticky-header') || 
+                       (document.querySelector('.sticky.top-0, header.sticky, [class*="sticky top-0"]') as HTMLElement | null)
+  let headerHeight = 0
+  if (stickyHeader) {
+    const headerRect = stickyHeader.getBoundingClientRect()
+    // Solo se computa si está ubicado en el margen superior del viewport
+    if (headerRect.top <= 10) {
+      headerHeight = Math.round(headerRect.height)
+    }
+  }
+
+  // Margen estético para que el título respire justo debajo de la barra o del borde
+  const margenRespirable = isMobile ? 12 : 24
+
+  // 5. Coordenada absoluta del título invariante tanto al subir como al bajar
+  const currentScroll = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0
+  const titleRect = targetTitle.getBoundingClientRect()
+  const absoluteTitleTop = currentScroll + titleRect.top
+
+  // targetY exacto donde debe aterrizar el scroll
+  const targetY = Math.max(0, Math.round(absoluteTitleTop - headerHeight - margenRespirable))
+
+  // 6. Ejecutar scroll suave (utilizando Lenis si está activo o nativo)
   const lenis = (window as any).__lenis
   if (lenis && typeof lenis.scrollTo === 'function') {
     lenis.scrollTo(targetY, { duration: 0.85, force: true })
