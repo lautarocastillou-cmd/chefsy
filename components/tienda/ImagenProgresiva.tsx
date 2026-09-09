@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -90,7 +90,7 @@ export default function ImagenProgresiva({
             onLoadSuccess?.()
           }}
           onError={() => setError(true)}
-          className={`relative z-10 ${fitClass} transition-opacity duration-300 ${
+          className={`relative z-[1] ${fitClass} transition-opacity duration-300 ${
             cargada ? 'opacity-100' : 'opacity-0'
           } ${className}`}
         />

@@ -274,7 +274,7 @@ export default function ModalPersonalizacion({
                     />
 
                     {/* Hint flotante de Zoom en Desktop */}
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1e1e]/95 text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
+                    <div className="absolute top-3 right-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1e1e]/95 text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
                       <Maximize2 size={13} className="text-chefsy-400" />
                       <span>Ver en pantalla completa</span>
                     </div>
@@ -288,7 +288,7 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev - 1 + listaFotos.length) % listaFotos.length)
                           }}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
                           aria-label="Foto anterior"
                         >
                           <ChevronLeft size={22} />
@@ -300,13 +300,13 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev + 1) % listaFotos.length)
                           }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
                           aria-label="Foto siguiente"
                         >
                           <ChevronRight size={22} />
                         </button>
 
-                        <div className="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-[#181818]/90 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
+                        <div className="absolute bottom-3 left-3 z-30 px-2.5 py-1 rounded-lg bg-[#181818]/90 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
                           <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
                           Foto {indiceFoto + 1} de {listaFotos.length}
                         </div>
