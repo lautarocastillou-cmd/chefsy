@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
 import ImagenProgresiva from './ImagenProgresiva'
+import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
 
 interface VisorFotosFullscreenProps {
   fotos: string[]
@@ -28,6 +29,12 @@ export default function VisorFotosFullscreen({
   const [posicion, setPosicion] = useState({ x: 0, y: 0 })
   const [arrastrando, setArrastrando] = useState(false)
 
+  const trackRef = useRef<HTMLDivElement>(null)
+  const touchInicioRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const dragOffsetRef = useRef<number>(0)
+  const isDraggingRef = useRef<boolean>(false)
+  const rafDragRef = useRef<number>(0)
+
   const arrastreRef = useRef({
     activo: false,
     startX: 0,
@@ -38,7 +45,6 @@ export default function VisorFotosFullscreen({
   })
 
   const ultimoTapRef = useRef<number>(0)
-  const touchInicioRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const pinchDistInicioRef = useRef<number | null>(null)
   const pinchZoomInicioRef = useRef<number>(1)
   const onCerrarRef = useRef(onCerrar)
@@ -51,35 +57,31 @@ export default function VisorFotosFullscreen({
     setMontado(true)
   }, [])
 
+  // Cambiar foto con animación fluida en el track GPU
+  const cambiarFoto = useCallback((nuevoIndice: number) => {
+    const idxValido = Math.min(Math.max(0, nuevoIndice), Math.max(0, fotos.length - 1))
+    setIndiceActivo(idxValido)
+    setZoom(1)
+    setPosicion({ x: 0, y: 0 })
+    if (trackRef.current) {
+      trackRef.current.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)'
+      trackRef.current.style.transform = `translate3d(-${idxValido * 100}%, 0, 0)`
+    }
+  }, [fotos.length])
+
   // Sincronizar índice inicial cuando se abre
   useEffect(() => {
     if (abierto) {
-      setIndiceActivo(Math.min(Math.max(0, indiceInicial), Math.max(0, fotos.length - 1)))
+      const idx = Math.min(Math.max(0, indiceInicial), Math.max(0, fotos.length - 1))
+      setIndiceActivo(idx)
       setZoom(1)
       setPosicion({ x: 0, y: 0 })
+      if (trackRef.current) {
+        trackRef.current.style.transition = 'none'
+        trackRef.current.style.transform = `translate3d(-${idx * 100}%, 0, 0)`
+      }
     }
   }, [abierto, indiceInicial, fotos.length])
-
-  // Precarga inteligente en segundo plano de fotos adyacentes
-  useEffect(() => {
-    if (fotos.length <= 1) return
-    const sig = (indiceActivo + 1) % fotos.length
-    const ant = (indiceActivo - 1 + fotos.length) % fotos.length
-    const slow = esConexionLenta()
-
-    ;[fotos[sig], fotos[ant]].forEach(url => {
-      if (!url) return
-      const img = new window.Image()
-      img.src = optimizarUrlImagen(url, slow ? 450 : 1000, slow)
-    })
-  }, [indiceActivo, fotos])
-
-  // Reset zoom al cambiar de foto
-  const cambiarFoto = useCallback((nuevoIndice: number) => {
-    setIndiceActivo(nuevoIndice)
-    setZoom(1)
-    setPosicion({ x: 0, y: 0 })
-  }, [])
 
   const fotoAnterior = useCallback(() => {
     if (fotos.length <= 1) return
@@ -215,7 +217,7 @@ export default function VisorFotosFullscreen({
     }
   }, [arrastrando, zoom])
 
-  // Gestos táctiles en móvil (Swipe & Pinch)
+  // Gestos táctiles en móvil (Swipe fluido & Pinch-to-zoom)
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       const t1 = e.touches[0]
@@ -241,6 +243,12 @@ export default function VisorFotosFullscreen({
         y: touch.clientY,
         time: ahora,
       }
+      dragOffsetRef.current = 0
+      isDraggingRef.current = true
+
+      if (zoom === 1 && trackRef.current) {
+        trackRef.current.style.transition = 'none'
+      }
     }
   }
 
@@ -253,34 +261,68 @@ export default function VisorFotosFullscreen({
       const nuevoZoom = Math.min(3.5, Math.max(1, Number((pinchZoomInicioRef.current * ratio).toFixed(2))))
       setZoom(nuevoZoom)
       if (nuevoZoom === 1) setPosicion({ x: 0, y: 0 })
+      return
+    }
+
+    if (e.touches.length === 1 && zoom === 1 && touchInicioRef.current && isDraggingRef.current && fotos.length > 1) {
+      const touch = e.touches[0]
+      const dx = touch.clientX - touchInicioRef.current.x
+      const dy = touch.clientY - touchInicioRef.current.y
+
+      // Si el desplazamiento es predominantemente horizontal, seguimos el dedo 1:1 en tiempo real
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+        let finalDx = dx
+        // Resistencia elástica en los extremos
+        if ((indiceActivo === 0 && dx > 0) || (indiceActivo === fotos.length - 1 && dx < 0)) {
+          finalDx = dx * 0.25
+        }
+        dragOffsetRef.current = finalDx
+
+        if (rafDragRef.current) cancelAnimationFrame(rafDragRef.current)
+        rafDragRef.current = requestAnimationFrame(() => {
+          if (trackRef.current) {
+            trackRef.current.style.transform = `translate3d(calc(-${indiceActivo * 100}% + ${finalDx}px), 0, 0)`
+          }
+        })
+      }
     }
   }
 
   const onTouchEnd = (e: React.TouchEvent) => {
     pinchDistInicioRef.current = null
+    isDraggingRef.current = false
 
     if (zoom === 1 && touchInicioRef.current && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0]
-      const deltaX = touch.clientX - touchInicioRef.current.x
-      const deltaY = touch.clientY - touchInicioRef.current.y
+      const dx = dragOffsetRef.current || (touch.clientX - touchInicioRef.current.x)
+      const dy = touch.clientY - touchInicioRef.current.y
       const deltaTime = Date.now() - touchInicioRef.current.time
 
-      // Swipe down rápido para cerrar
-      if (deltaY > 100 && Math.abs(deltaX) < 80 && deltaTime < 400) {
+      // Swipe down rápido para cerrar el visor
+      if (dy > 110 && Math.abs(dx) < 60 && deltaTime < 400) {
         onCerrarRef.current()
+        touchInicioRef.current = null
         return
       }
 
-      // Swipe horizontal para pasar foto
-      if (Math.abs(deltaX) > 60 && Math.abs(deltaY) < 60 && deltaTime < 500) {
-        if (deltaX < 0) {
-          fotoSiguiente()
-        } else {
-          fotoAnterior()
+      // Swipe horizontal fluido
+      if (fotos.length > 1) {
+        const threshold = 45
+        const isFlick = deltaTime < 350 && Math.abs(dx) > 25
+        let nuevoIndice = indiceActivo
+
+        if ((dx < -threshold || (isFlick && dx < 0)) && indiceActivo < fotos.length - 1) {
+          nuevoIndice = indiceActivo + 1
+        } else if ((dx > threshold || (isFlick && dx > 0)) && indiceActivo > 0) {
+          nuevoIndice = indiceActivo - 1
         }
+
+        cambiarFoto(nuevoIndice)
       }
     }
+
     touchInicioRef.current = null
+    dragOffsetRef.current = 0
   }
 
   if (!montado || !abierto || fotos.length === 0) return null
@@ -365,21 +407,54 @@ export default function VisorFotosFullscreen({
       >
         {/* Fondo medio oscuro que delimita y resalta la comida */}
         <div
-          className="relative w-full max-w-4xl h-[68vh] sm:h-[75vh] max-h-[750px] flex items-center justify-center rounded-2xl sm:rounded-3xl bg-[#171717] border border-[#2b2b2b] shadow-2xl overflow-hidden p-2 sm:p-4 will-change-transform"
+          className="relative w-full max-w-4xl h-[68vh] sm:h-[75vh] max-h-[750px] flex items-center justify-center rounded-2xl sm:rounded-3xl bg-[#171717] border border-[#2b2b2b] shadow-2xl overflow-hidden will-change-transform"
           style={{
             transform: `translate3d(${posicion.x}px, ${posicion.y}px, 0) scale(${zoom})`,
             transition: arrastrando ? 'none' : 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
             touchAction: zoom > 1 ? 'none' : 'pan-y',
           }}
         >
-          <ImagenProgresiva
-            src={fotoActual}
-            alt={`${nombreProducto} - Foto ${indiceActivo + 1}`}
-            anchoDeseado={1100}
-            priority
-            objectFit="contain"
-            sizes="(max-width: 768px) 95vw, 1000px"
-          />
+          {/* Pista deslizante horizontal fluida con aceleración por hardware */}
+          <div
+            ref={trackRef}
+            className="flex w-full h-full will-change-transform"
+            style={{
+              transform: `translate3d(-${indiceActivo * 100}%, 0, 0)`,
+              transition: 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          >
+            {fotos.map((url, idx) => {
+              const esActiva = idx === indiceActivo
+              const yaFueVista = esFotoVista(url)
+              // Regla estricta: solo carga la activa o las que el usuario ya vio previamente en el visor.
+              // Las fotos no vistas NO descargan datos hasta que el usuario se desplace a ellas.
+              const debeCargar = esActiva || yaFueVista
+
+              return (
+                <div
+                  key={idx}
+                  className="relative w-full h-full shrink-0 flex items-center justify-center p-2 sm:p-4"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  {debeCargar ? (
+                    <ImagenProgresiva
+                      src={url}
+                      alt={`${nombreProducto} - Foto ${idx + 1}`}
+                      anchoDeseado={1100}
+                      priority={esActiva || yaFueVista}
+                      objectFit="contain"
+                      sizes="(max-width: 768px) 95vw, 1000px"
+                      onLoadSuccess={() => registrarFotoVista(url)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#171717]">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Flechas de navegación flotantes (Desktop) */}

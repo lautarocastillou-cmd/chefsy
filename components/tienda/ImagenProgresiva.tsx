@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { RotateCcw, ImageOff } from 'lucide-react'
 import { optimizarUrlImagen, generarBlurUrl, esConexionLenta } from '@/lib/utils'
+import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
 
 interface ImagenProgresivaProps {
   src: string
@@ -26,20 +27,29 @@ export default function ImagenProgresiva({
   objectFit = 'cover',
   onLoadSuccess,
 }: ImagenProgresivaProps) {
-  const [cargada, setCargada] = useState(false)
-  const [error, setError] = useState(false)
-  const [reintentos, setReintentos] = useState(0)
   const [esLenta, setEsLenta] = useState(false)
 
   useEffect(() => {
     setEsLenta(esConexionLenta())
   }, [])
 
-  // Reset al cambiar de src
+  const anchoFinal = esLenta ? Math.min(anchoDeseado, 450) : anchoDeseado
+  const urlFinal = optimizarUrlImagen(src, anchoFinal, esLenta)
+  const isCdn = src.includes('res.cloudinary.com') || src.includes('supabase.co') || src.includes('unsplash.com') || src.includes('lh3.googleusercontent.com')
+  const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover'
+
+  // Si ya fue vista previamente en el visor, no esperamos ni mostramos blur
+  const yaVista = esFotoVista(urlFinal, src)
+  const [cargada, setCargada] = useState(() => yaVista)
+  const [error, setError] = useState(false)
+  const [reintentos, setReintentos] = useState(0)
+
+  // Reset al cambiar de src (si ya estaba en caché, queda cargada inmediatamente)
   useEffect(() => {
-    setCargada(false)
+    const vista = esFotoVista(urlFinal, src)
+    setCargada(vista)
     setError(false)
-  }, [src, reintentos])
+  }, [src, urlFinal, reintentos])
 
   if (!src) {
     return (
@@ -51,16 +61,12 @@ export default function ImagenProgresiva({
   }
 
   const urlBlur = generarBlurUrl(src)
-  const anchoFinal = esLenta ? Math.min(anchoDeseado, 450) : anchoDeseado
-  const urlFinal = optimizarUrlImagen(src, anchoFinal, esLenta)
-  const isCdn = src.includes('res.cloudinary.com') || src.includes('supabase.co') || src.includes('unsplash.com') || src.includes('lh3.googleusercontent.com')
-
-  const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover'
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#161616]">
       {/* ── 1. Miniatura Blur-Up ultraliviana (< 1 KB) ── */}
-      {!cargada && !error && urlBlur && (
+      {/* Solo se muestra si la foto no fue vista antes, evitando parpadeos al reabrir */}
+      {!cargada && !yaVista && !error && urlBlur && (
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           <Image
             src={urlBlur}
@@ -83,15 +89,18 @@ export default function ImagenProgresiva({
           alt={alt}
           fill
           sizes={sizes}
-          priority={priority}
+          priority={priority || yaVista}
           unoptimized={isCdn}
           onLoad={() => {
             setCargada(true)
+            registrarFotoVista(urlFinal, src)
             onLoadSuccess?.()
           }}
           onError={() => setError(true)}
-          className={`relative z-[1] ${fitClass} transition-opacity duration-300 ${
-            cargada ? 'opacity-100' : 'opacity-0'
+          className={`relative z-[1] ${fitClass} ${
+            yaVista
+              ? 'opacity-100'
+              : `transition-opacity duration-300 ${cargada ? 'opacity-100' : 'opacity-0'}`
           } ${className}`}
         />
       )}

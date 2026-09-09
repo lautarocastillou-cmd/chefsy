@@ -8,6 +8,7 @@ import { formatearPrecio, optimizarUrlImagen, esConexionLenta } from '@/lib/util
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import VisorFotosFullscreen from './VisorFotosFullscreen'
 import ImagenProgresiva from './ImagenProgresiva'
+import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -116,19 +117,18 @@ export default function ModalPersonalizacion({
     })
   }, [indiceFoto, listaFotos.length])
 
-  // Precarga inteligente en segundo plano de fotos adyacentes
+  // Sincronizar carrusel móvil cuando cambia el índice externamente
   useEffect(() => {
-    if (listaFotos.length <= 1) return
-    const sig = (indiceFoto + 1) % listaFotos.length
-    const ant = (indiceFoto - 1 + listaFotos.length) % listaFotos.length
-    const slow = esConexionLenta()
-
-    ;[listaFotos[sig], listaFotos[ant]].forEach(url => {
-      if (!url) return
-      const img = new window.Image()
-      img.src = optimizarUrlImagen(url, slow ? 450 : 800, slow)
-    })
-  }, [indiceFoto, listaFotos])
+    if (carruselMobileRef.current) {
+      const { clientWidth, scrollLeft } = carruselMobileRef.current
+      if (clientWidth > 0) {
+        const targetLeft = indiceFoto * clientWidth
+        if (Math.abs(scrollLeft - targetLeft) > 10) {
+          carruselMobileRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' })
+        }
+      }
+    }
+  }, [indiceFoto])
 
   const tieneFotos = listaFotos.length > 0
   const fotoActiva = tieneFotos ? (listaFotos[indiceFoto] || listaFotos[0]) : ''
@@ -207,11 +207,15 @@ export default function ModalPersonalizacion({
                   <div
                     ref={carruselMobileRef}
                     onScroll={handleScrollMobile}
-                    className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex scroll-smooth"
+                    className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex"
                   >
                     {listaFotos.map((imgUrl, i) => {
-                      const optimized = optimizarUrlImagen(imgUrl, 700)
-                      const isCdn = imgUrl.includes('res.cloudinary.com') || imgUrl.includes('supabase.co') || imgUrl.includes('unsplash.com') || imgUrl.includes('lh3.googleusercontent.com')
+                      const esActiva = i === indiceFoto
+                      const yaVista = esFotoVista(imgUrl)
+                      // Carga selectiva: activa, vista previamente, o adyacente inmediata.
+                      // Las fotos no vistas no consumen recursos hasta que el usuario las visualiza.
+                      const debeCargar = esActiva || yaVista || i === 0 || Math.abs(i - indiceFoto) <= 1
+
                       return (
                         <div
                           key={i}
@@ -223,14 +227,21 @@ export default function ModalPersonalizacion({
                             setLightboxAbierto(true)
                           }}
                         >
-                          <ImagenProgresiva
-                            src={imgUrl}
-                            alt={`${producto.nombre} - Foto ${i + 1}`}
-                            anchoDeseado={700}
-                            priority={i === 0}
-                            objectFit="cover"
-                            sizes="100vw"
-                          />
+                          {debeCargar ? (
+                            <ImagenProgresiva
+                              src={imgUrl}
+                              alt={`${producto.nombre} - Foto ${i + 1}`}
+                              anchoDeseado={700}
+                              priority={i === 0 || yaVista}
+                              objectFit="cover"
+                              sizes="100vw"
+                              onLoadSuccess={() => registrarFotoVista(imgUrl)}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#141414] flex items-center justify-center">
+                              <span className="w-2 h-2 rounded-full bg-white/10" />
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -238,15 +249,21 @@ export default function ModalPersonalizacion({
 
                   {/* Puntos de paginación inferiores (Mobile) */}
                   {listaFotos.length > 1 && (
-                    <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 pointer-events-none">
+                    <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
                       {listaFotos.map((_, i) => (
-                        <div
+                        <button
                           key={i}
-                          className={`h-1.5 rounded-full transition-all duration-200 ${
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIndiceFoto(i)
+                          }}
+                          className={`h-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                             i === indiceFoto
                               ? 'w-5 bg-chefsy-400 shadow-sm shadow-chefsy-400/50'
-                              : 'w-1.5 bg-white/30'
+                              : 'w-1.5 bg-white/30 hover:bg-white/60'
                           }`}
+                          aria-label={`Ver foto ${i + 1}`}
                         />
                       ))}
                     </div>
@@ -271,6 +288,7 @@ export default function ModalPersonalizacion({
                       priority
                       objectFit="contain"
                       sizes="(max-width: 1024px) 50vw, 600px"
+                      onLoadSuccess={() => registrarFotoVista(fotoActiva)}
                     />
 
                     {/* Hint flotante de Zoom en Desktop */}
