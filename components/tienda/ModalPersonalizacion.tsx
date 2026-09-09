@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
@@ -54,16 +54,28 @@ export default function ModalPersonalizacion({
 
   const cerradoPorAtrasRef = useRef(false)
   const onCerrarRef = useRef(onCerrar)
+  const lightboxAbiertoRef = useRef(lightboxAbierto)
 
   useEffect(() => {
     onCerrarRef.current = onCerrar
   }, [onCerrar])
 
   useEffect(() => {
+    lightboxAbiertoRef.current = lightboxAbierto
+  }, [lightboxAbierto])
+
+  useEffect(() => {
     // Interceptar gesto o botón Atrás (iPhone/Android)
     window.history.pushState({ modalProducto: true }, '', window.location.href)
 
     const handlePopState = () => {
+      // Si el visor fullscreen está abierto, el botón Atrás de Android solo cierra el fullscreen
+      if (lightboxAbiertoRef.current) {
+        setLightboxAbierto(false)
+        window.history.pushState({ modalProducto: true }, '', window.location.href)
+        return
+      }
+
       cerradoPorAtrasRef.current = true
       onCerrarRef.current()
     }
@@ -162,7 +174,11 @@ export default function ModalPersonalizacion({
                   {/* Botón flotante "Ampliar HD" (Mobile) */}
                   <button
                     type="button"
-                    onClick={() => setLightboxAbierto(true)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setLightboxAbierto(true)
+                    }}
                     className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/90 text-white text-xs font-bold border border-white/25 backdrop-blur-md shadow-xl transition-transform active:scale-95 cursor-pointer"
                   >
                     <Maximize2 size={13} className="text-chefsy-400" />
@@ -190,7 +206,9 @@ export default function ModalPersonalizacion({
                         <div
                           key={i}
                           className="relative w-full h-full shrink-0 snap-center cursor-pointer"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
                             setIndiceFoto(i)
                             setLightboxAbierto(true)
                           }}
@@ -231,7 +249,11 @@ export default function ModalPersonalizacion({
                   {/* Foto Principal en HD */}
                   <div
                     className="relative w-full aspect-[4/3] lg:aspect-auto lg:h-[440px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-xl flex items-center justify-center"
-                    onClick={() => setLightboxAbierto(true)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setLightboxAbierto(true)
+                    }}
                   >
                     <Image
                       src={fotoActivaDesktop}
@@ -294,7 +316,10 @@ export default function ModalPersonalizacion({
                           <button
                             key={idx}
                             type="button"
-                            onClick={() => setIndiceFoto(idx)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setIndiceFoto(idx)
+                            }}
                             className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer active:scale-95 ${
                               isSelect
                                 ? 'border-chefsy-400 ring-2 ring-chefsy-400/40 scale-105 shadow-md shadow-chefsy-500/20'
