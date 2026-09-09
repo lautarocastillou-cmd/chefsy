@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
@@ -41,16 +41,18 @@ export default function ModalPersonalizacion({
   const { turnoActivo, esDomingoCerrado, mensajeCierre } = usarCarrito()
   const estaCerrado = turnoActivo === false || esDomingoCerrado
 
-  // Lista de fotos
-  const listaFotos = imagenFinal
-    ? (imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal])
-        .map(url => url.trim())
-        .filter(Boolean)
-    : []
+  // Lista de fotos memoizada
+  const listaFotos = useMemo(() => {
+    if (!imagenFinal) return []
+    return (imagenFinal.includes(' | ') ? imagenFinal.split(' | ') : [imagenFinal])
+      .map(url => url.trim())
+      .filter(Boolean)
+  }, [imagenFinal])
 
   const [indiceFoto, setIndiceFoto] = useState(0)
   const [lightboxAbierto, setLightboxAbierto] = useState(false)
   const carruselMobileRef = useRef<HTMLDivElement>(null)
+  const scrollRafRef = useRef<number>(0)
 
   const cerradoPorAtrasRef = useRef(false)
   const onCerrarRef = useRef(onCerrar)
@@ -97,28 +99,25 @@ export default function ModalPersonalizacion({
     }
   }, [])
 
-  // Sincronizar índice en scroll móvil
-  const handleScrollMobile = () => {
+  // Sincronizar índice en scroll móvil optimizado con rAF
+  const handleScrollMobile = useCallback(() => {
     if (!carruselMobileRef.current) return
-    const { scrollLeft, clientWidth } = carruselMobileRef.current
-    if (clientWidth > 0) {
-      const nuevoIndice = Math.round(scrollLeft / clientWidth)
-      if (nuevoIndice !== indiceFoto && nuevoIndice >= 0 && nuevoIndice < listaFotos.length) {
-        setIndiceFoto(nuevoIndice)
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current)
+    scrollRafRef.current = requestAnimationFrame(() => {
+      if (!carruselMobileRef.current) return
+      const { scrollLeft, clientWidth } = carruselMobileRef.current
+      if (clientWidth > 0) {
+        const nuevoIndice = Math.round(scrollLeft / clientWidth)
+        if (nuevoIndice !== indiceFoto && nuevoIndice >= 0 && nuevoIndice < listaFotos.length) {
+          setIndiceFoto(nuevoIndice)
+        }
       }
-    }
-  }
-
-  const scrollMobileHacia = (indice: number) => {
-    if (!carruselMobileRef.current) return
-    const targetLeft = carruselMobileRef.current.clientWidth * indice
-    carruselMobileRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' })
-    setIndiceFoto(indice)
-  }
+    })
+  }, [indiceFoto, listaFotos.length])
 
   const tieneFotos = listaFotos.length > 0
   const fotoActiva = tieneFotos ? (listaFotos[indiceFoto] || listaFotos[0]) : ''
-  const fotoActivaDesktop = tieneFotos ? optimizarUrlImagen(fotoActiva, 1200) : ''
+  const fotoActivaDesktop = tieneFotos ? optimizarUrlImagen(fotoActiva, 800) : ''
   const isCdnDesktop = fotoActiva.includes('res.cloudinary.com') || fotoActiva.includes('supabase.co') || fotoActiva.includes('unsplash.com') || fotoActiva.includes('lh3.googleusercontent.com')
 
   return (
@@ -128,19 +127,17 @@ export default function ModalPersonalizacion({
         onClick={(e) => {
           if (e.target === e.currentTarget) onCerrar()
         }}
-        onWheel={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
         data-lenis-prevent="true"
       >
-        {/* Backdrop */}
+        {/* Backdrop sin filtros pesados */}
         <div 
-          className="fixed inset-0 bg-black/85 backdrop-blur-sm transition-opacity animate-in fade-in duration-250 ease-out pointer-events-auto will-change-opacity"
+          className="fixed inset-0 bg-black/80 transition-opacity animate-in fade-in duration-200 pointer-events-auto"
           onClick={onCerrar}
         />
 
         {/* Modal Panel */}
         <div 
-          className={`relative w-full h-[100dvh] sm:h-auto bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[88vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 fade-in duration-250 ease-out pointer-events-auto will-change-transform transform-gpu ${
+          className={`relative w-full h-[100dvh] sm:h-auto bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[88vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 fade-in duration-200 pointer-events-auto ${
             tieneFotos ? 'sm:max-w-4xl lg:max-w-5xl' : 'sm:max-w-md'
           }`}
           onClick={(e) => e.stopPropagation()}
@@ -158,14 +155,14 @@ export default function ModalPersonalizacion({
                 <div className="sm:hidden relative w-full aspect-[4/3] max-h-[300px] bg-[#111] overflow-hidden group">
                   {/* Barra decorativa superior (mobile) */}
                   <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                    <div className="w-10 h-1 rounded-full bg-white/40 shadow-sm backdrop-blur-sm" />
+                    <div className="w-10 h-1 rounded-full bg-white/40 shadow-sm" />
                   </div>
 
                   {/* Botón flotante Cerrar (Mobile) */}
                   <button
                     type="button"
                     onClick={onCerrar}
-                    className="absolute top-3 right-3 z-30 w-9 h-9 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md shadow-xl transition-transform active:scale-90 cursor-pointer"
+                    className="absolute top-3 right-3 z-30 w-9 h-9 flex items-center justify-center rounded-full bg-[#1e1e1e]/90 hover:bg-[#2a2a2a] text-white border border-white/15 shadow-lg transition-transform active:scale-90 cursor-pointer"
                     aria-label="Cerrar modal"
                   >
                     <X size={18} />
@@ -179,7 +176,7 @@ export default function ModalPersonalizacion({
                       e.stopPropagation()
                       setLightboxAbierto(true)
                     }}
-                    className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/90 text-white text-xs font-bold border border-white/25 backdrop-blur-md shadow-xl transition-transform active:scale-95 cursor-pointer"
+                    className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1e1e1e]/90 hover:bg-[#2c2c2c] text-white text-xs font-bold border border-white/15 shadow-md transition-transform active:scale-95 cursor-pointer"
                   >
                     <Maximize2 size={13} className="text-chefsy-400" />
                     <span>Ampliar</span>
@@ -187,7 +184,7 @@ export default function ModalPersonalizacion({
 
                   {/* Contador de fotos (Mobile si > 1) */}
                   {listaFotos.length > 1 && (
-                    <div className="absolute bottom-3 left-3 z-30 px-2.5 py-1 rounded-full bg-black/70 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/15 backdrop-blur-md">
+                    <div className="absolute bottom-3 left-3 z-30 px-2.5 py-1 rounded-full bg-[#1a1a1a]/90 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
                       <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
                       {indiceFoto + 1} / {listaFotos.length}
                     </div>
@@ -200,7 +197,7 @@ export default function ModalPersonalizacion({
                     className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex scroll-smooth"
                   >
                     {listaFotos.map((imgUrl, i) => {
-                      const optimized = optimizarUrlImagen(imgUrl, 1000)
+                      const optimized = optimizarUrlImagen(imgUrl, 700)
                       const isCdn = imgUrl.includes('res.cloudinary.com') || imgUrl.includes('supabase.co') || imgUrl.includes('unsplash.com') || imgUrl.includes('lh3.googleusercontent.com')
                       return (
                         <div
@@ -233,10 +230,10 @@ export default function ModalPersonalizacion({
                       {listaFotos.map((_, i) => (
                         <div
                           key={i}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                          className={`h-1.5 rounded-full transition-all duration-200 ${
                             i === indiceFoto
-                              ? 'w-5 bg-chefsy-400 shadow-md shadow-chefsy-400/50'
-                              : 'w-1.5 bg-white/40'
+                              ? 'w-5 bg-chefsy-400 shadow-sm shadow-chefsy-400/50'
+                              : 'w-1.5 bg-white/30'
                           }`}
                         />
                       ))}
@@ -248,7 +245,7 @@ export default function ModalPersonalizacion({
                 <div className="hidden sm:flex sm:flex-col justify-between h-full p-6">
                   {/* Foto Principal en HD */}
                   <div
-                    className="relative w-full aspect-[4/3] lg:aspect-auto lg:h-[440px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-xl flex items-center justify-center"
+                    className="relative w-full aspect-[4/3] lg:aspect-auto lg:h-[440px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-lg flex items-center justify-center"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -261,12 +258,12 @@ export default function ModalPersonalizacion({
                       fill
                       unoptimized={isCdnDesktop}
                       priority
-                      className="object-contain p-2 transition-transform duration-500 ease-out group-hover:scale-105"
+                      className="object-contain p-2 transition-opacity duration-200 group-hover:opacity-95"
                       sizes="(max-width: 1024px) 50vw, 600px"
                     />
 
                     {/* Hint flotante de Zoom en Desktop */}
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black text-white text-xs font-bold border border-white/20 backdrop-blur-md shadow-xl pointer-events-none">
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1e1e]/95 text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
                       <Maximize2 size={13} className="text-chefsy-400" />
                       <span>Ver en pantalla completa</span>
                     </div>
@@ -280,7 +277,7 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev - 1 + listaFotos.length) % listaFotos.length)
                           }}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center border border-white/15 backdrop-blur-md shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer opacity-70 group-hover:opacity-100"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
                           aria-label="Foto anterior"
                         >
                           <ChevronLeft size={22} />
@@ -292,13 +289,13 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev + 1) % listaFotos.length)
                           }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center border border-white/15 backdrop-blur-md shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer opacity-70 group-hover:opacity-100"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
                           aria-label="Foto siguiente"
                         >
                           <ChevronRight size={22} />
                         </button>
 
-                        <div className="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-black/70 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10 backdrop-blur-md">
+                        <div className="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-[#181818]/90 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
                           <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
                           Foto {indiceFoto + 1} de {listaFotos.length}
                         </div>
@@ -308,9 +305,9 @@ export default function ModalPersonalizacion({
 
                   {/* Fila de Miniaturas (Desktop) */}
                   {listaFotos.length > 1 && (
-                    <div className="flex items-center gap-2.5 pt-4 overflow-x-auto scrollbar-hide">
+                    <div className="flex items-center gap-2 pt-3 overflow-x-auto scrollbar-hide">
                       {listaFotos.map((foto, idx) => {
-                        const mini = optimizarUrlImagen(foto, 160)
+                        const mini = optimizarUrlImagen(foto, 120)
                         const isSelect = idx === indiceFoto
                         return (
                           <button
@@ -320,10 +317,10 @@ export default function ModalPersonalizacion({
                               e.stopPropagation()
                               setIndiceFoto(idx)
                             }}
-                            className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer active:scale-95 ${
+                            className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-transform shrink-0 cursor-pointer active:scale-95 ${
                               isSelect
-                                ? 'border-chefsy-400 ring-2 ring-chefsy-400/40 scale-105 shadow-md shadow-chefsy-500/20'
-                                : 'border-[#333] opacity-60 hover:opacity-100 hover:border-slate-400'
+                                ? 'border-chefsy-400 scale-105 shadow-md shadow-chefsy-500/20'
+                                : 'border-[#2d2d2d] opacity-50 hover:opacity-100'
                             }`}
                           >
                             <Image
@@ -332,6 +329,7 @@ export default function ModalPersonalizacion({
                               fill
                               unoptimized={mini.includes('res.cloudinary.com')}
                               className="object-cover"
+                              sizes="56px"
                             />
                           </button>
                         )
@@ -612,8 +610,8 @@ export default function ModalPersonalizacion({
         </div>
       </div>
 
-      {/* Visor Fullscreen / Lightbox */}
-      {tieneFotos && (
+      {/* Visor Fullscreen / Lightbox: solo se monta cuando se abre */}
+      {tieneFotos && lightboxAbierto && (
         <VisorFotosFullscreen
           fotos={listaFotos}
           indiceInicial={indiceFoto}

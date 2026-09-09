@@ -26,14 +26,22 @@ export default function VisorFotosFullscreen({
   const [zoom, setZoom] = useState(1)
   const [posicion, setPosicion] = useState({ x: 0, y: 0 })
   const [arrastrando, setArrastrando] = useState(false)
-  const arrastreInicioRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
+
+  const arrastreRef = useRef({
+    activo: false,
+    startX: 0,
+    startY: 0,
+    posX: 0,
+    posY: 0,
+    rafId: 0,
+  })
+
+  const ultimoTapRef = useRef<number>(0)
   const touchInicioRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const pinchDistInicioRef = useRef<number | null>(null)
   const pinchZoomInicioRef = useRef<number>(1)
-  const ultimoTapRef = useRef<number>(0)
-  const contenedorRef = useRef<HTMLDivElement>(null)
-
   const onCerrarRef = useRef(onCerrar)
+
   useEffect(() => {
     onCerrarRef.current = onCerrar
   }, [onCerrar])
@@ -45,7 +53,7 @@ export default function VisorFotosFullscreen({
   // Sincronizar índice inicial cuando se abre
   useEffect(() => {
     if (abierto) {
-      setIndiceActivo(Math.min(Math.max(0, indiceInicial), fotos.length - 1))
+      setIndiceActivo(Math.min(Math.max(0, indiceInicial), Math.max(0, fotos.length - 1)))
       setZoom(1)
       setPosicion({ x: 0, y: 0 })
     }
@@ -75,7 +83,7 @@ export default function VisorFotosFullscreen({
     fotoSiguienteRef.current = fotoSiguiente
   }, [fotoAnterior, fotoSiguiente])
 
-  // Atajos de teclado (Esc para cerrar, flechas para navegar, + / - para zoom)
+  // Atajos de teclado (Esc, Flechas, +, -, 0)
   useEffect(() => {
     if (!abierto) return
 
@@ -113,65 +121,91 @@ export default function VisorFotosFullscreen({
     }
   }, [abierto])
 
-  // Manejo de rueda de ratón para zoom
-  const manejarWheel = (e: React.WheelEvent) => {
+  // Manejo de rueda de ratón con requestAnimationFrame
+  const wheelRafRef = useRef<number>(0)
+  const manejarWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const delta = e.deltaY > 0 ? -0.25 : 0.25
-    setZoom(z => {
-      const nuevo = Math.min(3.5, Math.max(1, Number((z + delta).toFixed(2))))
-      if (nuevo === 1) setPosicion({ x: 0, y: 0 })
-      return nuevo
+    const delta = e.deltaY > 0 ? -0.3 : 0.3
+
+    if (wheelRafRef.current) cancelAnimationFrame(wheelRafRef.current)
+    wheelRafRef.current = requestAnimationFrame(() => {
+      setZoom(z => {
+        const nuevo = Math.min(3.5, Math.max(1, Number((z + delta).toFixed(2))))
+        if (nuevo === 1) setPosicion({ x: 0, y: 0 })
+        return nuevo
+      })
     })
-  }
+  }, [])
 
   // Doble clic o doble tap para toggle zoom (1x <-> 2.2x)
-  const manejarDobleTap = (e: React.MouseEvent | React.TouchEvent) => {
+  const manejarDobleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation()
-    if (zoom > 1.2) {
-      setZoom(1)
-      setPosicion({ x: 0, y: 0 })
-    } else {
-      setZoom(2.2)
-    }
-  }
+    setZoom(z => {
+      if (z > 1.2) {
+        setPosicion({ x: 0, y: 0 })
+        return 1
+      }
+      return 2.2
+    })
+  }, [])
 
-  // Mouse Drag / Pan cuando zoom > 1
-  const onMouseDown = (e: React.MouseEvent) => {
+  // Drag / Pan ultra-optimizado con puntero
+  const onPointerDown = (e: React.PointerEvent) => {
     if (zoom <= 1) return
     e.preventDefault()
     setArrastrando(true)
-    arrastreInicioRef.current = {
-      x: e.clientX,
-      y: e.clientY,
+    arrastreRef.current = {
+      activo: true,
+      startX: e.clientX,
+      startY: e.clientY,
       posX: posicion.x,
       posY: posicion.y,
+      rafId: 0,
     }
   }
 
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!arrastrando || zoom <= 1) return
-    const dx = e.clientX - arrastreInicioRef.current.x
-    const dy = e.clientY - arrastreInicioRef.current.y
-    const limiteX = (zoom - 1) * 250
-    const limiteY = (zoom - 1) * 250
-    setPosicion({
-      x: Math.min(limiteX, Math.max(-limiteX, arrastreInicioRef.current.posX + dx)),
-      y: Math.min(limiteY, Math.max(-limiteY, arrastreInicioRef.current.posY + dy)),
-    })
-  }
+  useEffect(() => {
+    if (!arrastrando) return
 
-  const onMouseUp = () => {
-    setArrastrando(false)
-  }
+    const onPointerMove = (e: PointerEvent) => {
+      if (!arrastreRef.current.activo || zoom <= 1) return
+      const dx = e.clientX - arrastreRef.current.startX
+      const dy = e.clientY - arrastreRef.current.startY
+      const limiteX = (zoom - 1) * 280
+      const limiteY = (zoom - 1) * 280
 
-  // Touch handlers: Swipe (cuando zoom=1), Pinch to zoom, y Pan (cuando zoom>1)
+      if (arrastreRef.current.rafId) cancelAnimationFrame(arrastreRef.current.rafId)
+      arrastreRef.current.rafId = requestAnimationFrame(() => {
+        setPosicion({
+          x: Math.min(limiteX, Math.max(-limiteX, arrastreRef.current.posX + dx)),
+          y: Math.min(limiteY, Math.max(-limiteY, arrastreRef.current.posY + dy)),
+        })
+      })
+    }
+
+    const onPointerUp = () => {
+      arrastreRef.current.activo = false
+      setArrastrando(false)
+    }
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+    }
+  }, [arrastrando, zoom])
+
+  // Gestos táctiles en móvil (Swipe & Pinch)
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       const t1 = e.touches[0]
       const t2 = e.touches[1]
-      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
-      pinchDistInicioRef.current = dist
+      pinchDistInicioRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
       pinchZoomInicioRef.current = zoom
       return
     }
@@ -180,7 +214,6 @@ export default function VisorFotosFullscreen({
       const touch = e.touches[0]
       const ahora = Date.now()
 
-      // Detección de doble tap
       if (ahora - ultimoTapRef.current < 300) {
         manejarDobleTap(e)
         ultimoTapRef.current = 0
@@ -193,21 +226,10 @@ export default function VisorFotosFullscreen({
         y: touch.clientY,
         time: ahora,
       }
-
-      if (zoom > 1) {
-        setArrastrando(true)
-        arrastreInicioRef.current = {
-          x: touch.clientX,
-          y: touch.clientY,
-          posX: posicion.x,
-          posY: posicion.y,
-        }
-      }
     }
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    // Pinch to zoom
     if (e.touches.length === 2 && pinchDistInicioRef.current !== null) {
       const t1 = e.touches[0]
       const t2 = e.touches[1]
@@ -216,41 +238,25 @@ export default function VisorFotosFullscreen({
       const nuevoZoom = Math.min(3.5, Math.max(1, Number((pinchZoomInicioRef.current * ratio).toFixed(2))))
       setZoom(nuevoZoom)
       if (nuevoZoom === 1) setPosicion({ x: 0, y: 0 })
-      return
-    }
-
-    // Drag / Pan con zoom > 1
-    if (e.touches.length === 1 && zoom > 1 && arrastrando) {
-      const touch = e.touches[0]
-      const dx = touch.clientX - arrastreInicioRef.current.x
-      const dy = touch.clientY - arrastreInicioRef.current.y
-      const limiteX = (zoom - 1) * 250
-      const limiteY = (zoom - 1) * 250
-      setPosicion({
-        x: Math.min(limiteX, Math.max(-limiteX, arrastreInicioRef.current.posX + dx)),
-        y: Math.min(limiteY, Math.max(-limiteY, arrastreInicioRef.current.posY + dy)),
-      })
     }
   }
 
   const onTouchEnd = (e: React.TouchEvent) => {
     pinchDistInicioRef.current = null
-    setArrastrando(false)
 
-    // Si estaba en zoom 1, evaluar swipe horizontal para cambiar foto o swipe vertical abajo para cerrar
     if (zoom === 1 && touchInicioRef.current && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0]
       const deltaX = touch.clientX - touchInicioRef.current.x
       const deltaY = touch.clientY - touchInicioRef.current.y
       const deltaTime = Date.now() - touchInicioRef.current.time
 
-      // Deslizar abajo rápido para cerrar
+      // Swipe down rápido para cerrar
       if (deltaY > 100 && Math.abs(deltaX) < 80 && deltaTime < 400) {
         onCerrarRef.current()
         return
       }
 
-      // Deslizar horizontal para cambiar foto
+      // Swipe horizontal para pasar foto
       if (Math.abs(deltaX) > 60 && Math.abs(deltaY) < 60 && deltaTime < 500) {
         if (deltaX < 0) {
           fotoSiguiente()
@@ -265,16 +271,14 @@ export default function VisorFotosFullscreen({
   if (!montado || !abierto || fotos.length === 0) return null
 
   const fotoActual = fotos[indiceActivo] || fotos[0]
-  const fotoOptimizada = optimizarUrlImagen(fotoActual, 1600)
+  const fotoOptimizada = optimizarUrlImagen(fotoActual, 1100)
   const isCdn = fotoActual.includes('res.cloudinary.com') || fotoActual.includes('supabase.co') || fotoActual.includes('unsplash.com') || fotoActual.includes('lh3.googleusercontent.com')
 
   return createPortal(
     <div
-      ref={contenedorRef}
-      className="fixed inset-0 z-[100000] flex flex-col justify-between bg-black/95 backdrop-blur-xl select-none animate-in fade-in duration-200 pointer-events-auto"
+      className="fixed inset-0 z-[100000] flex flex-col justify-between bg-[#0a0a0a]/98 select-none animate-in fade-in duration-150 pointer-events-auto"
       onClick={(e) => {
         e.stopPropagation()
-        // Clic en el backdrop exterior cierra el lightbox cuando está en 1x
         if (e.target === e.currentTarget && zoom === 1) {
           onCerrarRef.current()
         }
@@ -283,23 +287,20 @@ export default function VisorFotosFullscreen({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
     >
       {/* ── BARRA SUPERIOR ── */}
       <div 
-        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3.5 bg-gradient-to-b from-black/80 via-black/40 to-transparent"
+        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/60 border-b border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 max-w-[70%]">
-          <div className="w-2 h-2 rounded-full bg-chefsy-400 animate-pulse shrink-0" />
+          <div className="w-2 h-2 rounded-full bg-chefsy-400 shrink-0" />
           <div className="truncate">
-            <h4 className="font-bebas text-lg sm:text-xl text-white tracking-wide truncate drop-shadow">
+            <h4 className="font-bebas text-lg sm:text-xl text-white tracking-wide truncate">
               {nombreProducto}
             </h4>
-            <p className="text-[11px] font-semibold text-slate-400">
-              {fotos.length > 1 ? `Foto ${indiceActivo + 1} de ${fotos.length}` : 'Vista en alta definición'}
+            <p className="text-[11px] font-semibold text-neutral-400">
+              {fotos.length > 1 ? `Foto ${indiceActivo + 1} de ${fotos.length}` : 'Alta definición'}
             </p>
           </div>
         </div>
@@ -314,7 +315,7 @@ export default function VisorFotosFullscreen({
                 setZoom(1)
                 setPosicion({ x: 0, y: 0 })
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/10 backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#222] hover:bg-[#333] text-white text-xs font-bold border border-white/10 transition-colors active:scale-95 cursor-pointer"
               title="Restablecer zoom"
             >
               <RotateCcw size={13} />
@@ -328,7 +329,7 @@ export default function VisorFotosFullscreen({
               e.stopPropagation()
               onCerrarRef.current()
             }}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
+            className="w-10 h-10 rounded-full bg-[#222] hover:bg-[#333] text-white flex items-center justify-center border border-white/10 transition-colors active:scale-90 shadow-lg cursor-pointer"
             aria-label="Cerrar visor"
           >
             <X size={20} />
@@ -338,19 +339,22 @@ export default function VisorFotosFullscreen({
 
       {/* ── ÁREA CENTRAL DE IMAGEN ── */}
       <div 
-        className="relative flex-1 w-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+        className={`relative flex-1 w-full flex items-center justify-center overflow-hidden ${
+          zoom > 1 ? (arrastrando ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+        }`}
         onDoubleClick={manejarDobleTap}
+        onPointerDown={onPointerDown}
         onClick={(e) => {
-          // Si el usuario hace clic en el espacio vacío alrededor de la imagen a 1x, cierra el lightbox
           if (e.target === e.currentTarget && zoom === 1) {
             onCerrarRef.current()
           }
         }}
       >
         <div
-          className="relative w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center transition-transform duration-75 will-change-transform"
+          className="relative w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center will-change-transform"
           style={{
-            transform: `scale(${zoom}) translate(${posicion.x / zoom}px, ${posicion.y / zoom}px)`,
+            transform: `translate3d(${posicion.x}px, ${posicion.y}px, 0) scale(${zoom})`,
+            transition: arrastrando ? 'none' : 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
             touchAction: zoom > 1 ? 'none' : 'pan-y',
           }}
         >
@@ -360,12 +364,12 @@ export default function VisorFotosFullscreen({
             fill
             unoptimized={isCdn}
             priority
-            className="object-contain pointer-events-none drop-shadow-2xl"
-            sizes="(max-width: 768px) 100vw, 1200px"
+            className="object-contain pointer-events-none drop-shadow-xl"
+            sizes="(max-width: 768px) 100vw, 1100px"
           />
         </div>
 
-        {/* Flechas de navegación (Desktop & Tablets) */}
+        {/* Flechas de navegación (Desktop) */}
         {fotos.length > 1 && (
           <>
             <button
@@ -374,10 +378,10 @@ export default function VisorFotosFullscreen({
                 e.stopPropagation()
                 fotoAnterior()
               }}
-              className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-black/60 hover:bg-black/85 text-white items-center justify-center border border-white/20 backdrop-blur-md transition-all hover:scale-110 active:scale-95 shadow-2xl cursor-pointer"
+              className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/75 hover:bg-black text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
               aria-label="Foto anterior"
             >
-              <ChevronLeft size={28} />
+              <ChevronLeft size={24} />
             </button>
 
             <button
@@ -386,10 +390,10 @@ export default function VisorFotosFullscreen({
                 e.stopPropagation()
                 fotoSiguiente()
               }}
-              className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-black/60 hover:bg-black/85 text-white items-center justify-center border border-white/20 backdrop-blur-md transition-all hover:scale-110 active:scale-95 shadow-2xl cursor-pointer"
+              className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/75 hover:bg-black text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
               aria-label="Foto siguiente"
             >
-              <ChevronRight size={28} />
+              <ChevronRight size={24} />
             </button>
           </>
         )}
@@ -397,11 +401,11 @@ export default function VisorFotosFullscreen({
 
       {/* ── BARRA INFERIOR / MINIATURAS Y CONTROLES DE ZOOM ── */}
       <div 
-        className="relative z-50 flex flex-col items-center gap-3 px-4 py-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent"
+        className="relative z-50 flex flex-col items-center gap-3 px-4 py-3 bg-black/70 border-t border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Controles de Zoom Flotantes */}
-        <div className="flex items-center gap-2 bg-black/60 border border-white/15 px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg">
+        <div className="flex items-center gap-1.5 bg-[#1a1a1a] border border-white/10 px-3 py-1 rounded-full shadow-md">
           <button
             type="button"
             onClick={(e) => {
@@ -413,13 +417,13 @@ export default function VisorFotosFullscreen({
               })
             }}
             disabled={zoom <= 1}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white/80 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             title="Alejar (-)"
           >
-            <ZoomOut size={16} />
+            <ZoomOut size={15} />
           </button>
 
-          <span className="text-[11px] font-bold text-white px-1.5 min-w-[3rem] text-center">
+          <span className="text-[11px] font-bold text-white px-2 min-w-[3rem] text-center font-mono">
             {Math.round(zoom * 100)}%
           </span>
 
@@ -430,18 +434,18 @@ export default function VisorFotosFullscreen({
               setZoom(z => Math.min(3.5, Number((z + 0.4).toFixed(2))))
             }}
             disabled={zoom >= 3.5}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white/80 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             title="Acercar (+)"
           >
-            <ZoomIn size={16} />
+            <ZoomIn size={15} />
           </button>
         </div>
 
         {/* Miniaturas en carrusel horizontal si hay más de 1 foto */}
         {fotos.length > 1 && (
-          <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2 py-1 scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2 py-0.5 scrollbar-hide">
             {fotos.map((foto, idx) => {
-              const miniUrl = optimizarUrlImagen(foto, 150)
+              const miniUrl = optimizarUrlImagen(foto, 120)
               const seleccionada = idx === indiceActivo
               return (
                 <button
@@ -451,10 +455,10 @@ export default function VisorFotosFullscreen({
                     e.stopPropagation()
                     cambiarFoto(idx)
                   }}
-                  className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer active:scale-95 ${
+                  className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-lg overflow-hidden border-2 transition-transform shrink-0 cursor-pointer active:scale-95 ${
                     seleccionada
-                      ? 'border-chefsy-400 ring-2 ring-chefsy-400/50 scale-105 shadow-md shadow-chefsy-500/20'
-                      : 'border-white/20 opacity-50 hover:opacity-100 hover:border-white/50'
+                      ? 'border-chefsy-400 scale-105 shadow-md shadow-chefsy-500/20'
+                      : 'border-white/10 opacity-50 hover:opacity-100'
                   }`}
                 >
                   <Image
