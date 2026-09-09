@@ -9,7 +9,7 @@ import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { Search, ChevronRight, LogOut, User } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
-import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
 import Fuse from 'fuse.js'
@@ -41,6 +41,7 @@ export default function TiendaMobile() {
   const { usuario, perfil, cerrarSesion } = usarClienteAuth()
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
+  const [categoriaActivaNav, setCategoriaActivaNav] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'profile' | 'cart'>('home')
   const [metadata, setMetadata] = useState<Record<string, MetaProducto>>(metadataRespaldo as Record<string, MetaProducto>)
@@ -182,6 +183,22 @@ export default function TiendaMobile() {
     return `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
   }, [configuracion])
 
+  const handleSeleccionarCategoria = useCallback((id: string | null) => {
+    // Si hay búsqueda activa, limpiarla para asegurar que todas las categorías estén visibles
+    if (busqueda) {
+      setBusqueda('')
+    }
+    const targetId = (!id || id === 'todos') ? null : id
+    setCategoriaActivaNav(targetId)
+    // No filtramos destructivamente los productos para no colapsar la altura de la página
+    setCategoriaSeleccionada(null)
+
+    // Desplazamiento fluido y exacto hacia la categoría seleccionada
+    setTimeout(() => {
+      scrollHaciaCategoria(targetId)
+    }, 80)
+  }, [busqueda])
+
   const handleNavClick = (tab: 'home' | 'search' | 'profile' | 'cart') => {
     if (tab !== 'cart') {
       setCartAbierto(false)
@@ -192,16 +209,17 @@ export default function TiendaMobile() {
       setActiveTab('home') // Mantenemos en home pero enfocamos el buscador
       setTimeout(() => {
         searchInputRef.current?.focus()
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+        scrollHaciaCategoria(null)
       }, 100)
     } else if (tab === 'profile') {
       setActiveTab('home')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollHaciaCategoria(null)
     } else {
       setActiveTab(tab)
       setBusqueda('')
       setCategoriaSeleccionada(null)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setCategoriaActivaNav(null)
+      scrollHaciaCategoria(null)
     }
   }
 
@@ -347,7 +365,7 @@ export default function TiendaMobile() {
               onBusquedaChange={setBusqueda}
               onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
               onSeleccionarCategoria={(id) => {
-                setCategoriaSeleccionada(id === 'todos' ? null : id)
+                handleSeleccionarCategoria(id)
                 setSelectorAbierto(false)
               }}
             />
@@ -429,11 +447,8 @@ export default function TiendaMobile() {
         abierto={sidebarAbierto}
         onCerrar={() => setSidebarAbierto(false)}
         categorias={categoriasActivas}
-        categoriaSeleccionada={categoriaSeleccionada}
-        onSeleccionarCategoria={(id) => {
-          setCategoriaSeleccionada(id)
-          if (id && busqueda) setBusqueda('')
-        }}
+        categoriaSeleccionada={categoriaActivaNav}
+        onSeleccionarCategoria={handleSeleccionarCategoria}
       />
 
       <BotonPedidoFlotante />

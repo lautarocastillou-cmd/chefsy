@@ -58,7 +58,7 @@ function CatalogoProductosComponente({
   const esCategoriaCombinada = categoriaSeleccionada === idPatys || categoriaSeleccionada === idBurgers
 
   return (
-    <main className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
+    <main id="catalogo-productos" className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
       
       {/* Encabezado del Menú Seleccionado */}
       {categoriaSeleccionada && !busqueda && (

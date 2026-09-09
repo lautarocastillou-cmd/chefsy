@@ -9,7 +9,7 @@ import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
 import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
-import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
@@ -34,6 +34,7 @@ export default function TiendaDesktop() {
 
   // ── Estados de la tienda ──────────────────────────────────────────────
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
+  const [categoriaActivaNav, setCategoriaActivaNav] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   const [metadata, setMetadata] = useState<Record<string, MetaProducto>>(metadataRespaldo as Record<string, MetaProducto>)
@@ -208,8 +209,17 @@ export default function TiendaDesktop() {
 
   const handleToggleSelector = useCallback(() => setSelectorAbierto(prev => !prev), [])
   const handleSeleccionarCategoria = useCallback((id: string | null) => {
-    setCategoriaSeleccionada(id)
-  }, [])
+    if (busqueda) {
+      setBusqueda('')
+    }
+    const targetId = (!id || id === 'todos') ? null : id
+    setCategoriaActivaNav(targetId)
+    setCategoriaSeleccionada(null)
+
+    setTimeout(() => {
+      scrollHaciaCategoria(targetId)
+    }, 80)
+  }, [busqueda])
 
   if (!estaListoAuth) {
     return (
@@ -319,7 +329,7 @@ export default function TiendaDesktop() {
       <div className="relative z-10">
         <HeroSection
           categoriasActivas={categoriasActivas}
-          categoriaSeleccionada={categoriaSeleccionada}
+          categoriaSeleccionada={categoriaActivaNav}
           busqueda={busqueda}
           sugerenciaBusqueda={sugerenciaBusqueda}
           selectorAbierto={selectorAbierto}
@@ -332,7 +342,7 @@ export default function TiendaDesktop() {
         <CatalogoProductos
           categoriasActivas={categoriasActivas}
           productosFiltrados={productosFiltrados}
-          categoriaSeleccionada={categoriaSeleccionada}
+          categoriaSeleccionada={null}
           busqueda={busqueda}
           metadata={metadata}
           onAbrirModal={abrirModalPersonalizacion}

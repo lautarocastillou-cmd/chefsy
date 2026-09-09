@@ -95,8 +95,18 @@ export default function SidebarTienda({
   }, [abierto])
 
   const handleElegirCategoria = (id: string | null) => {
-    onSeleccionarCategoria(id)
+    // 1. Cerrar el sidebar
     onCerrar()
+
+    // 2. Desbloquear de inmediato overflow del body y reanudar Lenis para permitir scroll
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+    if (typeof window !== 'undefined' && (window as any).__lenis) {
+      ;(window as any).__lenis.start()
+    }
+
+    // 3. Notificar selección para iniciar desplazamiento
+    onSeleccionarCategoria(id)
   }
 
   const rawTel = (configuracion as any)?.telefono_negocio || '5493834225445'

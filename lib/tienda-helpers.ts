@@ -108,3 +108,79 @@ export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
       return { nombre: 'Menú Especial', subtitulo: 'Platos frescos de la cocina', icono: '/especial-icon.png' }
   }
 }
+
+// --- NAVEGACIÓN Y SCROLL EXACTO A CATEGORÍAS ---
+
+/**
+ * Desplaza suavemente la ventana hacia la categoría indicada en el catálogo,
+ * compensando la cabecera fija/sticky para que el título de la categoría
+ * y sus productos queden perfectamente visibles al inicio de la pantalla.
+ */
+export function scrollHaciaCategoria(catId: string | null) {
+  if (typeof window === 'undefined') return
+
+  // 1. Si es null o 'todos', scrollear suavemente a la cabecera del catálogo / inicio
+  if (!catId || catId === 'todos') {
+    const lenis = (window as any).__lenis
+    if (lenis && typeof lenis.scrollTo === 'function') {
+      lenis.scrollTo(0, { duration: 0.8, force: true })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    return
+  }
+
+  // 2. Localizar el elemento contenedor de la sección de la categoría
+  let el = document.getElementById(catId)
+
+  // Búsqueda inteligente por alias si el id no coincide directamente
+  if (!el) {
+    const idLower = catId.toLowerCase()
+    if (idLower.includes('papa')) {
+      el = document.getElementById('cat-1781574714354') || 
+           document.getElementById('papas') || 
+           document.getElementById('porciones-de-papas') ||
+           (document.querySelector('[id*="papa"]') as HTMLElement | null)
+    } else if (idLower.includes('mila-al-plato') || idLower.includes('mila al plato') || (idLower.includes('mila') && idLower.includes('plato'))) {
+      el = document.getElementById('mila-al-plato') || 
+           (document.querySelector('[id*="mila-al-plato"], [id*="plato"]') as HTMLElement | null)
+    } else if (idLower.includes('burger') || idLower.includes('paty')) {
+      el = document.getElementById('patys') || 
+           document.getElementById('cat-1781570568487') ||
+           (document.querySelector('[id*="burger"], [id*="paty"]') as HTMLElement | null)
+    } else if (idLower.includes('lomo')) {
+      el = document.getElementById('cat-1780506096615') ||
+           document.getElementById('lomos') ||
+           (document.querySelector('[id*="lomo"]') as HTMLElement | null)
+    } else if (idLower.includes('pizza')) {
+      el = document.getElementById('pizzas') || 
+           (document.querySelector('[id*="pizza"]') as HTMLElement | null)
+    } else if (idLower.includes('bebida')) {
+      el = document.getElementById('bebidas') || 
+           (document.querySelector('[id*="bebida"]') as HTMLElement | null)
+    } else if (idLower.includes('promo')) {
+      el = document.getElementById('promos') || 
+           (document.querySelector('[id*="promo"]') as HTMLElement | null)
+    }
+  }
+
+  if (!el) return
+
+  // 3. Calcular posición exacta compensando la barra sticky
+  const isMobile = window.innerWidth < 768
+  // En mobile: header sticky (~110px) + margen cómodo = 120px
+  // En desktop: header / banner = 130px
+  const stickyOffset = isMobile ? 120 : 130
+  const rect = el.getBoundingClientRect()
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+  const targetY = Math.max(0, Math.round(rect.top + scrollTop - stickyOffset))
+
+  // 4. Ejecutar scroll suave (utilizando Lenis si está activo o nativo)
+  const lenis = (window as any).__lenis
+  if (lenis && typeof lenis.scrollTo === 'function') {
+    lenis.scrollTo(targetY, { duration: 0.85, force: true })
+  } else {
+    window.scrollTo({ top: targetY, behavior: 'smooth' })
+  }
+}
+
