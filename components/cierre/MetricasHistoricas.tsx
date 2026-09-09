@@ -26,9 +26,15 @@ import {
 import TarjetaProductoEstrella, { ProductoEstrellaItem } from '@/components/cierre/TarjetaProductoEstrella'
 import GraficoRendimientoSemanal from '@/components/cierre/GraficoRendimientoSemanal'
 import GraficoMixCategorias, { CategoriaMixItem } from '@/components/cierre/GraficoMixCategorias'
+import MatrizIngenieriaMenu from '@/components/cierre/MatrizIngenieriaMenu'
+import MedidoresSlaVelocidad from '@/components/cierre/MedidoresSlaVelocidad'
+import MapaCalorHorario from '@/components/cierre/MapaCalorHorario'
+import RadiografiaFidelidad from '@/components/cierre/RadiografiaFidelidad'
+import RendimientoModalidades from '@/components/cierre/RendimientoModalidades'
 
 type TipoRango = '7d' | '30d' | 'este_mes' | 'mes_anterior' | 'todo'
 type FiltroTurnoMetricas = 'todos' | 'mediodia' | 'noche'
+type SeccionMetricas = 'todo' | 'menu' | 'sla' | 'heatmap' | 'fidelidad' | 'canales'
 
 interface CierreItem {
   id: string
@@ -68,6 +74,9 @@ export default function MetricasHistoricas() {
     mixCategorias: CategoriaMixItem[]
   } | null>(null)
   const [cargandoProductos, setCargandoProductos] = useState(false)
+  const [metricasAvanzadas, setMetricasAvanzadas] = useState<any>(null)
+  const [cargandoAvanzadas, setCargandoAvanzadas] = useState(false)
+  const [seccionActiva, setSeccionActiva] = useState<SeccionMetricas>('todo')
 
   useEffect(() => {
     async function cargar() {
@@ -224,10 +233,11 @@ export default function MetricasHistoricas() {
     return registrosRangoPrevio.filter(d => d.turno_tipo === filtroTurno)
   }, [registrosRangoPrevio, filtroTurno])
 
-  // ── Cargar métricas de productos y categorías desde la API ──────────────────
+  // ── Cargar métricas de productos y analítica avanzada desde la API ─────────
   useEffect(() => {
-    async function cargarMetricasProductos() {
+    async function cargarMetricasAnaliticas() {
       setCargandoProductos(true)
+      setCargandoAvanzadas(true)
       try {
         let desde = ''
         let hasta = ''
@@ -243,19 +253,28 @@ export default function MetricasHistoricas() {
         if (hasta) params.set('hasta', hasta)
         if (filtroTurno !== 'todos') params.set('turno', filtroTurno)
 
-        const res = await fetch(`/api/admin/metricas-productos?${params.toString()}`)
-        if (res.ok) {
-          const data = await res.json()
+        const [resProd, resAvanzadas] = await Promise.all([
+          fetch(`/api/admin/metricas-productos?${params.toString()}`),
+          fetch(`/api/admin/metricas-avanzadas?${params.toString()}`)
+        ])
+
+        if (resProd.ok) {
+          const data = await resProd.json()
           setMetricasProductos(data)
         }
+        if (resAvanzadas.ok) {
+          const dataAvanzada = await resAvanzadas.json()
+          setMetricasAvanzadas(dataAvanzada)
+        }
       } catch (err) {
-        console.error('Error al cargar métricas de productos:', err)
+        console.error('Error al cargar analítica avanzada:', err)
       } finally {
         setCargandoProductos(false)
+        setCargandoAvanzadas(false)
       }
     }
 
-    cargarMetricasProductos()
+    cargarMetricasAnaliticas()
   }, [registrosRangoActual, filtroTurno, rango])
 
   // ── Estadísticas Específicas por Turno (Mediodía vs Noche) ──────────────────
@@ -512,8 +531,35 @@ export default function MetricasHistoricas() {
 
       </div>
 
+      {/* ── SUB-BARRA DE PESTAÑAS ANALÍTICAS (MODULOS ENTERPRISE) ───────────── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+        {[
+          { id: 'todo', label: 'Panel Completo' },
+          { id: 'menu', label: 'Ingeniería de Menú (BCG)' },
+          { id: 'sla', label: 'Tiempos & SLA' },
+          { id: 'heatmap', label: 'Mapa de Calor' },
+          { id: 'fidelidad', label: 'Clientes & Retención' },
+          { id: 'canales', label: 'Canales & Delivery' },
+        ].map(tab => {
+          const activo = seccionActiva === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSeccionActiva(tab.id as SeccionMetricas)}
+              className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all duration-150 ${
+                activo
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-[1.02]'
+                  : 'bg-white dark:bg-[#252525] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2e2e2e]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* ── SECCIÓN CARA A CARA: MEDIODÍA VS NOCHE (COMPARATIVA EN VIVO) ──────── */}
-      {filtroTurno === 'todos' && statsTurnos.facturacionTotalAmbos > 0 && (
+      {seccionActiva === 'todo' && filtroTurno === 'todos' && statsTurnos.facturacionTotalAmbos > 0 && (
         <div className="bg-gradient-to-br from-slate-900 via-[#181a20] to-[#12141a] text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div className="flex items-center gap-2.5">
@@ -655,8 +701,11 @@ export default function MetricasHistoricas() {
         </div>
       )}
 
-      {/* ── TARJETAS DE RESUMEN (KPIs CON TENDENCIAS) ───────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── SECCIONES DEL PANEL GENERAL ─────────────────────────────────────── */}
+      {seccionActiva === 'todo' && (
+        <>
+          {/* ── TARJETAS DE RESUMEN (KPIs CON TENDENCIAS) ───────────────────────── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Generado */}
         <div className="bg-white dark:bg-[#252525] p-5 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between">
@@ -1030,84 +1079,129 @@ export default function MetricasHistoricas() {
         />
       )}
 
+        </>
+      )}
+
+      {/* ── SECCIÓN 4: MATRIZ DE INGENIERÍA DE MENÚ (BCG GASTRONÓMICA) ──────── */}
+      {(seccionActiva === 'todo' || seccionActiva === 'menu') && metricasAvanzadas?.matrizBCG && (
+        <MatrizIngenieriaMenu
+          resumen={metricasAvanzadas.matrizBCG.resumen}
+          platos={metricasAvanzadas.matrizBCG.platos}
+        />
+      )}
+
+      {/* ── SECCIÓN 5: TACÓMETROS Y CRONOMETRAJE SLA DE VELOCIDAD ───────────── */}
+      {(seccionActiva === 'todo' || seccionActiva === 'sla') && metricasAvanzadas?.sla && (
+        <MedidoresSlaVelocidad sla={metricasAvanzadas.sla} />
+      )}
+
+      {/* ── SECCIÓN 6: MAPA DE CALOR HORARIO (HEATMAP DE RÁFAGAS) ────────────── */}
+      {(seccionActiva === 'todo' || seccionActiva === 'heatmap') && metricasAvanzadas?.heatmap && (
+        <MapaCalorHorario
+          matriz={metricasAvanzadas.heatmap.matriz}
+          picoMaximo={metricasAvanzadas.heatmap.picoMaximo}
+          horasOperativas={metricasAvanzadas.heatmap.horasOperativas}
+        />
+      )}
+
+      {/* ── SECCIÓN 7: RADIOGRAFÍA DE FIDELIDAD & CLIENTES VIP ─────────────────── */}
+      {(seccionActiva === 'todo' || seccionActiva === 'fidelidad') && metricasAvanzadas?.fidelidad && (
+        <RadiografiaFidelidad fidelidad={metricasAvanzadas.fidelidad} />
+      )}
+
+      {/* ── SECCIÓN 8: RENDIMIENTO DE MODALIDADES & INCIDENCIA DE FLETE ───────── */}
+      {(seccionActiva === 'todo' || seccionActiva === 'canales') && metricasAvanzadas?.modalidades && (
+        <RendimientoModalidades modalidades={metricasAvanzadas.modalidades} />
+      )}
+
+      {/* Estado de carga de analítica avanzada */}
+      {cargandoAvanzadas && !metricasAvanzadas && (
+        <div className="bg-white dark:bg-[#252525] p-10 rounded-3xl border border-slate-100 dark:border-[#383838] flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-bold text-slate-500">Calculando analítica gastronómica avanzada...</p>
+        </div>
+      )}
+
       {/* ── TABLA DE HISTORIAL DE SNAPSHOTS INMUTABLES ────────────────────────── */}
-      <div className="bg-white dark:bg-[#252525] rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">
-              📜 Historial de Snapshots ({datosActuales.length} registros)
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {filtroTurno === 'todos' ? 'Listado de todos los cierres de Mediodía y Noche' : `Cierres correspondientes a turno ${filtroTurno}`}
-            </p>
+      {seccionActiva === 'todo' && (
+        <div className="bg-white dark:bg-[#252525] rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">
+                📜 Historial de Snapshots ({datosActuales.length} registros)
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {filtroTurno === 'todos' ? 'Listado de todos los cierres de Mediodía y Noche' : `Cierres correspondientes a turno ${filtroTurno}`}
+              </p>
+            </div>
+
+            <span className="text-xs font-semibold px-3 py-1 bg-slate-100 dark:bg-[#333] text-slate-600 dark:text-slate-300 rounded-lg self-start sm:self-auto">
+              {rango === 'todo' ? 'Todo el histórico' : `Filtrado por: ${rango}`}
+            </span>
           </div>
 
-          <span className="text-xs font-semibold px-3 py-1 bg-slate-100 dark:bg-[#333] text-slate-600 dark:text-slate-300 rounded-lg self-start sm:self-auto">
-            {rango === 'todo' ? 'Todo el histórico' : `Filtrado por: ${rango}`}
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 dark:bg-[#2f2f2f] text-slate-600 dark:text-slate-300">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Fecha</th>
-                <th className="px-4 py-3 font-semibold">Turno</th>
-                <th className="px-4 py-3 font-semibold">Pedidos</th>
-                <th className="px-4 py-3 font-semibold">Facturación Neta</th>
-                <th className="px-4 py-3 font-semibold">Ticket Promedio</th>
-                <th className="px-4 py-3 font-semibold">Caja Inicial</th>
-                <th className="px-4 py-3 font-semibold">Físico a Rendir</th>
-                <th className="px-4 py-3 font-semibold">Modalidades</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-[#3d3d3d]">
-              {[...datosActuales].reverse().map((row) => {
-                const esMediodia = row.turno_tipo === 'mediodia'
-                return (
-                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 dark:text-slate-100">
-                          {row.fechaConDia || row.fechaCortada}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-slate-50 dark:bg-[#2f2f2f] text-slate-600 dark:text-slate-300">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Fecha</th>
+                  <th className="px-4 py-3 font-semibold">Turno</th>
+                  <th className="px-4 py-3 font-semibold">Pedidos</th>
+                  <th className="px-4 py-3 font-semibold">Facturación Neta</th>
+                  <th className="px-4 py-3 font-semibold">Ticket Promedio</th>
+                  <th className="px-4 py-3 font-semibold">Caja Inicial</th>
+                  <th className="px-4 py-3 font-semibold">Físico a Rendir</th>
+                  <th className="px-4 py-3 font-semibold">Modalidades</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#3d3d3d]">
+                {[...datosActuales].reverse().map((row) => {
+                  const esMediodia = row.turno_tipo === 'mediodia'
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">
+                            {row.fechaConDia || row.fechaCortada}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-normal">
+                            {row.fecha}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                          esMediodia
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                        }`}>
+                          {esMediodia ? '☀️ Mediodía' : '🌙 Noche'}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-normal">
-                          {row.fecha}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">{row.pedidos}</td>
+                      <td className="px-4 py-3 text-emerald-600 dark:text-emerald-500 font-bold">{formatearPrecio(row.ingresos)}</td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
+                        {formatearPrecio(row.ticket_promedio || (row.pedidos > 0 ? row.ingresos / row.pedidos : 0))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatearPrecio(row.caja_inicial || 0)}</td>
+                      <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50/50 dark:bg-emerald-900/10">
+                        {formatearPrecio(row.efectivo_rendir || 0)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-2">
+                          <span>🛵 {row.total_envios_delivery || 0}</span>
+                          <span>🏪 {row.total_retiros || 0}</span>
+                          <span>🍽️ {row.total_consumo_local || 0}</span>
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
-                        esMediodia
-                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                          : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
-                      }`}>
-                        {esMediodia ? '☀️ Mediodía' : '🌙 Noche'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">{row.pedidos}</td>
-                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-500 font-bold">{formatearPrecio(row.ingresos)}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
-                      {formatearPrecio(row.ticket_promedio || (row.pedidos > 0 ? row.ingresos / row.pedidos : 0))}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatearPrecio(row.caja_inicial || 0)}</td>
-                    <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50/50 dark:bg-emerald-900/10">
-                      {formatearPrecio(row.efectivo_rendir || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-2">
-                        <span>🛵 {row.total_envios_delivery || 0}</span>
-                        <span>🏪 {row.total_retiros || 0}</span>
-                        <span>🍽️ {row.total_consumo_local || 0}</span>
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   )
