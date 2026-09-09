@@ -12,6 +12,14 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerHoraArgentina } from '@/lib/tiempo'
+import { productosCatalogo } from '@/datos/productos'
+import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+
+// Mapa canónico del catálogo para nombres limpios y fotos
+const MAPA_CATALOGO = new Map<string, { id: string; nombre: string; categoriaId: string }>()
+productosCatalogo.forEach(p => {
+  MAPA_CATALOGO.set(p.id, { id: p.id, nombre: p.nombre, categoriaId: p.categoriaId })
+})
 
 interface ItemProductoComanda {
   id?: string
@@ -142,6 +150,13 @@ export async function GET(request: Request) {
     }
 
     // 2. Historial de clientes acumulado a lo largo de toda la historia
+    interface PedidoHistCliente {
+      fecha: string
+      total: number
+      timestamp: number
+      productos: Array<{ id: string; nombre: string }>
+    }
+
     const historialClientes = new Map<string, {
       telefono: string
       nombre: string
@@ -149,6 +164,8 @@ export async function GET(request: Request) {
       ultimoPedidoFecha: string
       pedidosHistoricos: number
       gastoHistorico: number
+      fechasPedidos: number[]
+      pedidosList: PedidoHistCliente[]
     }>()
 
     pedidos.forEach(p => {
@@ -156,7 +173,26 @@ export async function GET(request: Request) {
       if (!tel || tel.length < 6) return
 
       const fechaPed = p.created_at || p.fecha || ''
+      const timestamp = new Date(fechaPed).getTime() || 0
       const totalPed = Number(p.total) || 0
+
+      let items: ItemProductoComanda[] = []
+      if (Array.isArray(p.productos)) items = p.productos
+      else if (typeof p.productos === 'string') {
+        try { items = JSON.parse(p.productos) } catch {}
+      }
+
+      const prodsEnPedido: Array<{ id: string; nombre: string }> = []
+      items.forEach(it => {
+        const rawNombre = (it.nombre || it.name || '').trim()
+        if (!rawNombre) return
+        const nombreLimpio = rawNombre.split(' (+ ')[0].trim().replace(/^["']|["']$/g, '')
+        const rawId = (it.idCatalogo || it.id_catalogo || it.productoId || '').trim()
+        const catItem = MAPA_CATALOGO.get(rawId)
+        const idKey = (catItem?.id || rawId || nombreLimpio).toLowerCase()
+        const nombreFinal = catItem?.nombre || nombreLimpio
+        prodsEnPedido.push({ id: idKey, nombre: nombreFinal })
+      })
 
       if (!historialClientes.has(tel)) {
         historialClientes.set(tel, {
@@ -165,13 +201,23 @@ export async function GET(request: Request) {
           primerPedidoFecha: fechaPed,
           ultimoPedidoFecha: fechaPed,
           pedidosHistoricos: 0,
-          gastoHistorico: 0
+          gastoHistorico: 0,
+          fechasPedidos: [],
+          pedidosList: []
         })
       }
 
       const hc = historialClientes.get(tel)!
       hc.pedidosHistoricos += 1
       hc.gastoHistorico += totalPed
+      if (timestamp > 0) hc.fechasPedidos.push(timestamp)
+      hc.pedidosList.push({
+        fecha: fechaPed,
+        total: totalPed,
+        timestamp,
+        productos: prodsEnPedido
+      })
+
       if (fechaPed && (!hc.primerPedidoFecha || new Date(fechaPed) < new Date(hc.primerPedidoFecha))) {
         hc.primerPedidoFecha = fechaPed
       }
@@ -419,15 +465,18 @@ export async function GET(request: Request) {
       matrizHeatmap[0], // Domingo
     ]
 
-    // ── MÓDULO 4: RADIOGRAFÍA DE FIDELIDAD Y CLIENTES VIP ───────────────────
+    // ── MÓDULO 4: CLIENTES & FIDELIZACIÓN (ENTERPRISE DECISION SUITE) ───────
     interface ClientePeriodo {
       telefono: string
       nombre: string
       pedidosEnPeriodo: number
       gastoEnPeriodo: number
-      esRecurrente: boolean
       primerPedidoHistorico: string
       ultimoPedidoHistorico: string
+      pedidosHistoricosTotal: number
+      gastoHistoricoTotal: number
+      segmento: 'nuevo' | 'ocasional' | 'habitual' | 'vip' | 'superVip'
+      esRecurrente: boolean
     }
 
     const mapaClientesPeriodo = new Map<string, ClientePeriodo>()
@@ -438,9 +487,23 @@ export async function GET(request: Request) {
 
       const totalPed = Number(p.total) || 0
       const hist = historialClientes.get(tel)
+      const cantHist = hist?.pedidosHistoricos || 1
+      const gastoHist = hist?.gastoHistorico || totalPed
 
-      // Se considera recurrente si tiene más de 1 pedido histórico o si el primer pedido fue antes de 'desde'
-      const esRec = (hist?.pedidosHistoricos || 1) > 1
+      // Segmentación según cantidad de compras históricas:
+      // - Nuevo: 1 compra
+      // - Ocasional: 2 compras
+      // - Habitual: 3 a 5 compras
+      // - VIP: 6 a 9 compras
+      // - Súper VIP: 10 o más compras
+      let segmento: 'nuevo' | 'ocasional' | 'habitual' | 'vip' | 'superVip' = 'nuevo'
+      if (cantHist === 1) segmento = 'nuevo'
+      else if (cantHist === 2) segmento = 'ocasional'
+      else if (cantHist >= 3 && cantHist <= 5) segmento = 'habitual'
+      else if (cantHist >= 6 && cantHist <= 9) segmento = 'vip'
+      else if (cantHist >= 10) segmento = 'superVip'
+
+      const esRec = cantHist > 1
 
       if (!mapaClientesPeriodo.has(tel)) {
         mapaClientesPeriodo.set(tel, {
@@ -448,9 +511,12 @@ export async function GET(request: Request) {
           nombre: p.cliente || hist?.nombre || 'Cliente',
           pedidosEnPeriodo: 0,
           gastoEnPeriodo: 0,
-          esRecurrente: esRec,
           primerPedidoHistorico: hist?.primerPedidoFecha || p.fecha,
-          ultimoPedidoHistorico: hist?.ultimoPedidoFecha || p.fecha
+          ultimoPedidoHistorico: hist?.ultimoPedidoFecha || p.fecha,
+          pedidosHistoricosTotal: cantHist,
+          gastoHistoricoTotal: gastoHist,
+          segmento,
+          esRecurrente: esRec
         })
       }
 
@@ -461,31 +527,124 @@ export async function GET(request: Request) {
     })
 
     const listaClientesPeriodo = Array.from(mapaClientesPeriodo.values())
-    const nuevosClientes = listaClientesPeriodo.filter(c => !c.esRecurrente)
-    const recurrentesClientes = listaClientesPeriodo.filter(c => c.esRecurrente)
+    const totalClientesUnicos = listaClientesPeriodo.length
 
-    const facturacionNuevos = nuevosClientes.reduce((acc, c) => acc + c.gastoEnPeriodo, 0)
-    const facturacionRecurrentes = recurrentesClientes.reduce((acc, c) => acc + c.gastoEnPeriodo, 0)
+    // Segmentos dentro del período
+    const clientesNuevos = listaClientesPeriodo.filter(c => !c.esRecurrente)
+    const clientesRecurrentes = listaClientesPeriodo.filter(c => c.esRecurrente)
+
+    const cantNuevos = clientesNuevos.length
+    const cantRecurrentes = clientesRecurrentes.length
+
+    const pedidosNuevos = clientesNuevos.reduce((acc, c) => acc + c.pedidosEnPeriodo, 0)
+    const pedidosRecurrentes = clientesRecurrentes.reduce((acc, c) => acc + c.pedidosEnPeriodo, 0)
+
+    const facturacionNuevos = clientesNuevos.reduce((acc, c) => acc + c.gastoEnPeriodo, 0)
+    const facturacionRecurrentes = clientesRecurrentes.reduce((acc, c) => acc + c.gastoEnPeriodo, 0)
     const facturacionTotalClientes = facturacionNuevos + facturacionRecurrentes
+
+    const ticketPromedioNuevos = pedidosNuevos > 0 ? Math.round(facturacionNuevos / pedidosNuevos) : 0
+    const ticketPromedioRecurrentes = pedidosRecurrentes > 0 ? Math.round(facturacionRecurrentes / pedidosRecurrentes) : 0
 
     // Frecuencia promedio en días entre pedidos para recurrentes
     let sumaFrecuenciasDias = 0
     let clientesConFrecuencia = 0
 
-    recurrentesClientes.forEach(c => {
+    clientesRecurrentes.forEach(c => {
       const hist = historialClientes.get(c.telefono)
-      if (hist && hist.pedidosHistoricos >= 2 && hist.primerPedidoFecha && hist.ultimoPedidoFecha) {
-        const d1 = new Date(hist.primerPedidoFecha).getTime()
-        const d2 = new Date(hist.ultimoPedidoFecha).getTime()
-        const diffDias = (d2 - d1) / (1000 * 3600 * 24)
+      if (hist && hist.fechasPedidos.length >= 2) {
+        const sorted = [...hist.fechasPedidos].sort((a, b) => a - b)
+        const diffDias = (sorted[sorted.length - 1] - sorted[0]) / (1000 * 3600 * 24)
         if (diffDias > 0) {
-          sumaFrecuenciasDias += diffDias / (hist.pedidosHistoricos - 1)
+          sumaFrecuenciasDias += diffDias / (hist.fechasPedidos.length - 1)
           clientesConFrecuencia += 1
         }
       }
     })
 
     const frecuenciaPromedioDias = clientesConFrecuencia > 0 ? Math.round(sumaFrecuenciasDias / clientesConFrecuencia) : 12
+
+    // Valor promedio histórico por cliente (LTV) de los clientes activos en el período
+    const sumaLtvHistoricoActivos = listaClientesPeriodo.reduce((acc, c) => acc + c.gastoHistoricoTotal, 0)
+    const ltvPromedio = totalClientesUnicos > 0 ? Math.round(sumaLtvHistoricoActivos / totalClientesUnicos) : 0
+
+    // Tasa global de segunda compra histórica en el restaurante (% con >= 2 compras sobre clientes totales)
+    const totalClientesHistoricos = historialClientes.size
+    const clientesConRecompraHistorica = Array.from(historialClientes.values()).filter(c => c.pedidosHistoricos >= 2).length
+    const tasaSegundaCompraGlobalPct = totalClientesHistoricos > 0
+      ? Math.round((clientesConRecompraHistorica / totalClientesHistoricos) * 1000) / 10
+      : 0
+
+    // Conteo en 5 niveles para clientes del período:
+    const cantSegNuevo = listaClientesPeriodo.filter(c => c.segmento === 'nuevo').length
+    const cantSegOcasional = listaClientesPeriodo.filter(c => c.segmento === 'ocasional').length
+    const cantSegHabitual = listaClientesPeriodo.filter(c => c.segmento === 'habitual').length
+    const cantSegVip = listaClientesPeriodo.filter(c => c.segmento === 'vip').length
+    const cantSegSuperVip = listaClientesPeriodo.filter(c => c.segmento === 'superVip').length
+
+    // Embudo de Fidelización (Funnel):
+    // 1. Clientes Activos (total en período)
+    // 2. Clientes Nuevos (1 compra)
+    // 3. Clientes con 2da Compra (>= 2 compras: ocasional + habitual + vip + superVip)
+    // 4. Clientes Habituales (>= 3 compras: habitual + vip + superVip)
+    // 5. Clientes VIP (>= 6 compras: vip + superVip)
+    const funnelActivos = totalClientesUnicos
+    const funnelNuevos = cantSegNuevo
+    const funnelSegundaCompra = cantSegOcasional + cantSegHabitual + cantSegVip + cantSegSuperVip
+    const funnelHabituales = cantSegHabitual + cantSegVip + cantSegSuperVip
+    const funnelVips = cantSegVip + cantSegSuperVip
+
+    const embudoFidelizacion = {
+      etapas: [
+        {
+          id: 'activos',
+          nombre: 'Clientes Activos',
+          descripcion: 'Compraron en el período seleccionado',
+          cantidad: funnelActivos,
+          porcentaje: 100,
+          tasaConversionSiguiente: funnelActivos > 0 ? Math.round((funnelSegundaCompra / funnelActivos) * 1000) / 10 : 0
+        },
+        {
+          id: 'nuevos',
+          nombre: 'Clientes Nuevos',
+          descripcion: '1 compra en su historia (primerizos)',
+          cantidad: funnelNuevos,
+          porcentaje: funnelActivos > 0 ? Math.round((funnelNuevos / funnelActivos) * 1000) / 10 : 0,
+          tasaConversionSiguiente: undefined
+        },
+        {
+          id: 'segunda_compra',
+          nombre: 'Segunda Compra',
+          descripcion: 'Superaron la barrera de 1 pedido (>= 2 compras)',
+          cantidad: funnelSegundaCompra,
+          porcentaje: funnelActivos > 0 ? Math.round((funnelSegundaCompra / funnelActivos) * 1000) / 10 : 0,
+          tasaConversionSiguiente: funnelSegundaCompra > 0 ? Math.round((funnelHabituales / funnelSegundaCompra) * 1000) / 10 : 0
+        },
+        {
+          id: 'habituales',
+          nombre: 'Clientes Habituales',
+          descripcion: '3 a 5 compras históricas acumuladas',
+          cantidad: funnelHabituales,
+          porcentaje: funnelActivos > 0 ? Math.round((funnelHabituales / funnelActivos) * 1000) / 10 : 0,
+          tasaConversionSiguiente: funnelHabituales > 0 ? Math.round((funnelVips / funnelHabituales) * 1000) / 10 : 0
+        },
+        {
+          id: 'vips',
+          nombre: 'Clientes VIP',
+          descripcion: '6 o más compras (fieles y promotores)',
+          cantidad: funnelVips,
+          porcentaje: funnelActivos > 0 ? Math.round((funnelVips / funnelActivos) * 1000) / 10 : 0,
+          tasaConversionSiguiente: undefined
+        }
+      ],
+      segmentacionNiveles: {
+        nuevo: { cantidad: cantSegNuevo, pct: funnelActivos > 0 ? Math.round((cantSegNuevo / funnelActivos) * 100) : 0 },
+        ocasional: { cantidad: cantSegOcasional, pct: funnelActivos > 0 ? Math.round((cantSegOcasional / funnelActivos) * 100) : 0 },
+        habitual: { cantidad: cantSegHabitual, pct: funnelActivos > 0 ? Math.round((cantSegHabitual / funnelActivos) * 100) : 0 },
+        vip: { cantidad: cantSegVip, pct: funnelActivos > 0 ? Math.round((cantSegVip / funnelActivos) * 100) : 0 },
+        superVip: { cantidad: cantSegSuperVip, pct: funnelActivos > 0 ? Math.round((cantSegSuperVip / funnelActivos) * 100) : 0 }
+      }
+    }
 
     // Top 5 VIPs
     const ahora = new Date()
@@ -501,32 +660,149 @@ export async function GET(request: Request) {
           gastoTotal: c.gastoEnPeriodo,
           ticketPromedio: c.pedidosEnPeriodo > 0 ? Math.round(c.gastoEnPeriodo / c.pedidosEnPeriodo) : 0,
           ultimoPedido: c.ultimoPedidoHistorico.split('T')[0],
-          diasDesdeUltimo: Math.max(0, diffDias)
+          diasDesdeUltimo: Math.max(0, diffDias),
+          segmento: c.segmento
         }
       })
 
-    // Clientes dormidos / en riesgo (>25 días sin pedir y con >=2 pedidos históricos)
-    const clientesDormidos = Array.from(historialClientes.values())
-      .filter(c => {
-        if (c.pedidosHistoricos < 2) return false
-        const diffDias = Math.floor((ahora.getTime() - new Date(c.ultimoPedidoFecha).getTime()) / (1000 * 3600 * 24))
-        return diffDias >= 25
-      })
-      .map(c => {
-        const diffDias = Math.floor((ahora.getTime() - new Date(c.ultimoPedidoFecha).getTime()) / (1000 * 3600 * 24))
-        const msg = encodeURIComponent(`¡Hola ${c.nombre}! Te extrañamos en Chefsy. Tenemos platos nuevos esperándote, ¿te gustaría pedir algo rico hoy?`)
-        return {
+    // Clientes en Riesgo Dinámico y Valor en Riesgo
+    const listaEnRiesgo: any[] = []
+    let valorEnRiesgoTotal = 0
+
+    Array.from(historialClientes.values()).forEach(c => {
+      if (c.pedidosHistoricos < 2) return // Clientes con relación previa
+      const ultimoDate = new Date(c.ultimoPedidoFecha)
+      const diffDias = Math.floor((ahora.getTime() - ultimoDate.getTime()) / (1000 * 3600 * 24))
+      if (diffDias < 10) return
+
+      // Frecuencia individual
+      let cicloIndividual = frecuenciaPromedioDias
+      if (c.fechasPedidos.length >= 2) {
+        const sorted = [...c.fechasPedidos].sort((a, b) => a - b)
+        const difDiasTotal = (sorted[sorted.length - 1] - sorted[0]) / (1000 * 3600 * 24)
+        const prom = difDiasTotal / (c.fechasPedidos.length - 1)
+        if (prom >= 3 && prom <= 90) {
+          cicloIndividual = Math.round(prom)
+        }
+      }
+
+      const ratioAtraso = Math.round((diffDias / cicloIndividual) * 10) / 10
+
+      // Detección dinámica de riesgo:
+      // Si el cliente está tardando significativamente más de su ciclo habitual (>= 1.8x)
+      // O si pasaron más de 25 días para cualquier cliente con historial
+      const estaEnRiesgo = (ratioAtraso >= 1.8 && diffDias >= 14) || (diffDias >= 25)
+
+      if (estaEnRiesgo) {
+        let nivelRiesgo: 'critico' | 'alto' | 'moderado' = 'moderado'
+        if (ratioAtraso >= 2.5 || diffDias >= 35) nivelRiesgo = 'critico'
+        else if (ratioAtraso >= 1.8 || diffDias >= 25) nivelRiesgo = 'alto'
+
+        // Score de prioridad para reactivación:
+        // Prioriza: mayor riesgo de abandono + mayor valor histórico + mayor cantidad de compras
+        const scoreRiesgo = (Math.min(5, ratioAtraso) * 1000) + (c.gastoHistorico / 100) + (c.pedidosHistoricos * 200)
+
+        const msg = encodeURIComponent(`¡Hola ${c.nombre}! Te extrañamos en Chefsy. Hace unos días que no te vemos, ¿te gustaría pedir algo rico hoy? Te preparamos algo especial.`)
+
+        listaEnRiesgo.push({
           telefono: c.telefono,
           nombre: c.nombre,
           pedidosHistoricos: c.pedidosHistoricos,
           gastoHistorico: c.gastoHistorico,
           ultimoPedido: c.ultimoPedidoFecha.split('T')[0],
           diasInactivo: diffDias,
+          cicloCompraDias: cicloIndividual,
+          ratioAtraso,
+          nivelRiesgo,
+          scoreRiesgo,
           mensajeWhatsapp: `https://wa.me/${c.telefono.startsWith('54') ? c.telefono : `549${c.telefono}`}?text=${msg}`
+        })
+
+        valorEnRiesgoTotal += c.gastoHistorico
+      }
+    })
+
+    // Ordenar priorizando:
+    // 1. Mayor score de riesgo (ratio de retraso)
+    // 2. Mayor valor histórico acumulado
+    // 3. Mayor cantidad de compras
+    listaEnRiesgo.sort((a, b) => {
+      if (b.scoreRiesgo !== a.scoreRiesgo) return b.scoreRiesgo - a.scoreRiesgo
+      return b.gastoHistorico - a.gastoHistorico
+    })
+
+    const totalClientesEnRiesgo = listaEnRiesgo.length
+    const clientesDormidosPriorizados = listaEnRiesgo.slice(0, 10)
+
+    // Análisis de Fidelización por Producto (¿Qué platos generan mayor recurrencia / recompra?)
+    const mapaRetencionProductos = new Map<string, {
+      id: string
+      nombre: string
+      categoria: string
+      imagenUrl?: string
+      clientesCompraron: Set<string>
+      clientesRecompraron: Set<string>
+    }>()
+
+    // Para cada cliente, ordenamos sus pedidos cronológicamente
+    historialClientes.forEach((hc, tel) => {
+      if (!hc.pedidosList || hc.pedidosList.length === 0) return
+      const ordersSorted = [...hc.pedidosList].sort((a, b) => a.timestamp - b.timestamp)
+      const totalPedidosCliente = ordersSorted.length
+
+      ordersSorted.forEach((order, idx) => {
+        const esUltimoPedidoDelCliente = idx === totalPedidosCliente - 1
+        const clienteVolvioAComprarPosteriormente = !esUltimoPedidoDelCliente
+
+        order.productos.forEach(pItem => {
+          if (!pItem.id) return
+          if (!mapaRetencionProductos.has(pItem.id)) {
+            const catItem = MAPA_CATALOGO.get(pItem.id)
+            const catId = catItem?.categoriaId || 'general'
+            const nombrePlato = catItem?.nombre || pItem.nombre
+            const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(catId, nombrePlato, pItem.id)
+
+            mapaRetencionProductos.set(pItem.id, {
+              id: pItem.id,
+              nombre: nombrePlato,
+              categoria: normalizarCategoria(catId, nombrePlato),
+              imagenUrl: detalles.img || undefined,
+              clientesCompraron: new Set<string>(),
+              clientesRecompraron: new Set<string>()
+            })
+          }
+
+          const rp = mapaRetencionProductos.get(pItem.id)!
+          rp.clientesCompraron.add(tel)
+          if (clienteVolvioAComprarPosteriormente) {
+            rp.clientesRecompraron.add(tel)
+          }
+        })
+      })
+    })
+
+    // Construir ranking de fidelización por producto
+    const arrayFidelizacionProductos = Array.from(mapaRetencionProductos.values())
+      .filter(p => p.clientesCompraron.size >= 5) // Mínimo de clientes para significancia estadística
+      .map(p => {
+        const compradores = p.clientesCompraron.size
+        const volvieron = p.clientesRecompraron.size
+        const tasaRecompraPct = compradores > 0 ? Math.round((volvieron / compradores) * 1000) / 10 : 0
+        return {
+          id: p.id,
+          nombre: p.nombre,
+          categoria: p.categoria,
+          imagenUrl: p.imagenUrl,
+          totalClientesCompraron: compradores,
+          clientesVolvieron: volvieron,
+          tasaRecompraPct
         }
       })
-      .sort((a, b) => b.gastoHistorico - a.gastoHistorico)
-      .slice(0, 8)
+      .sort((a, b) => {
+        if (b.tasaRecompraPct !== a.tasaRecompraPct) return b.tasaRecompraPct - a.tasaRecompraPct
+        return b.totalClientesCompraron - a.totalClientesCompraron
+      })
+      .slice(0, 10)
 
     // ── MÓDULO 5: RENDIMIENTO DE MODALIDADES & INCIDENCIA DE FLETE ──────────
     interface StatsModalidad {
@@ -653,22 +929,35 @@ export async function GET(request: Request) {
         horasOperativas: [11, 12, 13, 14, 15, 19, 20, 21, 22, 23, 0, 1]
       },
       fidelidad: {
-        totalClientesUnicos: listaClientesPeriodo.length,
+        totalClientesUnicos,
         nuevos: {
-          clientes: nuevosClientes.length,
-          pedidos: nuevosClientes.reduce((a, b) => a + b.pedidosEnPeriodo, 0),
+          clientes: cantNuevos,
+          pedidos: pedidosNuevos,
           facturacion: facturacionNuevos,
-          pctFacturacion: facturacionTotalClientes > 0 ? Math.round((facturacionNuevos / facturacionTotalClientes) * 1000) / 10 : 0
+          pctFacturacion: facturacionTotalClientes > 0 ? Math.round((facturacionNuevos / facturacionTotalClientes) * 1000) / 10 : 0,
+          ticketPromedio: ticketPromedioNuevos
         },
         recurrentes: {
-          clientes: recurrentesClientes.length,
-          pedidos: recurrentesClientes.reduce((a, b) => a + b.pedidosEnPeriodo, 0),
+          clientes: cantRecurrentes,
+          pedidos: pedidosRecurrentes,
           facturacion: facturacionRecurrentes,
           pctFacturacion: facturacionTotalClientes > 0 ? Math.round((facturacionRecurrentes / facturacionTotalClientes) * 1000) / 10 : 0,
+          ticketPromedio: ticketPromedioRecurrentes,
           frecuenciaPromedioDias
         },
+        metricasGlobales: {
+          ltvPromedio,
+          tasaSegundaCompraGlobalPct
+        },
+        embudo: embudoFidelizacion,
         topVip,
-        clientesDormidos
+        riesgoAbandono: {
+          totalClientesEnRiesgo,
+          valorEnRiesgoTotal,
+          clientesEnRiesgo: clientesDormidosPriorizados
+        },
+        clientesDormidos: clientesDormidosPriorizados,
+        fidelizacionPorProducto: arrayFidelizacionProductos
       },
       modalidades: {
         resumen: {

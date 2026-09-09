@@ -538,7 +538,7 @@ export default function MetricasHistoricas() {
           { id: 'menu', label: 'Ingeniería de Menú (BCG)' },
           { id: 'sla', label: 'Tiempos & SLA' },
           { id: 'heatmap', label: 'Mapa de Calor' },
-          { id: 'fidelidad', label: 'Clientes & Retención' },
+          { id: 'fidelidad', label: 'Clientes & Fidelización' },
           { id: 'canales', label: 'Canales & Delivery' },
         ].map(tab => {
           const activo = seccionActiva === tab.id
