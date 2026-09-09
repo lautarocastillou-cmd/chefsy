@@ -7,6 +7,13 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { productosCatalogo } from '@/datos/productos'
+
+// Mapa de referencia canónica para nombres limpios y categorías oficiales
+const MAPA_CATALOGO = new Map<string, { id: string; nombre: string; categoriaId: string }>()
+productosCatalogo.forEach(p => {
+  MAPA_CATALOGO.set(p.id, { id: p.id, nombre: p.nombre, categoriaId: p.categoriaId })
+})
 
 interface ItemProductoComanda {
   id?: string
@@ -172,12 +179,21 @@ function esPedidoMediodia(p: { hora?: string | null; created_at?: string | null 
 
       prods.forEach(item => {
         const rawNombre = (item.nombre || item.name || 'Producto').trim()
-        const idProd = item.id || item.idCatalogo || rawNombre.toLowerCase()
+        const baseNombre = rawNombre.split(' (+ ')[0].trim().replace(/^["']|["']$/g, '')
+
+        // NUNCA usar item.id aquí porque es el identificador efímero de línea de carrito
+        const idCatalogo = (item.idCatalogo || item.id_catalogo || item.productoId || '').trim()
+
+        // Buscar información canónica en catálogo si existe
+        const infoCatalogo = idCatalogo ? MAPA_CATALOGO.get(idCatalogo) : null
+        const idProd = idCatalogo || baseNombre.toLowerCase()
+        const nombreProducto = infoCatalogo?.nombre || baseNombre
+        const categoriaId = infoCatalogo?.categoriaId || item.categoriaId || item.categoria_id || ''
+        const categoria = normalizarCategoria(categoriaId, nombreProducto)
+
         const cantidad = Number(item.cantidad || item.qty || 1)
         const precioUnitario = Number(item.precio || item.price || 0)
         const subtotal = cantidad * precioUnitario
-        const categoria = normalizarCategoria(item.categoriaId || item.categoria_id, rawNombre)
-        const categoriaId = item.categoriaId || item.categoria_id || ''
 
         totalUnidades += cantidad
         totalFacturacionProductos += subtotal
@@ -187,7 +203,7 @@ function esPedidoMediodia(p: { hora?: string | null; created_at?: string | null 
         if (!productosMap.has(keyGeneral)) {
           productosMap.set(keyGeneral, {
             id: idProd,
-            nombre: rawNombre,
+            nombre: nombreProducto,
             categoria,
             categoriaId,
             unidades: 0,
@@ -206,7 +222,7 @@ function esPedidoMediodia(p: { hora?: string | null; created_at?: string | null 
         if (!targetTurnoMap.has(keyGeneral)) {
           targetTurnoMap.set(keyGeneral, {
             id: idProd,
-            nombre: rawNombre,
+            nombre: nombreProducto,
             categoria,
             categoriaId,
             unidades: 0,

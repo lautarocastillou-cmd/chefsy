@@ -1317,12 +1317,12 @@ export const metadataRespaldo: Record<string, { nombre_publico: string; descripc
   "prod-1780101546747-767": {
     "nombre_publico": "ZAPPING ESPECIAL + 2.25",
     "descripcion_publica": "",
-    "imagen_url": ""
+    "imagen_url": "https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782443398352_9lvila.jpeg"
   },
   "prod-1780706531138-444": {
     "nombre_publico": "2 ZAPPING ESPECIALES",
     "descripcion_publica": "",
-    "imagen_url": ""
+    "imagen_url": "https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782443398352_9lvila.jpeg"
   },
   "prod-1781570580518-241": {
     "nombre_publico": "Paty Común",

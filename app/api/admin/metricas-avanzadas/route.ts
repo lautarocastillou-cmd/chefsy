@@ -219,10 +219,12 @@ export async function GET(request: Request) {
       const nombresEnComanda = new Set<string>()
 
       items.forEach(item => {
-        const nombre = (item.nombre || item.name || '').trim()
-        if (!nombre) return
+        const rawNombre = (item.nombre || item.name || '').trim()
+        if (!rawNombre) return
+        const nombre = rawNombre.split(' (+ ')[0].trim().replace(/^["']|["']$/g, '')
 
-        const idKey = (item.idCatalogo || item.id || nombre).toLowerCase()
+        const idCatalogo = (item.idCatalogo || item.id_catalogo || item.productoId || '').trim()
+        const idKey = (idCatalogo || nombre).toLowerCase()
         const cantidad = Number(item.cantidad || item.qty || 1)
         const precioUnitario = Number(item.precio || item.price || 0)
         const subtotal = precioUnitario * cantidad

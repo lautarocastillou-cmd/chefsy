@@ -48,17 +48,19 @@ export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: st
   if (idProducto && metadataRespaldo[idProducto]) {
     const meta = metadataRespaldo[idProducto]
     if (meta.descripcion_publica || esImagenValida(meta.imagen_url)) {
+      const primeraImg = (meta.imagen_url || '').split('|')[0].trim()
       return {
         desc: meta.descripcion_publica || '',
-        img: esImagenValida(meta.imagen_url) ? meta.imagen_url.trim() : ''
+        img: esImagenValida(primeraImg) ? primeraImg : ''
       }
     }
   }
   const foundMeta = Object.entries(metadataRespaldo).find(([k, v]) => k.startsWith(categoriaId) && v.nombre_publico?.toLowerCase().trim() === nombre.toLowerCase().trim())?.[1]
   if (foundMeta && (foundMeta.descripcion_publica || esImagenValida(foundMeta.imagen_url))) {
+    const primeraImg = (foundMeta.imagen_url || '').split('|')[0].trim()
     return {
       desc: foundMeta.descripcion_publica || '',
-      img: esImagenValida(foundMeta.imagen_url) ? foundMeta.imagen_url.trim() : ''
+      img: esImagenValida(primeraImg) ? primeraImg : ''
     }
   }
 
