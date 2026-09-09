@@ -4,9 +4,10 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { formatearPrecio, optimizarUrlImagen } from '@/lib/utils'
+import { formatearPrecio, optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import VisorFotosFullscreen from './VisorFotosFullscreen'
+import ImagenProgresiva from './ImagenProgresiva'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -115,10 +116,22 @@ export default function ModalPersonalizacion({
     })
   }, [indiceFoto, listaFotos.length])
 
+  // Precarga inteligente en segundo plano de fotos adyacentes
+  useEffect(() => {
+    if (listaFotos.length <= 1) return
+    const sig = (indiceFoto + 1) % listaFotos.length
+    const ant = (indiceFoto - 1 + listaFotos.length) % listaFotos.length
+    const slow = esConexionLenta()
+
+    ;[listaFotos[sig], listaFotos[ant]].forEach(url => {
+      if (!url) return
+      const img = new window.Image()
+      img.src = optimizarUrlImagen(url, slow ? 450 : 800, slow)
+    })
+  }, [indiceFoto, listaFotos])
+
   const tieneFotos = listaFotos.length > 0
   const fotoActiva = tieneFotos ? (listaFotos[indiceFoto] || listaFotos[0]) : ''
-  const fotoActivaDesktop = tieneFotos ? optimizarUrlImagen(fotoActiva, 800) : ''
-  const isCdnDesktop = fotoActiva.includes('res.cloudinary.com') || fotoActiva.includes('supabase.co') || fotoActiva.includes('unsplash.com') || fotoActiva.includes('lh3.googleusercontent.com')
 
   return (
     <>
@@ -210,13 +223,12 @@ export default function ModalPersonalizacion({
                             setLightboxAbierto(true)
                           }}
                         >
-                          <Image
-                            src={optimized}
+                          <ImagenProgresiva
+                            src={imgUrl}
                             alt={`${producto.nombre} - Foto ${i + 1}`}
-                            fill
-                            unoptimized={isCdn}
+                            anchoDeseado={700}
                             priority={i === 0}
-                            className="object-cover"
+                            objectFit="cover"
                             sizes="100vw"
                           />
                         </div>
@@ -252,13 +264,12 @@ export default function ModalPersonalizacion({
                       setLightboxAbierto(true)
                     }}
                   >
-                    <Image
-                      src={fotoActivaDesktop}
+                    <ImagenProgresiva
+                      src={fotoActiva}
                       alt={`${producto.nombre} - Foto ${indiceFoto + 1}`}
-                      fill
-                      unoptimized={isCdnDesktop}
+                      anchoDeseado={800}
                       priority
-                      className="object-contain p-2 transition-opacity duration-200 group-hover:opacity-95"
+                      objectFit="contain"
                       sizes="(max-width: 1024px) 50vw, 600px"
                     />
 
@@ -307,7 +318,7 @@ export default function ModalPersonalizacion({
                   {listaFotos.length > 1 && (
                     <div className="flex items-center gap-2 pt-3 overflow-x-auto scrollbar-hide">
                       {listaFotos.map((foto, idx) => {
-                        const mini = optimizarUrlImagen(foto, 120)
+                        const mini = optimizarUrlImagen(foto, 120, true)
                         const isSelect = idx === indiceFoto
                         return (
                           <button

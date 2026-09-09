@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
-import { optimizarUrlImagen } from '@/lib/utils'
+import { optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
+import ImagenProgresiva from './ImagenProgresiva'
 
 interface VisorFotosFullscreenProps {
   fotos: string[]
@@ -58,6 +59,20 @@ export default function VisorFotosFullscreen({
       setPosicion({ x: 0, y: 0 })
     }
   }, [abierto, indiceInicial, fotos.length])
+
+  // Precarga inteligente en segundo plano de fotos adyacentes
+  useEffect(() => {
+    if (fotos.length <= 1) return
+    const sig = (indiceActivo + 1) % fotos.length
+    const ant = (indiceActivo - 1 + fotos.length) % fotos.length
+    const slow = esConexionLenta()
+
+    ;[fotos[sig], fotos[ant]].forEach(url => {
+      if (!url) return
+      const img = new window.Image()
+      img.src = optimizarUrlImagen(url, slow ? 450 : 1000, slow)
+    })
+  }, [indiceActivo, fotos])
 
   // Reset zoom al cambiar de foto
   const cambiarFoto = useCallback((nuevoIndice: number) => {
@@ -271,12 +286,10 @@ export default function VisorFotosFullscreen({
   if (!montado || !abierto || fotos.length === 0) return null
 
   const fotoActual = fotos[indiceActivo] || fotos[0]
-  const fotoOptimizada = optimizarUrlImagen(fotoActual, 1100)
-  const isCdn = fotoActual.includes('res.cloudinary.com') || fotoActual.includes('supabase.co') || fotoActual.includes('unsplash.com') || fotoActual.includes('lh3.googleusercontent.com')
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100000] flex flex-col justify-between bg-[#0a0a0a]/98 select-none animate-in fade-in duration-150 pointer-events-auto"
+      className="fixed inset-0 z-[100000] flex flex-col justify-between bg-[#080808]/98 select-none animate-in fade-in duration-150 pointer-events-auto"
       onClick={(e) => {
         e.stopPropagation()
         if (e.target === e.currentTarget && zoom === 1) {
@@ -290,7 +303,7 @@ export default function VisorFotosFullscreen({
     >
       {/* ── BARRA SUPERIOR ── */}
       <div 
-        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/60 border-b border-white/5"
+        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#111]/90 border-b border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 max-w-[70%]">
@@ -337,9 +350,9 @@ export default function VisorFotosFullscreen({
         </div>
       </div>
 
-      {/* ── ÁREA CENTRAL DE IMAGEN ── */}
+      {/* ── ÁREA CENTRAL DE IMAGEN CON MARCO MEDIO OSCURO ── */}
       <div 
-        className={`relative flex-1 w-full flex items-center justify-center overflow-hidden ${
+        className={`relative flex-1 w-full flex items-center justify-center p-3 sm:p-6 overflow-hidden ${
           zoom > 1 ? (arrastrando ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
         }`}
         onDoubleClick={manejarDobleTap}
@@ -350,26 +363,26 @@ export default function VisorFotosFullscreen({
           }
         }}
       >
+        {/* Fondo medio oscuro que delimita y resalta la comida */}
         <div
-          className="relative w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center will-change-transform"
+          className="relative w-full max-w-4xl h-[68vh] sm:h-[75vh] max-h-[750px] flex items-center justify-center rounded-2xl sm:rounded-3xl bg-[#171717] border border-[#2b2b2b] shadow-2xl overflow-hidden p-2 sm:p-4 will-change-transform"
           style={{
             transform: `translate3d(${posicion.x}px, ${posicion.y}px, 0) scale(${zoom})`,
             transition: arrastrando ? 'none' : 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
             touchAction: zoom > 1 ? 'none' : 'pan-y',
           }}
         >
-          <Image
-            src={fotoOptimizada}
+          <ImagenProgresiva
+            src={fotoActual}
             alt={`${nombreProducto} - Foto ${indiceActivo + 1}`}
-            fill
-            unoptimized={isCdn}
+            anchoDeseado={1100}
             priority
-            className="object-contain pointer-events-none drop-shadow-xl"
-            sizes="(max-width: 768px) 100vw, 1100px"
+            objectFit="contain"
+            sizes="(max-width: 768px) 95vw, 1000px"
           />
         </div>
 
-        {/* Flechas de navegación (Desktop) */}
+        {/* Flechas de navegación flotantes (Desktop) */}
         {fotos.length > 1 && (
           <>
             <button
@@ -378,7 +391,7 @@ export default function VisorFotosFullscreen({
                 e.stopPropagation()
                 fotoAnterior()
               }}
-              className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/75 hover:bg-black text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+              className="hidden sm:flex absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-[#181818]/90 hover:bg-[#252525] text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
               aria-label="Foto anterior"
             >
               <ChevronLeft size={24} />
@@ -390,7 +403,7 @@ export default function VisorFotosFullscreen({
                 e.stopPropagation()
                 fotoSiguiente()
               }}
-              className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/75 hover:bg-black text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+              className="hidden sm:flex absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-[#181818]/90 hover:bg-[#252525] text-white items-center justify-center border border-white/15 transition-transform hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
               aria-label="Foto siguiente"
             >
               <ChevronRight size={24} />
@@ -401,7 +414,7 @@ export default function VisorFotosFullscreen({
 
       {/* ── BARRA INFERIOR / MINIATURAS Y CONTROLES DE ZOOM ── */}
       <div 
-        className="relative z-50 flex flex-col items-center gap-3 px-4 py-3 bg-black/70 border-t border-white/5"
+        className="relative z-50 flex flex-col items-center gap-3 px-4 py-3 bg-[#111]/90 border-t border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Controles de Zoom Flotantes */}
@@ -445,7 +458,7 @@ export default function VisorFotosFullscreen({
         {fotos.length > 1 && (
           <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2 py-0.5 scrollbar-hide">
             {fotos.map((foto, idx) => {
-              const miniUrl = optimizarUrlImagen(foto, 120)
+              const miniUrl = optimizarUrlImagen(foto, 120, true)
               const seleccionada = idx === indiceActivo
               return (
                 <button

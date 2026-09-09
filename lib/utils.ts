@@ -43,9 +43,23 @@ export function generarIdProducto(): string {
 export const BLUR_DATA_URL_DEFAULT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyMjIyMjIiLz48L3N2Zz4="
 
 /**
+ * Detecta si el cliente tiene una conexión lenta (2G, 3G o Data Saver activo)
+ */
+export function esConexionLenta(): boolean {
+  if (typeof navigator === 'undefined') return false
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nav = navigator as any
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection
+  if (!conn) return false
+  if (conn.saveData) return true
+  const tipo = conn.effectiveType
+  return tipo === 'slow-2g' || tipo === '2g' || tipo === '3g'
+}
+
+/**
  * Optimiza URLs de imágenes (Cloudinary, Supabase Storage, Unsplash, Google) reduciendo peso y formato
  */
-export function optimizarUrlImagen(url: string, ancho: number = 300): string {
+export function optimizarUrlImagen(url: string, ancho: number = 300, calidadEco: boolean = false): string {
   if (!url) return ''
   const limpia = url.trim()
 
@@ -57,7 +71,8 @@ export function optimizarUrlImagen(url: string, ancho: number = 300): string {
     if (/^(?:[a-z]_[^/]+,)*[a-z]_[^/]+\//i.test(resto)) {
       resto = resto.replace(/^[^/]+\//, '')
     }
-    return `${partes[0]}/upload/f_auto,q_auto,w_${ancho},c_limit/${resto}`
+    const qParam = calidadEco ? 'q_auto:eco,fl_lossy' : 'q_auto'
+    return `${partes[0]}/upload/f_auto,${qParam},w_${ancho},c_limit/${resto}`
   }
 
   // 2. Supabase Storage (Transformación dinámica on-the-fly)
@@ -67,17 +82,17 @@ export function optimizarUrlImagen(url: string, ancho: number = 300): string {
     if (baseUrl.includes('/object/public/')) {
       baseUrl = baseUrl.replace('/object/public/', '/render/image/public/')
     }
-    const separador = baseUrl.includes('?') ? '&' : '?'
-    // Limpiamos query params previos de width/quality si existían
     const urlLimpiaParams = baseUrl.replace(/[?&](width|quality|resize)=[^&]*/g, '')
     const sepFinal = urlLimpiaParams.includes('?') ? '&' : '?'
-    return `${urlLimpiaParams}${sepFinal}width=${ancho}&quality=80&resize=contain`
+    const quality = calidadEco ? 60 : 80
+    return `${urlLimpiaParams}${sepFinal}width=${ancho}&quality=${quality}&resize=contain`
   }
 
   // 3. Unsplash
   if (limpia.includes('images.unsplash.com')) {
     const separador = limpia.includes('?') ? '&' : '?'
-    return `${limpia}${separador}w=${ancho}&q=80&auto=format`
+    const q = calidadEco ? 60 : 80
+    return `${limpia}${separador}w=${ancho}&q=${q}&auto=format`
   }
 
   // 4. Google Drive / LH3 CDN
