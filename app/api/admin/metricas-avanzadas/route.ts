@@ -560,16 +560,22 @@ export async function GET(request: Request) {
 
     const buildCanalResumen = (key: 'delivery' | 'retiro' | 'consumo_local') => {
       const c = canalesMap[key]
-      const ticketPromedio = c.pedidos > 0 ? Math.round(c.facturacion / c.pedidos) : 0
+      const fleteTotal = c.costoEnvios
+      const facturacionTotal = c.facturacion
+      const ventaNetaComida = Math.max(0, facturacionTotal - fleteTotal)
+      const ticketPromedio = c.pedidos > 0 ? Math.round(facturacionTotal / c.pedidos) : 0
+      const ticketComidaPromedio = c.pedidos > 0 ? Math.round(ventaNetaComida / c.pedidos) : 0
       const participacionPct = facturacionTotalCanales > 0 ? Math.round((c.facturacion / facturacionTotalCanales) * 1000) / 10 : 0
       const incidenciaFletePct = c.facturacion > 0 ? Math.round((c.costoEnvios / c.facturacion) * 1000) / 10 : 0
 
       return {
         pedidos: c.pedidos,
         facturacion: c.facturacion,
+        ventaNetaComida,
         ticketPromedio,
+        ticketComidaPromedio,
         participacionPct,
-        fleteTotal: c.costoEnvios,
+        fleteTotal,
         incidenciaFletePct
       }
     }
@@ -667,8 +673,10 @@ export async function GET(request: Request) {
       modalidades: {
         resumen: {
           facturacionTotal: facturacionTotalCanales,
+          ventaNetaCocinaTotal: Math.max(0, facturacionTotalCanales - costoEnviosTotal),
           pedidosTotal: totalComandas,
           costoEnvioTotal: costoEnviosTotal,
+          fletesRecaudadosTotal: costoEnviosTotal,
           incidenciaFleteGlobal: facturacionTotalCanales > 0 ? Math.round((costoEnviosTotal / facturacionTotalCanales) * 1000) / 10 : 0
         },
         canales: {

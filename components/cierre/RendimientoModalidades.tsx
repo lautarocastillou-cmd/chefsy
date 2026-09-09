@@ -16,7 +16,9 @@ import {
 export interface CanalModalidad {
   pedidos: number
   facturacion: number
+  ventaNetaComida?: number
   ticketPromedio: number
+  ticketComidaPromedio?: number
   participacionPct: number
   fleteTotal?: number
   incidenciaFletePct?: number
@@ -25,8 +27,10 @@ export interface CanalModalidad {
 export interface ModalidadesData {
   resumen: {
     facturacionTotal: number
+    ventaNetaCocinaTotal?: number
     pedidosTotal: number
     costoEnvioTotal: number
+    fletesRecaudadosTotal?: number
     incidenciaFleteGlobal: number
   }
   canales: {
@@ -55,22 +59,23 @@ export default function RendimientoModalidades({ modalidades }: Props) {
           </div>
           <div>
             <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
-              Rendimiento de Canales & Costo Real del Delivery
+              Rendimiento Económico por Canal
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Unit economics comparativo: Delivery, Retiro en Mostrador y Consumo Local
+              Desglose de Facturación: Comida Neta vs. Fletes Recaudados (Delivery, Retiro y Salón)
             </p>
           </div>
         </div>
 
-        {/* Tarjeta Resumen Flete Global */}
+        {/* Resumen Fletes Recaudados */}
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#1e1e1e] px-3.5 py-2 rounded-2xl border border-slate-200/80 dark:border-[#383838] text-xs self-start sm:self-auto">
-          <Percent size={15} className="text-sky-500 shrink-0" />
+          <Bike size={15} className="text-sky-500 shrink-0" />
           <div className="text-slate-600 dark:text-slate-300">
-            <span>Incidencia del Flete: </span>
+            <span>Fletes recaudados: </span>
             <strong className="text-sky-600 dark:text-sky-400 font-black">
-              {delivery.incidenciaFletePct || 0}% de las ventas de delivery
+              {formatearPrecio(delivery.fleteTotal || 0)}
             </strong>
+            <span className="text-[10px] text-slate-400 ml-1">(abonados por clientes)</span>
           </div>
         </div>
       </div>
@@ -133,20 +138,29 @@ export default function RendimientoModalidades({ modalidades }: Props) {
 
           <div className="space-y-2 pt-2 border-t border-sky-200/40 dark:border-sky-900/30 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Facturación Bruta:</span>
-              <span className="text-base font-black text-slate-900 dark:text-white">{formatearPrecio(delivery.facturacion)}</span>
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Venta Neta de Cocina:</span>
+              <span className="text-base font-black text-slate-900 dark:text-white">
+                {formatearPrecio(delivery.ventaNetaComida ?? Math.max(0, delivery.facturacion - (delivery.fleteTotal || 0)))}
+              </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Ticket Promedio:</span>
-              <span className="font-bold text-slate-700 dark:text-slate-200">{formatearPrecio(delivery.ticketPromedio)}</span>
+              <span className="text-slate-500">Ticket Prom. Cocina:</span>
+              <span className="font-bold text-slate-700 dark:text-slate-200">
+                {formatearPrecio(delivery.ticketComidaPromedio ?? (delivery.pedidos > 0 ? Math.round(Math.max(0, delivery.facturacion - (delivery.fleteTotal || 0)) / delivery.pedidos) : 0))}
+              </span>
             </div>
-            <div className="flex justify-between items-center text-sky-700 dark:text-sky-300 pt-1 border-t border-dashed border-sky-200/50">
-              <span>Costo Fletes Cadetes:</span>
+            <div className="flex justify-between items-center text-sky-700 dark:text-sky-300 pt-1.5 border-t border-dashed border-sky-200/60 dark:border-sky-800/40">
+              <span className="flex items-center gap-1">
+                <span>Fletes Recaudados:</span>
+                <span className="text-[10px] text-sky-600/70 dark:text-sky-400/70">(pagó cliente)</span>
+              </span>
               <span className="font-bold">{formatearPrecio(delivery.fleteTotal || 0)}</span>
             </div>
-            <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-              <span>Incidencia del Flete:</span>
-              <span className="font-extrabold text-sky-600 dark:text-sky-400">{delivery.incidenciaFletePct || 0}% de la venta</span>
+            <div className="flex justify-between items-center pt-1.5 border-t border-sky-200/60 dark:border-sky-800/50">
+              <span className="font-bold text-slate-700 dark:text-slate-200">Total Cobrado:</span>
+              <span className="font-extrabold text-sky-600 dark:text-sky-400 text-sm">
+                {formatearPrecio(delivery.facturacion)}
+              </span>
             </div>
           </div>
         </div>
@@ -170,20 +184,25 @@ export default function RendimientoModalidades({ modalidades }: Props) {
 
           <div className="space-y-2 pt-2 border-t border-emerald-200/40 dark:border-emerald-900/30 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Facturación Total:</span>
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Venta Neta de Cocina:</span>
               <span className="text-base font-black text-slate-900 dark:text-white">{formatearPrecio(retiro.facturacion)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Ticket Promedio:</span>
+              <span className="text-slate-500">Ticket Prom. Cocina:</span>
               <span className="font-bold text-slate-700 dark:text-slate-200">{formatearPrecio(retiro.ticketPromedio)}</span>
             </div>
-            <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-300 pt-1 border-t border-dashed border-emerald-200/50">
-              <span>Costo Logístico:</span>
-              <span className="font-bold">$0 (Sin cadetes)</span>
+            <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-300 pt-1.5 border-t border-dashed border-emerald-200/60 dark:border-emerald-800/40">
+              <span className="flex items-center gap-1">
+                <span>Fletes Recaudados:</span>
+                <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">(sin costo)</span>
+              </span>
+              <span className="font-bold">$0</span>
             </div>
-            <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-              <span>Margen Operativo:</span>
-              <span className="font-extrabold text-emerald-600 dark:text-emerald-400">100% Retención en Local</span>
+            <div className="flex justify-between items-center pt-1.5 border-t border-emerald-200/60 dark:border-emerald-800/50">
+              <span className="font-bold text-slate-700 dark:text-slate-200">Total Cobrado:</span>
+              <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+                {formatearPrecio(retiro.facturacion)}
+              </span>
             </div>
           </div>
         </div>
@@ -207,21 +226,24 @@ export default function RendimientoModalidades({ modalidades }: Props) {
 
           <div className="space-y-2 pt-2 border-t border-amber-200/40 dark:border-amber-900/30 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Facturación Total:</span>
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Venta Neta de Cocina:</span>
               <span className="text-base font-black text-slate-900 dark:text-white">{formatearPrecio(consumo_local.facturacion)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Ticket Promedio:</span>
+              <span className="text-slate-500">Ticket Prom. Cocina:</span>
               <span className="font-bold text-slate-700 dark:text-slate-200">{formatearPrecio(consumo_local.ticketPromedio)}</span>
             </div>
-            <div className="flex justify-between items-center text-amber-700 dark:text-amber-300 pt-1 border-t border-dashed border-amber-200/50">
-              <span>Costo de Envío:</span>
-              <span className="font-bold">$0 (Consumo in-situ)</span>
+            <div className="flex justify-between items-center text-amber-700 dark:text-amber-300 pt-1.5 border-t border-dashed border-amber-200/60 dark:border-amber-800/40">
+              <span className="flex items-center gap-1">
+                <span>Fletes Recaudados:</span>
+                <span className="text-[10px] text-amber-600/70 dark:text-amber-400/70">(consumo in-situ)</span>
+              </span>
+              <span className="font-bold">$0</span>
             </div>
-            <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
-              <span>Rendimiento por Mesa:</span>
-              <span className="font-extrabold text-amber-600 dark:text-amber-400">
-                {consumo_local.ticketPromedio > delivery.ticketPromedio ? '+ Ticket que Delivery' : 'Alta rotación'}
+            <div className="flex justify-between items-center pt-1.5 border-t border-amber-200/60 dark:border-amber-800/50">
+              <span className="font-bold text-slate-700 dark:text-slate-200">Total Cobrado:</span>
+              <span className="font-extrabold text-amber-600 dark:text-amber-400 text-sm">
+                {formatearPrecio(consumo_local.facturacion)}
               </span>
             </div>
           </div>
