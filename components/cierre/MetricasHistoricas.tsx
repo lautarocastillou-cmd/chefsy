@@ -21,9 +21,11 @@ import {
   Store,
   Sparkles,
   Percent,
-  Layers,
   ArrowUpRight
 } from 'lucide-react'
+import TarjetaProductoEstrella, { ProductoEstrellaItem } from '@/components/cierre/TarjetaProductoEstrella'
+import GraficoRendimientoSemanal from '@/components/cierre/GraficoRendimientoSemanal'
+import GraficoMixCategorias, { CategoriaMixItem } from '@/components/cierre/GraficoMixCategorias'
 
 type TipoRango = '7d' | '30d' | 'este_mes' | 'mes_anterior' | 'todo'
 type FiltroTurnoMetricas = 'todos' | 'mediodia' | 'noche'
@@ -57,6 +59,15 @@ export default function MetricasHistoricas() {
   const [cargando, setCargando] = useState(true)
   const [rango, setRango] = useState<TipoRango>('30d')
   const [filtroTurno, setFiltroTurno] = useState<FiltroTurnoMetricas>('todos')
+  const [metricasProductos, setMetricasProductos] = useState<{
+    resumen: { totalComandas: number; totalUnidades: number; totalFacturacionProductos: number }
+    productoEstrella: ProductoEstrellaItem | null
+    productoEstrellaMediodia: ProductoEstrellaItem | null
+    productoEstrellaNoche: ProductoEstrellaItem | null
+    topProductos: ProductoEstrellaItem[]
+    mixCategorias: CategoriaMixItem[]
+  } | null>(null)
+  const [cargandoProductos, setCargandoProductos] = useState(false)
 
   useEffect(() => {
     async function cargar() {
@@ -210,6 +221,40 @@ export default function MetricasHistoricas() {
     if (filtroTurno === 'todos') return registrosRangoPrevio
     return registrosRangoPrevio.filter(d => d.turno_tipo === filtroTurno)
   }, [registrosRangoPrevio, filtroTurno])
+
+  // ── Cargar métricas de productos y categorías desde la API ──────────────────
+  useEffect(() => {
+    async function cargarMetricasProductos() {
+      setCargandoProductos(true)
+      try {
+        let desde = ''
+        let hasta = ''
+
+        if (registrosRangoActual.length > 0 && rango !== 'todo') {
+          const fechas = registrosRangoActual.map(r => r.fecha).sort()
+          desde = fechas[0]
+          hasta = fechas[fechas.length - 1]
+        }
+
+        const params = new URLSearchParams()
+        if (desde) params.set('desde', desde)
+        if (hasta) params.set('hasta', hasta)
+        if (filtroTurno !== 'todos') params.set('turno', filtroTurno)
+
+        const res = await fetch(`/api/admin/metricas-productos?${params.toString()}`)
+        if (res.ok) {
+          const data = await res.json()
+          setMetricasProductos(data)
+        }
+      } catch (err) {
+        console.error('Error al cargar métricas de productos:', err)
+      } finally {
+        setCargandoProductos(false)
+      }
+    }
+
+    cargarMetricasProductos()
+  }, [registrosRangoActual, filtroTurno, rango])
 
   // ── Estadísticas Específicas por Turno (Mediodía vs Noche) ──────────────────
   const statsTurnos = useMemo(() => {
@@ -689,6 +734,15 @@ export default function MetricasHistoricas() {
 
       </div>
 
+      {/* ── SECCIÓN 1: PRODUCTO ESTRELLA & PODIO TOP 5 ───────────────────────── */}
+      <TarjetaProductoEstrella
+        estrellaGeneral={metricasProductos?.productoEstrella || null}
+        estrellaMediodia={metricasProductos?.productoEstrellaMediodia || null}
+        estrellaNoche={metricasProductos?.productoEstrellaNoche || null}
+        topProductos={metricasProductos?.topProductos || []}
+        totalComandas={metricasProductos?.resumen?.totalComandas || kpisActuales.totalPedidos}
+      />
+
       {/* ── GRÁFICOS ANALÍTICOS (EN CUADRÍCULA DE 2 COLUMNAS) ────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -961,6 +1015,18 @@ export default function MetricasHistoricas() {
         </div>
 
       </div>
+
+      {/* ── SECCIÓN 2: EL DÍA DE ORO (PATRÓN SEMANAL) ────────────────────────── */}
+      <GraficoRendimientoSemanal datos={datosActuales} />
+
+      {/* ── SECCIÓN 3: MIX DE VENTAS POR CATEGORÍA ───────────────────────────── */}
+      {metricasProductos && metricasProductos.mixCategorias.length > 0 && (
+        <GraficoMixCategorias
+          categorias={metricasProductos.mixCategorias}
+          totalFacturacion={metricasProductos.resumen.totalFacturacionProductos}
+          totalUnidades={metricasProductos.resumen.totalUnidades}
+        />
+      )}
 
       {/* ── TABLA DE HISTORIAL DE SNAPSHOTS INMUTABLES ────────────────────────── */}
       <div className="bg-white dark:bg-[#252525] rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm overflow-hidden">
