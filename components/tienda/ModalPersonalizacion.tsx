@@ -136,7 +136,9 @@ export default function ModalPersonalizacion({
   return (
     <>
       <div 
-        className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+        className={`fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-150 ${
+          lightboxAbierto ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
         onClick={(e) => {
           if (e.target === e.currentTarget) onCerrar()
         }}

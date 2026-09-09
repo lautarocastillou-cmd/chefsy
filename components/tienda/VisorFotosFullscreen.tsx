@@ -331,7 +331,7 @@ export default function VisorFotosFullscreen({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100000] flex flex-col justify-between bg-[#080808]/98 select-none animate-in fade-in duration-150 pointer-events-auto"
+      className="fixed inset-0 z-[100000] w-screen h-[100dvh] flex flex-col justify-between bg-[#0a0a0a] select-none animate-in fade-in duration-150 pointer-events-auto"
       onClick={(e) => {
         e.stopPropagation()
         if (e.target === e.currentTarget && zoom === 1) {
@@ -345,7 +345,7 @@ export default function VisorFotosFullscreen({
     >
       {/* ── BARRA SUPERIOR ── */}
       <div 
-        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#111]/90 border-b border-white/5"
+        className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#111] border-b border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 max-w-[70%]">
@@ -394,7 +394,7 @@ export default function VisorFotosFullscreen({
 
       {/* ── ÁREA CENTRAL DE IMAGEN CON MARCO MEDIO OSCURO ── */}
       <div 
-        className={`relative flex-1 w-full flex items-center justify-center p-3 sm:p-6 overflow-hidden ${
+        className={`relative flex-1 w-full flex items-center justify-center p-0 sm:p-6 overflow-hidden ${
           zoom > 1 ? (arrastrando ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
         }`}
         onDoubleClick={manejarDobleTap}
@@ -405,9 +405,9 @@ export default function VisorFotosFullscreen({
           }
         }}
       >
-        {/* Fondo medio oscuro que delimita y resalta la comida */}
+        {/* Fondo medio oscuro que delimita y resalta la comida: cubre toda la pantalla en móvil y marco en PC */}
         <div
-          className="relative w-full max-w-4xl h-[68vh] sm:h-[75vh] max-h-[750px] flex items-center justify-center rounded-2xl sm:rounded-3xl bg-[#171717] border border-[#2b2b2b] shadow-2xl overflow-hidden will-change-transform"
+          className="relative w-full h-full sm:max-w-4xl sm:h-[75vh] sm:max-h-[750px] flex items-center justify-center rounded-none sm:rounded-3xl bg-[#141414] sm:bg-[#171717] border-0 sm:border sm:border-[#2b2b2b] shadow-none sm:shadow-2xl overflow-hidden will-change-transform"
           style={{
             transform: `translate3d(${posicion.x}px, ${posicion.y}px, 0) scale(${zoom})`,
             transition: arrastrando ? 'none' : 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -447,7 +447,7 @@ export default function VisorFotosFullscreen({
                       onLoadSuccess={() => registrarFotoVista(url)}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#171717]">
+                    <div className="w-full h-full flex items-center justify-center bg-[#141414]">
                       <span className="w-2.5 h-2.5 rounded-full bg-white/10" />
                     </div>
                   )}
@@ -455,6 +455,28 @@ export default function VisorFotosFullscreen({
               )
             })}
           </div>
+
+          {/* Puntos indicadores de foto actual (•••) en la parte inferior de la imagen */}
+          {fotos.length > 1 && (
+            <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 border border-white/10 shadow-xl pointer-events-auto">
+              {fotos.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    cambiarFoto(i)
+                  }}
+                  className={`rounded-full transition-all duration-300 cursor-pointer ${
+                    i === indiceActivo
+                      ? 'w-5 h-1.5 bg-chefsy-400 shadow-sm shadow-chefsy-400/50'
+                      : 'w-1.5 h-1.5 bg-white/35 hover:bg-white/65'
+                  }`}
+                  aria-label={`Ir a foto ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Flechas de navegación flotantes (Desktop) */}
