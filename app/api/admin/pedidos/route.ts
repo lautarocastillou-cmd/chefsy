@@ -371,24 +371,16 @@ export async function POST(request: Request) {
               monto_cancelados,
             }
 
-            // Buscar si ya existe un registro de cierre para esta fecha y turno
-            const { data: existingCierres } = await supabaseAdmin
+            // Guardar o actualizar registro de cierre para esta fecha y turno atómicamente
+            await supabaseAdmin
               .from('cierres_diarios')
-              .select('id')
-              .eq('fecha', fechaStr)
-              .eq('turno_tipo', turnoTipo)
-              .limit(1)
+              .upsert(snapshotConsolidado, { onConflict: 'fecha,turno_tipo' })
 
-            if (existingCierres && existingCierres.length > 0) {
-              await supabaseAdmin
-                .from('cierres_diarios')
-                .update(snapshotConsolidado)
-                .eq('id', existingCierres[0].id)
-            } else {
-              await supabaseAdmin
-                .from('cierres_diarios')
-                .insert(snapshotConsolidado)
-            }
+            // Desactivar el turno activo para que el próximo turno inicie limpio
+            await supabaseAdmin
+              .from('turnos')
+              .update({ activo: false })
+              .eq('id', 1)
           }
         } catch (errCierre) {
           console.error('[API Cierre Diario] Error al consolidar snapshot:', errCierre)

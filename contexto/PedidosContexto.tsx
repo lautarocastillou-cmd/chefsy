@@ -772,7 +772,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const finalizarTurno = async () => {
     try {
       const todosPedidosActivos = estado.pedidos
-      const tipoTurnoActual = estadoTurno?.tipoTurno || detectarTipoTurnoActual()
+      const tipoTurnoActual = (estadoTurno?.activo && estadoTurno?.tipoTurno) ? estadoTurno.tipoTurno : detectarTipoTurnoActual()
 
       // ── Solo operar sobre los pedidos del turno que se está cerrando ─────────
       // Fallback por hora para pedidos sin turno_tipo etiquetado (usando parsearFechaHora para soportar 12h y 24h)

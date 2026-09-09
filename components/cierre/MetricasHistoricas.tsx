@@ -142,24 +142,26 @@ export default function MetricasHistoricas() {
       return { registrosRangoActual: [], registrosRangoPrevio: [], etiquetaComparacion: '' }
     }
 
-    const n = todosDatos.length
+    // Fechas únicas ordenadas cronológicamente
+    const fechasUnicas = Array.from(new Set(todosDatos.map(d => d.fecha))).sort()
+    const totalFechas = fechasUnicas.length
 
     if (rango === '7d') {
-      const actuales = todosDatos.slice(Math.max(0, n - 14))
-      const splitPoint = Math.max(0, actuales.length - 7)
+      const fechasActuales = new Set(fechasUnicas.slice(Math.max(0, totalFechas - 7)))
+      const fechasPrevias = new Set(fechasUnicas.slice(Math.max(0, totalFechas - 14), Math.max(0, totalFechas - 7)))
       return {
-        registrosRangoActual: actuales.slice(splitPoint),
-        registrosRangoPrevio: actuales.slice(0, splitPoint),
+        registrosRangoActual: todosDatos.filter(d => fechasActuales.has(d.fecha)),
+        registrosRangoPrevio: todosDatos.filter(d => fechasPrevias.has(d.fecha)),
         etiquetaComparacion: 'vs 7 días anteriores'
       }
     }
 
     if (rango === '30d') {
-      const actuales = todosDatos.slice(Math.max(0, n - 60))
-      const splitPoint = Math.max(0, actuales.length - 30)
+      const fechasActuales = new Set(fechasUnicas.slice(Math.max(0, totalFechas - 30)))
+      const fechasPrevias = new Set(fechasUnicas.slice(Math.max(0, totalFechas - 60), Math.max(0, totalFechas - 30)))
       return {
-        registrosRangoActual: actuales.slice(splitPoint),
-        registrosRangoPrevio: actuales.slice(0, splitPoint),
+        registrosRangoActual: todosDatos.filter(d => fechasActuales.has(d.fecha)),
+        registrosRangoPrevio: todosDatos.filter(d => fechasPrevias.has(d.fecha)),
         etiquetaComparacion: 'vs 30 días anteriores'
       }
     }

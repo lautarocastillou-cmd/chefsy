@@ -70,23 +70,36 @@ export async function GET(request: Request) {
 
     const supabaseAdmin = obtenerSupabaseAdmin()
 
-    let query = supabaseAdmin
-      .from('pedidos')
-      .select('id, fecha, hora, estado, total, productos, created_at')
-      .neq('estado', 'cancelado')
+    let pedidos: any[] = []
+    let from = 0
+    const step = 1000
 
-    if (desde) {
-      query = query.gte('fecha', desde)
-    }
-    if (hasta) {
-      query = query.lte('fecha', hasta)
-    }
+    while (true) {
+      let query = supabaseAdmin
+        .from('pedidos')
+        .select('id, fecha, hora, estado, total, productos, created_at')
+        .neq('estado', 'cancelado')
+        .order('created_at', { ascending: true })
+        .range(from, from + step - 1)
 
-    const { data: pedidos, error } = await query
+      if (desde) {
+        query = query.gte('fecha', desde)
+      }
+      if (hasta) {
+        query = query.lte('fecha', hasta)
+      }
 
-    if (error) {
-      console.error('[API Metricas Productos] Error de consulta Supabase:', error)
-      throw error
+      const { data, error } = await query
+
+      if (error) {
+        console.error('[API Metricas Productos] Error de consulta Supabase:', error)
+        throw error
+      }
+
+      if (!data || data.length === 0) break
+      pedidos = pedidos.concat(data)
+      if (data.length < step) break
+      from += step
     }
 
     if (!pedidos || pedidos.length === 0) {
