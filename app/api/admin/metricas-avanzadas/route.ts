@@ -243,7 +243,7 @@ export async function GET(request: Request) {
 
     const totalComandas = pedidosFiltrados.length
 
-    // ── MÓDULO 1: MATRIZ BCG (INGENIERÍA DE MENÚ) ───────────────────────────
+    // ── MÓDULO 1: MATRIZ DE INGENIERÍA DE MENÚ ─────────────────────────────
     interface ProdStats {
       id: string
       nombre: string
@@ -252,6 +252,7 @@ export async function GET(request: Request) {
       unidades: number
       facturacionTotal: number
       comandasCount: number
+      imagenUrl?: string
     }
     const mapaProductos = new Map<string, ProdStats>()
 
@@ -267,24 +268,29 @@ export async function GET(request: Request) {
       items.forEach(item => {
         const rawNombre = (item.nombre || item.name || '').trim()
         if (!rawNombre) return
-        const nombre = rawNombre.split(' (+ ')[0].trim().replace(/^["']|["']$/g, '')
+        const nombreLimpio = rawNombre.split(' (+ ')[0].trim().replace(/^["']|["']$/g, '')
 
         const idCatalogo = (item.idCatalogo || item.id_catalogo || item.productoId || '').trim()
-        const idKey = (idCatalogo || nombre).toLowerCase()
+        const catItem = MAPA_CATALOGO.get(idCatalogo)
+        const idKey = (catItem?.id || idCatalogo || nombreLimpio).toLowerCase()
+        const nombreFinal = catItem?.nombre || nombreLimpio
         const cantidad = Number(item.cantidad || item.qty || 1)
         const precioUnitario = Number(item.precio || item.price || 0)
         const subtotal = precioUnitario * cantidad
-        const categoria = normalizarCategoria(item.categoriaId || item.categoria_id, nombre)
+        const categoriaIdFinal = catItem?.categoriaId || item.categoriaId || item.categoria_id || ''
+        const categoria = normalizarCategoria(categoriaIdFinal, nombreFinal)
 
         if (!mapaProductos.has(idKey)) {
+          const detalles = OBTENER_DETALLES_COMPLEMENTARIOS(categoriaIdFinal, nombreFinal, idKey)
           mapaProductos.set(idKey, {
             id: idKey,
-            nombre,
+            nombre: nombreFinal,
             categoria,
-            categoriaId: item.categoriaId || item.categoria_id || '',
+            categoriaId: categoriaIdFinal,
             unidades: 0,
             facturacionTotal: 0,
-            comandasCount: 0
+            comandasCount: 0,
+            imagenUrl: detalles.img || undefined
           })
         }
 
@@ -303,9 +309,18 @@ export async function GET(request: Request) {
     const totalUnidadesVendidas = arrayProductos.reduce((acc, p) => acc + p.unidades, 0)
     const totalFacturacionMenu = arrayProductos.reduce((acc, p) => acc + p.facturacionTotal, 0)
 
-    // Umbrales para clasificación en cuadrantes
+    // Umbrales para clasificación en cuadrantes (Ingeniería de Menú: Miller / Kasavana & Smith)
     const umbralVolumenMedio = arrayProductos.length > 0 ? (totalUnidadesVendidas / arrayProductos.length) : 0
     const umbralPrecioMedio = totalUnidadesVendidas > 0 ? (totalFacturacionMenu / totalUnidadesVendidas) : 0
+
+    // Rankings de productos
+    const porFacturacion = [...arrayProductos].sort((a, b) => b.facturacionTotal - a.facturacionTotal)
+    const mapRankingFacturacion = new Map<string, number>()
+    porFacturacion.forEach((p, idx) => mapRankingFacturacion.set(p.id, idx + 1))
+
+    const porUnidades = [...arrayProductos].sort((a, b) => b.unidades - a.unidades)
+    const mapRankingUnidades = new Map<string, number>()
+    porUnidades.forEach((p, idx) => mapRankingUnidades.set(p.id, idx + 1))
 
     let cantEstrellas = 0
     let cantCaballos = 0
@@ -314,35 +329,160 @@ export async function GET(request: Request) {
 
     const platosClasificados = arrayProductos.map(p => {
       const precioPromedio = p.unidades > 0 ? Math.round(p.facturacionTotal / p.unidades) : 0
+      const participacionUnidadesPct = totalUnidadesVendidas > 0 ? Math.round((p.unidades / totalUnidadesVendidas) * 1000) / 10 : 0
+      const participacionFacturacionPct = totalFacturacionMenu > 0 ? Math.round((p.facturacionTotal / totalFacturacionMenu) * 1000) / 10 : 0
       const porcentajeComandas = totalComandas > 0 ? Math.round((p.comandasCount / totalComandas) * 1000) / 10 : 0
 
       const altaPopularidad = p.unidades >= umbralVolumenMedio
       const altaRentabilidad = precioPromedio >= umbralPrecioMedio
 
       let cuadrante: 'estrella' | 'caballo' | 'rompecabezas' | 'lastre'
-      let diagnostico = ''
-      let accionSugerida = ''
-
       if (altaPopularidad && altaRentabilidad) {
         cuadrante = 'estrella'
         cantEstrellas++
-        diagnostico = 'Plato líder: máxima salida y ticket por comanda.'
-        accionSugerida = 'Mantener receta estricta, calidad fotográfica y prioridad en abastecimiento.'
       } else if (altaPopularidad && !altaRentabilidad) {
         cuadrante = 'caballo'
         cantCaballos++
-        diagnostico = 'Alto volumen de comanda pero con ticket unitario bajo.'
-        accionSugerida = 'Armar combos con bebidas o guarnición, o testear suba de precio (+5% a 8%).'
       } else if (!altaPopularidad && altaRentabilidad) {
         cuadrante = 'rompecabezas'
         cantRompecabezas++
-        diagnostico = 'Alto margen y ticket, pero poca visibilidad o pedidos.'
-        accionSugerida = 'Destacar en cabecera de la tienda, mejorar foto o lanzar como recomendación.'
       } else {
         cuadrante = 'lastre'
         cantLastres++
-        diagnostico = 'Baja rotación y escaso aporte monetario a la cocina.'
-        accionSugerida = 'Evaluar discontinuación para liberar stock y complejidad en la línea de cocción.'
+      }
+
+      // Recomendación y Diagnóstico Específico por Producto
+      const catLower = p.categoria.toLowerCase()
+      const nomLower = p.nombre.toLowerCase()
+      let accionSugerida = ''
+      let diagnostico = ''
+      let razon = ''
+      let significado = ''
+      let accionesChefsy: string[] = []
+
+      if (cuadrante === 'estrella') {
+        diagnostico = 'Alta popularidad + Alto valor económico'
+        razon = `Supera el corte de volumen (${p.unidades} u. vendidas vs corte de ${Math.round(umbralVolumenMedio * 10) / 10} u.) y supera el corte de ticket ($${precioPromedio.toLocaleString('es-AR')} vs corte de $${Math.round(umbralPrecioMedio).toLocaleString('es-AR')}).`
+        significado = 'Es un producto ancla: el cliente lo elige activamente y aporta una porción sustancial a la facturación de Chefsy.'
+
+        if (catLower.includes('burger') || catLower.includes('paty') || nomLower.includes('zapping')) {
+          accionSugerida = 'Hamburguesa insignia. Mantener receta intacta, foto en portada y stock de pan/medallones garantizado.'
+          accionesChefsy = [
+            'Proteger la estandarización estricta de panes y medallones en horas pico.',
+            'Mantenerla visible en la portada de la tienda online sin aplicar descuentos individuales.',
+            'Ofrecer opcionales premium (extra cheddar, panceta) para maximizar el ticket comanda.',
+            'Priorizar la velocidad de ensamblado para evitar demoras en cocina.'
+          ]
+        } else if (catLower.includes('lomo') || catLower.includes('mila')) {
+          accionSugerida = 'Plato fuerte de alto ticket. Cuidar porciones de lomo/mila y mantenerlo como opción premium recomendada.'
+          accionesChefsy = [
+            'Asegurar abastecimiento de carne de primera calidad y papas de acompañamiento.',
+            'Evitar quiebres de stock en turnos noche cuando se concentra la demanda.',
+            'Mantener su posición de destaque en la sección de platos principales.'
+          ]
+        } else if (catLower.includes('pizza')) {
+          accionSugerida = 'Pizza estrella de alta rotación. Asegurar masa madre/estándar y muzzarella en horarios pico sin demoras.'
+          accionesChefsy = [
+            'Precocinar o tener lista la mise-en-place de prepizzas para absorber ráfagas.',
+            'Empaquetarla en combos familiares con bebidas para pedidos de fin de semana.',
+            'Mantener la calidad del queso y salsa sin variaciones de costo que afecten el sabor.'
+          ]
+        } else if (catLower.includes('promo') || catLower.includes('combo')) {
+          accionSugerida = 'Combo estrella con máxima tracción. Mantener en banner superior y auditar que la cocina lo despache ágilmente.'
+          accionesChefsy = [
+            'Mantener visible en cabecera principal de la tienda online.',
+            'Asegurar stock de gaseosas y envases descartables asociados.',
+            'Monitorear tiempos de comanda para que no sature la freidora o plancha.'
+          ]
+        } else {
+          accionSugerida = 'Pilar del menú. Proteger consistencia, asegurar disponibilidad continua y mantener máxima visibilidad.'
+          accionesChefsy = [
+            'Proteger la receta estandarizada y la calidad del producto.',
+            'Garantizar abastecimiento de insumos para no quebrar stock en días fuertes.',
+            'No hacer descuentos innecesarios: el cliente ya lo valora y lo paga.'
+          ]
+        }
+      } else if (cuadrante === 'caballo') {
+        diagnostico = 'Alta popularidad + Menor valor unitario'
+        razon = `Vende por encima del corte de volumen (${p.unidades} u. vs corte de ${Math.round(umbralVolumenMedio * 10) / 10} u.), pero su precio ($${precioPromedio.toLocaleString('es-AR')}) está por debajo del corte de ticket ($${Math.round(umbralPrecioMedio).toLocaleString('es-AR')}).`
+        significado = 'Genera mucho volumen y pedidos, pero aporta un ticket unitario menor. Es el candidato natural para empaquetar y subir el ticket medio.'
+
+        if (catLower.includes('papa')) {
+          accionSugerida = 'Acompañamiento masivo. Ofrecer agregados con margen (cheddar, verdeo, bacon) o combo cerrado con plato principal.'
+          accionesChefsy = [
+            'Ofrecer opciones cargadas (cheddar/bacon/verdeo) que eleven el ticket unitario.',
+            'Empaquetarlas en combo sugerido durante el checkout en el carrito.',
+            'Monitorear el rendimiento de insumos y aceite para maximizar margen.'
+          ]
+        } else if (catLower.includes('bebida')) {
+          accionSugerida = 'Bebida de alta rotación. Mantener stock frío y armar combos fijos con comida para monetizar la salida.'
+          accionesChefsy = [
+            'Armar combos obligados con hamburguesas y pizzas para asegurar venta conjunta.',
+            'Mantener siempre stock frío en heladeras para retiro y despacho inmediato.',
+            'Revisar acuerdos de compra por volumen con distribuidores locales.'
+          ]
+        } else if (catLower.includes('burger') || catLower.includes('paty')) {
+          accionSugerida = 'Burger accesible de alto volumen. Probar combo con gaseosa chica o testear suba gradual (+3% a 5%).'
+          accionesChefsy = [
+            'Diseñar combo con bebida para llevar el ticket al umbral del menú.',
+            'Testear un aumento sutil de precio para medir elasticidad sin perder volumen.',
+            'Ofrecer adicionales durante el pedido (doble carne, papas extra).'
+          ]
+        } else {
+          accionSugerida = 'Fuerte volumen pero ticket moderado. Crear combos con bebida o adicionales para elevar el ticket comanda.'
+          accionesChefsy = [
+            'No retirar el producto: tracciona pedidos y atrae clientes.',
+            'Empaquetarlo con bebida o papas para elevar el ticket comanda.',
+            'Analizar posibilidad de ajuste gradual de precio (+3% a 5%).'
+          ]
+        }
+      } else if (cuadrante === 'rompecabezas') {
+        diagnostico = 'Baja popularidad + Alto valor económico'
+        razon = `Tiene un precio unitario elevado ($${precioPromedio.toLocaleString('es-AR')} vs corte de $${Math.round(umbralPrecioMedio).toLocaleString('es-AR')}), pero sus ventas (${p.unidades} u.) están por debajo del corte (${Math.round(umbralVolumenMedio * 10) / 10} u.).`
+        significado = 'Plato con excelente aporte al ticket pero baja salida. No conviene eliminarlo sin antes intentar aumentar su visibilidad o probar promociones.'
+
+        if (catLower.includes('lomo') || catLower.includes('mila')) {
+          accionSugerida = 'Plato premium con baja salida. Mejorar fotografía en primer plano y probar ubicarlo como Recomendación del Chef.'
+          accionesChefsy = [
+            'Revisar foto y descripción en la tienda para resaltar por qué es una opción gourmet/especial.',
+            'Destacarlo en la sección de recomendados o al inicio de la categoría.',
+            'Probar una promo de lanzamiento temporal en días tranquilos (martes/miércoles).'
+          ]
+        } else if (catLower.includes('pizza')) {
+          accionSugerida = 'Pizza de buen ticket pero poco movimiento. Armar promo combinada con una clásica para incentivar el testeo.'
+          accionesChefsy = [
+            'Ofrecerla en combo mitad y mitad o con una pizza tradicional.',
+            'Mejorar la descripción de los ingredientes para tentar al comensal.',
+            'Evaluar si el nombre es claro o si requiere un cambio comunicacional.'
+          ]
+        } else {
+          accionSugerida = 'Aporte económico alto con baja rotación. Mejorar fotografía y ubicación en carta antes de considerar cambios.'
+          accionesChefsy = [
+            'No eliminar automáticamente: aporta buen ticket cuando se vende.',
+            'Mejorar la presentación fotográfica en la tienda online.',
+            'Probar ofertas o combos de prueba para incentivar la primera compra.'
+          ]
+        }
+      } else {
+        diagnostico = 'Baja popularidad + Menor valor unitario'
+        razon = `Registra ventas por debajo del corte (${p.unidades} u. vs corte de ${Math.round(umbralVolumenMedio * 10) / 10} u.) y precio por debajo del umbral ($${precioPromedio.toLocaleString('es-AR')} vs $${Math.round(umbralPrecioMedio).toLocaleString('es-AR')}).`
+        significado = 'Plato de bajo movimiento que aporta poco volumen y poca facturación. Puede complicar la cocina o compras sin justificación comercial.'
+
+        if (p.unidades <= 3) {
+          accionSugerida = 'Salida prácticamente nula (≤3 u.). Candidato directo a retiro para simplificar la cocina y compras.'
+          accionesChefsy = [
+            'Discontinuar de la tienda online para no saturar al cliente con opciones sin demanda.',
+            'Liberar espacio en heladera y mise-en-place de cocina.',
+            'Evitar comprar insumos exclusivos que puedan vencerse.'
+          ]
+        } else {
+          accionSugerida = 'Baja rotación y escaso aporte monetario. Evaluar si comparte insumos con estrellas o retirarlo de la carta.'
+          accionesChefsy = [
+            'Auditar si requiere ingredientes exclusivos que generen mermas.',
+            'Si comparte insumos con platos estrella, mantenerlo como opción secundaria.',
+            'Si no repunta en el próximo ciclo mensual, evaluar su reemplazo.'
+          ]
+        }
       }
 
       return {
@@ -350,15 +490,74 @@ export async function GET(request: Request) {
         nombre: p.nombre,
         categoria: p.categoria,
         categoriaId: p.categoriaId,
+        imagenUrl: p.imagenUrl,
         unidades: p.unidades,
+        participacionUnidadesPct,
+        porcentajeComandas,
         precioPromedio,
         facturacionTotal: p.facturacionTotal,
-        porcentajeComandas,
+        participacionFacturacionPct,
+        rankingFacturacion: mapRankingFacturacion.get(p.id) || 1,
+        rankingUnidades: mapRankingUnidades.get(p.id) || 1,
         cuadrante,
         diagnostico,
-        accionSugerida
+        accionSugerida,
+        diagnosticoDetallado: {
+          razon,
+          significado,
+          accionesChefsy
+        }
       }
     }).sort((a, b) => b.facturacionTotal - a.facturacionTotal)
+
+    // Agregación de Métricas por Cuadrante
+    const buildStatsCuadrante = (cuadrante: 'estrella' | 'caballo' | 'rompecabezas' | 'lastre', accion: string) => {
+      const items = platosClasificados.filter(p => p.cuadrante === cuadrante)
+      const count = items.length
+      const facturacionTotal = items.reduce((a, b) => a + b.facturacionTotal, 0)
+      const unidadesTotal = items.reduce((a, b) => a + b.unidades, 0)
+      const porcentajeFacturacion = totalFacturacionMenu > 0 ? Math.round((facturacionTotal / totalFacturacionMenu) * 1000) / 10 : 0
+      const porcentajeUnidades = totalUnidadesVendidas > 0 ? Math.round((unidadesTotal / totalUnidadesVendidas) * 1000) / 10 : 0
+      const precioPromedio = unidadesTotal > 0 ? Math.round(facturacionTotal / unidadesTotal) : 0
+
+      return {
+        count,
+        facturacionTotal,
+        porcentajeFacturacion,
+        unidadesTotal,
+        porcentajeUnidades,
+        precioPromedio,
+        accionPrincipal: accion
+      }
+    }
+
+    const statsEstrellas = buildStatsCuadrante('estrella', 'Proteger, mantener disponibilidad y dar máxima visibilidad.')
+    const statsCaballos = buildStatsCuadrante('caballo', 'Monetizar el volumen: empaquetar en combos con bebida o papas.')
+    const statsRompecabezas = buildStatsCuadrante('rompecabezas', 'Impulsar visibilidad: mejorar foto y probar promos antes de retirar.')
+    const statsLastres = buildStatsCuadrante('lastre', 'Auditar complejidad: simplificar insumos o descontinuar platos sin rotación.')
+
+    // Resumen Ejecutivo Dinámico ("Lectura rápida del menú")
+    const conclusionesEjecutivas: string[] = []
+    if (cantEstrellas > 0) {
+      conclusionesEjecutivas.push(
+        `${cantEstrellas} platos Estrella concentran el ${statsEstrellas.porcentajeFacturacion}% de la facturación total y sostienen el ${statsEstrellas.porcentajeUnidades}% del volumen. Son el motor de Chefsy: no aplicar descuentos y asegurar insumos en turnos pico.`
+      )
+    }
+    if (cantCaballos > 0) {
+      conclusionesEjecutivas.push(
+        `Los ${cantCaballos} Caballos de Batalla generan ${statsCaballos.unidadesTotal} unidades (${statsCaballos.porcentajeUnidades}% del volumen) con un ticket promedio de $${statsCaballos.precioPromedio.toLocaleString('es-AR')}. Oportunidad directa para crear combos con bebidas o adicionales para subir el ticket.`
+      )
+    }
+    if (cantRompecabezas > 0) {
+      conclusionesEjecutivas.push(
+        `Hay ${cantRompecabezas} productos Rompecabezas con ticket alto ($${statsRompecabezas.precioPromedio.toLocaleString('es-AR')}) pero baja venta (${statsRompecabezas.porcentajeUnidades}% del volumen). Conviene mejorar fotografía y ubicarlos en cabecera antes de evaluar cambios.`
+      )
+    }
+    if (cantLastres > 0) {
+      conclusionesEjecutivas.push(
+        `${cantLastres} platos están en cuadrante Lastre aportando solo el ${statsLastres.porcentajeFacturacion}% de la caja. Revisar si complican la mise-en-place y compras de insumos para considerar su retiro.`
+      )
+    }
 
     // ── MÓDULO 2: MEDIDORES DE SLA Y VELOCIDAD (TACÓMETROS) ─────────────────
     let cocinaMuestras: number[] = []
@@ -866,12 +1065,21 @@ export async function GET(request: Request) {
       matrizBCG: {
         resumen: {
           totalPlatosAnalizados: arrayProductos.length,
+          totalUnidadesVendidas,
+          totalFacturacionMenu,
           umbralVolumenMedio: Math.round(umbralVolumenMedio * 10) / 10,
           umbralPrecioMedio: Math.round(umbralPrecioMedio),
           cantEstrellas,
           cantCaballos,
           cantRompecabezas,
-          cantLastres
+          cantLastres,
+          cuadrantes: {
+            estrella: statsEstrellas,
+            caballo: statsCaballos,
+            rompecabezas: statsRompecabezas,
+            lastre: statsLastres
+          },
+          resumenEjecutivo: conclusionesEjecutivas
         },
         platos: platosClasificados
       },
