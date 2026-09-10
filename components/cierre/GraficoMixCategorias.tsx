@@ -46,12 +46,12 @@ export default function GraficoMixCategorias({
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 flex items-center gap-1">
                 <Sparkles size={11} />
-                Mix de Ventas
+                Reparto de Ventas
               </span>
               <span className="text-xs text-slate-400 font-medium">Salud del Menú</span>
             </div>
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight mt-0.5">
-              Distribución por Categorías
+              ¿Qué se vende más? Reparto por Categorías
             </h3>
           </div>
         </div>

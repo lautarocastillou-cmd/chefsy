@@ -156,17 +156,17 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
           </div>
           <div>
             <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
-              Tacómetros Operativos & Tiempos de Entrega (SLA)
+              Velocidad de Despacho & Tiempos de Espera
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Cronometraje real en cocina, despacho y tiempo en tránsito
+              Cuánto tarda la comida en prepararse y viajar hasta la casa del cliente
             </p>
           </div>
         </div>
 
         {/* Badge de Eficiencia Global */}
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#1e1e1e] px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#383838] text-xs self-start sm:self-auto">
-          <span className="text-slate-500 font-medium">Cumplimiento Lead Time (&lt;40m):</span>
+          <span className="text-slate-500 font-medium">Entregas en menos de 40 min:</span>
           <strong className={`font-black ${
             totalLeadTime.cumplimientoMenor40.pct >= 70
               ? 'text-emerald-600 dark:text-emerald-400'
@@ -188,8 +188,8 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
                 <Flame size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Cocina & Elaboración</h3>
-                <p className="text-[11px] text-slate-400">Ingreso comanda ➔ &quot;Listo&quot;</p>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Cocina & Preparación</h3>
+                <p className="text-[11px] text-slate-400">Desde que entra hasta que sale de la plancha</p>
               </div>
             </div>
 
@@ -213,7 +213,7 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
               { inicio: 20, fin: 32, color: '#f59e0b' }, // Ámbar (20-32m)
               { inicio: 32, fin: 50, color: '#f43f5e' }, // Rojo (> 32m)
             ]}
-            subtitulo={`${cocina.totalMuestras} comandas cronometradas`}
+            subtitulo={`${cocina.totalMuestras} pedidos cocinados`}
           />
 
           {/* Barras de Segmentación */}
@@ -250,8 +250,8 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
                 <Bike size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Cadetería en Calle</h3>
-                <p className="text-[11px] text-slate-400">Despacho ➔ &quot;Entregado&quot;</p>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Viaje de Cadetes</h3>
+                <p className="text-[11px] text-slate-400">Desde que sale del local hasta la puerta del cliente</p>
               </div>
             </div>
 
@@ -275,7 +275,7 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
               { inicio: 15, fin: 25, color: '#f59e0b' }, // Ámbar (15-25m)
               { inicio: 25, fin: 35, color: '#f43f5e' }, // Rojo (> 25m)
             ]}
-            subtitulo={`${cadete.totalMuestras} viajes en tránsito`}
+            subtitulo={`${cadete.totalMuestras} viajes en moto`}
           />
 
           {/* Barras de Segmentación */}
@@ -304,7 +304,7 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
           </div>
         </div>
 
-        {/* 3. TACÓMETRO EXPERIENCIA CLIENTE: LEAD TIME TOTAL */}
+        {/* 3. TACÓMETRO EXPERIENCIA CLIENTE: ESPERA TOTAL */}
         <div className="bg-slate-50/60 dark:bg-[#1e1e1e] p-5 rounded-2xl border border-slate-200/80 dark:border-[#383838] flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -312,8 +312,8 @@ export default function MedidoresSlaVelocidad({ sla }: Props) {
                 <Clock size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Lead Time al Cliente</h3>
-                <p className="text-[11px] text-slate-400">Comanda ➔ En manos del cliente</p>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Espera Total del Cliente</h3>
+                <p className="text-[11px] text-slate-400">Desde que pide hasta que le tocan el timbre</p>
               </div>
             </div>
 

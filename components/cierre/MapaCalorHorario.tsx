@@ -82,10 +82,10 @@ export default function MapaCalorHorario({ matriz, picoMaximo, horasOperativas }
           </div>
           <div>
             <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
-              Mapa de Calor Horario (Heatmap de Ráfagas)
+              Horarios Pico & Ráfagas de Pedidos
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Concentración comanda a comanda para optimizar dotación y tiempos de cocina
+              Descubrí a qué hora explotan los pedidos para organizar cocineros y cadetes antes del pico
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function MapaCalorHorario({ matriz, picoMaximo, horasOperativas }
           </div>
 
           <div className="hidden lg:flex items-center gap-2 text-xs font-bold text-emerald-400/90 bg-emerald-950/50 px-3 py-2 rounded-xl border border-emerald-800/40 shrink-0">
-            <span>Momento crítico para cadetería</span>
+            <span>Momento de mayor demanda de cadetes</span>
             <ChevronRight size={14} />
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function MapaCalorHorario({ matriz, picoMaximo, horasOperativas }
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-4 h-4 rounded-md bg-emerald-500 border border-emerald-400 text-white flex items-center justify-center text-[8px] font-bold">★</span>
-            <span className="text-[10px]">Ráfaga pico</span>
+            <span className="text-[10px]">Horario pico</span>
           </div>
         </div>
 

@@ -59,10 +59,10 @@ export default function RendimientoModalidades({ modalidades }: Props) {
           </div>
           <div>
             <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
-              Rendimiento Económico por Canal
+              Ventas por Canal: Delivery vs Mostrador vs Salón
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Desglose de Facturación: Comida Neta vs. Fletes Recaudados (Delivery, Retiro y Salón)
+              Plata neta de comida vs. lo recaudado en envíos para los cadetes
             </p>
           </div>
         </div>
