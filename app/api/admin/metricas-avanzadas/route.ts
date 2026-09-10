@@ -243,6 +243,32 @@ export async function GET(request: Request) {
 
     const totalComandas = pedidosFiltrados.length
 
+    // ── CONSULTA DE COSTOS DE PRODUCTOS (MICRO-ESCANDALLO) ───────────────────
+    const { data: rawCostos } = await supabaseAdmin
+      .from('producto_costos')
+      .select('producto_id, costo_estimado, insumo_principal, packaging, notas, updated_at')
+
+    const mapaCostosDB = new Map<string, {
+      costoEstimado: number
+      insumoPrincipal: number
+      packaging: number
+      notas: string
+      updatedAt: string
+    }>()
+
+    ;(rawCostos || []).forEach((row: any) => {
+      const key = (row.producto_id || '').trim().toLowerCase()
+      if (key) {
+        mapaCostosDB.set(key, {
+          costoEstimado: Number(row.costo_estimado) || 0,
+          insumoPrincipal: Number(row.insumo_principal) || 0,
+          packaging: Number(row.packaging) || 0,
+          notas: row.notas || '',
+          updatedAt: row.updated_at
+        })
+      }
+    })
+
     // ── MÓDULO 1: MATRIZ DE INGENIERÍA DE MENÚ ─────────────────────────────
     interface ProdStats {
       id: string
@@ -485,6 +511,63 @@ export async function GET(request: Request) {
         }
       }
 
+      // Cálculo de Rentabilidad Real con palabras sencillas de negocio
+      const costoMatch = mapaCostosDB.get(p.id.toLowerCase()) || mapaCostosDB.get(p.nombre.toLowerCase())
+      let rentabilidadReal: {
+        tieneCosto: boolean
+        costoUnitario: number
+        insumoPrincipal: number
+        packaging: number
+        notas: string
+        gananciaLimpiaUnitaria: number
+        porcentajeInsumos: number
+        porcentajeGananciaLimpia: number
+        gananciaTotalMes: number
+        estadoSalud: 'saludable' | 'moderado' | 'alerta'
+        explicacionSalud: string
+        descuentoSeguroPct: number
+        ahorroPromoSegura: number
+        updatedAt?: string
+      } | null = null
+
+      if (costoMatch && costoMatch.costoEstimado > 0) {
+        const costoUnitario = costoMatch.costoEstimado
+        const gananciaLimpiaUnitaria = Math.max(0, precioPromedio - costoUnitario)
+        const porcentajeInsumos = precioPromedio > 0 ? Math.round((costoUnitario / precioPromedio) * 1000) / 10 : 0
+        const porcentajeGananciaLimpia = Math.max(0, Math.round((100 - porcentajeInsumos) * 10) / 10)
+        const gananciaTotalMes = Math.round(gananciaLimpiaUnitaria * p.unidades)
+
+        let estadoSalud: 'saludable' | 'moderado' | 'alerta' = 'saludable'
+        let explicacionSalud = 'Excelente margen: te queda más del 65% limpio en mano.'
+        if (porcentajeInsumos > 40) {
+          estadoSalud = 'alerta'
+          explicacionSalud = 'Costo alto: los ingredientes se comen más del 40% del precio de venta.'
+        } else if (porcentajeInsumos >= 30) {
+          estadoSalud = 'moderado'
+          explicacionSalud = 'Margen normal dentro del estándar gastronómico (30% a 40% de insumos).'
+        }
+
+        const descuentoSeguroPct = porcentajeGananciaLimpia > 50 ? 20 : porcentajeGananciaLimpia > 35 ? 10 : 0
+        const ahorroPromoSegura = Math.round(precioPromedio * (descuentoSeguroPct / 100))
+
+        rentabilidadReal = {
+          tieneCosto: true,
+          costoUnitario,
+          insumoPrincipal: costoMatch.insumoPrincipal,
+          packaging: costoMatch.packaging,
+          notas: costoMatch.notas,
+          gananciaLimpiaUnitaria,
+          porcentajeInsumos,
+          porcentajeGananciaLimpia,
+          gananciaTotalMes,
+          estadoSalud,
+          explicacionSalud,
+          descuentoSeguroPct,
+          ahorroPromoSegura,
+          updatedAt: costoMatch.updatedAt
+        }
+      }
+
       return {
         id: p.id,
         nombre: p.nombre,
@@ -502,6 +585,7 @@ export async function GET(request: Request) {
         cuadrante,
         diagnostico,
         accionSugerida,
+        rentabilidadReal,
         diagnosticoDetallado: {
           razon,
           significado,
@@ -509,6 +593,12 @@ export async function GET(request: Request) {
         }
       }
     }).sort((a, b) => b.facturacionTotal - a.facturacionTotal)
+
+    // Métricas globales de rentabilidad real para el resumen
+    const platosConCosto = platosClasificados.filter(p => p.rentabilidadReal?.tieneCosto)
+    const cantPlatosConCosto = platosConCosto.length
+    const gananciaLimpiaTotalMes = platosConCosto.reduce((acc, p) => acc + (p.rentabilidadReal?.gananciaTotalMes || 0), 0)
+    const costoTotalMercaderiaMes = platosConCosto.reduce((acc, p) => acc + ((p.rentabilidadReal?.costoUnitario || 0) * p.unidades), 0)
 
     // Agregación de Métricas por Cuadrante
     const buildStatsCuadrante = (cuadrante: 'estrella' | 'caballo' | 'rompecabezas' | 'lastre', accion: string) => {
@@ -1073,6 +1163,12 @@ export async function GET(request: Request) {
           cantCaballos,
           cantRompecabezas,
           cantLastres,
+          rentabilidadMenu: {
+            platosAuditados: cantPlatosConCosto,
+            totalPlatos: arrayProductos.length,
+            gananciaLimpiaTotalMes,
+            costoTotalMercaderiaMes
+          },
           cuadrantes: {
             estrella: statsEstrellas,
             caballo: statsCaballos,

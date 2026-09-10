@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { formatearPrecio } from '@/lib/utils'
 import {
   Star,
@@ -25,13 +25,36 @@ import {
   Award,
   DollarSign,
   ShoppingBag,
-  Percent
+  Percent,
+  Coins,
+  ShieldCheck,
+  Pencil,
+  Save,
+  RefreshCw,
+  PlusCircle
 } from 'lucide-react'
 
 export interface DiagnosticoDetallado {
   razon: string
   significado: string
   accionesChefsy: string[]
+}
+
+export interface RentabilidadReal {
+  tieneCosto: boolean
+  costoUnitario: number
+  insumoPrincipal?: number
+  packaging?: number
+  notas?: string
+  gananciaLimpiaUnitaria: number
+  porcentajeInsumos: number
+  porcentajeGananciaLimpia: number
+  gananciaTotalMes: number
+  estadoSalud: 'saludable' | 'moderado' | 'alerta'
+  explicacionSalud: string
+  descuentoSeguroPct: number
+  ahorroPromoSegura: number
+  updatedAt?: string
 }
 
 export interface PlatoBCG {
@@ -52,6 +75,7 @@ export interface PlatoBCG {
   diagnostico: string
   accionSugerida: string
   diagnosticoDetallado?: DiagnosticoDetallado
+  rentabilidadReal?: RentabilidadReal | null
 }
 
 export interface CuadranteStats {
@@ -74,6 +98,12 @@ export interface ResumenBCG {
   cantCaballos: number
   cantRompecabezas: number
   cantLastres: number
+  rentabilidadMenu?: {
+    platosAuditados: number
+    totalPlatos: number
+    gananciaLimpiaTotalMes: number
+    costoTotalMercaderiaMes: number
+  }
   cuadrantes?: {
     estrella: CuadranteStats
     caballo: CuadranteStats
@@ -89,9 +119,14 @@ interface Props {
 }
 
 type CuadranteFiltro = 'todos' | 'estrella' | 'caballo' | 'rompecabezas' | 'lastre'
-type TipoOrden = 'facturacion_desc' | 'unidades_desc' | 'precio_desc' | 'unidades_asc' | 'presencia_desc'
+type TipoOrden = 'facturacion_desc' | 'ganancia_desc' | 'unidades_desc' | 'precio_desc' | 'unidades_asc' | 'presencia_desc'
 
 export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
+  const [listaPlatos, setListaPlatos] = useState<PlatoBCG[]>(platos)
+  useEffect(() => {
+    setListaPlatos(platos)
+  }, [platos])
+
   const [filtroCuadrante, setFiltroCuadrante] = useState<CuadranteFiltro>('todos')
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todas')
   const [busqueda, setBusqueda] = useState('')
@@ -99,25 +134,145 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
   const [platoSeleccionado, setPlatoSeleccionado] = useState<PlatoBCG | null>(null)
   const [mostrarComoFunciona, setMostrarComoFunciona] = useState(false)
 
+  // Estado para carga y edición de costo rápido
+  const [guardandoCosto, setGuardandoCosto] = useState(false)
+  const [editandoCosto, setEditandoCosto] = useState(false)
+  const [costoInput, setCostoInput] = useState('')
+  const [desgloseInsumo, setDesgloseInsumo] = useState('')
+  const [desglosePackaging, setDesglosePackaging] = useState('')
+  const [mostrarDesglose, setMostrarDesglose] = useState(false)
+
+  // Inicializar formulario al abrir o cambiar de plato seleccionado
+  useEffect(() => {
+    if (platoSeleccionado) {
+      if (platoSeleccionado.rentabilidadReal?.tieneCosto) {
+        setCostoInput(platoSeleccionado.rentabilidadReal.costoUnitario.toString())
+        setDesgloseInsumo(platoSeleccionado.rentabilidadReal.insumoPrincipal ? platoSeleccionado.rentabilidadReal.insumoPrincipal.toString() : '')
+        setDesglosePackaging(platoSeleccionado.rentabilidadReal.packaging ? platoSeleccionado.rentabilidadReal.packaging.toString() : '')
+        setEditandoCosto(false)
+        setMostrarDesglose(Boolean(platoSeleccionado.rentabilidadReal.insumoPrincipal || platoSeleccionado.rentabilidadReal.packaging))
+      } else {
+        setCostoInput('')
+        setDesgloseInsumo('')
+        setDesglosePackaging('')
+        setEditandoCosto(true)
+        setMostrarDesglose(false)
+      }
+    }
+  }, [platoSeleccionado?.id])
+
+  // Guardar costo en Supabase y actualizar interfaz inmediatamente
+  const guardarCostoPlato = async (platoId: string) => {
+    if (!platoSeleccionado) return
+    const costoNum = Math.max(0, Number(costoInput.replace(/[^0-9]/g, '')) || 0)
+    if (costoNum <= 0) {
+      alert('Por favor ingresá un costo de elaboración mayor a $0.')
+      return
+    }
+    const insumoNum = Math.max(0, Number(desgloseInsumo.replace(/[^0-9]/g, '')) || 0)
+    const packNum = Math.max(0, Number(desglosePackaging.replace(/[^0-9]/g, '')) || 0)
+
+    try {
+      setGuardandoCosto(true)
+      const res = await fetch('/api/admin/costos-productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productoId: platoId,
+          costoEstimado: costoNum,
+          insumoPrincipal: insumoNum,
+          packaging: packNum
+        })
+      })
+
+      if (!res.ok) {
+        throw new Error('Error al guardar en el servidor')
+      }
+
+      // Cálculo de rentabilidad en caliente para visualización inmediata
+      const precioPromedio = platoSeleccionado.precioPromedio
+      const gananciaLimpiaUnitaria = Math.max(0, precioPromedio - costoNum)
+      const porcentajeInsumos = precioPromedio > 0 ? Math.round((costoNum / precioPromedio) * 1000) / 10 : 0
+      const porcentajeGananciaLimpia = Math.max(0, Math.round((100 - porcentajeInsumos) * 10) / 10)
+      const gananciaTotalMes = Math.round(gananciaLimpiaUnitaria * platoSeleccionado.unidades)
+
+      let estadoSalud: 'saludable' | 'moderado' | 'alerta' = 'saludable'
+      let explicacionSalud = 'Excelente margen: te queda más del 65% limpio en mano.'
+      if (porcentajeInsumos > 40) {
+        estadoSalud = 'alerta'
+        explicacionSalud = 'Costo alto: los ingredientes y packaging se comen más del 40% del precio.'
+      } else if (porcentajeInsumos >= 30) {
+        estadoSalud = 'moderado'
+        explicacionSalud = 'Margen normal dentro del estándar gastronómico (30% a 40% de insumos).'
+      }
+
+      const descuentoSeguroPct = porcentajeGananciaLimpia > 50 ? 20 : porcentajeGananciaLimpia > 35 ? 10 : 0
+      const ahorroPromoSegura = Math.round(precioPromedio * (descuentoSeguroPct / 100))
+
+      const nuevaRentabilidad: RentabilidadReal = {
+        tieneCosto: true,
+        costoUnitario: costoNum,
+        insumoPrincipal: insumoNum,
+        packaging: packNum,
+        gananciaLimpiaUnitaria,
+        porcentajeInsumos,
+        porcentajeGananciaLimpia,
+        gananciaTotalMes,
+        estadoSalud,
+        explicacionSalud,
+        descuentoSeguroPct,
+        ahorroPromoSegura,
+        updatedAt: new Date().toISOString()
+      }
+
+      const platoActualizado: PlatoBCG = {
+        ...platoSeleccionado,
+        rentabilidadReal: nuevaRentabilidad
+      }
+
+      setPlatoSeleccionado(platoActualizado)
+      setListaPlatos(prev => prev.map(p => p.id === platoId ? platoActualizado : p))
+      setEditandoCosto(false)
+    } catch (err) {
+      console.error(err)
+      alert('Hubo un problema al guardar el costo. Intentá nuevamente.')
+    } finally {
+      setGuardandoCosto(false)
+    }
+  }
+
   // Lista de categorías únicas presentes en la carta
   const categoriasDisponibles = useMemo(() => {
     const setCats = new Set<string>()
-    platos.forEach(p => {
+    listaPlatos.forEach(p => {
       if (p.categoria) setCats.add(p.categoria)
     })
     return Array.from(setCats).sort()
-  }, [platos])
+  }, [listaPlatos])
 
-  // Métricas consolidadas por cuadrante (con fallback dinámico si no vienen de la API)
+  // Resumen de rentabilidad global para los platos que ya tienen costo cargado
+  const resumenRentabilidad = useMemo(() => {
+    const auditados = listaPlatos.filter(p => p.rentabilidadReal?.tieneCosto)
+    const gananciaTotal = auditados.reduce((acc, p) => acc + (p.rentabilidadReal?.gananciaTotalMes || 0), 0)
+    const costoTotal = auditados.reduce((acc, p) => acc + ((p.rentabilidadReal?.costoUnitario || 0) * p.unidades), 0)
+    return {
+      auditadosCount: auditados.length,
+      totalCount: listaPlatos.length,
+      gananciaTotal,
+      costoTotal
+    }
+  }, [listaPlatos])
+
+  // Métricas consolidadas por cuadrante
   const statsCuadrantes = useMemo(() => {
     if (resumen.cuadrantes) {
       return resumen.cuadrantes
     }
-    const totalFact = platos.reduce((acc, p) => acc + p.facturacionTotal, 0)
-    const totalUni = platos.reduce((acc, p) => acc + p.unidades, 0)
+    const totalFact = listaPlatos.reduce((acc, p) => acc + p.facturacionTotal, 0)
+    const totalUni = listaPlatos.reduce((acc, p) => acc + p.unidades, 0)
 
     const calcCuad = (cuad: 'estrella' | 'caballo' | 'rompecabezas' | 'lastre', accion: string): CuadranteStats => {
-      const items = platos.filter(p => p.cuadrante === cuad)
+      const items = listaPlatos.filter(p => p.cuadrante === cuad)
       const count = items.length
       const facturacionTotal = items.reduce((a, b) => a + b.facturacionTotal, 0)
       const unidadesTotal = items.reduce((a, b) => a + b.unidades, 0)
@@ -138,11 +293,11 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
       rompecabezas: calcCuad('rompecabezas', 'Impulsar visibilidad: mejorar foto y probar promos antes de retirar.'),
       lastre: calcCuad('lastre', 'Auditar complejidad: simplificar insumos o descontinuar platos sin rotación.')
     }
-  }, [resumen.cuadrantes, platos])
+  }, [resumen.cuadrantes, listaPlatos])
 
   // Filtrado y ordenamiento de platos
   const platosFiltrados = useMemo(() => {
-    return platos
+    return listaPlatos
       .filter(p => {
         if (filtroCuadrante !== 'todos' && p.cuadrante !== filtroCuadrante) return false
         if (categoriaSeleccionada !== 'todas' && p.categoria !== categoriaSeleccionada) return false
@@ -156,6 +311,12 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
         switch (orden) {
           case 'facturacion_desc':
             return b.facturacionTotal - a.facturacionTotal
+          case 'ganancia_desc': {
+            const ganA = a.rentabilidadReal?.gananciaTotalMes || 0
+            const ganB = b.rentabilidadReal?.gananciaTotalMes || 0
+            if (ganB !== ganA) return ganB - ganA
+            return b.facturacionTotal - a.facturacionTotal
+          }
           case 'unidades_desc':
             return b.unidades - a.unidades
           case 'precio_desc':
@@ -168,7 +329,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
             return b.facturacionTotal - a.facturacionTotal
         }
       })
-  }, [platos, filtroCuadrante, categoriaSeleccionada, busqueda, orden])
+  }, [listaPlatos, filtroCuadrante, categoriaSeleccionada, busqueda, orden])
 
   return (
     <div className="bg-white dark:bg-[#252525] rounded-3xl border border-slate-100 dark:border-[#3d3d3d] p-5 sm:p-7 shadow-sm space-y-6">
@@ -196,8 +357,27 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
           </div>
         </div>
 
-        {/* Umbrales de Corte y Botón ¿Cómo funciona? */}
+        {/* Umbrales de Corte, Rentabilidad y Botón ¿Cómo funciona? */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {resumenRentabilidad.auditadosCount > 0 ? (
+            <div className="flex items-center gap-2 text-xs bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-200">
+              <Coins size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="flex flex-wrap items-center gap-x-2">
+                <span>
+                  <strong className="font-extrabold">{resumenRentabilidad.auditadosCount}</strong> con costo:
+                </span>
+                <span className="font-black text-emerald-700 dark:text-emerald-300">
+                  +{formatearPrecio(resumenRentabilidad.gananciaTotal)} ganancia limpia en el mes
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs bg-slate-50 dark:bg-[#1e1e1e] px-3 py-2 rounded-xl border border-dashed border-slate-300 dark:border-[#383838] text-slate-500">
+              <Coins size={14} className="text-slate-400 shrink-0" />
+              <span>Ficha de costos: Carga el costo de tus platos para ver tu ganancia real</span>
+            </div>
+          )}
+
           <button
             onClick={() => setMostrarComoFunciona(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl border border-indigo-200/60 dark:border-indigo-800/40 transition-colors"
@@ -464,6 +644,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                 className="bg-transparent text-slate-700 dark:text-slate-200 font-bold focus:outline-none text-xs cursor-pointer"
               >
                 <option value="facturacion_desc">Mayor Facturación</option>
+                <option value="ganancia_desc">Mayor Ganancia Limpia en Mano ($)</option>
                 <option value="unidades_desc">Mayor Volumen (u.)</option>
                 <option value="precio_desc">Mayor Precio / Ticket</option>
                 <option value="unidades_asc">Menor Movimiento (u.)</option>
@@ -552,7 +733,8 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                   Presencia Comandas ⓘ
                 </span>
               </th>
-              <th className="px-4 py-3 text-right">Precio Promedio</th>
+              <th className="px-4 py-3 text-right">Precio Venta</th>
+              <th className="px-4 py-3 text-right">Ganancia Limpia</th>
               <th className="px-4 py-3 text-right">Total Facturado</th>
               <th className="px-4 py-3">Estrategia Recomendada</th>
               <th className="px-4 py-3 text-center">Acción</th>
@@ -561,7 +743,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
           <tbody className="divide-y divide-slate-100 dark:divide-[#333]">
             {platosFiltrados.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-slate-400 text-xs">
+                <td colSpan={10} className="px-4 py-10 text-center text-slate-400 text-xs">
                   No se encontraron productos con los filtros seleccionados.
                 </td>
               </tr>
@@ -650,6 +832,43 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                     {/* Precio Promedio */}
                     <td className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-300">
                       {formatearPrecio(p.precioPromedio)}
+                    </td>
+
+                    {/* Ganancia Limpia */}
+                    <td className="px-4 py-3 text-right">
+                      {p.rentabilidadReal?.tieneCosto ? (
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                              +{formatearPrecio(p.rentabilidadReal.gananciaLimpiaUnitaria)}
+                            </span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                              p.rentabilidadReal.estadoSalud === 'saludable'
+                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                                : p.rentabilidadReal.estadoSalud === 'moderado'
+                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                                : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                            }`}>
+                              {p.rentabilidadReal.porcentajeGananciaLimpia}%
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            Costo: {formatearPrecio(p.rentabilidadReal.costoUnitario)}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPlatoSeleccionado(p)
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold transition-colors border border-indigo-200/50 dark:border-indigo-800/40"
+                          title="Cargar costo express de este plato"
+                        >
+                          <PlusCircle size={12} />
+                          <span>+ Cargar costo</span>
+                        </button>
+                      )}
                     </td>
 
                     {/* Facturación */}
@@ -782,6 +1001,247 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                     de los pedidos
                   </span>
                 </div>
+              </div>
+
+              {/* ── FICHA DE COSTO RÁPIDO & RENTABILIDAD REAL ─────────────────────── */}
+              <div className="rounded-2xl border border-slate-200/90 dark:border-[#383838] p-4 bg-slate-50/70 dark:bg-[#202020] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                      <Coins size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                        Rentabilidad & Ganancia Limpia en Mano
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Cargá el costo de elaboración para ver cuánta plata real te deja este plato
+                      </p>
+                    </div>
+                  </div>
+
+                  {platoSeleccionado.rentabilidadReal?.tieneCosto && !editandoCosto && (
+                    <button
+                      onClick={() => setEditandoCosto(true)}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      <Pencil size={12} />
+                      <span>Modificar costo</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* SI YA TIENE COSTO Y NO ESTÁ EDITANDO: MÉTRICAS LIMPIAS Y RECOMENDACIÓN */}
+                {platoSeleccionado.rentabilidadReal?.tieneCosto && !editandoCosto ? (
+                  <div className="space-y-3 pt-1">
+                    {/* 3 Métricas en tarjetas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      
+                      {/* Plata limpia por plato */}
+                      <div className="bg-white dark:bg-[#262626] p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Plata limpia por plato</span>
+                        <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                          +{formatearPrecio(platoSeleccionado.rentabilidadReal.gananciaLimpiaUnitaria)}
+                        </p>
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                          Te queda el {platoSeleccionado.rentabilidadReal.porcentajeGananciaLimpia}% limpio
+                        </span>
+                      </div>
+
+                      {/* Ganancia del mes en mano */}
+                      <div className="bg-white dark:bg-[#262626] p-3 rounded-xl border border-slate-200/60 dark:border-[#383838]">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Ganancia de bolsillo mes</span>
+                        <p className="text-base font-black text-slate-800 dark:text-white mt-0.5">
+                          +{formatearPrecio(platoSeleccionado.rentabilidadReal.gananciaTotalMes)}
+                        </p>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Por {platoSeleccionado.unidades} u. vendidas
+                        </span>
+                      </div>
+
+                      {/* Costo de elaboración */}
+                      <div className="bg-white dark:bg-[#262626] p-3 rounded-xl border border-slate-200/60 dark:border-[#383838]">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Costo de elaboración</span>
+                        <p className="text-base font-black text-slate-700 dark:text-slate-300 mt-0.5">
+                          {formatearPrecio(platoSeleccionado.rentabilidadReal.costoUnitario)}
+                        </p>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Se come el {platoSeleccionado.rentabilidadReal.porcentajeInsumos}% del precio
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Desglose si existe */}
+                    {(platoSeleccionado.rentabilidadReal.insumoPrincipal || platoSeleccionado.rentabilidadReal.packaging) ? (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-[#262626] px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-[#383838]">
+                        <span className="font-semibold text-slate-600 dark:text-slate-300">Desglose:</span>
+                        {platoSeleccionado.rentabilidadReal.insumoPrincipal ? (
+                          <span>Ingredientes: <strong className="text-slate-800 dark:text-slate-100">{formatearPrecio(platoSeleccionado.rentabilidadReal.insumoPrincipal)}</strong></span>
+                        ) : null}
+                        {platoSeleccionado.rentabilidadReal.insumoPrincipal && platoSeleccionado.rentabilidadReal.packaging ? <span>•</span> : null}
+                        {platoSeleccionado.rentabilidadReal.packaging ? (
+                          <span>Packaging & descartables: <strong className="text-slate-800 dark:text-slate-100">{formatearPrecio(platoSeleccionado.rentabilidadReal.packaging)}</strong></span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {/* Semáforo de salud de costo y consejo de promo */}
+                    <div className="space-y-2">
+                      <div className={`p-2.5 rounded-xl border flex items-start gap-2 text-xs ${
+                        platoSeleccionado.rentabilidadReal.estadoSalud === 'saludable'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-200'
+                          : platoSeleccionado.rentabilidadReal.estadoSalud === 'moderado'
+                          ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-200'
+                          : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/40 text-rose-800 dark:text-rose-200'
+                      }`}>
+                        {platoSeleccionado.rentabilidadReal.estadoSalud === 'saludable' ? (
+                          <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle size={16} className={platoSeleccionado.rentabilidadReal.estadoSalud === 'moderado' ? 'text-amber-600 shrink-0 mt-0.5' : 'text-rose-600 shrink-0 mt-0.5'} />
+                        )}
+                        <div>
+                          <strong className="block font-bold">
+                            {platoSeleccionado.rentabilidadReal.estadoSalud === 'saludable' ? '🟢 Margen Excelente' : platoSeleccionado.rentabilidadReal.estadoSalud === 'moderado' ? '🟡 Margen Equilibrado' : '🔴 Atención con el Costo'}
+                          </strong>
+                          <span className="leading-snug">{platoSeleccionado.rentabilidadReal.explicacionSalud}</span>
+                        </div>
+                      </div>
+
+                      {/* Recomendación de promo segura */}
+                      {platoSeleccionado.rentabilidadReal.descuentoSeguroPct > 0 ? (
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-indigo-900 dark:text-indigo-200 text-xs">
+                          <ShieldCheck size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                          <span>
+                            <strong>Descuento seguro en promociones:</strong> Podés rebajarlo hasta un <strong>{platoSeleccionado.rentabilidadReal.descuentoSeguroPct}% (-{formatearPrecio(platoSeleccionado.rentabilidadReal.ahorroPromoSegura)})</strong> sin poner en riesgo tu ganancia.
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-[#252525] text-slate-600 dark:text-slate-300 text-xs">
+                          <ShieldCheck size={16} className="text-slate-400 shrink-0" />
+                          <span>
+                            <strong>Cuidado con los descuentos:</strong> Como el costo absorbe más del 40% del precio, <strong>no conviene hacer rebajas de precio directas</strong> en este plato.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* FORMULARIO DE CARGA RÁPIDA */
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                        ¿Cuánto te sale elaborar una unidad de este plato? (Ingredientes + Packaging)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                          <input
+                            type="text"
+                            placeholder="Ej: 3.500"
+                            value={costoInput}
+                            onChange={e => {
+                              const val = e.target.value.replace(/[^0-9]/g, '')
+                              setCostoInput(val ? Number(val).toLocaleString('es-AR') : '')
+                            }}
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#282828] rounded-xl border border-slate-300 dark:border-[#444] text-slate-900 dark:text-white font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <button
+                          disabled={guardandoCosto}
+                          onClick={() => guardarCostoPlato(platoSeleccionado.id)}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+                        >
+                          {guardandoCosto ? (
+                            <>
+                              <RefreshCw size={14} className="animate-spin" />
+                              <span>Guardando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save size={14} />
+                              <span>Guardar Costo</span>
+                            </>
+                          )}
+                        </button>
+                        {platoSeleccionado.rentabilidadReal?.tieneCosto && (
+                          <button
+                            onClick={() => setEditandoCosto(false)}
+                            className="px-3 py-2 bg-slate-200 dark:bg-[#333] hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Toggle opcional para separar ingredientes de packaging */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarDesglose(!mostrarDesglose)}
+                        className="text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>{mostrarDesglose ? '▼ Ocultar detalle de ingredientes' : '► Opcional: Separar ingredientes de packaging'}</span>
+                      </button>
+
+                      {mostrarDesglose && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 p-2.5 bg-white dark:bg-[#282828] rounded-xl border border-slate-200 dark:border-[#383838]">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                              Ingredientes (Carne, pan, verdura...)
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                              <input
+                                type="text"
+                                placeholder="Ej: 3.000"
+                                value={desgloseInsumo}
+                                onChange={e => {
+                                  const val = e.target.value.replace(/[^0-9]/g, '')
+                                  setDesgloseInsumo(val ? Number(val).toLocaleString('es-AR') : '')
+                                  const insumoNum = Number(val) || 0
+                                  const packNum = Number(desglosePackaging.replace(/[^0-9]/g, '')) || 0
+                                  if (insumoNum > 0 || packNum > 0) {
+                                    setCostoInput((insumoNum + packNum).toLocaleString('es-AR'))
+                                  }
+                                }}
+                                className="w-full pl-6 pr-2 py-1.5 text-xs bg-slate-50 dark:bg-[#202020] rounded-lg border border-slate-200 dark:border-[#444] text-slate-900 dark:text-white font-bold"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                              Packaging (Caja, bolsa, servilleta...)
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                              <input
+                                type="text"
+                                placeholder="Ej: 500"
+                                value={desglosePackaging}
+                                onChange={e => {
+                                  const val = e.target.value.replace(/[^0-9]/g, '')
+                                  setDesglosePackaging(val ? Number(val).toLocaleString('es-AR') : '')
+                                  const packNum = Number(val) || 0
+                                  const insumoNum = Number(desgloseInsumo.replace(/[^0-9]/g, '')) || 0
+                                  if (insumoNum > 0 || packNum > 0) {
+                                    setCostoInput((insumoNum + packNum).toLocaleString('es-AR'))
+                                  }
+                                }}
+                                className="w-full pl-6 pr-2 py-1.5 text-xs bg-slate-50 dark:bg-[#202020] rounded-lg border border-slate-200 dark:border-[#444] text-slate-900 dark:text-white font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                      💡 <strong>Cálculo al instante:</strong> Con ingresar el costo una sola vez, Chefsy proyecta tu margen limpio y te avisa qué descuento podés hacer en promociones sin perder plata.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* 1. ¿Por qué está aquí? */}
