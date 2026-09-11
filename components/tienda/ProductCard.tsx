@@ -2,19 +2,27 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
+<<<<<<< HEAD
 import { Plus, Flame, Star, Leaf, Sparkles } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+=======
+import { Plus, Utensils } from 'lucide-react'
+import { formatearPrecio, optimizarUrlImagen, generarBlurUrl } from '@/lib/utils'
+import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
+import { esImagenValida } from '@/lib/tienda-helpers'
+>>>>>>> 44305eb (feat: tarjetas de productos sin imagen para tienda oficial segun diseno tienda-v2 y ruta /tienda)
 
 interface ProductCardProps {
-  prod:        ProductoCatalogo
-  meta:        MetaProducto | undefined | null
-  detalles:    DetallesComplementarios
-  agotado:     boolean
-  imagenFinal: string
-  index:       number
+  prod:         ProductoCatalogo
+  meta:         MetaProducto | undefined | null
+  detalles:     DetallesComplementarios
+  agotado:      boolean
+  imagenFinal:  string
+  tieneImagen?: boolean
+  index:        number
   onAbrirModal: (prod: ProductoCatalogo) => void
 }
 
@@ -24,6 +32,7 @@ function ProductCard({
   detalles,
   agotado,
   imagenFinal,
+  tieneImagen,
   index,
   onAbrirModal
 }: ProductCardProps) {
@@ -54,6 +63,7 @@ function ProductCard({
     return () => observer.disconnect()
   }, [index])
 
+<<<<<<< HEAD
   // Optimización de imágenes inteligente
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
   const isCdnOptimized =
@@ -66,9 +76,13 @@ function ProductCard({
   const blurSrc = generarBlurUrl(rawSrc)
   const esPrioritario = index < 4
 
+=======
+  // Nombre visible: el admin puede renombrarlo en el panel
+>>>>>>> 44305eb (feat: tarjetas de productos sin imagen para tienda oficial segun diseno tienda-v2 y ruta /tienda)
   const nombreVisible = meta?.nombre_publico || prod.nombre
   const descripcionVisible = meta?.descripcion_publica || detalles.desc
 
+<<<<<<< HEAD
   // Cálculo de Descuento si existe precio anterior / promocional
   const precioAnterior = (meta as any)?.precio_anterior || (prod as any)?.precio_anterior
   const porcentajeDescuento =
@@ -87,6 +101,102 @@ function ProductCard({
     compacto_lista:
       'bg-zinc-900/70 hover:bg-zinc-900 border border-white/5 p-2.5 rounded-xl items-center',
   }[estiloTarjeta] || 'bg-white/[0.05] p-3.5 rounded-2xl border border-white/10'
+=======
+  // Comprobación rigurosa de si el producto cuenta con imagen genuina
+  const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
+  const tieneFoto = tieneImagen !== undefined ? tieneImagen : esImagenValida(rawSrc)
+
+  // ── RENDER 1: Tarjeta para productos SIN imagen (tienda-v2 visual spec) ─────
+  if (!tieneFoto) {
+    return (
+      <div
+        ref={ref}
+        onClick={() => !agotado && onAbrirModal(prod)}
+        style={{
+          contentVisibility: 'auto',
+          containIntrinsicSize: '0 280px',
+          // Delay escalonado según posición relativa
+          transitionDelay: visible ? `${(index % 5) * 55}ms` : '0ms',
+        }}
+        className={`group relative flex flex-col justify-between w-full rounded-3xl overflow-hidden cursor-pointer touch-manipulation
+          bg-[#0B101B] border border-white/[0.08] shadow-lg shadow-black/40
+          transition-all duration-300 hover:border-white/20 active:scale-[0.99]
+          ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
+          ${agotado ? 'opacity-50 grayscale' : ''}
+        `}
+      >
+        {/* Parte Superior: Bloque oscuro con squircle Utensils + texto CHEFSY */}
+        <div className="relative w-full h-44 sm:h-48 flex flex-col items-center justify-center bg-gradient-to-b from-[#162032]/40 via-[#0e1626]/20 to-[#0B101B] pt-4 pb-2 px-4 select-none">
+          {/* Squircle contenedor */}
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+            <Utensils className="w-7 h-7 text-slate-400 stroke-[1.75]" />
+          </div>
+
+          {/* Texto CHEFSY debajo del squircle */}
+          <span className="text-[10px] font-bold tracking-[0.25em] text-slate-400 uppercase mt-3">
+            CHEFSY
+          </span>
+
+          {/* Badge Combo */}
+          {prod.esCombo && (
+            <span className="absolute top-3 left-3 text-[8px] font-black bg-chefsy text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-lg">
+              Combo
+            </span>
+          )}
+
+          {/* Overlay Agotado */}
+          {agotado && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-10">
+              <span className="bg-red-500 text-white font-extrabold text-[9px] px-3 py-1 rounded-lg uppercase tracking-wider shadow-lg">
+                Agotado
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Parte Inferior: Título, divisor, PRECIO y botón + Agregar */}
+        <div className="p-5 pt-1 flex flex-col justify-between flex-1 bg-[#0B101B]">
+          <h4 className="font-bold text-lg sm:text-xl text-white tracking-tight leading-snug text-left group-hover:text-chefsy-300 transition-colors">
+            {nombreVisible}
+          </h4>
+
+          {/* Línea divisoria */}
+          <div className="w-full h-px bg-white/[0.07] my-3.5" />
+
+          {/* Fila: Precio a la izquierda, botón a la derecha */}
+          <div className="flex items-end justify-between gap-3">
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                PRECIO
+              </span>
+              <span className="text-emerald-400 font-bold text-lg sm:text-xl leading-tight mt-0.5">
+                {formatearPrecio(prod.precio)}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!agotado) onAbrirModal(prod)
+              }}
+              className="bg-[#059669] hover:bg-[#10b981] active:scale-95 text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Agregar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── RENDER 2: Tarjeta para productos CON imagen genuina ────────────────────
+  const isCloudinary = rawSrc.includes('res.cloudinary.com')
+  const optimizedSrc = optimizarUrlImagen(rawSrc, 250)
+  const blurSrc = generarBlurUrl(rawSrc)
+  const esPrioritario = index < 4
+>>>>>>> 44305eb (feat: tarjetas de productos sin imagen para tienda oficial segun diseno tienda-v2 y ruta /tienda)
 
   return (
     <div
@@ -234,6 +344,7 @@ export default React.memo(ProductCard, (prevProps, nextProps) => {
     prevProps.prod.stock       === nextProps.prod.stock       &&
     prevProps.agotado          === nextProps.agotado          &&
     prevProps.imagenFinal      === nextProps.imagenFinal      &&
+    prevProps.tieneImagen      === nextProps.tieneImagen      &&
     prevProps.meta?.descripcion_publica === nextProps.meta?.descripcion_publica &&
     prevProps.meta?.nombre_publico      === nextProps.meta?.nombre_publico      &&
     prevProps.meta?.imagen_url          === nextProps.meta?.imagen_url

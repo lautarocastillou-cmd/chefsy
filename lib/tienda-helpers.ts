@@ -6,91 +6,43 @@
 
 import { metadataRespaldo } from '@/datos/productos'
 
+// Validador estricto de URLs de imagen genuinas
+export function esImagenValida(url?: string | null): boolean {
+  if (!url) return false
+  const u = url.trim()
+  if (!u) return false
+  if (u.includes('unsplash.com')) return false
+  if (u.includes('upload_1782187748534_ly8iup')) return false
+  if (u.startsWith('data:')) return false
+  return true
+}
+
 // --- DESCRIPCIONES E IMÁGENES COMPLEMENTARIAS DE PRODUCTOS ---
 export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: string, idProducto?: string) => {
   if (idProducto && metadataRespaldo[idProducto]) {
     const meta = metadataRespaldo[idProducto]
-    if (meta.descripcion_publica || meta.imagen_url) {
+    const validImg = esImagenValida(meta.imagen_url) ? meta.imagen_url! : ''
+    if (meta.descripcion_publica || validImg) {
       return {
         desc: meta.descripcion_publica || '',
-        img: meta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+        img: validImg
       }
     }
   }
   const foundMeta = Object.entries(metadataRespaldo).find(([k, v]) => k.startsWith(categoriaId) && v.nombre_publico?.toLowerCase().trim() === nombre.toLowerCase().trim())?.[1]
-  if (foundMeta && (foundMeta.descripcion_publica || foundMeta.imagen_url)) {
-    return {
-      desc: foundMeta.descripcion_publica || '',
-      img: foundMeta.imagen_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+  if (foundMeta) {
+    const validImg = esImagenValida(foundMeta.imagen_url) ? foundMeta.imagen_url! : ''
+    if (foundMeta.descripcion_publica || validImg) {
+      return {
+        desc: foundMeta.descripcion_publica || '',
+        img: validImg
+      }
     }
   }
 
-  if (categoriaId === 'lomos-y-milas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'patys') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'pizzas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'zapping') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'choripan') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'mila-al-plato') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'tartas-xl') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'bebidas') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
-  if (categoriaId === 'promos') {
-    return {
-      desc: '',
-      img: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=600&q=80'
-    }
-  }
-  
   return {
     desc: '',
-    img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+    img: ''
   }
 }
 
