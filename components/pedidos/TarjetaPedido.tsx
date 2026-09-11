@@ -42,6 +42,7 @@ const ModalBreadcrumbTrail = dynamic(() => import('@/components/cadeteria/ModalB
 })
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import BadgeSmartBatch from './BadgeSmartBatch'
+import SelectorCadetePedido from './SelectorCadetePedido'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
 import { Sliders, Zap } from 'lucide-react'
@@ -499,27 +500,15 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             </span>
           )}
           {pedido.tipoEntrega === 'delivery' && (
-            <select
-              value={pedido.cadete_id || ''}
-              onChange={(e) => {
-                const selectedId = e.target.value
-                const cad = cadetes.find(c => c.id === selectedId)
-                asignarCadete(
-                  pedido.id,
-                  selectedId || null,
-                  cad ? cad.nombre : null
-                )
+            <SelectorCadetePedido
+              cadeteId={pedido.cadete_id || null}
+              cadeteNombre={pedido.cadete_nombre || null}
+              cadetes={cadetes}
+              onAsignar={(selectedId, nombreCadete) => {
+                asignarCadete(pedido.id, selectedId, nombreCadete)
               }}
               disabled={soloLectura}
-              className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
-            >
-              <option value="">Sin Cadete</option>
-              {cadetes.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} {c.gps_activo ? '(GPS)' : '(Sin GPS)'}
-                </option>
-              ))}
-            </select>
+            />
           )}
           {pedido.metodoPago === 'transferencia' && !soloLectura && (
             <div className="flex items-center gap-1.5 ml-1">
