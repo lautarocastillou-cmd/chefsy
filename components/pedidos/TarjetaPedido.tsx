@@ -289,6 +289,31 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
   const imprimirSilencioso = async (tipo: 'ticket' | 'cocina') => {
     setModalImpresion(false)
     await gestorImpresora.imprimirPedido(pedido, tipo)
+    if (pedido.estado === 'nuevo') {
+      try {
+        await cambiarEstado(pedido.id, 'en_cocina')
+      } catch (err) {
+        console.error('Error auto-avanzando estado al imprimir:', err)
+      }
+    }
+  }
+
+  const copiarLinkSeguimientoConAutoAvance = async () => {
+    const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+    const noEstaEnCamino = pedido.estado !== 'en_camino'
+    const ok = await copiarConNotificacion(
+      url,
+      noEstaEnCamino
+        ? '¡Link copiado y pedido marcado en camino! 🛵'
+        : '¡Link de seguimiento copiado al portapapeles!'
+    )
+    if (ok && noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
+      try {
+        await cambiarEstado(pedido.id, 'en_camino')
+      } catch (err) {
+        console.error('Error auto-avanzando estado al copiar link:', err)
+      }
+    }
   }
 
   return (
@@ -543,7 +568,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               }}
               className="text-[10px] text-chefsy-700 hover:text-chefsy-800 bg-chefsy-50 hover:bg-chefsy-100 px-1.5 py-0.5 rounded transition-colors font-medium ml-1"
             >
-              + Nota
+              + Aclaración
             </button>
           )}
         </div>
@@ -598,7 +623,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               "text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100/50 dark:border-amber-800/40 rounded-md px-2 py-1.5 flex items-start gap-1 relative group",
               !soloLectura && "cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-950/50 transition-colors"
             )}
-            title={!soloLectura ? "Haz clic para editar la nota" : undefined}
+            title={!soloLectura ? "Hacé clic para editar la aclaración" : undefined}
           >
             <span className="shrink-0">💬</span>
             <p className="flex-1 pr-8">{pedido.observaciones}</p>
@@ -628,15 +653,12 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             className="flex-1 min-w-[80px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
             title="Ver trayecto real recorrido por la moto"
           >
-            <Bike size={13} /> Repetir Ruta
+            <Bike size={13} /> Ver Trayecto
           </button>
 
           {!esFinal && (
             <button
-              onClick={async () => {
-                const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-                await copiarConNotificacion(url, '¡Link de seguimiento copiado al portapapeles!')
-              }}
+              onClick={copiarLinkSeguimientoConAutoAvance}
               className="flex-1 min-w-[80px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
             >
               <Copy size={13} /> Link
@@ -755,6 +777,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
           onImprimir={() => setModalImpresion(true)}
           onCopiarTicket={copiarTicketCliente}
           onCopiarWhatsApp={copiarParaWhatsApp}
+          onCopiarLinkSeguimiento={copiarLinkSeguimientoConAutoAvance}
           onVerMapa={() => setVerMapa(true)}
           onRevertirEstado={() => revertirEstado(pedido.id)}
           onCancelar={() => {

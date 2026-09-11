@@ -306,7 +306,7 @@ export default function EditorTienda() {
       <div className="w-88 sm:w-96 bg-zinc-950 border-r border-slate-800/80 flex flex-col z-50 shadow-2xl relative shrink-0">
         
         {/* Cabecera Superior del Panel */}
-        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900/80 backdrop-blur-md">
+        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900">
           <Link
             href="/configuracion"
             className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all active:scale-95 shadow-sm"
@@ -1085,7 +1085,7 @@ export default function EditorTienda() {
       <div className="flex-1 relative overflow-hidden flex flex-col bg-[#07090E]">
         
         {/* BARRA SUPERIOR STUDIO: EMULADORES, ZOOM, UNDO/REDO */}
-        <div className="h-14 border-b border-slate-800/80 bg-zinc-950/90 backdrop-blur-xl px-6 flex items-center justify-between shrink-0 z-40">
+        <div className="h-14 border-b border-slate-800/80 bg-zinc-950 px-6 flex items-center justify-between shrink-0 z-40">
           
           {/* Deshacer / Rehacer */}
           <div className="flex items-center gap-1.5">
@@ -1268,7 +1268,7 @@ export default function EditorTienda() {
 
         {/* Badge Flotante "Live Canvas" */}
         <div className="absolute bottom-5 right-6 flex items-center gap-2 pointer-events-none z-30">
-          <div className="bg-zinc-900/90 border border-white/10 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-md">
+          <div className="bg-zinc-900 border border-white/10 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Chefsy Engine Activo</span>
           </div>

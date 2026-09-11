@@ -40,6 +40,7 @@ function ProductCard({
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(index < 4)
   const [imgError, setImgError] = useState(false)
+  const [expandido, setExpandido] = useState(false)
 
   useEffect(() => {
     if (index < 4) return
@@ -217,9 +218,40 @@ function ProductCard({
         </div>
 
         {descripcionVisible && estiloTarjeta !== 'compacto_lista' ? (
-          <p className="text-[11px] sm:text-xs md:text-sm text-slate-300/90 font-medium leading-snug mt-1 line-clamp-2">
-            {descripcionVisible}
-          </p>
+          <div className="mt-1">
+            <p
+              className={cn(
+                "text-[11px] sm:text-xs md:text-sm text-slate-300/90 font-medium leading-snug",
+                !expandido && "line-clamp-2"
+              )}
+            >
+              {descripcionVisible}
+              {expandido && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandido(false)
+                  }}
+                  className="text-amber-400/90 hover:text-amber-300 font-bold text-[10px] sm:text-[11px] ml-1.5 hover:underline cursor-pointer inline"
+                >
+                  ver menos
+                </button>
+              )}
+            </p>
+            {!expandido && descripcionVisible.length > 60 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpandido(true)
+                }}
+                className="text-amber-400 hover:text-amber-300 font-bold text-[10px] sm:text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
+              >
+                ... ver más
+              </button>
+            )}
+          </div>
         ) : null}
       </div>
 

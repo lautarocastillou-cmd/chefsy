@@ -70,7 +70,7 @@ export default function ModalCoccionEmpanada({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-150 select-none"
       onClick={onCerrar}
       role="dialog"
       aria-modal="true"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido } from '@/tipos'
+import { usarPedidos } from '@/contexto/PedidosContexto'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import { X, ExternalLink, MapPin, Copy, Bike, Check } from 'lucide-react'
 import { copiarConNotificacion } from '@/lib/notificaciones'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ModalVistaMapa({ pedido, onClose }: Props) {
+  const { cambiarEstado } = usarPedidos()
   const [montado, setMontado] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
@@ -35,10 +37,21 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
 
   const copiarLinkRastreo = async () => {
     const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-    const ok = await copiarConNotificacion(url, '¡Link de seguimiento copiado al portapapeles!')
+    const noEstaEnCamino = pedido.estado !== 'en_camino'
+    const mensaje = noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
+      ? '¡Link copiado y pedido marcado en camino! 🛵'
+      : '¡Link de seguimiento copiado al portapapeles!'
+    const ok = await copiarConNotificacion(url, mensaje)
     if (ok) {
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
+      if (noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
+        try {
+          await cambiarEstado(pedido.id, 'en_camino')
+        } catch (err) {
+          console.error('Error auto-avanzando estado al copiar link:', err)
+        }
+      }
     }
   }
 

@@ -67,7 +67,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
           <section className="bg-slate-50/50 dark:bg-slate-900/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400">1</span>
-              Tipo de pedido
+              Entrega (Delivery · Mostrador · Salón)
             </h3>
             <SelectorTipoEntrega valor={tipoEntrega} onCambio={manejarTipoEntrega} />
           </section>
@@ -112,10 +112,10 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="text-sm">👤</span> Cliente Frecuente Detectado
+                        <span className="text-sm">✨</span> Cliente registrado
                       </span>
                       <span className="text-[9px] font-black bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-sm">
-                        AUTOCOMPLETAR →
+                        Cargar datos y dirección →
                       </span>
                     </div>
                     <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
@@ -167,7 +167,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
           <section className="bg-slate-50/50 dark:bg-slate-900/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400">4</span>
-              Pago y Cierre
+              Cobro y Detalles
             </h3>
 
             <div className="space-y-4 pt-2">
@@ -367,7 +367,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
       )}
 
       {/* ── Barra de Confirmación Inferior Fija para Móvil ──────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950 border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3 max-w-md mx-auto">
           <div className="min-w-0 flex-1">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">

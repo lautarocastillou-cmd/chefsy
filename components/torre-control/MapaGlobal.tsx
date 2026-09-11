@@ -726,7 +726,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       </div>
 
       {/* Widget Flotante: Velocímetro y Telemetría en Vivo */}
-      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[280px] sm:max-w-xs bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
+      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[280px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
         <div
           onClick={() => setMostrarPanelVelocidad(!mostrarPanelVelocidad)}
           className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"

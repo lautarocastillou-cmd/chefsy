@@ -214,7 +214,7 @@ export default function ConsultorChefsyModal({
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-in fade-in duration-200">
       <div
         className="bg-white dark:bg-[#202020] w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-[#383838] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}

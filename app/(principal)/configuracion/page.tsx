@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff } from 'lucide-react'
 import Link from 'next/link'
 
 // --- COMPONENTE DE USUARIOS ---
@@ -239,6 +239,14 @@ function PestanaParametros() {
   // Estado local para habilitar/deshabilitar el portal web de cadetería
   const [portalCadeteriaHabilitado, setPortalCadeteriaHabilitado] = useState(true)
 
+  // Estados locales para el cartel de alerta flotante de pedidos demorados (estilo alarma)
+  const [alertaHabilitada, setAlertaHabilitada] = useState(true)
+  const [alertaCocinaMinutos, setAlertaCocinaMinutos] = useState(25)
+  const [alertaListoMinutos, setAlertaListoMinutos] = useState(12)
+  const [alertaTotalMinutos, setAlertaTotalMinutos] = useState(40)
+  const [alertaAplazoMinutos, setAlertaAplazoMinutos] = useState(5)
+  const [alertaSonidoHabilitado, setAlertaSonidoHabilitado] = useState(true)
+
   const [guardando, setGuardando] = useState(false)
 
   // Cargar valores iniciales desde la configuración centralizada
@@ -256,6 +264,16 @@ function PestanaParametros() {
 
       setMontoBaseCadete((configuracionOperativa as any).montoBaseCadete ?? 4000)
       setPortalCadeteriaHabilitado((configuracionOperativa as any).portalCadeteriaHabilitado ?? true)
+
+      const confAlerta = (configuracionOperativa as any).alertaCriticaFlotante
+      if (confAlerta) {
+        setAlertaHabilitada(confAlerta.habilitada !== undefined ? Boolean(confAlerta.habilitada) : true)
+        setAlertaCocinaMinutos(Number(confAlerta.tiempoCocinaMinutos ?? 25))
+        setAlertaListoMinutos(Number(confAlerta.tiempoListoMinutos ?? 12))
+        setAlertaTotalMinutos(Number(confAlerta.tiempoTotalMinutos ?? 40))
+        setAlertaAplazoMinutos(Number(confAlerta.tiempoAplazoMinutos ?? 5))
+        setAlertaSonidoHabilitado(confAlerta.sonidoHabilitado !== undefined ? Boolean(confAlerta.sonidoHabilitado) : true)
+      }
     }
   }, [configuracionOperativa])
 
@@ -278,6 +296,14 @@ function PestanaParametros() {
       },
       montoBaseCadete: Number(montoBaseCadete),
       portalCadeteriaHabilitado: nuevoValor,
+      alertaCriticaFlotante: {
+        habilitada: Boolean(alertaHabilitada),
+        tiempoCocinaMinutos: Number(alertaCocinaMinutos),
+        tiempoListoMinutos: Number(alertaListoMinutos),
+        tiempoTotalMinutos: Number(alertaTotalMinutos),
+        tiempoAplazoMinutos: Number(alertaAplazoMinutos),
+        sonidoHabilitado: Boolean(alertaSonidoHabilitado),
+      },
     }
 
     await guardarConfiguracionOperativa(
@@ -306,6 +332,14 @@ function PestanaParametros() {
       },
       montoBaseCadete: Number(montoBaseCadete),
       portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
+      alertaCriticaFlotante: {
+        habilitada: Boolean(alertaHabilitada),
+        tiempoCocinaMinutos: Number(alertaCocinaMinutos),
+        tiempoListoMinutos: Number(alertaListoMinutos),
+        tiempoTotalMinutos: Number(alertaTotalMinutos),
+        tiempoAplazoMinutos: Number(alertaAplazoMinutos),
+        sonidoHabilitado: Boolean(alertaSonidoHabilitado),
+      },
     }
 
     await guardarConfiguracionOperativa(nuevaConfig as any, 'Configuración operativa guardada exitosamente.')
@@ -326,6 +360,13 @@ function PestanaParametros() {
       setCocinaDemoradoAltaMinutos(30)
       setMontoBaseCadete(4000)
       setPortalCadeteriaHabilitado(true)
+
+      setAlertaHabilitada(true)
+      setAlertaCocinaMinutos(25)
+      setAlertaListoMinutos(12)
+      setAlertaTotalMinutos(40)
+      setAlertaAplazoMinutos(5)
+      setAlertaSonidoHabilitado(true)
     }
   }
 
@@ -377,6 +418,140 @@ function PestanaParametros() {
             Este dinero base se sumará automáticamente a lo recaudado por viajes para cada cadete en Cadetería y en Cierre de Caja (Ej: $4.000, $6.000).
           </span>
         </div>
+      </div>
+
+      {/* Tarjeta: Cartel Flotante de Alerta de Demora (Estilo Alarma) */}
+      <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-5 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-100 dark:border-amber-900/30 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+              <Bell size={18} />
+            </span>
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                Cartel Flotante de Pedidos Demorados (Estilo Alarma)
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Aviso persistente en pantalla que no se cierra solo hasta avanzar el pedido o tocar "Aplazar".
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Switch Sonido */}
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <Volume2 size={15} className={alertaSonidoHabilitado ? 'text-amber-500' : 'text-slate-400'} />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sonido</span>
+              <input
+                type="checkbox"
+                checked={alertaSonidoHabilitado}
+                onChange={(e) => setAlertaSonidoHabilitado(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+
+            {/* Switch Activar Cartel */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={alertaHabilitada}
+                onChange={(e) => setAlertaHabilitada(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {alertaHabilitada ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            <div>
+              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-200">
+                Demora en Cocina
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  value={alertaCocinaMinutos}
+                  onChange={(e) => setAlertaCocinaMinutos(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500/50"
+                  required
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">min</span>
+              </div>
+              <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
+                Dispara si supera este tiempo preparándose (Por defecto: 25)
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-200">
+                Demora en Listo / Salida
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  value={alertaListoMinutos}
+                  onChange={(e) => setAlertaListoMinutos(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500/50"
+                  required
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">min</span>
+              </div>
+              <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
+                Dispara si queda esperando cadete o entrega (Por defecto: 12)
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-200">
+                Demora Total del Pedido
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  value={alertaTotalMinutos}
+                  onChange={(e) => setAlertaTotalMinutos(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500/50"
+                  required
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">min</span>
+              </div>
+              <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
+                Dispara por tiempo total acumulado (Por defecto: 40)
+              </span>
+            </div>
+
+            <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-xl p-3">
+              <label className="block text-xs font-bold mb-1 text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <BellOff size={13} /> Tiempo de Aplazo (Snooze)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={alertaAplazoMinutos}
+                  onChange={(e) => setAlertaAplazoMinutos(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 px-3 py-2 rounded-xl text-sm font-black outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-800 dark:text-white"
+                  required
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">min</span>
+              </div>
+              <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-1 block font-medium">
+                Al tocar "Aplazar", el cartel se silencia por esta cantidad de minutos antes de insistir.
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 italic">
+            El cartel flotante persistente de demora está actualmente desactivado.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

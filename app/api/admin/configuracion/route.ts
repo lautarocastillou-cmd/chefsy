@@ -38,11 +38,23 @@ export async function GET() {
       ? Number(prioridades.montoBaseCadete)
       : (configuracionFallback as any).montoBaseCadete ?? 4000
 
+    const alertaCriticaFlotante = prioridades.alertaCriticaFlotante !== undefined
+      ? prioridades.alertaCriticaFlotante
+      : (configuracionFallback as any).alertaCriticaFlotante ?? {
+          habilitada: true,
+          tiempoCocinaMinutos: 25,
+          tiempoListoMinutos: 12,
+          tiempoTotalMinutos: 40,
+          tiempoAplazoMinutos: 5,
+          sonidoHabilitado: true,
+        }
+
     return NextResponse.json({
       limites: data.limites || configuracionFallback.limites,
       prioridades,
       montoBaseCadete,
       portalCadeteriaHabilitado,
+      alertaCriticaFlotante,
     })
   } catch (error: any) {
     console.error('[API Config] Error al leer la configuración:', error)
@@ -63,7 +75,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { limites, prioridades, montoBaseCadete, portalCadeteriaHabilitado } = body
+    const { limites, prioridades, montoBaseCadete, portalCadeteriaHabilitado, alertaCriticaFlotante } = body
 
     if (!limites || !prioridades) {
       return NextResponse.json(
@@ -74,11 +86,12 @@ export async function POST(request: Request) {
 
     const habilitado = portalCadeteriaHabilitado !== undefined ? Boolean(portalCadeteriaHabilitado) : true
     const monto = Number(montoBaseCadete ?? 4000)
+    const alerta = alertaCriticaFlotante || prioridades.alertaCriticaFlotante || (configuracionFallback as any).alertaCriticaFlotante
 
     // Guardar dentro de JSONB prioridades (compatible 100% con Postgres sin columnas extra)
     const prioridadesActualizadas = typeof prioridades === 'object' && prioridades !== null
-      ? { ...prioridades, montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado }
-      : { montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado }
+      ? { ...prioridades, montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado, alertaCriticaFlotante: alerta }
+      : { montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado, alertaCriticaFlotante: alerta }
 
     const supabase = obtenerSupabaseAdmin()
 

@@ -62,24 +62,24 @@ export default function BannerSugerenciasRuta() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[11px] font-black tracking-wider uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full">
-                    💡 Ruta Inteligente ({grupo.pedidos.length} pedidos)
+                    💡 Oportunidad: Viaje Conjunto ({grupo.pedidos.length} pedidos)
                   </span>
                   <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
                     <MapPin size={12} /> A solo {grupo.distanciaMaximaMetros}m entre sí
                   </span>
                 </div>
                 <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm mt-1 truncate">
-                  Entrega conjunta para {nombresClientes}
+                  Entrega en la misma zona: {nombresClientes}
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                  Total acumulado: <strong>{formatearPrecio(totalGrupo)}</strong> • Ahorrá 1 viaje asignando al mismo cadete.
+                  Total acumulado: <strong>{formatearPrecio(totalGrupo)}</strong> • Los domicilios están pegados: despachalos juntos en una sola moto.
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 w-full md:w-auto shrink-0 flex-wrap">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 hidden lg:inline">
-                Asignar ruta a:
+                Despachar ambos con:
               </span>
               <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                 {cadetes.filter((c) => c.gps_activo).map((c) => {

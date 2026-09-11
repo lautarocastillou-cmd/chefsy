@@ -519,7 +519,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm sm:text-base font-black text-white truncate">
-                  Historial de Ruta (Breadcrumb Trail)
+                  Trayecto Real de la Moto
                 </h2>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold">
                   Pedido #{pedido.id ? pedido.id.slice(-6).toUpperCase() : ''}
@@ -598,7 +598,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
           {/* Telemetría Flotante en Vivo */}
-          <div className="absolute top-3 right-3 z-[500] bg-slate-900/95 border border-slate-700 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 backdrop-blur-none pointer-events-none min-w-[130px]">
+          <div className="absolute top-3 right-3 z-[500] bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 pointer-events-none min-w-[130px]">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-400">Punto:</span>
               <strong className="text-white font-mono">{datosMomentoActual.indice} de {puntos.length}</strong>

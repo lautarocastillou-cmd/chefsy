@@ -129,6 +129,28 @@ export function reproducirSonidoEntregaExitosa() {
   } catch {}
 }
 
+export function reproducirAlarmaDemora() {
+  const ctx = obtenerAudioContext()
+  if (!ctx) return
+  try {
+    const playTone = (freq: number, start: number, duration: number, volume: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, start)
+      gain.gain.setValueAtTime(volume, start)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + duration)
+    }
+    const t = ctx.currentTime
+    playTone(520, t, 0.12, 0.14)
+    playTone(620, t + 0.12, 0.16, 0.16)
+  } catch {}
+}
+
 // ── Proveedor de Tema y Notificaciones ─────────────────────────────────────
 
 export function ProveedorTemaNotificacion({ children }: { children: ReactNode }) {
@@ -289,7 +311,7 @@ function ToastItem({
     <div
       style={{ willChange: 'transform, opacity' }}
       className={cn(
-        'flex items-center gap-2.5 bg-[#0f172a]/95 backdrop-blur-md border border-white/20 text-white rounded-full px-4 sm:px-5 py-2 sm:py-2.5 shadow-[0_20px_30px_-5px_rgba(0,0,0,0.8),0_0_15px_0_rgba(0,0,0,0.4)] pointer-events-auto select-none max-w-[92vw] transform-gpu transition-all duration-300 ease-out',
+        'flex items-center gap-2.5 bg-[#0f172a] border border-white/20 text-white rounded-full px-4 sm:px-5 py-2 sm:py-2.5 shadow-[0_20px_30px_-5px_rgba(0,0,0,0.8),0_0_15px_0_rgba(0,0,0,0.4)] pointer-events-auto select-none max-w-[92vw] transform-gpu transition-all duration-300 ease-out',
         saliendo
           ? 'opacity-0 translate-y-3 scale-95 pointer-events-none'
           : 'opacity-100 translate-y-0 scale-100 animate-in slide-in-from-bottom-3 fade-in-0 duration-200'

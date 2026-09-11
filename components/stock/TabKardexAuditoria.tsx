@@ -311,7 +311,7 @@ export function TabKardexAuditoria({
       </div>
 
       {/* ── Barra de Filtros Inteligentes ────────────────────────── */}
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl backdrop-blur-md shadow-xs">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-2xl shadow-xs">
         
         {/* Buscador */}
         <div className="relative flex-1 min-w-[240px]">

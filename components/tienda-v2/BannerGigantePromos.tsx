@@ -212,7 +212,7 @@ export default function BannerGigantePromos({
                   e.stopPropagation()
                   cambiarSlide(indiceActual - 1)
                 }}
-                className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
+                className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer"
                 title="Banner anterior"
               >
                 <ChevronLeft size={24} />
@@ -223,7 +223,7 @@ export default function BannerGigantePromos({
                   e.stopPropagation()
                   cambiarSlide(indiceActual + 1)
                 }}
-                className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer backdrop-blur-xs"
+                className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer"
                 title="Siguiente banner"
               >
                 <ChevronRight size={24} />
@@ -233,7 +233,7 @@ export default function BannerGigantePromos({
 
           {/* Indicadores de diapositiva (Pills con progreso sutil) */}
           {promos.length > 1 && (
-            <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 md:gap-2 bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-xs border border-white/10">
+            <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 md:gap-2 bg-black/75 px-3 py-1.5 rounded-full border border-white/10">
               {promos.map((slide, idx) => {
                 const esActivo = idx === indiceActual
                 return (
@@ -267,7 +267,7 @@ export default function BannerGigantePromos({
               e.stopPropagation()
               setModalEditorAbierto(true)
             }}
-            className="absolute top-3 right-3 z-30 bg-black/70 hover:bg-black/90 border border-white/20 text-slate-200 hover:text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-xs opacity-75 hover:opacity-100"
+            className="absolute top-3 right-3 z-30 bg-black/80 hover:bg-black border border-white/20 text-slate-200 hover:text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer opacity-75 hover:opacity-100"
             title="Administrar imágenes de los banners"
           >
             <Edit3 size={13} className="text-amber-400" />

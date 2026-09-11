@@ -170,7 +170,7 @@ export default function TiendaV2() {
       </div>
 
       {/* ── Cabecera Principal Moderna ────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[#07090E]/90 backdrop-blur-md border-b border-white/5 transition-all">
+      <header className="sticky top-0 z-40 bg-[#07090E] border-b border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.5)] transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
           {/* Logo y Nombre */}
           <div className="flex items-center gap-3 shrink-0">
@@ -311,6 +311,14 @@ export default function TiendaV2() {
                 productoAPersonalizar.id
               ).img
             )}
+            descripcion={
+              metadata[productoAPersonalizar.id]?.descripcion_publica ||
+              OBTENER_DETALLES_COMPLEMENTARIOS(
+                productoAPersonalizar.categoriaId,
+                productoAPersonalizar.nombre,
+                productoAPersonalizar.id
+              ).desc
+            }
             modificadoresDisponibles={
               (productoAPersonalizar.modificadoresIds ?? [])
                 .map((id) => modificadores.find((m) => m.id === id))

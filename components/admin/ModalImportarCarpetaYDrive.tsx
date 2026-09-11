@@ -405,7 +405,7 @@ export default function ModalImportarCarpetaYDrive({
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[120] bg-black/85 flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* ── Encabezado del Modal ─────────────────────────────────── */}

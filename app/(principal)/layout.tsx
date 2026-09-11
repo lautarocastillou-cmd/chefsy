@@ -19,6 +19,7 @@ import { ProveedorPedidos } from '@/contexto/PedidosContexto'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
 import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
 import ConsumoPersonalFlotante from '@/components/herramientas/ConsumoPersonalFlotante'
+import AlertaPedidosDemoradosFlotante from '@/components/pedidos/AlertaPedidosDemoradosFlotante'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
 function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
@@ -118,6 +119,9 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
           <ConsumoPersonalFlotante />
         </div>
       )}
+
+      {/* Alerta flotante persistente de pedidos demorados (Estilo Alarma con aplazo) */}
+      <AlertaPedidosDemoradosFlotante />
     </div>
   )
 }

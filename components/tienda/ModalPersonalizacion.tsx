@@ -13,6 +13,7 @@ import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
   imagenFinal: string
+  descripcion?: string
   modificadoresDisponibles: ModificadorCatalogo[]
   modsSeleccionados: ModificadorCatalogo[]
   cantidadModal: number
@@ -29,6 +30,7 @@ interface ModalPersonalizacionProps {
 export default function ModalPersonalizacion({
   producto,
   imagenFinal,
+  descripcion,
   modificadoresDisponibles,
   modsSeleccionados,
   cantidadModal,
@@ -409,6 +411,21 @@ export default function ModalPersonalizacion({
                     </span>
                   </div>
 
+                  {/* Ingredientes y Detalles */}
+                  {descripcion && descripcion.trim() && (
+                    <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs">📋</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          Ingredientes & Detalles
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                        {descripcion.trim()}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Nota libre */}
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-300 leading-snug">
@@ -543,6 +560,21 @@ export default function ModalPersonalizacion({
                     {formatearPrecio(producto.precio)}
                   </span>
                 </div>
+
+                {/* Ingredientes y Detalles */}
+                {descripcion && descripcion.trim() && (
+                  <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">📋</span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Ingredientes & Detalles
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                      {descripcion.trim()}
+                    </p>
+                  </div>
+                )}
 
                 {/* Nota libre */}
                 <div className="space-y-1.5">

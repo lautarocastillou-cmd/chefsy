@@ -128,7 +128,7 @@ export default function BottomNavMobile({
         <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-slate-950/80 transition-opacity animate-in fade-in"
             onClick={() => setMenuMasAbierto(false)}
           />
 
@@ -186,7 +186,7 @@ export default function BottomNavMobile({
 
       {/* ── Barra de Navegación Inferior Fija (Bottom Navigation) ─── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/92 backdrop-blur-xl border-t border-slate-800/80 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950 border-t border-slate-800/80 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
         style={{ paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-center justify-around relative max-w-md mx-auto">

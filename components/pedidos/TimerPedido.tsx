@@ -92,7 +92,7 @@ const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaComplet
 
     if (pedido.estado === 'nuevo') {
       tInicioAtraso = tCreacion
-      limiteSegundos = 60 // 1 min
+      limiteSegundos = 5 * 60 // 5 min de margen operativo para imprimir y mandar a cocina
     } else if (pedido.estado === 'en_cocina') {
       tInicioAtraso = tCocina || tCreacion
       limiteSegundos = 45 * 60 // 45 min

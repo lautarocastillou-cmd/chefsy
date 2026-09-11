@@ -31,6 +31,7 @@ export default function ProductCardV2({
   const estaCerrado = turnoActivo === false || esDomingoCerrado
 
   const [imgError, setImgError] = useState(false)
+  const [expandido, setExpandido] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(index < 8)
 
@@ -119,7 +120,7 @@ export default function ProductCardV2({
 
         {/* Badge Combo */}
         {prod.esCombo && (
-          <div className="absolute top-2.5 left-2.5 bg-emerald-600/90 text-white font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-lg shadow-md backdrop-blur-xs">
+          <div className="absolute top-2.5 left-2.5 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-lg shadow-md border border-emerald-400/30">
             Combo
           </div>
         )}
@@ -144,9 +145,40 @@ export default function ProductCardV2({
 
           {/* Descripción con ingredientes legible */}
           {descripcionVisible && (
-            <p className="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
-              {descripcionVisible}
-            </p>
+            <div>
+              <p
+                className={cn(
+                  "text-xs text-slate-400 font-normal leading-relaxed",
+                  !expandido && "line-clamp-2"
+                )}
+              >
+                {descripcionVisible}
+                {expandido && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpandido(false)
+                    }}
+                    className="text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
+                  >
+                    ver menos
+                  </button>
+                )}
+              </p>
+              {!expandido && descripcionVisible.length > 60 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandido(true)
+                  }}
+                  className="text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
+                >
+                  ... ver más
+                </button>
+              )}
+            </div>
           )}
         </div>
 

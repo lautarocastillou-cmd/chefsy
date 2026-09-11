@@ -71,11 +71,11 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
             ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
             : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
         )}
-        title="Ver pedidos cercanos para entrega conjunta"
+        title="Ver pedidos cercanos en la misma zona"
       >
         <Sparkles size={11} className="text-emerald-600 dark:text-emerald-400" />
         <span>
-          Misma zona: <strong>{primerVecino.pedido.cliente.split(' ')[0]}</strong> ({primerVecino.distanciaMetros}m)
+          📍 Cerca de <strong>{primerVecino.pedido.cliente.split(' ')[0]}</strong> ({primerVecino.distanciaMetros}m)
           {vecinos.length > 1 ? ` +${vecinos.length - 1}` : ''}
         </span>
       </button>
@@ -85,7 +85,7 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
             <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-100">
               <MapPin size={14} className="text-emerald-600" />
-              <span>Smart Batching (Entrega Conjunta)</span>
+              <span>Rutas Compartidas (Misma Zona)</span>
             </div>
             <button
               onClick={() => setAbierto(false)}
@@ -96,7 +96,7 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
           </div>
 
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2 leading-tight">
-            Destinos a menos de 750m. Asigná el mismo cadete para ahorrar viajes:
+            Destinos a menos de 7 cuadras. Asignalos al mismo cadete para ahorrar tiempo y combustible:
           </p>
 
           <div className="space-y-1.5 max-h-36 overflow-y-auto mb-3">

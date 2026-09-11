@@ -379,6 +379,10 @@ export default function TiendaDesktop() {
                 metadata[productoAPersonalizar.id]?.imagen_url,
                 OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
               )}
+              descripcion={
+                metadata[productoAPersonalizar.id]?.descripcion_publica ||
+                OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).desc
+              }
               modificadoresDisponibles={
                 (productoAPersonalizar.modificadoresIds ?? [])
                   .map(id => modificadores.find(m => m.id === id))

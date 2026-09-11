@@ -129,7 +129,7 @@ export default function PaginaPedidos() {
             )}
           >
             <span className="inline-flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" /> Pedidos Activos
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" /> Pedidos en Curso
             </span>
           </button>
           <button
@@ -146,7 +146,7 @@ export default function PaginaPedidos() {
             )}
           >
             <span className="inline-flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-slate-500" /> Historial por Fecha
+              <Calendar className="w-4 h-4 text-slate-500" /> Historial del Día
             </span>
           </button>
         </div>
@@ -163,9 +163,9 @@ export default function PaginaPedidos() {
                     ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
-                title="Vista de Cuadrículas"
+                title="Vista de Cuadrícula"
               >
-                <Grid size={16} /> Cuadrículas
+                <Grid size={16} /> Cuadrícula
               </button>
               <button
                 onClick={() => setModoVista('lista_vertical')}
@@ -187,9 +187,9 @@ export default function PaginaPedidos() {
                     ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
-                title="Vista Kanban"
+                title="Vista en Columnas"
               >
-                <Columns size={16} /> Tablero
+                <Columns size={16} /> Columnas
               </button>
             </div>
           )}
@@ -260,7 +260,7 @@ export default function PaginaPedidos() {
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
                 )}
               >
-                Todos los tipos
+                Todos los canales
               </button>
               {opcionesTipoEntrega.map((opcion) => (
                 <button
@@ -313,18 +313,18 @@ export default function PaginaPedidos() {
             />
           </div>
           <div className="md:hidden text-center py-10 bg-slate-50 dark:bg-slate-900 rounded-xl">
-            <p className="text-slate-500 font-medium">La vista de Tablero no está disponible en móviles.</p>
+            <p className="text-slate-500 font-medium">La vista en columnas no está disponible en móviles.</p>
             <button 
               onClick={() => setModoVista('cuadricula')}
               className="mt-4 text-chefsy font-bold underline"
             >
-              Volver a las Cuadrículas
+              Volver a la cuadrícula
             </button>
           </div>
         </div>
       ) : pedidosFiltrados.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">
-          No hay pedidos en este estado para mostrar.
+          ¡Todo al día! No hay pedidos pendientes en esta sección.
         </div>
       ) : (
         <div className={cn(
@@ -349,7 +349,7 @@ export default function PaginaPedidos() {
         className="hidden md:flex fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
       >
         <Plus size={18} />
-        <span>Crear Pedido</span>
+        <span>+ Nuevo Pedido</span>
       </button>
 
       {/* ── Modal de Nuevo / Editar Pedido (Fullscreen en Móvil, Diálogo en Desktop) ── */}
@@ -368,7 +368,7 @@ export default function PaginaPedidos() {
                   {pedidoAEditar ? '✏️ Editar Pedido' : '📝 Nuevo Pedido'}
                 </h2>
                 <p className="text-[11px] text-gray-400 dark:text-slate-400">
-                  {pedidoAEditar ? 'Modificar detalles de la orden' : 'Registrar una orden desde el panel'}
+                  {pedidoAEditar ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}
                 </p>
               </div>
               <button
