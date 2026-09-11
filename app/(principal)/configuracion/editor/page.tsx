@@ -267,7 +267,7 @@ export default function EditorTienda() {
       id: `slide-${Date.now()}`,
       titulo: 'NUEVA PROMO CHEFSY',
       subtitulo: 'Aprovechá nuestra promo especial de hoy',
-      badge: '🔥 2x1',
+      badge: '2x1',
       imagen_url: '/burger-loca.webp',
       boton_texto: 'Pedir Ahora',
     }
@@ -306,7 +306,7 @@ export default function EditorTienda() {
       <div className="w-88 sm:w-96 bg-zinc-950 border-r border-slate-800/80 flex flex-col z-50 shadow-2xl relative shrink-0">
         
         {/* Cabecera Superior del Panel */}
-        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900/80 backdrop-blur-md">
+        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900">
           <Link
             href="/configuracion"
             className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all active:scale-95 shadow-sm"
@@ -453,7 +453,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">🍔</div>
+                  <Layers className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Doble Parallax</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">2 platos flotantes</div>
                 </button>
@@ -468,7 +468,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">🎠</div>
+                  <Layout className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Carrusel Promo</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Banners rotativos</div>
                 </button>
@@ -483,7 +483,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">🎬</div>
+                  <Video className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Cinemático</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Video / textura</div>
                 </button>
@@ -498,7 +498,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">⭐</div>
+                  <Sparkles className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Minimalista</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Logo y rating</div>
                 </button>
@@ -549,7 +549,7 @@ export default function EditorTienda() {
                             type="text"
                             value={slide.badge || ''}
                             onChange={(e) => actualizarSlide(slide.id, 'badge', e.target.value)}
-                            placeholder="Badge (ej: 🔥 2x1)"
+                            placeholder="Badge (ej: 2x1)"
                             className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-amber-300"
                           />
                           <input
@@ -725,7 +725,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">💎</div>
+                  <Layers className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Glassmorphism</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Cristal traslúcido</div>
                 </button>
@@ -740,7 +740,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">✨</div>
+                  <Sparkles className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Borde Neón</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Resplandor de marca</div>
                 </button>
@@ -755,7 +755,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">🧼</div>
+                  <Layout className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Minimalista</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Limpio y fotográfico</div>
                 </button>
@@ -770,7 +770,7 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <div className="text-xl mb-1">⚡</div>
+                  <Sliders className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Lista Rápida</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Compacto con [+]</div>
                 </button>
@@ -785,7 +785,7 @@ export default function EditorTienda() {
                     <Flame size={16} className="text-amber-400" />
                     <div>
                       <div className="text-xs font-bold text-slate-200">Badges Automáticos</div>
-                      <div className="text-[10px] text-slate-400">🔥 Más Pedido, ⭐ Chef, 🌱 Veggie</div>
+                      <div className="text-[10px] text-slate-400">Más Pedido, Especial Chef, Veggie</div>
                     </div>
                   </div>
                   <input
@@ -1085,7 +1085,7 @@ export default function EditorTienda() {
       <div className="flex-1 relative overflow-hidden flex flex-col bg-[#07090E]">
         
         {/* BARRA SUPERIOR STUDIO: EMULADORES, ZOOM, UNDO/REDO */}
-        <div className="h-14 border-b border-slate-800/80 bg-zinc-950/90 backdrop-blur-xl px-6 flex items-center justify-between shrink-0 z-40">
+        <div className="h-14 border-b border-slate-800/80 bg-zinc-950 px-6 flex items-center justify-between shrink-0 z-40">
           
           {/* Deshacer / Rehacer */}
           <div className="flex items-center gap-1.5">
@@ -1268,7 +1268,7 @@ export default function EditorTienda() {
 
         {/* Badge Flotante "Live Canvas" */}
         <div className="absolute bottom-5 right-6 flex items-center gap-2 pointer-events-none z-30">
-          <div className="bg-zinc-900/90 border border-white/10 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-md">
+          <div className="bg-zinc-900 border border-white/10 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Chefsy Engine Activo</span>
           </div>

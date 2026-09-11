@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Package,
   Layers,
-  ChevronDown
+  ChevronDown,
+  FileText,
+  Banknote
 } from 'lucide-react'
 import { cn, formatearPrecio } from '@/lib/utils'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
@@ -457,7 +459,10 @@ export default function ConsumoPersonalFlotante() {
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black uppercase tracking-wider">📝 Anotado</span>
+                          <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                            <FileText size={13} className="text-amber-600 dark:text-amber-400" />
+                            <span>Anotado</span>
+                          </span>
                           {tipoPago === 'anotado' && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
                         </div>
                         <span className="text-[10.5px] opacity-80 leading-tight">
@@ -476,7 +481,10 @@ export default function ConsumoPersonalFlotante() {
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black uppercase tracking-wider">💵 Pagado en el acto</span>
+                          <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                            <Banknote size={13} className="text-emerald-600 dark:text-emerald-400" />
+                            <span>Pagado en el acto</span>
+                          </span>
                           {tipoPago === 'pagado' && <Check size={14} className="text-emerald-600 dark:text-emerald-400" />}
                         </div>
                         <span className="text-[10.5px] opacity-80 leading-tight">

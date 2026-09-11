@@ -24,7 +24,9 @@ import {
   MoreHorizontal,
   Phone,
   MessageCircle,
-  Bike
+  MessageSquare,
+  Bike,
+  ChefHat
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -151,27 +153,30 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   }
 
   const copiarParaWhatsApp = async () => {
-    const productosText = pedido.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('\n')
+    const productosText = pedido.productos.map(p => {
+      const coccionTag = p.coccion ? ` (${p.coccion === 'fritas' ? 'Fritas' : 'Al Horno'})` : ''
+      return `${p.cantidad}x ${p.nombre}${coccionTag}`
+    }).join('\n')
     
     let direccionTexto = ''
     if (pedido.direccion && pedido.direccion.trim() !== '') {
-      direccionTexto = `📍 ${pedido.direccion.trim()}`
+      direccionTexto = `Dirección: ${pedido.direccion.trim()}`
       const linkMapa = crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)
       if (linkMapa) {
-        direccionTexto += `\n🗺️ Mapa: ${linkMapa}`
+        direccionTexto += `\nMapa: ${linkMapa}`
       }
     } else if (pedido.tipoEntrega && pedido.tipoEntrega !== 'delivery') {
-      direccionTexto = `📍 ${pedido.tipoEntrega === 'retiro' ? 'Retiro en el local' : 'Consumo en el local'}`
+      direccionTexto = `Tipo: ${pedido.tipoEntrega === 'retiro' ? 'Retiro en el local' : 'Consumo en el local'}`
     }
 
     const texto = `*Pedido de ${pedido.cliente}*
-📞 ${pedido.telefono}
+Tel: ${pedido.telefono}
 ${direccionTexto ? `${direccionTexto}\n` : ''}
 *Detalle:*
 ${productosText}
 
-💵 Total: ${formatearPrecio(pedido.total)} (${etiquetaMetodoPago[pedido.metodoPago]})
-${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
+Total: ${formatearPrecio(pedido.total)} (${etiquetaMetodoPago[pedido.metodoPago]})
+${pedido.observaciones ? `Nota: ${pedido.observaciones}` : ''}`.trim()
 
     const ok = await copiarConNotificacion(texto, '¡Pedido para WhatsApp copiado al portapapeles!')
     if (ok) {
@@ -233,7 +238,9 @@ ${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
       const totalProducto = p.precio * p.cantidad
       subtotal += totalProducto
 
-      return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${extrasTexto}`
+      const coccionTexto = p.coccion ? `\n   ↳ ${p.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}` : ''
+
+      return `${p.cantidad}x ${nombreBase} - ${formatearPrecio(precioBase * p.cantidad)}${coccionTexto}${extrasTexto}`
     }).join('\n\n')
 
     let costoEnvio = pedido.costoEnvio || 0
@@ -284,6 +291,31 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
   const imprimirSilencioso = async (tipo: 'ticket' | 'cocina') => {
     setModalImpresion(false)
     await gestorImpresora.imprimirPedido(pedido, tipo)
+    if (pedido.estado === 'nuevo') {
+      try {
+        await cambiarEstado(pedido.id, 'en_cocina')
+      } catch (err) {
+        console.error('Error auto-avanzando estado al imprimir:', err)
+      }
+    }
+  }
+
+  const copiarLinkSeguimientoConAutoAvance = async () => {
+    const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+    const noEstaEnCamino = pedido.estado !== 'en_camino'
+    const ok = await copiarConNotificacion(
+      url,
+      noEstaEnCamino
+        ? '¡Link copiado y pedido marcado en camino!'
+        : '¡Link de seguimiento copiado al portapapeles!'
+    )
+    if (ok && noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
+      try {
+        await cambiarEstado(pedido.id, 'en_camino')
+      } catch (err) {
+        console.error('Error auto-avanzando estado al copiar link:', err)
+      }
+    }
   }
 
   return (
@@ -417,10 +449,15 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
       {/* Lista de productos (muy compacta) */}
       <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 space-y-0.5">
         {pedido.productos.map((producto) => (
-          <div key={producto.id} className="flex justify-between text-xs py-0.5">
-            <span className="text-gray-600 dark:text-[#a8a8a8] font-medium truncate max-w-[200px]" title={`${producto.cantidad}x ${producto.nombre}`}>
+          <div key={producto.id} className="flex justify-between items-center text-xs py-0.5">
+            <span className="text-gray-600 dark:text-[#a8a8a8] font-medium truncate max-w-[220px] flex items-center" title={`${producto.cantidad}x ${producto.nombre}${producto.coccion ? ` (${producto.coccion})` : ''}`}>
               <span className="font-bold text-chefsy-700 dark:text-chefsy-300 mr-1">{producto.cantidad}×</span> 
-              {producto.nombre}
+              <span className="truncate">{producto.nombre}</span>
+              {producto.coccion && (
+                <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
+                  {producto.coccion === 'fritas' ? 'Fritas' : 'Al Horno'}
+                </span>
+              )}
             </span>
             <span className="text-gray-400 dark:text-[#686868] font-mono shrink-0 ml-2">
               {formatearPrecio(producto.precio * producto.cantidad)}
@@ -446,19 +483,19 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 : "bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6]"
             )}
           >
-            <option value="sin_especificar">⚠️ Falta Pago</option>
-            <option value="efectivo">💵 Efectivo</option>
-            <option value="tarjeta">💳 Tarjeta</option>
-            <option value="transferencia">📱 Transf.</option>
-            <option value="mixto">💵📱 Mixto</option>
+            <option value="sin_especificar">Falta Pago</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transf.</option>
+            <option value="mixto">Mixto</option>
           </select>
           {pedido.metodoPago === 'mixto' && (
             <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded">
-              {pedido.montoEfectivo ? `💵${formatearPrecio(pedido.montoEfectivo)}` : ''}
+              {pedido.montoEfectivo ? `Ef: ${formatearPrecio(pedido.montoEfectivo)}` : ''}
               {pedido.montoEfectivo && (pedido.montoTransferencia || pedido.montoTarjeta) ? ' + ' : ''}
-              {pedido.montoTransferencia ? `📱${formatearPrecio(pedido.montoTransferencia)}` : ''}
+              {pedido.montoTransferencia ? `Transf: ${formatearPrecio(pedido.montoTransferencia)}` : ''}
               {pedido.montoTransferencia && pedido.montoTarjeta ? ' + ' : ''}
-              {pedido.montoTarjeta ? `💳${formatearPrecio(pedido.montoTarjeta)}` : ''}
+              {pedido.montoTarjeta ? `Tarj: ${formatearPrecio(pedido.montoTarjeta)}` : ''}
             </span>
           )}
           {pedido.tipoEntrega === 'delivery' && (
@@ -476,10 +513,10 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               disabled={soloLectura}
               className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
             >
-              <option value="">🛵 Sin Cadete</option>
+              <option value="">Sin Cadete</option>
               {cadetes.map(c => (
                 <option key={c.id} value={c.id}>
-                  🛵 {c.nombre} {c.gps_activo ? '🟢 (GPS)' : '⚪ (GPS apagado)'}
+                  {c.nombre} {c.gps_activo ? '(GPS)' : '(Sin GPS)'}
                 </option>
               ))}
             </select>
@@ -522,7 +559,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               className="inline-flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ml-1"
               title="Este pedido de delivery no tiene costo de envío sumado. Hacé clic para sumarle el costo en 1 clic."
             >
-              <span>⚠️ + Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
+              <span>+ Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
             </button>
           )}
           {!pedido.observaciones && !editandoNota && !soloLectura && (
@@ -533,7 +570,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               }}
               className="text-[10px] text-chefsy-700 hover:text-chefsy-800 bg-chefsy-50 hover:bg-chefsy-100 px-1.5 py-0.5 rounded transition-colors font-medium ml-1"
             >
-              + Nota
+              + Aclaración
             </button>
           )}
         </div>
@@ -588,9 +625,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               "text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100/50 dark:border-amber-800/40 rounded-md px-2 py-1.5 flex items-start gap-1 relative group",
               !soloLectura && "cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-950/50 transition-colors"
             )}
-            title={!soloLectura ? "Haz clic para editar la nota" : undefined}
+            title={!soloLectura ? "Hacé clic para editar la aclaración" : undefined}
           >
-            <span className="shrink-0">💬</span>
+            <MessageSquare className="w-3.5 h-3.5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="flex-1 pr-8">{pedido.observaciones}</p>
             {!soloLectura && (
               <span className="text-[9px] text-amber-600 dark:text-amber-400 underline opacity-0 group-hover:opacity-100 absolute right-2 top-1.5 transition-opacity duration-150">
@@ -618,15 +655,12 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             className="flex-1 min-w-[80px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
             title="Ver trayecto real recorrido por la moto"
           >
-            <Bike size={13} /> Repetir Ruta
+            <Bike size={13} /> Ver Trayecto
           </button>
 
           {!esFinal && (
             <button
-              onClick={async () => {
-                const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
-                await copiarConNotificacion(url, '¡Link de seguimiento copiado al portapapeles!')
-              }}
+              onClick={copiarLinkSeguimientoConAutoAvance}
               className="flex-1 min-w-[80px] bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 px-2 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-xs cursor-pointer"
             >
               <Copy size={13} /> Link
@@ -745,6 +779,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
           onImprimir={() => setModalImpresion(true)}
           onCopiarTicket={copiarTicketCliente}
           onCopiarWhatsApp={copiarParaWhatsApp}
+          onCopiarLinkSeguimiento={copiarLinkSeguimientoConAutoAvance}
           onVerMapa={() => setVerMapa(true)}
           onRevertirEstado={() => revertirEstado(pedido.id)}
           onCancelar={() => {
@@ -788,7 +823,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 onClick={() => imprimirSilencioso('ticket')}
                 className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-chefsy-200 dark:border-chefsy-800/60 hover:border-chefsy hover:bg-chefsy-50/40 dark:hover:bg-chefsy-900/20 transition-all text-left group"
               >
-                <span className="text-2xl">🧾</span>
+                <div className="w-10 h-10 rounded-xl bg-chefsy-500/10 flex items-center justify-center shrink-0">
+                  <Receipt className="w-6 h-6 text-chefsy-600 dark:text-chefsy-400" />
+                </div>
                 <div>
                   <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-chefsy-700 dark:group-hover:text-chefsy-300 transition-colors">
                     Ticket para el Cliente
@@ -804,7 +841,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 onClick={() => imprimirSilencioso('cocina')}
                 className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800/60 hover:border-orange-500 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 transition-all text-left group"
               >
-                <span className="text-2xl">🍳</span>
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <ChefHat className="w-6 h-6 text-orange-500" />
+                </div>
                 <div>
                   <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
                     Comanda para Cocina

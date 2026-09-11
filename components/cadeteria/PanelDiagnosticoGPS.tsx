@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
@@ -18,6 +18,8 @@ import {
   ChevronUp,
   Package,
   Signal,
+  XCircle,
+  Radio,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -93,9 +95,9 @@ function colorBateria(pct: number | null): string {
 
 function badgeEstado(estado: string) {
   const map: Record<string, { label: string; cls: string }> = {
-    en_camino: { label: "🛵 En camino", cls: "bg-blue-100 text-blue-700 border-blue-200" },
-    listo:     { label: "✅ Listo",     cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    en_cocina: { label: "🍳 En cocina", cls: "bg-amber-100 text-amber-700 border-amber-200" },
+    en_camino: { label: "En camino", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+    listo:     { label: "Listo",     cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    en_cocina: { label: "En cocina", cls: "bg-amber-100 text-amber-700 border-amber-200" },
   }
   const info = map[estado] ?? { label: estado, cls: "bg-slate-100 text-slate-600 border-slate-200" }
   return (
@@ -105,12 +107,12 @@ function badgeEstado(estado: string) {
   )
 }
 
-const ICON_EVENTO: Record<EventoGPS["tipo"], string> = {
-  conectado:      "✅",
-  desconectado:   "🔴",
-  bateria_baja:   "🔋",
-  precision_mala: "📡",
-  velocidad_alta: "💨",
+const ICON_EVENTO: Record<EventoGPS["tipo"], React.ReactNode> = {
+  conectado:      <CheckCircle2 size={13} className="text-emerald-500" />,
+  desconectado:   <XCircle size={13} className="text-red-500" />,
+  bateria_baja:   <BatteryLow size={13} className="text-amber-500" />,
+  precision_mala: <Radio size={13} className="text-purple-500" />,
+  velocidad_alta: <Zap size={13} className="text-blue-500" />,
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -251,7 +253,7 @@ export default function PanelDiagnosticoGPS() {
               <Activity size={18} />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">🛰️ Diagnóstico GPS en Vivo</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Diagnóstico GPS en Vivo</p>
               <p className="text-[10px] text-slate-400">
                 {ultimaActualizacion ? `Actualizado a las ${ultimaActualizacion}` : "Cargando..."} · Auto-refresh {intervalo}s
               </p>
@@ -522,9 +524,9 @@ export default function PanelDiagnosticoGPS() {
             {/* Meta info */}
             {meta && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-400 border-t border-slate-100 dark:border-[#3d3d3d] pt-3">
-                <span>🕒 Servidor: {new Date(meta.timestamp).toLocaleTimeString("es-AR")}</span>
-                <span>⚡ Latencia API: {meta.latencia_ms}ms</span>
-                <span>👥 Total cadetes: {meta.total_cadetes}</span>
+                <span>Servidor: {new Date(meta.timestamp).toLocaleTimeString("es-AR")}</span>
+                <span>Latencia API: {meta.latencia_ms}ms</span>
+                <span>Total cadetes: {meta.total_cadetes}</span>
               </div>
             )}
           </div>
@@ -542,7 +544,7 @@ export default function PanelDiagnosticoGPS() {
               <Clock size={16} />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">📋 Log de Eventos GPS</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Log de Eventos GPS</p>
               <p className="text-[10px] text-slate-400">
                 {eventos.length > 0 ? `${eventos.length} evento${eventos.length > 1 ? "s" : ""} detectado${eventos.length > 1 ? "s" : ""}` : "Sin eventos aún"}
               </p>
@@ -555,7 +557,7 @@ export default function PanelDiagnosticoGPS() {
           <div className="border-t border-slate-100 dark:border-[#3d3d3d]">
             {eventos.length === 0 ? (
               <div className="text-center py-8 text-slate-400 text-xs">
-                <p className="mb-1">🟢 Sin eventos detectados</p>
+                <p className="mb-1">Sin eventos detectados</p>
                 <p>Los cambios de estado GPS aparecerán aquí automáticamente.</p>
               </div>
             ) : (

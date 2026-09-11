@@ -20,7 +20,7 @@ export async function GET() {
     // 1. Obtener cadetes con su ubicación
     const { data: cadetesData, error: cadetesError } = await supabase
       .from('cadetes')
-      .select('id, lat, lng, gps_activo, bateria, updated_at')
+      .select('id, lat, lng, gps_activo, bateria, updated_at, speed, heading')
 
     if (cadetesError) throw cadetesError
 
@@ -96,6 +96,8 @@ export async function GET() {
         nombre: entry.nombre,
         lat: cadete?.lat ?? null,
         lng: cadete?.lng ?? null,
+        speed: cadete?.speed != null ? Number(cadete.speed) : null,
+        heading: cadete?.heading != null ? Number(cadete.heading) : null,
         gps_activo: gpsActivo,
         gps_activo_db: Boolean(cadete?.gps_activo),
         bateria: cadete?.bateria ?? null,

@@ -353,7 +353,7 @@ export default function PaginaCierreCaja() {
 
     const desgloseCadetesTexto = resumenCadetes.length > 0
       ? resumenCadetes.map(c => {
-          let str = `- 🛵 ${c.nombre}: ${c.cantidadViajes} viajes (${formatearPrecio(c.recaudadoViajes)})`
+          let str = `- ${c.nombre}: ${c.cantidadViajes} viajes (${formatearPrecio(c.recaudadoViajes)})`
           if (c.base > 0) str += ` + ${formatearPrecio(c.base)} base`
           if (c.extras && c.extras.length > 0) {
             c.extras.forEach(ext => {
@@ -365,32 +365,32 @@ export default function PaginaCierreCaja() {
         }).join('\n')
       : '- Sin entregas registradas'
 
-    const mensaje = `*CIERRE DE CAJA - CHEFSY* 💰
-📅 *Fecha:* ${formattedDate}
+    const mensaje = `*CIERRE DE CAJA - CHEFSY*
+*Fecha:* ${formattedDate}
 ----------------------------------------
-💵 *Facturación Neta:* ${formatearPrecio(facturacionNeta)}
-📋 *Pedidos:* ${totalPedidos}
-🎫 *Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
+*Facturación Neta:* ${formatearPrecio(facturacionNeta)}
+*Pedidos:* ${totalPedidos}
+*Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
 
 *Estado de la Caja:*
-- 📥 Caja Inicial: ${formatearPrecio(cajaInicialEfectiva)}
-- 💵 Efectivo Ventas: ${formatearPrecio(efectivoTotal)}
-- 💰 *Físico a Rendir:* ${formatearPrecio(efectivoARendir)}
+- Caja Inicial: ${formatearPrecio(cajaInicialEfectiva)}
+- Efectivo Ventas: ${formatearPrecio(efectivoTotal)}
+- *Físico a Rendir:* ${formatearPrecio(efectivoARendir)}
 
 *Por Método de Pago:*
-- 💵 Efectivo: ${formatearPrecio(efectivoTotal)} (${efectivoCount} ped.)
-- 💳 Tarjeta: ${formatearPrecio(tarjetaTotal)} (${tarjetaCount} ped.)
-- 📱 Transferencia: ${formatearPrecio(transferenciaTotal)} (${transferenciaCount} ped.)
+- Efectivo: ${formatearPrecio(efectivoTotal)} (${efectivoCount} ped.)
+- Tarjeta: ${formatearPrecio(tarjetaTotal)} (${tarjetaCount} ped.)
+- Transferencia: ${formatearPrecio(transferenciaTotal)} (${transferenciaCount} ped.)
 
 *Por Modalidad:*
-- 🛵 Delivery: ${formatearPrecio(deliveryTotal)} (${deliveryCount} ped.)
-- 🏪 Retiro: ${formatearPrecio(retiroTotal)} (${retiroCount} ped.)
-- 🍽️ Consumo Local: ${formatearPrecio(localTotal)} (${localCount} ped.)
+- Delivery: ${formatearPrecio(deliveryTotal)} (${deliveryCount} ped.)
+- Retiro: ${formatearPrecio(retiroTotal)} (${retiroCount} ped.)
+- Consumo Local: ${formatearPrecio(localTotal)} (${localCount} ped.)
 
 *Pago y Liquidación a Cadetes (Total: ${formatearPrecio(totalPagoCadetesTotal)}):*
 ${desgloseCadetesTexto}
 ----------------------------------------
-❌ *Pedidos Cancelados:* ${canceladosCount} (${formatearPrecio(canceladosMonto)})
+*Pedidos Cancelados:* ${canceladosCount} (${formatearPrecio(canceladosMonto)})
 ----------------------------------------
 _Generado automáticamente desde Chefsy_`.trim()
 
@@ -400,14 +400,14 @@ _Generado automáticamente desde Chefsy_`.trim()
         setTimeout(() => setCopiado(false), 2000)
       })
       .catch((err) => {
-        console.error('Error al copiar el reporte: ', err)
+        console.error('Error al copiar al portapapeles:', err)
       })
   }
 
   // Finalizar el turno (Archivar pedidos de la pantalla)
   const manejarFinalizarTurno = async () => {
     const confirmacion = window.confirm(
-      '🚨 ¿Estás seguro de que deseas FINALIZAR EL TURNO?\n\n' +
+      '¿Estás seguro de que deseas FINALIZAR EL TURNO?\n\n' +
       'Esto archivará todos los pedidos que estén actualmente visibles en la pantalla (dashboard, pedidos y cadetería) ' +
       'para dejar el panel limpio para el próximo turno.\n\n' +
       'Los pedidos no se borrarán de la base de datos; podrás consultarlos en cualquier momento seleccionando esta fecha en esta misma pantalla.'
@@ -467,7 +467,7 @@ _Generado automáticamente desde Chefsy_`.trim()
               )}
             >
               <Zap size={14} />
-              <span>⚡ En Vivo ({pedidos.filter(p => !p.archivado).length})</span>
+              <span>En Vivo ({pedidos.filter(p => !p.archivado).length})</span>
             </button>
             <button
               onClick={() => setModoOrigen('fecha')}
@@ -496,7 +496,7 @@ _Generado automáticamente desde Chefsy_`.trim()
           )}
 
           <button
-            onClick={abrirModalIniciarTurno}
+            onClick={() => setModalInicioAbierto(true)}
             disabled={estadoTurno.activo}
             className={cn(
               "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5",
@@ -507,7 +507,7 @@ _Generado automáticamente desde Chefsy_`.trim()
           >
             <Play size={16} />
             {estadoTurno.activo
-              ? (estadoTurno.tipoTurno === 'mediodia' ? '☀️ Turno Mediodía activo' : '🌙 Turno Noche activo')
+              ? (estadoTurno.tipoTurno === 'mediodia' ? 'Turno Mediodía activo' : 'Turno Noche activo')
               : 'Iniciar Turno'}
           </button>
           <button
@@ -516,7 +516,7 @@ _Generado automáticamente desde Chefsy_`.trim()
             className="bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer"
             title="Archiva todos los pedidos del panel activo para arrancar un nuevo turno limpio"
           >
-            🏁 Finalizar Turno
+            Finalizar Turno
           </button>
         </div>
       </div>
@@ -530,7 +530,7 @@ _Generado automáticamente desde Chefsy_`.trim()
             </div>
             <div>
               <h4 className="text-sm font-bold text-amber-900 dark:text-amber-300">
-                ⚠️ Turno anterior sin finalizar ({infoTurnoPendiente.fechaPendiente})
+                Turno anterior sin finalizar ({infoTurnoPendiente.fechaPendiente})
               </h4>
               <p className="text-xs text-amber-800/90 dark:text-amber-400/90 mt-0.5 font-medium">
                 Tenés <strong className="text-amber-950 dark:text-amber-200">{infoTurnoPendiente.cantidad} pedidos en vivo</strong> sin archivar por <strong className="text-amber-950 dark:text-amber-200">{formatearPrecio(infoTurnoPendiente.totalMonto)}</strong> pertenecientes a una fecha previa.
@@ -553,7 +553,7 @@ _Generado automáticamente desde Chefsy_`.trim()
               onClick={manejarFinalizarTurno}
               className="px-3 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5"
             >
-              🏁 Finalizar Turno Anterior
+              Finalizar Turno Anterior
             </button>
           </div>
         </div>
@@ -599,7 +599,7 @@ _Generado automáticamente desde Chefsy_`.trim()
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               )}
             >
-              ☀️/🌙 Ambos Turnos
+              Ambos Turnos
             </button>
             <button
               onClick={() => setFiltroTurno('mediodia')}
@@ -771,7 +771,7 @@ _Generado automáticamente desde Chefsy_`.trim()
 
         {/* Desglose por Modalidad de Entrega */}
         <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2">🛵 Facturación por Modalidad</h2>
+          <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6] border-b border-slate-100 dark:border-[#3d3d3d] pb-2">Facturación por Modalidad</h2>
           
           {totalPedidos === 0 ? (
             <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-6">
@@ -878,7 +878,7 @@ _Generado automáticamente desde Chefsy_`.trim()
                             key={ext.id}
                             className="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-lg text-[11px] font-semibold"
                           >
-                            <span>🥩 +{formatearPrecio(ext.monto)} <span className="font-normal opacity-90">({ext.motivo})</span></span>
+                            <span>+{formatearPrecio(ext.monto)} <span className="font-normal opacity-90">({ext.motivo})</span></span>
                             <button
                               type="button"
                               onClick={() => handleEliminarPagoExtra(ext.id)}
@@ -940,7 +940,8 @@ _Generado automáticamente desde Chefsy_`.trim()
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200 overflow-hidden will-change-transform">
             <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-5">
               <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                ▶️ Iniciar Turno
+                <Play size={18} className="text-emerald-500 fill-emerald-500" />
+                Iniciar Turno
               </h2>
               <button
                 onClick={() => setModalInicioAbierto(false)}
@@ -967,7 +968,7 @@ _Generado automáticamente desde Chefsy_`.trim()
                     )}
                   >
                     <Sun size={18} />
-                    <span>☀️ Mediodía</span>
+                    <span>Mediodía</span>
                     <span className="text-[10px] font-normal opacity-80">11:30 a 14:00</span>
                   </button>
 
@@ -982,7 +983,7 @@ _Generado automáticamente desde Chefsy_`.trim()
                     )}
                   >
                     <Moon size={18} />
-                    <span>🌙 Noche</span>
+                    <span>Noche</span>
                     <span className="text-[10px] font-normal opacity-80">20:30 a 01:00</span>
                   </button>
                 </div>

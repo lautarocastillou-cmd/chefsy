@@ -81,7 +81,7 @@ export default function BancoTexturasModal({
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200">
       <div className="bg-zinc-950 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
         
         {/* Cabecera */}
@@ -122,7 +122,7 @@ export default function BancoTexturasModal({
             )}
           >
             <div className="w-full h-16 rounded-xl bg-black border border-white/10 flex items-center justify-center text-slate-500 text-xs font-bold">
-              🚫 Sin Textura (Color Puro)
+              Sin Textura (Color Puro)
             </div>
             <div className="mt-2">
               <div className="text-xs font-bold text-slate-200">Fondo Plano</div>

@@ -78,6 +78,7 @@ export default function SelectorCategorias({
         <>
           {/* Backdrop */}
           <div
+            data-lenis-prevent="true"
             onClick={onToggleSelector}
             className={`fixed inset-0 bg-black/80 z-[200] transition-opacity duration-200 ${
               selectorAbierto ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -85,8 +86,12 @@ export default function SelectorCategorias({
           />
 
           {/* Panel Modal */}
-          <div className={`fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none transition-opacity duration-200 ${selectorAbierto ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}>
+          <div 
+            data-lenis-prevent="true"
+            className={`fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none transition-opacity duration-200 ${selectorAbierto ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
+          >
             <div
+              data-lenis-prevent="true"
               className={`w-full max-w-sm bg-[#121212] border border-white/15 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden ${
                 selectorAbierto ? 'scale-100' : 'scale-95'
               } transition-transform duration-200`}

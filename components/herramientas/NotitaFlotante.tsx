@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Plus, StickyNote, GripHorizontal } from 'lucide-react'
+import { X, Plus, StickyNote, GripHorizontal, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setCache, getCache } from '@/lib/localCache'
 
@@ -218,7 +218,8 @@ export default function NotitaFlotante() {
                   className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-white bg-emerald-900/40 hover:bg-emerald-600/60 px-2 py-0.5 rounded-full transition-all"
                   title="Guardar y minimizar"
                 >
-                  💾 Guardar
+                  <Save size={10} />
+                  <span>Guardar</span>
                 </button>
                 <GripHorizontal size={13} className="text-[#686868] ml-1" />
               </div>

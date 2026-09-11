@@ -3,14 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import ProductCardV2 from './ProductCardV2'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen } from '@/lib/tienda-helpers'
 import { cn } from '@/lib/utils'
-
-function resolverImagen(imagenUrl: string | null | undefined, fallback: string): string {
-  if (!imagenUrl) return fallback
-  if (imagenUrl.startsWith('data:')) return fallback
-  return imagenUrl
-}
 
 function buildCardProps(
   prodOriginal: ProductoCatalogo,
@@ -96,7 +90,7 @@ export default function CatalogoV2({
   return (
     <div className="w-full">
       {/* ── Barra de Navegación de Categorías Minimalista y Sticky ───────── */}
-      <nav className="sticky top-[61px] md:top-[69px] z-30 bg-[#07090E]/95 backdrop-blur-md border-b border-white/5 py-2.5 px-3 sm:px-6">
+      <nav className="sticky top-[61px] md:top-[69px] z-30 bg-[#07090E] border-b border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.4)] py-2.5 px-3 sm:px-6">
         <div
           ref={tabsRef}
           className="max-w-6xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none"

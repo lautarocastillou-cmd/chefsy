@@ -9,7 +9,7 @@ export async function generateMetadata({
   const resolvedParams = await Promise.resolve(params)
   const id = resolvedParams?.id || ''
 
-  let titulo = '🛵 Seguimiento de Pedido en Vivo | Chefsy'
+  let titulo = 'Seguimiento de Pedido en Vivo | Chefsy'
   let descripcion = 'Seguí el estado de tu pedido y la ubicación del repartidor en tiempo real en el mapa interactivo de Chefsy.'
 
   try {
@@ -25,8 +25,8 @@ export async function generateMetadata({
         const primerNombre = pedido.cliente ? pedido.cliente.trim().split(' ')[0] : ''
         
         titulo = primerNombre 
-          ? `🛵 Pedido de ${primerNombre} (#${idCorto}) • Seguimiento en Vivo | Chefsy`
-          : `🛵 Pedido #${idCorto} • Seguimiento en Vivo | Chefsy`
+          ? `Pedido de ${primerNombre} (#${idCorto}) • Seguimiento en Vivo | Chefsy`
+          : `Pedido #${idCorto} • Seguimiento en Vivo | Chefsy`
 
         const estadoMensajes: Record<string, string> = {
           nuevo: 'Tu pedido fue recibido y está en cola de cocina.',

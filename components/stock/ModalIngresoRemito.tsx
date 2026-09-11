@@ -129,7 +129,6 @@ export function ModalIngresoRemito({
       if (!res.ok) throw new Error(await res.text())
 
       toast.success(`¡Ingreso registrado! +${totalUnidades} unidades en ${itemsACargar.length} insumos.`, {
-        icon: '📦',
         duration: 4000,
       })
 

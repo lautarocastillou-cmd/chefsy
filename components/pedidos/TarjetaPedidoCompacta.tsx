@@ -49,7 +49,7 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
 
     if (pedido.estado === 'nuevo') {
       tInicioEtapa = tInicial
-      limiteMs = 1 * 60 * 1000 // 1 min
+      limiteMs = 5 * 60 * 1000 // 5 min de margen operativo
     } else if (pedido.estado === 'en_cocina') {
       tInicioEtapa = tCocina || tInicial
       limiteMs = 45 * 60 * 1000 // 45 min

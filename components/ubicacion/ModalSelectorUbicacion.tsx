@@ -12,7 +12,7 @@ import {
   obtenerUbicacionActual,
 } from '@/lib/ubicacion'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Navigation } from 'lucide-react'
+import { Navigation, X } from 'lucide-react'
 
 const MapaSelector = dynamic(() => import('./MapaSelector'), {
   ssr: false,
@@ -126,10 +126,10 @@ export default function ModalSelectorUbicacion({
           <button
             type="button"
             onClick={onCerrar}
-            className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1"
+            className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
             aria-label="Cerrar"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 

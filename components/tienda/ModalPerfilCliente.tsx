@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X } from 'lucide-react'
+import { X, Receipt } from 'lucide-react'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 
 interface Props {
@@ -54,7 +54,7 @@ export default function ModalPerfilCliente({ abierto, onCerrar, onAbrirHistorial
             }}
             className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 text-base tracking-wide cursor-pointer"
           >
-            <span className="text-xl">📜</span>
+            <Receipt size={18} className="text-amber-400" />
             <span>Historial de pedidos</span>
           </button>
         </div>

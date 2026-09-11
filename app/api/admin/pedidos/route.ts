@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
-          .select('cadete_id, tipoEntrega, cliente, productos')
+          .select('id, cadete_id, tipoEntrega, cliente, productos')
 
         if (error) throw error
         
@@ -208,8 +208,8 @@ export async function POST(request: Request) {
         if (estado === 'listo' && pedidoAct?.cadete_id && pedidoAct?.tipoEntrega === 'delivery') {
           await enviarNotificacionCadete(
             pedidoAct.cadete_id,
-            '¡Pedido Listo para Retirar! 🛵',
-            `El pedido de ${pedidoAct.cliente} ya está listo en cocina.`
+            '¡Pedido Listo para Retirar!',
+            `Tu pedido #${(pedidoAct?.id || id || '').slice(-4).toUpperCase()} ya está listo en el local para que pases a buscarlo. ¡Te esperamos!`
           )
         }
 
@@ -371,24 +371,16 @@ export async function POST(request: Request) {
               monto_cancelados,
             }
 
-            // Buscar si ya existe un registro de cierre para esta fecha y turno
-            const { data: existingCierres } = await supabaseAdmin
+            // Guardar o actualizar registro de cierre para esta fecha y turno atómicamente
+            await supabaseAdmin
               .from('cierres_diarios')
-              .select('id')
-              .eq('fecha', fechaStr)
-              .eq('turno_tipo', turnoTipo)
-              .limit(1)
+              .upsert(snapshotConsolidado, { onConflict: 'fecha,turno_tipo' })
 
-            if (existingCierres && existingCierres.length > 0) {
-              await supabaseAdmin
-                .from('cierres_diarios')
-                .update(snapshotConsolidado)
-                .eq('id', existingCierres[0].id)
-            } else {
-              await supabaseAdmin
-                .from('cierres_diarios')
-                .insert(snapshotConsolidado)
-            }
+            // Desactivar el turno activo para que el próximo turno inicie limpio
+            await supabaseAdmin
+              .from('turnos')
+              .update({ activo: false })
+              .eq('id', 1)
           }
         } catch (errCierre) {
           console.error('[API Cierre Diario] Error al consolidar snapshot:', errCierre)
@@ -443,7 +435,7 @@ export async function POST(request: Request) {
         if (cadete_id && pedidoAct) {
           enviarNotificacionCadete(
             cadete_id,
-            '🛵 Nuevo Pedido Asignado',
+            'Nuevo Pedido Asignado',
             `Se te ha asignado el pedido de ${pedidoAct.cliente || 'un cliente'}.`
           ).catch((err) => console.error('[Push Cadete] Error enviando notificación:', err))
         }

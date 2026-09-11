@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     const payload = JSON.stringify({
-      title: 'Aviso de tu pedido 🍔',
+      title: 'Aviso de tu pedido',
       body: mensaje,
       url: 'https://chefsy.xyz/pedidos'
     })

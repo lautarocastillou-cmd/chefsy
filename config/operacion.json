@@ -12,5 +12,13 @@
     "cocinaDemoradoAltaMinutos": 30
   },
   "montoBaseCadete": 4000,
-  "portalCadeteriaHabilitado": true
+  "portalCadeteriaHabilitado": true,
+  "alertaCriticaFlotante": {
+    "habilitada": true,
+    "tiempoCocinaMinutos": 25,
+    "tiempoListoMinutos": 12,
+    "tiempoTotalMinutos": 40,
+    "tiempoAplazoMinutos": 5,
+    "sonidoHabilitado": true
+  }
 }

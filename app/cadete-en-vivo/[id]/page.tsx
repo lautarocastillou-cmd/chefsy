@@ -395,7 +395,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-500">Cadete asignado:</span>
           <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs">
-            <span>🛵</span>
+            <Bike className="w-3.5 h-3.5" />
             <span>{pedido.cadete_nombre}</span>
           </span>
         </div>
@@ -410,7 +410,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-amber-50 text-amber-800 border-amber-200'
           }`}>
-            <span>📍</span>
+            <MapPin className="w-3.5 h-3.5" />
             <span>
               {esProximaEntrega
                 ? 'Próxima parada (destino actual)'

@@ -81,13 +81,13 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       hero_layout: 'parallax_doble',
       hero_video_url: '',
       hero_video_overlay_opacity: 60,
-      hero_badge_texto: '⭐ 4.9 en Google • Los mejores de la ciudad',
+      hero_badge_texto: '4.9 en Google • Los mejores de la ciudad',
       hero_carrusel_slides: [
         {
           id: 'slide-1',
           titulo: 'DOBLE SMASH BURGER',
           subtitulo: '2x 120g de carne seleccionada + Doble Cheddar Fundido',
-          badge: '🔥 MÁS PEDIDO',
+          badge: 'MÁS PEDIDO',
           imagen_url: '/burger-loca.webp',
           boton_texto: 'Ver Hamburguesas',
         },
@@ -95,7 +95,7 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
           id: 'slide-2',
           titulo: 'MIÉRCOLES DE PROMO 2x1',
           subtitulo: 'Aprovechá 2x1 en Lomos y Pizzas durante todo el turno',
-          badge: '⚡ PROMO EXCLUSIVA',
+          badge: 'PROMO EXCLUSIVA',
           imagen_url: '/burger-loca.webp',
           boton_texto: 'Pedir Ahora',
         }

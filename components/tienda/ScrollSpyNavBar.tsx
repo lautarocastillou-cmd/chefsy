@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { scrollHaciaCategoria } from '@/lib/tienda-helpers'
 
 export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { categoriasActivas: any[], productosFiltrados: any[] }) {
   const [categoriaVisible, setCategoriaVisible] = useState<string>('')
@@ -53,7 +54,7 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
               <button
                 key={cat.id}
                 onClick={() => {
-                  document.getElementById(cat.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  scrollHaciaCategoria(cat.id)
                 }}
                 className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
                   categoriaVisible === cat.id || (esNavBurgers && categoriaVisible === idPatys) ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'

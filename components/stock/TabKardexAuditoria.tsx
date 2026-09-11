@@ -311,7 +311,7 @@ export function TabKardexAuditoria({
       </div>
 
       {/* ── Barra de Filtros Inteligentes ────────────────────────── */}
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl backdrop-blur-md shadow-xs">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-2xl shadow-xs">
         
         {/* Buscador */}
         <div className="relative flex-1 min-w-[240px]">
@@ -347,14 +347,14 @@ export function TabKardexAuditoria({
             className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
           >
             <option value="todos">Todos los Tipos</option>
-            <option value="ingreso_mercaderia">🟢 Compras / Ingresos</option>
-            <option value="venta_automatica">🔵 Ventas Automáticas</option>
-            <option value="consumo_personal">🟣 Consumo Personal</option>
-            <option value="merma_rotura">🔴 Merma: Roturas</option>
-            <option value="merma_vencimiento">🔴 Merma: Vencimiento</option>
-            <option value="merma_cocina">🟠 Merma: Cocina</option>
-            <option value="ajuste_inventario">🔵 Conteo Físico</option>
-            <option value="ajuste_manual">⚪ Ajustes Manuales</option>
+            <option value="ingreso_mercaderia">Compras / Ingresos</option>
+            <option value="venta_automatica">Ventas Automáticas</option>
+            <option value="consumo_personal">Consumo Personal</option>
+            <option value="merma_rotura">Merma: Roturas</option>
+            <option value="merma_vencimiento">Merma: Vencimiento</option>
+            <option value="merma_cocina">Merma: Cocina</option>
+            <option value="ajuste_inventario">Conteo Físico</option>
+            <option value="ajuste_manual">Ajustes Manuales</option>
           </select>
 
           {/* Periodo Pills */}
@@ -398,7 +398,7 @@ export function TabKardexAuditoria({
                 <th className="py-4 px-5 min-w-[200px]">Insumo</th>
                 <th className="py-4 px-5 min-w-[170px]">Tipo de Evento</th>
                 <th className="py-4 px-5 min-w-[120px] text-right">Variación Delta</th>
-                <th className="py-4 px-5 min-w-[180px] text-center">Stock (Antes ➔ Después)</th>
+                <th className="py-4 px-5 min-w-[180px] text-center">Stock (Antes &rarr; Después)</th>
                 <th className="py-4 px-5 min-w-[260px]">Motivo / Comprobante</th>
                 <th className="py-4 px-5 min-w-[150px]">Responsable</th>
               </tr>

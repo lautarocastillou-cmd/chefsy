@@ -31,7 +31,8 @@ import {
   Loader2,
   History,
   Truck,
-  ShieldAlert
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-react'
 
 type FiltroEstado = 'todos' | 'criticos' | 'bajo' | 'optimo' | 'ocultos'
@@ -218,7 +219,6 @@ export function TabInsumos({
           ? `"${insumo.nombre}" activado y visible en la tienda online${detalleProds}`
           : `"${insumo.nombre}" ocultado/pausado de la tienda online${detalleProds}`,
         {
-          icon: nuevoEstadoActivo ? '👁️' : '⏸️',
           duration: 3500
         }
       )
@@ -370,7 +370,7 @@ export function TabInsumos({
         if (asociados.length > 0) {
           await sincronizarVisibilidadProductos(ins, false)
           toast.error(
-            `🛡️ Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por falta de "${ins.nombre}".`,
+            `Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por falta de "${ins.nombre}".`,
             { duration: 4500 }
           )
         }
@@ -420,13 +420,13 @@ export function TabInsumos({
         await sincronizarVisibilidadProductos(insumoReposicion, true)
         toast.success(
           `¡Stock reabastecido (+${cantidadDelta}) y ${asociados.length} plato(s) reactivados en la tienda online!`,
-          { icon: '🚀', duration: 4000 }
+          { duration: 4000 }
         )
       } else if (tipoOperacion === 'restar' && nuevoStockCalculado <= 0 && asociados.length > 0) {
         // Auto-Pausado si el stock llegó a 0 al restar
         await sincronizarVisibilidadProductos(insumoReposicion, false)
         toast.error(
-          `🛡️ Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por quiebre de stock de "${insumoReposicion.nombre}".`,
+          `Auto-Pausado: Se pausaron automáticamente ${asociados.length} plato(s) en la tienda por quiebre de stock de "${insumoReposicion.nombre}".`,
           { duration: 5000 }
         )
       } else {
@@ -455,19 +455,19 @@ export function TabInsumos({
     const criticos = insumosParaComprar.filter(i => i.stock_actual <= 0)
     const bajos = insumosParaComprar.filter(i => i.stock_actual > 0)
 
-    let texto = `🛒 *LISTA DE COMPRAS Y REPOSICIÓN - CHEFSY*\n📅 ${hoyCap}\n----------------------------------------\n`
+    let texto = `*LISTA DE COMPRAS Y REPOSICIÓN - CHEFSY*\nFecha: ${hoyCap}\n----------------------------------------\n`
 
     if (criticos.length > 0) {
-      texto += `\n🚨 *URGENTE / AGOTADOS (${criticos.length}):*\n`
+      texto += `\n*URGENTE / AGOTADOS (${criticos.length}):*\n`
       criticos.forEach(i => {
-        texto += `• 🔴 *${i.nombre}* (Stock: ${i.stock_actual} ${i.unidad_medida})\n`
+        texto += `• *${i.nombre}* (Stock: ${i.stock_actual} ${i.unidad_medida})\n`
       })
     }
 
     if (bajos.length > 0) {
-      texto += `\n⚠️ *POR AGOTARSE / STOCK BAJO (${bajos.length}):*\n`
+      texto += `\n*POR AGOTARSE / STOCK BAJO (${bajos.length}):*\n`
       bajos.forEach(i => {
-        texto += `• 🟡 *${i.nombre}* (Quedan: ${i.stock_actual} ${i.unidad_medida})\n`
+        texto += `• *${i.nombre}* (Quedan: ${i.stock_actual} ${i.unidad_medida})\n`
       })
     }
 
@@ -532,7 +532,7 @@ export function TabInsumos({
           </div>
           <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{stats.criticos}</p>
           <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 font-semibold">
-            {stats.criticos > 0 ? '🔴 Requieren compra' : 'Sin quiebres'}
+            {stats.criticos > 0 ? 'Requieren compra' : 'Sin quiebres'}
           </span>
         </div>
 
@@ -585,7 +585,7 @@ export function TabInsumos({
           </div>
           <p className="text-2xl font-black text-slate-700 dark:text-slate-300">{stats.ocultos}</p>
           <span className="text-[10px] opacity-70">
-            {stats.ocultos > 0 ? '⏸️ Ocultos para clientes' : 'Todos visibles'}
+            {stats.ocultos > 0 ? 'Ocultos para clientes' : 'Todos visibles'}
           </span>
         </div>
 
@@ -600,7 +600,7 @@ export function TabInsumos({
             </div>
             <div>
               <h4 className="text-sm font-black text-amber-950 dark:text-amber-200 flex items-center gap-2">
-                <span>🛡️ {totalPlatosPausadosPorAgotamiento} plato(s) pausados automáticamente en la tienda</span>
+                <span>{totalPlatosPausadosPorAgotamiento} plato(s) pausados automáticamente en la tienda</span>
               </h4>
               <p className="text-xs text-amber-900/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
                 Ocultados en la carta online para proteger las ventas debido al quiebre de stock de:{' '}
@@ -1349,7 +1349,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    📦 Compra a Proveedor
+                    Compra a Proveedor
                   </button>
                   <button
                     type="button"
@@ -1360,7 +1360,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    🔍 Ajuste / Conteo Físico (+)
+                    Ajuste / Conteo Físico (+)
                   </button>
                 </div>
               ) : (
@@ -1374,7 +1374,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    💥 Rotura / Caída
+                    Rotura / Caída
                   </button>
                   <button
                     type="button"
@@ -1385,7 +1385,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    ⏳ Vencimiento
+                    Vencimiento
                   </button>
                   <button
                     type="button"
@@ -1396,7 +1396,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    🍳 Error de Cocina
+                    Error de Cocina
                   </button>
                   <button
                     type="button"
@@ -1407,7 +1407,7 @@ export function TabInsumos({
                         : 'bg-slate-800 border-slate-700 text-slate-400'
                     }`}
                   >
-                    🔍 Ajuste de Conteo (-)
+                    Ajuste de Conteo (-)
                   </button>
                 </div>
               )}
@@ -1475,7 +1475,7 @@ export function TabInsumos({
                 </strong>
               </div>
 
-              <div className="text-slate-400 font-bold text-base">➔</div>
+              <ArrowRight size={16} className="text-slate-400 font-bold" />
 
               <div className="text-right">
                 <span className="text-slate-400 block font-medium">Nuevo Stock Final:</span>
@@ -1494,7 +1494,7 @@ export function TabInsumos({
               return (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
                   <div className="flex items-center gap-2.5 text-xs">
-                    <span className="text-lg">🚀</span>
+                    <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
                     <div>
                       <strong className="text-emerald-400 block font-bold">Reactivar platos en la tienda online</strong>
                       <span className="text-[11px] text-slate-400">

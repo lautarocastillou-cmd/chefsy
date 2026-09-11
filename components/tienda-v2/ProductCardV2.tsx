@@ -6,6 +6,7 @@ import { Plus, Utensils, Flame } from 'lucide-react'
 import { formatearPrecio, optimizarUrlImagen, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import { esImagenValida } from '@/lib/tienda-helpers'
 
 interface ProductCardV2Props {
   prod: ProductoCatalogo
@@ -30,6 +31,7 @@ export default function ProductCardV2({
   const estaCerrado = turnoActivo === false || esDomingoCerrado
 
   const [imgError, setImgError] = useState(false)
+  const [expandido, setExpandido] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(index < 8)
 
@@ -49,13 +51,14 @@ export default function ProductCardV2({
   }, [index])
 
   const rawSrc = (imagenFinal.includes(' | ') ? imagenFinal.split(' | ')[0] : imagenFinal).trim()
+  const tieneImagenValida = esImagenValida(rawSrc) && !imgError
   const isCdnOptimized =
-    rawSrc.includes('res.cloudinary.com') ||
-    rawSrc.includes('supabase.co') ||
-    rawSrc.includes('unsplash.com') ||
-    rawSrc.includes('lh3.googleusercontent.com')
+    tieneImagenValida &&
+    (rawSrc.includes('res.cloudinary.com') ||
+      rawSrc.includes('supabase.co') ||
+      rawSrc.includes('lh3.googleusercontent.com'))
 
-  const optimizedSrc = isCdnOptimized ? optimizarUrlImagen(rawSrc, 400) : rawSrc
+  const optimizedSrc = tieneImagenValida ? optimizarUrlImagen(rawSrc, 400) : ''
   const esPrioritario = index < 4
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
@@ -91,7 +94,7 @@ export default function ProductCardV2({
     >
       {/* ── 1. Foto Superior Grande (16:10) ─────────────────────────────────── */}
       <div className="relative w-full aspect-[16/10] bg-slate-950 overflow-hidden">
-        {!imgError && optimizedSrc ? (
+        {tieneImagenValida && optimizedSrc ? (
           <Image
             src={optimizedSrc}
             alt={nombreVisible}
@@ -117,7 +120,7 @@ export default function ProductCardV2({
 
         {/* Badge Combo */}
         {prod.esCombo && (
-          <div className="absolute top-2.5 left-2.5 bg-emerald-600/90 text-white font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-lg shadow-md backdrop-blur-xs">
+          <div className="absolute top-2.5 left-2.5 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-lg shadow-md border border-emerald-400/30">
             Combo
           </div>
         )}
@@ -142,9 +145,40 @@ export default function ProductCardV2({
 
           {/* Descripción con ingredientes legible */}
           {descripcionVisible && (
-            <p className="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
-              {descripcionVisible}
-            </p>
+            <div>
+              <p
+                className={cn(
+                  "text-xs text-slate-400 font-normal leading-relaxed",
+                  !expandido && "line-clamp-2"
+                )}
+              >
+                {descripcionVisible}
+                {expandido && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpandido(false)
+                    }}
+                    className="text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
+                  >
+                    ver menos
+                  </button>
+                )}
+              </p>
+              {!expandido && descripcionVisible.length > 60 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandido(true)
+                  }}
+                  className="text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
+                >
+                  ... ver más
+                </button>
+              )}
+            </div>
           )}
         </div>
 

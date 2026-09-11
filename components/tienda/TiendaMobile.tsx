@@ -7,9 +7,9 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { Search, ChevronRight, LogOut, User } from 'lucide-react'
+import { Search, ChevronRight, LogOut, User, Lock } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
-import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
+import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
 import Fuse from 'fuse.js'
@@ -41,6 +41,7 @@ export default function TiendaMobile() {
   const { usuario, perfil, cerrarSesion } = usarClienteAuth()
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null)
+  const [categoriaActivaNav, setCategoriaActivaNav] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'profile' | 'cart'>('home')
   const [metadata, setMetadata] = useState<Record<string, MetaProducto>>(metadataRespaldo as Record<string, MetaProducto>)
@@ -182,6 +183,22 @@ export default function TiendaMobile() {
     return `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
   }, [configuracion])
 
+  const handleSeleccionarCategoria = useCallback((id: string | null) => {
+    // Si hay búsqueda activa, limpiarla para asegurar que todas las categorías estén visibles
+    if (busqueda) {
+      setBusqueda('')
+    }
+    const targetId = (!id || id === 'todos') ? null : id
+    setCategoriaActivaNav(targetId)
+    // No filtramos destructivamente los productos para no colapsar la altura de la página
+    setCategoriaSeleccionada(null)
+
+    // Desplazamiento fluido y exacto hacia la categoría seleccionada
+    setTimeout(() => {
+      scrollHaciaCategoria(targetId)
+    }, 80)
+  }, [busqueda])
+
   const handleNavClick = (tab: 'home' | 'search' | 'profile' | 'cart') => {
     if (tab !== 'cart') {
       setCartAbierto(false)
@@ -192,16 +209,17 @@ export default function TiendaMobile() {
       setActiveTab('home') // Mantenemos en home pero enfocamos el buscador
       setTimeout(() => {
         searchInputRef.current?.focus()
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+        scrollHaciaCategoria(null)
       }, 100)
     } else if (tab === 'profile') {
       setActiveTab('home')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollHaciaCategoria(null)
     } else {
       setActiveTab(tab)
       setBusqueda('')
       setCategoriaSeleccionada(null)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setCategoriaActivaNav(null)
+      scrollHaciaCategoria(null)
     }
   }
 
@@ -257,7 +275,7 @@ export default function TiendaMobile() {
       {/* Capa de oscurecimiento si hay textura para asegurar legibilidad */}
       {(isVideoBg || bgImage) && <div className="fixed inset-0 bg-black/75 -z-10 pointer-events-none" />}
       {/* Header App-like minimalista */}
-      <div className="bg-[#141414] sticky top-0 z-[100] px-3.5 py-3 shadow-md border-b border-white/5">
+      <div id="tienda-sticky-header" className="bg-[#141414] sticky top-0 z-[100] px-3.5 py-3 shadow-md border-b border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <BotonHamburguesa
@@ -320,8 +338,8 @@ export default function TiendaMobile() {
           {/* Banner Bloqueante de Local Cerrado / Domingos */}
           {(turnoActivo === false || esDomingoCerrado) && (
             <div className="mx-4 my-3 p-3.5 bg-rose-950 border border-rose-500/40 rounded-2xl flex items-center gap-3 shadow-xl animate-in fade-in">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shrink-0 border border-rose-500/30">
-                🔒
+              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30">
+                <Lock size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-black text-rose-300 leading-tight">
@@ -347,7 +365,7 @@ export default function TiendaMobile() {
               onBusquedaChange={setBusqueda}
               onToggleSelector={() => setSelectorAbierto(!selectorAbierto)}
               onSeleccionarCategoria={(id) => {
-                setCategoriaSeleccionada(id === 'todos' ? null : id)
+                handleSeleccionarCategoria(id)
                 setSelectorAbierto(false)
               }}
             />
@@ -380,11 +398,14 @@ export default function TiendaMobile() {
         <Suspense fallback={null}>
           <ModalPersonalizacion
             producto={productoAPersonalizar}
-            imagenFinal={(() => {
-              const url = metadata[productoAPersonalizar.id]?.imagen_url
-              if (!url || url.startsWith('data:')) return OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
-              return url
-            })()}
+            imagenFinal={resolverImagen(
+              metadata[productoAPersonalizar.id]?.imagen_url,
+              OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
+            )}
+            descripcion={
+              metadata[productoAPersonalizar.id]?.descripcion_publica ||
+              OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).desc
+            }
             modificadoresDisponibles={
               (productoAPersonalizar.modificadoresIds ?? [])
                 .map(id => modificadores.find(m => m.id === id))
@@ -430,11 +451,8 @@ export default function TiendaMobile() {
         abierto={sidebarAbierto}
         onCerrar={() => setSidebarAbierto(false)}
         categorias={categoriasActivas}
-        categoriaSeleccionada={categoriaSeleccionada}
-        onSeleccionarCategoria={(id) => {
-          setCategoriaSeleccionada(id)
-          if (id && busqueda) setBusqueda('')
-        }}
+        categoriaSeleccionada={categoriaActivaNav}
+        onSeleccionarCategoria={handleSeleccionarCategoria}
       />
 
       <BotonPedidoFlotante />

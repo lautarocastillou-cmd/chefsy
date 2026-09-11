@@ -137,7 +137,42 @@ export function filasAProductosPedido(
         precio: fila.precio,
         idCatalogo: fila.idProductoCatalogo,
         categoriaId: fila.idCategoria,
+        coccion: fila.coccion,
       }
     })
 }
+
+/**
+ * Detecta si un producto o su categoría corresponde a empanadas que tienen opción
+ * de cocción (Fritas o Al Horno).
+ * NOTA: Las empanadas árabes quedan excluidas porque solo salen al horno y no llevan opción.
+ */
+export function esProductoEmpanada(
+  nombreProducto?: string,
+  nombreCategoria?: string,
+  idCategoria?: string
+): boolean {
+  const normalizar = (s?: string) =>
+    (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+
+  const p = normalizar(nombreProducto)
+  const c = normalizar(nombreCategoria)
+  const cid = normalizar(idCategoria)
+
+  // Las empanadas árabes no tienen opción (solamente salen al horno)
+  if (p.includes('arabe') || c.includes('arabe') || cid.includes('arabe')) {
+    return false
+  }
+
+  return (
+    p.includes('empanada') ||
+    c.includes('empanada') ||
+    cid.includes('empanada')
+  )
+}
+
 

@@ -16,7 +16,9 @@ import {
   Bike,
   ChevronRight,
   Info,
-  ArrowRight
+  ArrowRight,
+  ChefHat,
+  Utensils
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -76,18 +78,28 @@ export default function SidebarTienda({
   // Bloquear scroll de fondo cuando el sidebar está abierto
   useEffect(() => {
     if (abierto) {
+      const origHtmlOverflow = document.documentElement.style.overflow
+      const origBodyOverflow = document.body.style.overflow
+      document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
+
+      return () => {
+        document.documentElement.style.overflow = origHtmlOverflow
+        document.body.style.overflow = origBodyOverflow
+      }
     }
   }, [abierto])
 
   const handleElegirCategoria = (id: string | null) => {
-    onSeleccionarCategoria(id)
+    // 1. Cerrar el sidebar
     onCerrar()
+
+    // 2. Desbloquear de inmediato overflow del body para permitir scroll
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+
+    // 3. Notificar selección para iniciar desplazamiento fluido
+    onSeleccionarCategoria(id)
   }
 
   const rawTel = (configuracion as any)?.telefono_negocio || '5493834225445'
@@ -104,10 +116,16 @@ export default function SidebarTienda({
           abierto ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
         onClick={onCerrar}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-lenis-prevent="true"
       />
 
       {/* Panel Lateral Deslizable (Sidebar) */}
       <aside
+        data-lenis-prevent="true"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
         className={cn(
           'fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-[#141414] text-white z-[200] shadow-2xl border-r border-white/10 flex flex-col justify-between transition-transform duration-300 ease-out overflow-hidden',
           abierto ? 'translate-x-0' : '-translate-x-full'
@@ -152,12 +170,15 @@ export default function SidebarTienda({
         </div>
 
         {/* Contenido Scrolleable */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+        <div 
+          data-lenis-prevent="true"
+          className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10"
+        >
           {/* SECCIÓN 1: Pedidos Activos (si hay alguno en camino) */}
           {pedidosActivos.length > 0 && (
             <div>
               <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider block mb-2 px-1">
-                🛵 Tu Pedido en Curso
+                Tu Pedido en Curso
               </span>
               <div className="space-y-2">
                 {pedidosActivos.map((p) => (
@@ -189,7 +210,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 2: Menú y Categorías */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              🍽️ Menú & Categorías
+              Menú & Categorías
             </span>
             <div className="space-y-1">
               {/* Opción Todos */}
@@ -204,7 +225,7 @@ export default function SidebarTienda({
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-base">🍴</span>
+                  <Utensils size={15} className="text-white/80 shrink-0" />
                   <span>Ver todo el menú</span>
                 </div>
                 {!categoriaSeleccionada && (
@@ -228,23 +249,10 @@ export default function SidebarTienda({
                     )}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <span className="text-sm shrink-0">
-                        {cat.nombre.toLowerCase().includes('burger')
-                          ? '🍔'
-                          : cat.nombre.toLowerCase().includes('lomo')
-                          ? '🥪'
-                          : cat.nombre.toLowerCase().includes('pizza')
-                          ? '🍕'
-                          : cat.nombre.toLowerCase().includes('mila')
-                          ? '🥩'
-                          : cat.nombre.toLowerCase().includes('papa')
-                          ? '🍟'
-                          : cat.nombre.toLowerCase().includes('bebida')
-                          ? '🥤'
-                          : cat.nombre.toLowerCase().includes('promo')
-                          ? '🏷️'
-                          : '🍽️'}
-                      </span>
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full shrink-0",
+                        seleccionada ? "bg-white" : "bg-amber-400/80"
+                      )} />
                       <span className="truncate">{cat.nombre}</span>
                     </div>
                     {seleccionada ? (
@@ -261,7 +269,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 3: Información & Institucional */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              ✨ Sobre Nosotros
+              Sobre Nosotros
             </span>
             <div className="space-y-1">
               {/* Botón ¿Quiénes somos? */}
@@ -312,7 +320,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 4: Contacto & Redes */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              💬 Contacto & Soporte
+              Contacto & Soporte
             </span>
             <div className="space-y-1.5">
               <a
@@ -353,7 +361,12 @@ export default function SidebarTienda({
 
       {/* Modal "¿Quiénes somos?" informativo */}
       {mostrarQuienesSomosModal && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200">
+        <div 
+          className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200"
+          data-lenis-prevent="true"
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           <div className="bg-[#1c1c1c] border border-white/15 rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative space-y-4">
             <button
               type="button"
@@ -363,8 +376,8 @@ export default function SidebarTienda({
               <X size={18} />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-2xl">
-              👨‍🍳
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+              <ChefHat size={24} className="text-amber-400" />
             </div>
 
             <div>

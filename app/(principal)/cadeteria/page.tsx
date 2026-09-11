@@ -8,7 +8,7 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus, Lock, AlertTriangle, AlertOctagon, Radio } from 'lucide-react'
 import { mutate } from 'swr'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
@@ -23,7 +23,8 @@ import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
-import { ListOrdered } from 'lucide-react'
+import { ListOrdered, Activity } from 'lucide-react'
+import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
 
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
@@ -140,7 +141,7 @@ function TarjetaPedidoCadete({
       {totalParadas !== undefined && totalParadas > 1 && (
         <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl p-2.5 flex items-center justify-between gap-2 transition-all">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-base shrink-0">📍</span>
+            <MapPin className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-black text-emerald-900 dark:text-emerald-200">
@@ -253,26 +254,27 @@ function TarjetaPedidoCadete({
             <div className="mt-1">
               {pedido.pago_confirmado ? (
                 <span className="inline-flex items-center bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  ✅ PAGADO
+                  PAGADO
                 </span>
               ) : (
                 <span className="inline-flex items-center bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">
-                  ❌ Pendiente Impactar
+                  Pendiente Impactar
                 </span>
               )}
             </div>
           )}
           {cambioMetodo && (
             <p className="text-[10px] font-black text-red-600 dark:text-red-400 animate-pulse mt-0.5">
-              ⚠️ ¡MÉTODO CAMBIÓ! (Era: {metodoOriginal.toUpperCase()})
+              ¡MÉTODO CAMBIÓ! (Era: {metodoOriginal.toUpperCase()})
             </p>
           )}
         </div>
       </div>
 
       {pedido.observaciones && (
-        <div className="text-sm text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded px-3 py-2">
-          ⚠️ {pedido.observaciones}
+        <div className="text-sm text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded px-3 py-2 flex items-start gap-1.5">
+          <AlertTriangle size={14} className="shrink-0 text-amber-500 mt-0.5" />
+          <span>{pedido.observaciones}</span>
         </div>
       )}
 
@@ -314,6 +316,7 @@ export default function PaginaCadeteria() {
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
   const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
   const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: Pedido[] } | null>(null)
+  const [tabAdmin, setTabAdmin] = useState<'pedidos' | 'rendimiento'>('pedidos')
 
   // Estado GPS de los cadetes activos (para el admin)
   const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
@@ -589,8 +592,8 @@ export default function PaginaCadeteria() {
     return (
       <div className="min-h-screen bg-chefsy-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl mx-auto border border-amber-500/20 shadow-inner">
-            🔒
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-inner">
+            <Lock className="w-7 h-7" />
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
@@ -623,62 +626,107 @@ export default function PaginaCadeteria() {
   return (
     <div className={esAdmin ? "min-h-full pb-8" : "min-h-screen bg-chefsy-50"}>
       {esAdmin ? (
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 transition-colors">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
-              <Bike size={22} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Cadetería</h1>
-              <p className="text-xs text-gray-400 dark:text-slate-400">
-                Pedidos asignados y listos para reparto (Solo Delivery)
-              </p>
-            </div>
-            <div className={cn(
-              "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
-              dbEstado === 'conectado'
-                ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
-                : dbEstado === 'desconectado'
-                  ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 animate-pulse"
-                  : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
-            )}>
-              <span className={cn(
-                "h-1.5 w-1.5 rounded-full shrink-0",
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-4 mb-6 transition-colors">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
+                <Bike size={22} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Cadetería</h1>
+                <p className="text-xs text-gray-400 dark:text-slate-400">
+                  {tabAdmin === 'pedidos' 
+                    ? 'Pedidos asignados y listos para reparto (Solo Delivery)'
+                    : 'Informe de rendimiento, velocidad física y rutas de cadetes'}
+                </p>
+              </div>
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
                 dbEstado === 'conectado'
-                  ? "bg-emerald-500 animate-pulse"
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
                   : dbEstado === 'desconectado'
-                    ? "bg-red-500"
-                    : "bg-slate-400"
-              )} />
-              <span>
-                {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE DE DATOS' : 'CONECTANDO...'}
-              </span>
+                    ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 animate-pulse"
+                    : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
+              )}>
+                <span className={cn(
+                  "h-1.5 w-1.5 rounded-full shrink-0",
+                  dbEstado === 'conectado'
+                    ? "bg-emerald-500 animate-pulse"
+                    : dbEstado === 'desconectado'
+                      ? "bg-red-500"
+                      : "bg-slate-400"
+                )} />
+                <span>
+                  {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE DE DATOS' : 'CONECTANDO...'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCadeteParaPagoExtra(null)
+                  setModalPagoExtraAbierto(true)
+                }}
+                className="text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0 cursor-pointer"
+                title="Registrar viaje a la carnicería o pago extra al cadete"
+              >
+                <Plus size={14} />
+                <span>+ Viaje / Pago Extra</span>
+              </button>
+
+              <a
+                href="/api/cadeteria/descargar-apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-slate-700 shrink-0"
+                title="Descargar última versión APK compilada por GitHub Actions"
+              >
+                <Download size={14} />
+                <span>Descargar APK Cadete</span>
+              </a>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Selector de pestañas para Administrador */}
+          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto self-start border border-slate-200/60 dark:border-slate-700/60">
             <button
               type="button"
-              onClick={() => {
-                setCadeteParaPagoExtra(null)
-                setModalPagoExtraAbierto(true)
-              }}
-              className="text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0 cursor-pointer"
-              title="Registrar viaje a la carnicería o pago extra al cadete"
+              onClick={() => setTabAdmin('pedidos')}
+              className={cn(
+                "px-4 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center gap-2 cursor-pointer",
+                tabAdmin === 'pedidos'
+                  ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
             >
-              <Plus size={14} />
-              <span>+ Viaje / Pago Extra</span>
+              <Bike size={15} />
+              <span>Repartos Activos</span>
+              {pedidosCadeteria.length > 0 && (
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-black",
+                  tabAdmin === 'pedidos'
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                )}>
+                  {pedidosCadeteria.length}
+                </span>
+              )}
             </button>
 
-            <a
-              href="/api/cadeteria/descargar-apk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-slate-700 shrink-0"
-              title="Descargar última versión APK compilada por GitHub Actions"
+            <button
+              type="button"
+              onClick={() => setTabAdmin('rendimiento')}
+              className={cn(
+                "px-4 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center gap-2 cursor-pointer",
+                tabAdmin === 'rendimiento'
+                  ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
             >
-              <Download size={14} />
-              <span>Descargar APK Cadete</span>
-            </a>
+              <Activity size={15} />
+              <span>Informe de Rendimiento & Velocidad</span>
+            </button>
           </div>
         </div>
       ) : (
@@ -741,10 +789,10 @@ export default function PaginaCadeteria() {
         </header>
       )}
 
-      <main className={esAdmin ? "max-w-xl mx-auto space-y-4" : "max-w-md mx-auto p-4 space-y-4"}>
+      <main className={esAdmin ? (tabAdmin === 'rendimiento' ? "max-w-5xl mx-auto space-y-4 px-2 sm:px-4" : "max-w-xl mx-auto space-y-4") : "max-w-md mx-auto p-4 space-y-4"}>
         {alertaVisibility && (
           <div className="bg-red-600 text-white p-4 rounded-2xl text-sm font-bold flex items-start gap-2.5 shadow-xl animate-bounce">
-            <span className="text-xl shrink-0">🚨</span>
+            <AlertOctagon className="w-6 h-6 shrink-0 mt-0.5" />
             <div>
               <p className="text-lg">¡CUIDADO!</p>
               <p className="mt-1 font-medium text-red-100">Minimizaste la app. El GPS del cliente se detuvo. Por favor, mantené esta pantalla abierta mientras estés en camino para no fallarle al cliente.</p>
@@ -754,14 +802,22 @@ export default function PaginaCadeteria() {
         
         {errorGps && (
           <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
-            <span className="text-base shrink-0">⚠️</span>
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">Advertencia de Ubicación:</p>
               <p className="mt-0.5 leading-relaxed">{errorGps}</p>
             </div>
           </div>
         )}
-        {!esAdmin && (
+
+        {esAdmin && tabAdmin === 'rendimiento' ? (
+          <InformeRendimientoCadetes
+            pedidosEnVivo={pedidos}
+            estadoGpsCadetes={estadoGpsCadetes}
+          />
+        ) : (
+          <>
+            {!esAdmin && (
           <>
             <div className="bg-gradient-to-r from-chefsy-800 to-chefsy-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden mb-3 animate-[slideIn_0.25s_ease-out]">
               <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
@@ -769,7 +825,7 @@ export default function PaginaCadeteria() {
               </div>
               <div className="relative z-10">
                 <h2 className="text-lg font-bold">
-                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
+                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo!' : `¡Hola, ${usuarioActivo.nombre}!`}
                 </h2>
                 <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
                 {pedidosListos.length > 0 && (
@@ -834,7 +890,10 @@ export default function PaginaCadeteria() {
 
         {esAdmin && Object.keys(estadoGpsCadetes).length > 0 && (
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">📡 Estado GPS Cadetes</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Radio size={12} className="text-emerald-500" />
+              <span>Estado GPS Cadetes</span>
+            </p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(estadoGpsCadetes).map(([id, estado]) => (
                 <div
@@ -975,6 +1034,8 @@ export default function PaginaCadeteria() {
               ))}
             </div>
           )
+        )}
+          </>
         )}
       </main>
       <CalculadoraSutil />

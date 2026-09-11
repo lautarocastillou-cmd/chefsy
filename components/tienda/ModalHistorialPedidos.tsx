@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, ShoppingBag, Truck, Store, UtensilsCrossed, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { X, ShoppingBag, Truck, Store, UtensilsCrossed, Clock, CheckCircle2, AlertCircle, Receipt } from 'lucide-react'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 
 interface ProductoPedido {
@@ -155,7 +155,7 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
             </div>
           ) : pedidos.length === 0 ? (
             <div className="py-16 text-center bg-black/30 rounded-2xl border border-dashed border-white/10 p-6 flex flex-col items-center">
-              <span className="text-4xl mb-3">🍔</span>
+              <Receipt size={36} className="text-slate-500 mb-3 stroke-[1.5]" />
               <h4 className="font-bebas text-2xl text-white tracking-wide">AÚN NO TENÉS PEDIDOS REGISTRADOS</h4>
               <p className="text-slate-400 text-sm max-w-xs mt-1">
                 Tus próximas compras y pedidos aparecerán en este historial automáticamente.

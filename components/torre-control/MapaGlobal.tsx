@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
-import { Compass, Bike, Store, Maximize2, Layers } from 'lucide-react'
+import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
+import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Coordenadas del local Chefsy
@@ -15,6 +16,8 @@ export interface CadeteData {
   nombre: string
   lat: number | null
   lng: number | null
+  speed?: number | null
+  heading?: number | null
   gps_activo: boolean
   bateria?: number | null
   updated_at: string | null
@@ -32,6 +35,7 @@ export interface CadeteData {
 interface MapaGlobalProps {
   cadetes: CadeteData[]
   focusedId?: string | null
+  onSelectCadete?: (id: string) => void
 }
 
 // Helper: Calcular ángulo de rumbo geográfico (0° a 360°)
@@ -71,7 +75,7 @@ interface CadeteAnimState {
   duracion: number
 }
 
-export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
+export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaGlobalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<{
@@ -90,6 +94,11 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
   const focusedIdRef = useRef<string | null | undefined>(focusedId)
   const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
   const modoCamaraRef = useRef<'todo' | 'cadete' | 'manual'>('todo')
+  const [mostrarPanelVelocidad, setMostrarPanelVelocidad] = useState(true)
+
+  const cadetesActivosConGps = useMemo(() => {
+    return cadetes.filter((c) => c.gps_activo && c.lat != null && c.lng != null)
+  }, [cadetes])
 
   useEffect(() => {
     cadetesDataRef.current = cadetes
@@ -166,8 +175,8 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
     const localIcon = L.divIcon({
       html: `
         <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-          <div style="width:40px;height:40px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(42,99,72,0.45);font-size:20px;display:flex;align-items:center;justify-content:center;">
-            🏪
+          <div style="width:40px;height:40px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(42,99,72,0.45);display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
           </div>
           <div style="margin-top:2px;background:#2A6348;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #ffffff;">
             Local Chefsy
@@ -184,7 +193,7 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       .addTo(map)
       .bindPopup(`
         <div style="text-align:center;padding:4px;font-family:sans-serif;">
-          <b style="font-size:14px;color:#2A6348;">🏪 Local Chefsy</b>
+          <b style="font-size:14px;color:#2A6348;">Local Chefsy</b>
           <p style="margin:4px 0 0;font-size:11px;color:#64748b;">Punto de partida y cocina central</p>
         </div>
       `)
@@ -369,6 +378,23 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       }
 
       const rumbo = animStatesRef.current[cadete.id]?.rumboActual || 0
+      const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
+      const esEnMovimiento = velKmH >= 4
+
+      let velBadgeBg = '#334155'
+      let velBadgeColor = '#94a3b8'
+      if (esEnMovimiento) {
+        if (velKmH > 60) {
+          velBadgeBg = '#dc2626'
+          velBadgeColor = '#ffffff'
+        } else if (velKmH > 40) {
+          velBadgeBg = '#d97706'
+          velBadgeColor = '#ffffff'
+        } else {
+          velBadgeBg = '#10b981'
+          velBadgeColor = '#ffffff'
+        }
+      }
 
       const batBadge =
         cadete.bateria != null
@@ -392,8 +418,8 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
             <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
             <!-- Badge circular de la moto (siempre derecho, ruedas al suelo) -->
             <div class="cadete-moto-badge" style="position:relative; width:44px; height:44px; background:${colorBg}; border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
-              <span class="cadete-moto-flip" style="display:inline-block; font-size:23px; line-height:1; transition:transform 0.15s ease-out; transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
-                🛵
+              <span class="cadete-moto-flip" style="display:flex; align-items:center; justify-content:center; transition:transform 0.15s ease-out; transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
               </span>
             </div>
             <!-- Flecha direccional en 360° -->
@@ -404,9 +430,14 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
             ${batBadge}
           </div>
 
-          <!-- Etiqueta de Nombre del Cadete con separación adecuada para que nunca se tape -->
-          <div style="margin-top:8px; background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
-            ${cadete.nombre}
+          <!-- Etiqueta de Nombre del Cadete y Velocidad en Tiempo Real -->
+          <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:2px;">
+            <div style="background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
+              ${cadete.nombre}
+            </div>
+            <div style="background:${velBadgeBg}; color:${velBadgeColor}; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:9999px; box-shadow:0 2px 5px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.85); display:flex; align-items:center; gap:2px; letter-spacing:0.2px; z-index:21;">
+              <span>${velKmH} km/h</span>
+            </div>
           </div>
         </div>
       `
@@ -414,7 +445,7 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       const cadeteIcon = L.divIcon({
         html: cadeteHtml,
         className: 'custom-cadete-animated-marker',
-        iconSize: [120, 80],
+        iconSize: [120, 96],
         iconAnchor: [60, 22],
         popupAnchor: [0, -25],
       })
@@ -422,7 +453,7 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
       const popupContent = `
         <div style="min-width:190px;padding:4px;font-family:sans-serif;">
           <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:6px;">
-            <b style="font-size:14px;color:#0f172a;">🛵 ${cadete.nombre}</b>
+            <b style="font-size:14px;color:#0f172a;">${cadete.nombre}</b>
             ${
               cadete.bateria != null
                 ? `<span style="font-size:11px;font-weight:bold;color:${
@@ -433,13 +464,19 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
                 : ''
             }
           </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:5px 8px;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Velocidad actual:</span>
+            <span style="font-size:12px;font-weight:900;color:${esEnMovimiento ? (velKmH > 60 ? '#dc2626' : '#16a34a') : '#64748b'};">
+              ${esEnMovimiento ? `${velKmH} km/h (En marcha)` : '0 km/h (Detenido)'}
+            </span>
+          </div>
           <div style="font-size:12px;margin-bottom:6px;">
             ${
               cadete.pedidoActivo
-                ? `<span style="color:#e11d48;font-weight:bold;">📦 EN REPARTO</span>
+                ? `<span style="color:#e11d48;font-weight:bold;">EN REPARTO</span>
                    <div style="color:#334155;font-size:12px;margin-top:2px;">Cliente: <b>${cadete.pedidoActivo.cliente}</b></div>
-                   ${cadete.pedidoActivo.direccion ? `<div style="color:#64748b;font-size:11px;margin-top:1px;">📍 ${cadete.pedidoActivo.direccion}</div>` : ''}`
-                : `<span style="color:#16a34a;font-weight:bold;">🟢 DISPONIBLE</span>
+                   ${cadete.pedidoActivo.direccion ? `<div style="color:#64748b;font-size:11px;margin-top:1px;">${cadete.pedidoActivo.direccion}</div>` : ''}`
+                : `<span style="color:#16a34a;font-weight:bold;">DISPONIBLE</span>
                    <div style="color:#64748b;font-size:11px;margin-top:2px;">En espera / Libre</div>`
             }
           </div>
@@ -474,8 +511,8 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         const clienteIcon = L.divIcon({
           html: `
             <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
-              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);font-size:18px;">
-                🏠
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               </div>
               <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;">
                 ${pedido.cliente}
@@ -491,10 +528,10 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         const clientPopup = `
           <div style="min-width:180px;padding:4px;font-family:sans-serif;">
             <div style="border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:6px;">
-              <b style="font-size:13px;color:#1e40af;">🏠 Entrega: ${pedido.cliente}</b>
+              <b style="font-size:13px;color:#1e40af;">Entrega: ${pedido.cliente}</b>
             </div>
-            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">📍 ${pedido.direccion}</div>` : ''}
-            <div style="font-size:11px;color:#64748b;">Cadete asignado: <b>🛵 ${cadete.nombre}</b></div>
+            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">${pedido.direccion}</div>` : ''}
+            <div style="font-size:11px;color:#64748b;">Cadete asignado: <b>${cadete.nombre}</b></div>
             ${pedido.total ? `<div style="font-size:11px;font-weight:bold;color:#0f172a;margin-top:2px;">Total: ${formatearPrecio(pedido.total)}</div>` : ''}
           </div>
         `
@@ -681,6 +718,99 @@ export default function MapaGlobal({ cadetes, focusedId }: MapaGlobalProps) {
         >
           <Store size={18} />
         </button>
+      </div>
+
+      {/* Widget Flotante: Velocímetro y Telemetría en Vivo */}
+      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[280px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
+        <div
+          onClick={() => setMostrarPanelVelocidad(!mostrarPanelVelocidad)}
+          className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Gauge size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                  Velocidad en Vivo
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              </div>
+              <p className="text-[10px] text-slate-400 truncate">
+                {cadetesActivosConGps.length} cadete(s) transmitiendo
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+            title={mostrarPanelVelocidad ? 'Minimizar' : 'Expandir'}
+          >
+            {mostrarPanelVelocidad ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {mostrarPanelVelocidad && (
+          <div className="px-3 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800 space-y-2 max-h-[260px] overflow-y-auto">
+            {cadetesActivosConGps.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic py-2 text-center">
+                Sin cadetes con GPS activo en este momento.
+              </p>
+            ) : (
+              cadetesActivosConGps.map((c) => {
+                const vel = calcularVelocidadEnVivoKmH(c.speed)
+                const enMarcha = vel >= 4
+                const isSelected = focusedId === c.id
+
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      if (onSelectCadete) onSelectCadete(c.id)
+                      if (mapInstanceRef.current && c.lat != null && c.lng != null) {
+                        setModoCamara('cadete')
+                        mapInstanceRef.current.flyTo([c.lat, c.lng], 16, { duration: 0.6 })
+                      }
+                    }}
+                    className={`p-2 rounded-xl flex items-center justify-between gap-2 text-xs transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="min-w-0 flex items-center gap-2">
+                      <Bike className="w-4 h-4 text-slate-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {c.nombre}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {c.pedidoActivo ? `Pedido: ${c.pedidoActivo.cliente}` : 'Libre'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${
+                        enMarcha
+                          ? vel > 60
+                            ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:border-red-900/40'
+                            : vel > 40
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/40'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/40'
+                          : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                      }`}>
+                        {enMarcha && <Zap size={10} className="fill-current" />}
+                        <span>{vel} km/h</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

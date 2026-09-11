@@ -200,7 +200,7 @@ export default function PaginaInicio() {
               <span className="font-black text-xl text-white">Chefsy</span>
             </div>
             <p className="text-sm leading-relaxed max-w-xs">
-              El mejor sabor, ingredientes de primera calidad y envío rápido. Hecho con ❤️ en Tucumán.
+              El mejor sabor, ingredientes de primera calidad y envío rápido. Hecho con pasión en Tucumán.
             </p>
           </div>
           <div className="space-y-4">

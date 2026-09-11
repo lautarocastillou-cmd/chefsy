@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { usarAuth } from '@/contexto/AuthContexto'
-import { KeyRound, User, Lock, AlertTriangle, ShieldCheck, Bike } from 'lucide-react'
+import { KeyRound, User, Lock, AlertTriangle, ShieldCheck, Bike, Store } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -136,7 +136,8 @@ export default function LoginPage() {
             href="/"
             className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-98"
           >
-            🏪 Ir a la Tienda
+            <Store size={14} />
+            <span>Ir a la Tienda</span>
           </Link>
         </div>
       </div>

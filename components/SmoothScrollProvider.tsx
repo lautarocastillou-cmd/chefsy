@@ -25,6 +25,10 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
       touchMultiplier: 1.5,
     })
 
+    if (typeof window !== 'undefined') {
+      ;(window as any).__lenis = lenis
+    }
+
     function raf(time: number) {
       lenis.raf(time)
       requestAnimationFrame(raf)
@@ -34,6 +38,9 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
 
     return () => {
       cancelAnimationFrame(rafId)
+      if (typeof window !== 'undefined' && (window as any).__lenis === lenis) {
+        ;(window as any).__lenis = null
+      }
       lenis.destroy()
     }
   }, [pathname])

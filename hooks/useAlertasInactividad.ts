@@ -98,7 +98,7 @@ export function useAlertasInactividad({
           if (deberiaAlertar) {
             alertasEnviadasRef.current[key] = ahora
             const tiempoMinutos = Math.round(transcurridoMs / (60 * 1000))
-            const msg = `⚠️ El pedido de ${pedido.cliente} lleva ${tiempoMinutos} min en estado "${msgEstado}".`
+            const msg = `El pedido de ${pedido.cliente} lleva ${tiempoMinutos} min en estado "${msgEstado}".`
             agregarNotificacionRef.current(msg, 'warning')
             reproducirSonidoNotificacion()
           }

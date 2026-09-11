@@ -8,9 +8,15 @@ import {
   Sparkles, 
   X, 
   QrCode, 
-  Clock,
-  FileText,
-  Type
+  Clock, 
+  FileText, 
+  Type,
+  Gift,
+  Ticket,
+  Instagram,
+  Star,
+  MessageSquare,
+  Zap
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -18,7 +24,7 @@ import { cn } from '@/lib/utils'
 interface PlantillaPromo {
   id: string
   nombre: string
-  icono: string
+  icono: React.ElementType
   titulo: string
   mensaje: string
   incluirQr: boolean
@@ -61,7 +67,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'descuento_7dias',
     nombre: '15% OFF (7 Días)',
-    icono: '🎁',
+    icono: Gift,
     titulo: '¡REGALO EXCLUSIVO!',
     mensaje: 'Presentá este ticket en tu próximo pedido y llevate un 15% DE DESCUENTO.',
     incluirQr: true,
@@ -74,7 +80,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'descuento_14dias',
     nombre: '10% OFF (14 Días)',
-    icono: '🎟️',
+    icono: Ticket,
     titulo: '¡10% OFF PROMO!',
     mensaje: 'Mostrá este ticket en tu próxima visita y disfrutá de un 10% de descuento en tu cuenta.',
     incluirQr: true,
@@ -87,7 +93,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'instagram',
     nombre: 'Seguinos en Instagram',
-    icono: '📸',
+    icono: Instagram,
     titulo: 'SEGUINOS EN INSTAGRAM',
     mensaje: 'Subí una foto de tu pedido, etiquetanos en tus historias y participá por cenas gratis cada semana.',
     incluirQr: true,
@@ -100,7 +106,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'resena',
     nombre: 'Reseña Google (Calificar)',
-    icono: '⭐',
+    icono: Star,
     titulo: '¿TE GUSTÓ NUESTRA COMIDA?',
     mensaje: 'Dejanos tu opinión y 5 estrellas en Google para ayudarnos a seguir mejorando. ¡Tu valoración nos ayuda un montón!',
     incluirQr: true,
@@ -113,7 +119,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'whatsapp',
     nombre: 'WhatsApp Directo',
-    icono: '💬',
+    icono: MessageSquare,
     titulo: 'PEDÍ MÁS RÁPIDO',
     mensaje: 'Agendá nuestro WhatsApp para acceder a promociones relámpago y menú diario exclusivo.',
     incluirQr: true,
@@ -126,7 +132,7 @@ const PLANTILLAS: PlantillaPromo[] = [
   {
     id: 'personalizado',
     nombre: 'Promo Solo Hoy / Express',
-    icono: '⚡',
+    icono: Zap,
     titulo: '¡PROMO DEL DÍA!',
     mensaje: '2x1 en postres y bebidas hasta el cierre del servicio.',
     incluirQr: false,
@@ -203,17 +209,20 @@ const PlantillasGrid = memo(function PlantillasGrid({ onSelect }: { onSelect: (p
         <span>Plantillas Rápidas (1 Clic)</span>
       </label>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {PLANTILLAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onSelect(p)}
-            className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 group cursor-pointer"
-          >
-            <span className="text-base shrink-0">{p.icono}</span>
-            <span className="truncate leading-tight text-[11px]">{p.nombre}</span>
-          </button>
-        ))}
+        {PLANTILLAS.map((p) => {
+          const Icono = p.icono
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect(p)}
+              className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 group cursor-pointer"
+            >
+              <Icono size={16} className="text-amber-500 shrink-0" />
+              <span className="truncate leading-tight text-[11px]">{p.nombre}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -326,7 +335,7 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         <div class="mensaje">${mensaje.replace(/\n/g, '<br/>')}</div>
 
         ${textoValidez ? `
-          <div class="validez-box">⏳ ${textoValidez.toUpperCase()}</div>
+          <div class="validez-box">${textoValidez.toUpperCase()}</div>
         ` : ''}
 
         ${incluirQr && qrDataUrl ? `
@@ -846,12 +855,13 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
 
                 {textoValidez && (
                   <div 
-                    className="border border-black rounded px-1.5 py-1 my-1.5 bg-slate-50 font-black uppercase tracking-wide"
+                    className="border border-black rounded px-1.5 py-1 my-1.5 bg-slate-50 font-black uppercase tracking-wide flex items-center justify-center gap-1.5"
                     style={{
                       fontSize: tamanoFuente === 'extra_grande' ? '11px' : tamanoFuente === 'grande' ? '10px' : '9px'
                     }}
                   >
-                    ⏳ {textoValidez}
+                    <Clock size={11} className="inline shrink-0" />
+                    <span>{textoValidez}</span>
                   </div>
                 )}
 

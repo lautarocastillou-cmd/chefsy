@@ -12,6 +12,7 @@ import {
   X,
   Phone,
   MessageCircle,
+  Bike,
 } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 
@@ -23,6 +24,7 @@ interface PropsModalAccionesPedidoMobile {
   onImprimir: () => void
   onCopiarTicket: () => void
   onCopiarWhatsApp: () => void
+  onCopiarLinkSeguimiento?: () => void
   onVerMapa?: () => void
   onRevertirEstado?: () => void
   onCancelar: () => void
@@ -36,6 +38,7 @@ export default function ModalAccionesPedidoMobile({
   onImprimir,
   onCopiarTicket,
   onCopiarWhatsApp,
+  onCopiarLinkSeguimiento,
   onVerMapa,
   onRevertirEstado,
   onCancelar,
@@ -65,16 +68,16 @@ export default function ModalAccionesPedidoMobile({
     },
     {
       id: 'imprimir',
-      label: 'Imprimir Comanda Térmica',
-      descripcion: 'Enviar a ticketera USB / Bluetooth',
+      label: 'Imprimir Comanda',
+      descripcion: 'Mandar a la impresora térmica',
       icon: Printer,
       color: 'text-slate-300 bg-slate-800 border-slate-700',
       action: onImprimir,
     },
     {
       id: 'ticket',
-      label: 'Copiar Desglose para Cliente',
-      descripcion: 'Texto formateado con ítems y total',
+      label: 'Copiar Ticket para Cliente',
+      descripcion: 'Resumen prolijo para enviar por WhatsApp',
       icon: Receipt,
       color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
       action: onCopiarTicket,
@@ -87,6 +90,18 @@ export default function ModalAccionesPedidoMobile({
       color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
       action: onCopiarWhatsApp,
     },
+    ...(onCopiarLinkSeguimiento && pedido.tipoEntrega === 'delivery' && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
+      ? [
+          {
+            id: 'link_rastreo',
+            label: 'Copiar Link de Rastreo en Vivo',
+            descripcion: 'Para enviar al cliente y marcar pedido en camino',
+            icon: Bike,
+            color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+            action: onCopiarLinkSeguimiento,
+          },
+        ]
+      : []),
     ...(pedido.cadete_id && onVerMapa
       ? [
           {
@@ -103,8 +118,8 @@ export default function ModalAccionesPedidoMobile({
       ? [
           {
             id: 'revertir',
-            label: 'Revertir a Estado Anterior',
-            descripcion: 'Retroceder la comanda un paso',
+            label: 'Volver al Paso Anterior',
+            descripcion: 'Corregir si se avanzó por error',
             icon: Undo2,
             color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
             action: onRevertirEstado,
@@ -113,8 +128,8 @@ export default function ModalAccionesPedidoMobile({
       : []),
     {
       id: 'cancelar',
-      label: 'Cancelar Pedido',
-      descripcion: 'Anular orden y restituir stock',
+      label: 'Anular Pedido',
+      descripcion: 'Cancelar esta comanda',
       icon: Trash2,
       color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
       esPeligroso: true,

@@ -142,7 +142,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
               Resumen de Entrega
             </h3>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md border border-white/5">
-              {pedido.tipoEntrega === 'delivery' ? '🛵 Delivery' : '🏪 Retiro'}
+              {pedido.tipoEntrega === 'delivery' ? 'Delivery' : 'Retiro'}
             </span>
           </div>
 
@@ -162,7 +162,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
             <div>
               <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Método de Pago</p>
               <p className="font-bold text-emerald-400 capitalize text-xs">
-                {pedido.metodoPago === 'efectivo' ? '💵 Efectivo' : pedido.metodoPago === 'tarjeta' ? '💳 Tarjeta' : pedido.metodoPago === 'transferencia' ? '📲 Transferencia' : pedido.metodoPago.replace('_', ' ')}
+                {pedido.metodoPago === 'efectivo' ? 'Efectivo' : pedido.metodoPago === 'tarjeta' ? 'Tarjeta' : pedido.metodoPago === 'transferencia' ? 'Transferencia' : pedido.metodoPago.replace('_', ' ')}
               </p>
             </div>
           </div>
@@ -193,8 +193,8 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
         {/* Acciones principales */}
         <div className="flex flex-col gap-3 pt-1">
           <div className="flex flex-col items-center gap-1">
-            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-bounce">
-              Ahora, por favor 👇
+            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              Paso final:
             </span>
           </div>
 

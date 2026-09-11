@@ -8,7 +8,8 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react'
-import { X, CheckCircle2, RotateCcw, AlertTriangle, Bell, Bike, Trash2 } from 'lucide-react'
+import { X, CheckCircle2, AlertTriangle, Bell, Bike } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface Notificacion {
   id: string
@@ -18,6 +19,7 @@ export interface Notificacion {
     etiqueta: string
     alHacerClick: () => void
   }
+  saliendo?: boolean
 }
 
 export interface ValorContextoTemaNotificacion {
@@ -127,6 +129,28 @@ export function reproducirSonidoEntregaExitosa() {
   } catch {}
 }
 
+export function reproducirAlarmaDemora() {
+  const ctx = obtenerAudioContext()
+  if (!ctx) return
+  try {
+    const playTone = (freq: number, start: number, duration: number, volume: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, start)
+      gain.gain.setValueAtTime(volume, start)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + duration)
+    }
+    const t = ctx.currentTime
+    playTone(520, t, 0.12, 0.14)
+    playTone(620, t + 0.12, 0.16, 0.16)
+  } catch {}
+}
+
 // ── Proveedor de Tema y Notificaciones ─────────────────────────────────────
 
 export function ProveedorTemaNotificacion({ children }: { children: ReactNode }) {
@@ -172,18 +196,28 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       ) {
         try {
           new Notification('Chefsy', {
-            body: mensaje.replace(/[🛵🔔💵📍💬]/g, '').trim(),
+            body: mensaje.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim(),
             icon: '/logo.jpg',
           })
         } catch {}
       }
 
       setNotificaciones((prev) => {
-        if (prev.some((n) => n.mensaje === mensaje && n.tipo === tipo)) {
+        if (prev.some((n) => !n.saliendo && n.mensaje === mensaje && n.tipo === tipo)) {
           return prev
         }
         const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-        return [...prev, { id, mensaje, tipo, accion }]
+        const nueva: Notificacion = { id, mensaje, tipo, accion, saliendo: false }
+
+        // Contamos cuántas notificaciones no están todavía saliendo
+        const activas = prev.filter((n) => !n.saliendo)
+        if (activas.length >= 3) {
+          // Marcamos la más vieja activa para que inicie su salida suave y elegante
+          const idAMarcar = activas[0].id
+          return prev.map((n) => (n.id === idAMarcar ? { ...n, saliendo: true } : n)).concat(nueva)
+        }
+
+        return [...prev, nueva]
       })
     },
     []
@@ -218,7 +252,7 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
   )
 }
 
-// ── Toast Individual con Animación CSS Nativa en GPU (0 CPU / 0 Re-renders) ─
+// ── Toast Individual en Formato Píldora Centrada con Animación Soft de Salida ──
 
 function ToastItem({
   notificacion: n,
@@ -227,10 +261,11 @@ function ToastItem({
   notificacion: Notificacion
   onEliminar: (id: string) => void
 }) {
-  const [pausado, setPausado] = useState(false)
-  const duracionMs = n.accion ? 4800 : 3800
+  const [saliendoLocal, setSaliendoLocal] = useState(false)
+  const saliendo = Boolean(n.saliendo || saliendoLocal)
+  const duracionMs = n.accion ? 4200 : 2600
 
-  const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
+  const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.toLowerCase().includes('entrega') || n.mensaje.toLowerCase().includes('llevar')
 
   const Icono = esEntrega
     ? Bike
@@ -240,141 +275,103 @@ function ToastItem({
     ? AlertTriangle
     : Bell
 
-  const badgeEstilo = esEntrega
-    ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
-    : n.tipo === 'success'
-    ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
+  const iconoEstilo = esEntrega || n.tipo === 'success'
+    ? 'text-emerald-400 bg-emerald-500/20 border-emerald-500/40'
     : n.tipo === 'warning'
-    ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30'
-    : 'text-sky-400 bg-sky-500/15 border border-sky-500/30'
+    ? 'text-amber-400 bg-amber-500/20 border-amber-500/40'
+    : 'text-sky-400 bg-sky-500/20 border-sky-500/40'
 
-  const barraColor = esEntrega
-    ? 'from-emerald-500 to-teal-400'
-    : n.tipo === 'success'
-    ? 'from-emerald-500 to-emerald-400'
-    : n.tipo === 'warning'
-    ? 'from-amber-500 to-amber-400'
-    : 'from-sky-500 to-sky-400'
+  // Auto-cierre con timer si aún no está saliendo
+  useEffect(() => {
+    if (saliendo) return
 
-  const etiquetaCategoria = esEntrega
-    ? 'PEDIDO ENTREGADO'
-    : n.tipo === 'success'
-    ? 'ÉXITO'
-    : n.tipo === 'warning'
-    ? 'AVISO'
-    : 'NOVEDAD'
+    const timer = setTimeout(() => {
+      setSaliendoLocal(true)
+    }, duracionMs)
+
+    return () => clearTimeout(timer)
+  }, [duracionMs, saliendo])
+
+  // Desmontar de estado una vez terminada la animación suave de salida (280ms)
+  useEffect(() => {
+    if (!saliendo) return
+
+    const timerDesmontar = setTimeout(() => {
+      onEliminar(n.id)
+    }, 280)
+
+    return () => clearTimeout(timerDesmontar)
+  }, [saliendo, n.id, onEliminar])
+
+  const manejarCerrar = () => {
+    setSaliendoLocal(true)
+  }
 
   return (
     <div
-      onMouseEnter={() => setPausado(true)}
-      onMouseLeave={() => setPausado(false)}
-      className="relative overflow-hidden bg-[#0f172a] border border-white/10 hover:border-white/20 text-slate-100 rounded-2xl shadow-2xl shadow-black/90 p-3.5 sm:p-4 flex gap-3 items-start pointer-events-auto transition-transform duration-150 transform hover:scale-[1.01] animate-in slide-in-from-right-4 fade-in-0 duration-200 select-none"
+      style={{ willChange: 'transform, opacity' }}
+      className={cn(
+        'flex items-center gap-2.5 bg-[#0f172a] border border-white/20 text-white rounded-full px-4 sm:px-5 py-2 sm:py-2.5 shadow-[0_20px_30px_-5px_rgba(0,0,0,0.8),0_0_15px_0_rgba(0,0,0,0.4)] pointer-events-auto select-none max-w-[92vw] transform-gpu transition-all duration-300 ease-out',
+        saliendo
+          ? 'opacity-0 translate-y-3 scale-95 pointer-events-none'
+          : 'opacity-100 translate-y-0 scale-100 animate-in slide-in-from-bottom-3 fade-in-0 duration-200'
+      )}
     >
-      {/* Icono temático */}
-      <div className={`p-2 rounded-xl shrink-0 ${badgeEstilo}`}>
-        <Icono size={17} strokeWidth={2.2} />
+      {/* Icono temático circular */}
+      <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0 border ${iconoEstilo}`}>
+        <Icono size={13} strokeWidth={2.5} />
       </div>
 
-      {/* Contenido */}
-      <div className="flex-1 min-w-0 pr-1 text-left">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-            {etiquetaCategoria}
-          </span>
-          {pausado && (
-            <span className="text-[9px] text-amber-400/90 font-bold tracking-tight">
-              (pausado)
-            </span>
-          )}
-        </div>
-        <p className="text-xs sm:text-[13px] font-medium text-slate-100 mt-1 leading-snug">
-          {n.mensaje}
-        </p>
+      {/* Contenido / Mensaje en una línea */}
+      <span className="text-xs sm:text-[13.5px] font-semibold text-slate-100 whitespace-nowrap overflow-hidden text-ellipsis max-w-[65vw] sm:max-w-[420px]">
+        {n.mensaje}
+      </span>
 
-        {/* Botón de acción opcional */}
-        {n.accion && (
-          <button
-            type="button"
-            onClick={() => {
-              n.accion?.alHacerClick()
-              onEliminar(n.id)
-            }}
-            className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
-          >
-            <RotateCcw size={11} />
-            <span>{n.accion.etiqueta}</span>
-          </button>
-        )}
-      </div>
+      {/* Botón de acción opcional */}
+      {n.accion && (
+        <button
+          type="button"
+          onClick={() => {
+            n.accion?.alHacerClick()
+            manejarCerrar()
+          }}
+          className="ml-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 underline cursor-pointer shrink-0"
+        >
+          {n.accion.etiqueta}
+        </button>
+      )}
 
-      {/* Botón de descarte inmediato */}
+      {/* Botón de descarte inmediato con salida suave */}
       <button
         type="button"
-        onClick={() => onEliminar(n.id)}
-        className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 shrink-0 -mr-1 cursor-pointer"
+        onClick={manejarCerrar}
+        className="text-slate-400 hover:text-white transition-colors p-0.5 rounded-full hover:bg-white/10 shrink-0 ml-0.5 cursor-pointer"
         title="Cerrar notificación"
       >
-        <X size={14} />
+        <X size={13} />
       </button>
-
-      {/* Barra de progreso en GPU pura (sin renders de React; se elimina al terminar la animación) */}
-      <div
-        className={`absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r ${barraColor}`}
-        style={{
-          width: '100%',
-          animation: `toast-progress ${duracionMs}ms linear forwards`,
-          animationPlayState: pausado ? 'paused' : 'running',
-          willChange: 'transform, width',
-        }}
-        onAnimationEnd={() => onEliminar(n.id)}
-      />
     </div>
   )
 }
 
-// ── Contenedor de Toasts a la Derecha con Animaciones a 60/120 FPS ──────────
+// ── Contenedor de Toasts Centrado Abajo (Máximo 3 en pantalla) ────────────
 
 function ContenedorToasts({
   notificaciones,
   onEliminar,
-  onEliminarTodas,
 }: {
   notificaciones: Notificacion[]
   onEliminar: (id: string) => void
   onEliminarTodas: () => void
 }) {
-  return (
-    <>
-      <style>{`
-        @keyframes toast-progress {
-          0% { width: 100%; }
-          100% { width: 0%; }
-        }
-      `}</style>
-      <div className="fixed bottom-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full px-3 sm:px-0 pointer-events-none">
-        {/* Botón flotante 'Borrar todas' si hay más de 3 notificaciones */}
-        {notificaciones.length > 3 && (
-          <div className="flex justify-end pb-0.5 pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <button
-              type="button"
-              onClick={onEliminarTodas}
-              className="group flex items-center gap-1.5 bg-[#0f172a] hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-white/15 hover:border-rose-500/50 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-2xl shadow-black/90 transition-all duration-150 cursor-pointer active:scale-95"
-              title="Descartar todas las notificaciones activas"
-            >
-              <Trash2 size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
-              <span>Borrar todas ({notificaciones.length})</span>
-            </button>
-          </div>
-        )}
+  if (notificaciones.length === 0) return null
 
-        {/* Lista de notificaciones con scroll suave si hay muchas */}
-        <div className="flex flex-col gap-2.5 max-h-[75vh] overflow-y-auto no-scrollbar pr-0.5">
-          {notificaciones.map((n) => (
-            <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
-          ))}
-        </div>
-      </div>
-    </>
+  return (
+    <div className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-[999999] flex flex-col items-center gap-2 pointer-events-none w-auto max-w-[92vw]">
+      {notificaciones.map((n) => (
+        <ToastItem key={n.id} notificacion={n} onEliminar={onEliminar} />
+      ))}
+    </div>
   )
 }
 
