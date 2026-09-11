@@ -322,8 +322,8 @@ export default function InformeRendimientoCadetes({
                   className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer select-none"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 font-black shadow-inner">
-                      🛵
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-black shadow-inner">
+                      <Bike className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -466,11 +466,11 @@ export default function InformeRendimientoCadetes({
                                   </p>
                                   {telemetriaPedido && (
                                     <div className="flex items-center gap-2.5 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                                        🚀 {telemetriaPedido.velocidadMediaMovimiento} km/h
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                                        <Zap size={11} /> {telemetriaPedido.velocidadMediaMovimiento} km/h
                                       </span>
-                                      <span>📏 {telemetriaPedido.distanciaTotalKm} km</span>
-                                      <span>⏱️ {Math.round(telemetriaPedido.duracionTotalSegundos / 60)} min</span>
+                                      <span className="flex items-center gap-1"><Navigation size={11} /> {telemetriaPedido.distanciaTotalKm} km</span>
+                                      <span className="flex items-center gap-1"><Clock size={11} /> {Math.round(telemetriaPedido.duracionTotalSegundos / 60)} min</span>
                                     </div>
                                   )}
                                 </div>

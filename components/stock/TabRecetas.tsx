@@ -114,9 +114,18 @@ export function TabRecetas({
                           }`}
                         >
                           <div>
-                            <div className="text-slate-800 dark:text-slate-100 font-bold">{p.nombre}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                              {tieneReceta ? '✅ Receta asignada' : '⚠️ Sin receta'}
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium flex items-center gap-1.5">
+                              {tieneReceta ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                  <span>Receta asignada</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                                  <span>Sin receta</span>
+                                </>
+                              )}
                             </div>
                           </div>
                           <ChevronRight size={18} className="text-slate-400" />

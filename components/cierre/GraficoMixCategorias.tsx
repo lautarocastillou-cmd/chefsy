@@ -58,7 +58,7 @@ export default function GraficoMixCategorias({
 
         {categoriaLider && (
           <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hidden sm:inline-flex items-center gap-1.5">
-            👑 Líder: {categoriaLider.categoria} ({categoriaLider.porcentaje}%)
+            Líder: {categoriaLider.categoria} ({categoriaLider.porcentaje}%)
           </span>
         )}
       </div>

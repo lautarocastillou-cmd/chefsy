@@ -8,7 +8,7 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus, Lock, AlertTriangle, AlertOctagon, Radio } from 'lucide-react'
 import { mutate } from 'swr'
 import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
@@ -141,7 +141,7 @@ function TarjetaPedidoCadete({
       {totalParadas !== undefined && totalParadas > 1 && (
         <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl p-2.5 flex items-center justify-between gap-2 transition-all">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-base shrink-0">📍</span>
+            <MapPin className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-black text-emerald-900 dark:text-emerald-200">
@@ -254,26 +254,27 @@ function TarjetaPedidoCadete({
             <div className="mt-1">
               {pedido.pago_confirmado ? (
                 <span className="inline-flex items-center bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  ✅ PAGADO
+                  PAGADO
                 </span>
               ) : (
                 <span className="inline-flex items-center bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">
-                  ❌ Pendiente Impactar
+                  Pendiente Impactar
                 </span>
               )}
             </div>
           )}
           {cambioMetodo && (
             <p className="text-[10px] font-black text-red-600 dark:text-red-400 animate-pulse mt-0.5">
-              ⚠️ ¡MÉTODO CAMBIÓ! (Era: {metodoOriginal.toUpperCase()})
+              ¡MÉTODO CAMBIÓ! (Era: {metodoOriginal.toUpperCase()})
             </p>
           )}
         </div>
       </div>
 
       {pedido.observaciones && (
-        <div className="text-sm text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded px-3 py-2">
-          ⚠️ {pedido.observaciones}
+        <div className="text-sm text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded px-3 py-2 flex items-start gap-1.5">
+          <AlertTriangle size={14} className="shrink-0 text-amber-500 mt-0.5" />
+          <span>{pedido.observaciones}</span>
         </div>
       )}
 
@@ -591,8 +592,8 @@ export default function PaginaCadeteria() {
     return (
       <div className="min-h-screen bg-chefsy-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl mx-auto border border-amber-500/20 shadow-inner">
-            🔒
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-inner">
+            <Lock className="w-7 h-7" />
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
@@ -791,7 +792,7 @@ export default function PaginaCadeteria() {
       <main className={esAdmin ? (tabAdmin === 'rendimiento' ? "max-w-5xl mx-auto space-y-4 px-2 sm:px-4" : "max-w-xl mx-auto space-y-4") : "max-w-md mx-auto p-4 space-y-4"}>
         {alertaVisibility && (
           <div className="bg-red-600 text-white p-4 rounded-2xl text-sm font-bold flex items-start gap-2.5 shadow-xl animate-bounce">
-            <span className="text-xl shrink-0">🚨</span>
+            <AlertOctagon className="w-6 h-6 shrink-0 mt-0.5" />
             <div>
               <p className="text-lg">¡CUIDADO!</p>
               <p className="mt-1 font-medium text-red-100">Minimizaste la app. El GPS del cliente se detuvo. Por favor, mantené esta pantalla abierta mientras estés en camino para no fallarle al cliente.</p>
@@ -801,7 +802,7 @@ export default function PaginaCadeteria() {
         
         {errorGps && (
           <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
-            <span className="text-base shrink-0">⚠️</span>
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">Advertencia de Ubicación:</p>
               <p className="mt-0.5 leading-relaxed">{errorGps}</p>
@@ -824,7 +825,7 @@ export default function PaginaCadeteria() {
               </div>
               <div className="relative z-10">
                 <h2 className="text-lg font-bold">
-                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo! 👋' : `¡Hola, ${usuarioActivo.nombre}! 👋`}
+                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo!' : `¡Hola, ${usuarioActivo.nombre}!`}
                 </h2>
                 <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
                 {pedidosListos.length > 0 && (
@@ -889,7 +890,10 @@ export default function PaginaCadeteria() {
 
         {esAdmin && Object.keys(estadoGpsCadetes).length > 0 && (
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">📡 Estado GPS Cadetes</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Radio size={12} className="text-emerald-500" />
+              <span>Estado GPS Cadetes</span>
+            </p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(estadoGpsCadetes).map(([id, estado]) => (
                 <div

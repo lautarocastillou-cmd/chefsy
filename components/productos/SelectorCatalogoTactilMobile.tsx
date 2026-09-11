@@ -202,7 +202,7 @@ export default function SelectorCatalogoTactilMobile({
               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
           )}
         >
-          🔥 Todos
+          Todos
         </button>
 
         {categoriasConProductos.map((cat) => {
@@ -279,10 +279,10 @@ export default function SelectorCatalogoTactilMobile({
                     >
                       <span>
                         {filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'fritas'
-                          ? '🥟 Fritas'
+                          ? 'Fritas'
                           : filas.find((item) => item.idProductoCatalogo === producto.id)?.coccion === 'al_horno'
-                          ? '🔥 Al Horno'
-                          : '⚠️ Elegir cocción'}
+                          ? 'Al Horno'
+                          : 'Elegir cocción'}
                       </span>
                     </button>
                   )}

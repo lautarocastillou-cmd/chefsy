@@ -356,7 +356,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           const ultCambio = cambiosLocalesRef.current[nuevo.id] || 0
           const esCambioReciente = Date.now() - ultCambio < 10000
           if (!esCambioReciente) {
-            agregarNotificacion(`🔔 ¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
+            agregarNotificacion(`¡Nuevo pedido de ${nuevo.cliente}!`, 'info')
           }
         }
       })
@@ -376,7 +376,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         const esCambioReciente = Date.now() - ultCambio < 10000
 
         if (seLeAsignoAlCadete && !esCambioReciente) {
-          agregarNotificacion(`🔔 ¡Tenés un nuevo pedido! para ${nuevo.cliente}`, 'info')
+          agregarNotificacion(`¡Tenés un nuevo pedido! para ${nuevo.cliente}`, 'info')
           reproducirSonidoNotificacion()
         }
 
@@ -398,9 +398,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
             if (estadosPermitidosParaCadete.includes(nuevo.estado)) {
               let mensaje = `El pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`
               if (nuevo.estado === 'listo') {
-                mensaje = `🛵 ¡El pedido de ${nuevo.cliente} está listo para llevar!`
+                mensaje = `¡El pedido de ${nuevo.cliente} está listo para llevar!`
               } else if (nuevo.estado === 'entregado') {
-                mensaje = `🛵 ¡Entrega completada! Pedido de ${nuevo.cliente} entregado.`
+                mensaje = `¡Entrega completada! Pedido de ${nuevo.cliente} entregado.`
               }
               agregarNotificacion(mensaje, nuevo.estado === 'entregado' ? 'success' : 'info')
               if (nuevo.estado === 'entregado') {
@@ -416,7 +416,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
               if (!esCambioReciente) {
                 const cadeteTexto = nuevo.cadete_nombre ? ` (Cadete: ${nuevo.cadete_nombre})` : ''
                 agregarNotificacion(
-                  `🛵 ¡Pedido entregado! ${nuevo.cliente} recibió su pedido${cadeteTexto}.`,
+                  `¡Pedido entregado! ${nuevo.cliente} recibió su pedido${cadeteTexto}.`,
                   'success'
                 )
                 reproducirSonidoEntregaExitosa()
@@ -856,7 +856,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       })
       setEstadoTurno(turnoCerrado)
 
-      const etiquetaTurno = tipoTurnoActual === 'mediodia' ? '☀️ Mediodía' : '🌙 Noche'
+      const etiquetaTurno = tipoTurnoActual === 'mediodia' ? 'Mediodía' : 'Noche'
       agregarNotificacion(`Turno ${etiquetaTurno} finalizado. Panel limpio para el próximo turno.`, 'success')
     } catch (err) {
       console.error('[Servidor/Supabase] Error al finalizar turno:', err)

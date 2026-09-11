@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import SelectorCategoria from './SelectorCategoria'
 import SelectorProducto from './SelectorProducto'
 import ModalCoccionEmpanada from './ModalCoccionEmpanada'
+import { X, Trash2 } from 'lucide-react'
 
 interface PropsFilaProductoPedido {
   fila: FilaProducto
@@ -183,7 +184,7 @@ export default function FilaProductoPedido({
           className="hidden sm:flex text-slate-400 hover:text-red-500 disabled:opacity-20 text-lg items-center justify-center h-full focus:outline-none"
           title="Eliminar producto"
         >
-          ✕
+          <X className="w-4 h-4" />
         </button>
       </div>
 
@@ -206,7 +207,7 @@ export default function FilaProductoPedido({
             )}
             title="Hacé clic para cambiar la cocción"
           >
-            <span>{fila.coccion === 'fritas' ? '🥟 FRITAS' : fila.coccion === 'al_horno' ? '🔥 AL HORNO' : '⚠️ ELEGIR: ¿FRITAS O HORNO?'}</span>
+            <span>{fila.coccion === 'fritas' ? 'FRITAS' : fila.coccion === 'al_horno' ? 'AL HORNO' : 'ELEGIR: ¿FRITAS O HORNO?'}</span>
             <span className="text-[10px] underline font-semibold opacity-70 ml-0.5">Cambiar</span>
           </button>
         </div>
@@ -252,9 +253,10 @@ export default function FilaProductoPedido({
         type="button"
         onClick={() => onEliminar(indice)}
         disabled={!puedeEliminar}
-        className="sm:hidden w-full py-1 bg-red-50/30 dark:bg-red-950/10 border border-red-100/40 dark:border-red-950/20 text-red-500 hover:text-red-600 disabled:opacity-20 text-[10px] font-bold rounded-lg focus:outline-none"
+        className="sm:hidden w-full py-1.5 bg-red-50/30 dark:bg-red-950/10 border border-red-100/40 dark:border-red-950/20 text-red-500 hover:text-red-600 disabled:opacity-20 text-[10px] font-bold rounded-lg focus:outline-none flex items-center justify-center gap-1.5"
       >
-        ✕ Quitar producto
+        <Trash2 className="w-3.5 h-3.5" />
+        <span>Quitar producto</span>
       </button>
 
       {/* Modal de selección de cocción */}

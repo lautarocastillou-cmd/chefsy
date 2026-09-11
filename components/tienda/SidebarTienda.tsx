@@ -16,7 +16,9 @@ import {
   Bike,
   ChevronRight,
   Info,
-  ArrowRight
+  ArrowRight,
+  ChefHat,
+  Utensils
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -176,7 +178,7 @@ export default function SidebarTienda({
           {pedidosActivos.length > 0 && (
             <div>
               <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider block mb-2 px-1">
-                🛵 Tu Pedido en Curso
+                Tu Pedido en Curso
               </span>
               <div className="space-y-2">
                 {pedidosActivos.map((p) => (
@@ -208,7 +210,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 2: Menú y Categorías */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              🍽️ Menú & Categorías
+              Menú & Categorías
             </span>
             <div className="space-y-1">
               {/* Opción Todos */}
@@ -223,7 +225,7 @@ export default function SidebarTienda({
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-base">🍴</span>
+                  <Utensils size={15} className="text-white/80 shrink-0" />
                   <span>Ver todo el menú</span>
                 </div>
                 {!categoriaSeleccionada && (
@@ -247,23 +249,10 @@ export default function SidebarTienda({
                     )}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <span className="text-sm shrink-0">
-                        {cat.nombre.toLowerCase().includes('burger')
-                          ? '🍔'
-                          : cat.nombre.toLowerCase().includes('lomo')
-                          ? '🥪'
-                          : cat.nombre.toLowerCase().includes('pizza')
-                          ? '🍕'
-                          : cat.nombre.toLowerCase().includes('mila')
-                          ? '🥩'
-                          : cat.nombre.toLowerCase().includes('papa')
-                          ? '🍟'
-                          : cat.nombre.toLowerCase().includes('bebida')
-                          ? '🥤'
-                          : cat.nombre.toLowerCase().includes('promo')
-                          ? '🏷️'
-                          : '🍽️'}
-                      </span>
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full shrink-0",
+                        seleccionada ? "bg-white" : "bg-amber-400/80"
+                      )} />
                       <span className="truncate">{cat.nombre}</span>
                     </div>
                     {seleccionada ? (
@@ -280,7 +269,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 3: Información & Institucional */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              ✨ Sobre Nosotros
+              Sobre Nosotros
             </span>
             <div className="space-y-1">
               {/* Botón ¿Quiénes somos? */}
@@ -331,7 +320,7 @@ export default function SidebarTienda({
           {/* SECCIÓN 4: Contacto & Redes */}
           <div>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2 px-1">
-              💬 Contacto & Soporte
+              Contacto & Soporte
             </span>
             <div className="space-y-1.5">
               <a
@@ -387,8 +376,8 @@ export default function SidebarTienda({
               <X size={18} />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-2xl">
-              👨‍🍳
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+              <ChefHat size={24} className="text-amber-400" />
             </div>
 
             <div>

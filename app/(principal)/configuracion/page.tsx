@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 // --- COMPONENTE DE USUARIOS ---
@@ -308,7 +308,7 @@ function PestanaParametros() {
 
     await guardarConfiguracionOperativa(
       nuevaConfig as any,
-      nuevoValor ? '✅ Acceso web a cadetería habilitado.' : '🔒 Acceso web a cadetería bloqueado (obligando App móvil).'
+      nuevoValor ? 'Acceso web a cadetería habilitado.' : 'Acceso web a cadetería bloqueado (obligando App móvil).'
     )
   }
 
@@ -396,7 +396,7 @@ function PestanaParametros() {
       {/* Tarjeta de Pago Base a Cadetes */}
       <div className="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 shadow-sm space-y-4">
         <h3 className="text-sm font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2 border-b border-emerald-100 dark:border-emerald-900/30 pb-3">
-          🛵 Dinero Base Fijo por Cadete ($)
+          <Bike size={16} /> Dinero Base Fijo por Cadete ($)
         </h3>
         <div className="max-w-md">
           <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-200">
@@ -726,7 +726,10 @@ export default function PaginaConfiguracion() {
       {/* Explicación / Cabecera */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
         <div>
-          <h1 className="text-xl font-bold">⚙️ Configuración del Sistema</h1>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Settings size={20} />
+            Configuración del Sistema
+          </h1>
           <p className="text-xs text-gray-400 dark:text-slate-400">
             Administrá los usuarios del local y los parámetros de alerta de los pedidos.
           </p>

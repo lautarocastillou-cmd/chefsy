@@ -212,8 +212,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     const localIcon = L.divIcon({
       html: `
         <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-          <div style="width:36px;height:36px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(0,0,0,0.35);font-size:18px;display:flex;align-items:center;justify-content:center;">
-            🏪
+          <div style="width:36px;height:36px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
           </div>
           <div style="margin-top:2px;background:#2A6348;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;border:1px solid #fff;">
             Local
@@ -226,15 +226,15 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     })
     L.marker([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], { icon: localIcon, zIndexOffset: 200 })
       .addTo(map)
-      .bindPopup('<b>🏪 Local Chefsy (Punto de Partida)</b>')
+      .bindPopup('<b>Local Chefsy (Punto de Partida)</b>')
 
     // 2. Icono del Destino (Cliente)
     if (pedido.coordenadas?.latitud && pedido.coordenadas?.longitud) {
       const clienteIcon = L.divIcon({
         html: `
           <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="width:36px;height:36px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);font-size:18px;display:flex;align-items:center;justify-content:center;">
-              🏠
+            <div style="width:36px;height:36px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </div>
             <div style="margin-top:2px;background:#1E40AF;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;border:1px solid #fff;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
               ${pedido.cliente || 'Destino'}
@@ -247,7 +247,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       })
       L.marker([pedido.coordenadas.latitud, pedido.coordenadas.longitud], { icon: clienteIcon, zIndexOffset: 200 })
         .addTo(map)
-        .bindPopup(`<b>🏠 ${pedido.cliente}</b><br/>${pedido.direccion || ''}`)
+        .bindPopup(`<b>${pedido.cliente}</b><br/>${pedido.direccion || ''}`)
     }
 
     // 3. Polilínea Total de Fondo (Gris / Azul guía)
@@ -277,8 +277,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
           <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(0deg);"></div>
           <div class="cadete-radar-pulse"></div>
           <div class="cadete-moto-badge" style="width:44px; height:44px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <span class="cadete-moto-flip" style="display:inline-block; font-size:24px; line-height:1; transition:transform 0.15s ease-out; transform: scaleX(1);">
-              🛵
+            <span class="cadete-moto-flip" style="display:flex; align-items:center; justify-content:center; transition:transform 0.15s ease-out; transform: scaleX(1);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
             </span>
           </div>
           <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-25px); font-size:12px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
@@ -513,8 +513,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         {/* Header */}
         <div className="px-4 py-3 bg-slate-800/95 border-b border-slate-700 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-xl shrink-0">
-              🛵
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
+              <Bike className="w-5 h-5 text-emerald-400" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

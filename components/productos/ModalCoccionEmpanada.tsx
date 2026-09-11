@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { X, ChefHat, Flame, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface PropsModalCoccionEmpanada {
@@ -84,7 +84,7 @@ export default function ModalCoccionEmpanada({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">🥟</span>
+              <ChefHat className="w-5 h-5 text-amber-500" />
               <h3
                 id="modal-coccion-titulo"
                 className="font-black text-lg text-slate-900 dark:text-white tracking-tight"
@@ -120,8 +120,8 @@ export default function ModalCoccionEmpanada({
                 : 'bg-slate-50/70 hover:bg-amber-50/40 dark:bg-slate-800/60 dark:hover:bg-amber-950/20 border-slate-200 dark:border-slate-700/80 hover:border-amber-400 dark:hover:border-amber-500/70'
             )}
           >
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform shadow-xs">
-              🥟
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-xs">
+              <Sparkles className="w-7 h-7" />
             </div>
 
             <span className="font-black text-base text-slate-900 dark:text-white tracking-wide uppercase">
@@ -151,8 +151,8 @@ export default function ModalCoccionEmpanada({
                 : 'bg-slate-50/70 hover:bg-orange-50/40 dark:bg-slate-800/60 dark:hover:bg-orange-950/20 border-slate-200 dark:border-slate-700/80 hover:border-orange-400 dark:hover:border-orange-500/70'
             )}
           >
-            <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform shadow-xs">
-              🔥
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-xs">
+              <Flame className="w-7 h-7" />
             </div>
 
             <span className="font-black text-base text-slate-900 dark:text-white tracking-wide uppercase">

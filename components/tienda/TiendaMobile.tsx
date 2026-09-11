@@ -7,7 +7,7 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { Search, ChevronRight, LogOut, User } from 'lucide-react'
+import { Search, ChevronRight, LogOut, User, Lock } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
@@ -338,8 +338,8 @@ export default function TiendaMobile() {
           {/* Banner Bloqueante de Local Cerrado / Domingos */}
           {(turnoActivo === false || esDomingoCerrado) && (
             <div className="mx-4 my-3 p-3.5 bg-rose-950 border border-rose-500/40 rounded-2xl flex items-center gap-3 shadow-xl animate-in fade-in">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shrink-0 border border-rose-500/30">
-                🔒
+              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30">
+                <Lock size={18} />
               </div>
               <div className="flex-1">
                 <p className="text-xs font-black text-rose-300 leading-tight">

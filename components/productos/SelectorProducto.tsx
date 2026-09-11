@@ -132,7 +132,7 @@ export default function SelectorProducto({
             setBusqueda('')
           }}
           onKeyDown={manejarKeyDown}
-          placeholder={productoSeleccionado ? productoSeleccionado.nombre : "🔍 Buscar producto..."}
+          placeholder={productoSeleccionado ? productoSeleccionado.nombre : "Buscar producto..."}
           className="w-full px-2 py-2 bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder:text-gray-400 outline-none truncate"
         />
 

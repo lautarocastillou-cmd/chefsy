@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Calculator } from 'lucide-react'
+import { X, Calculator, Delete } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setCache, getCache } from '@/lib/localCache'
 
@@ -257,7 +257,7 @@ export default function CalculadoraFlotante() {
             <div className="grid grid-cols-4 gap-1.5 p-3 bg-[#252525]">
               {/* Fila 1 */}
               <button onClick={limpiar} className={cn(btnSpec, 'col-span-2 text-sm')}>AC</button>
-              <button onClick={borrar} className={cn(btnSpec, 'text-sm')}>⌫</button>
+              <button onClick={borrar} className={cn(btnSpec, 'text-sm flex items-center justify-center')} title="Borrar"><Delete size={15} /></button>
               <button onClick={() => inputOperacion('÷')} className={btnOp}>÷</button>
 
               {/* Fila 2 */}

@@ -49,7 +49,7 @@ function DireccionBadge({ direccion }: { direccion: string }) {
         title="Abrir en Google Maps"
       >
         <MapPin size={12} className="text-blue-600 dark:text-blue-400 shrink-0" />
-        <span>📍 Ubicación GPS (Ver Mapa)</span>
+        <span>Ubicación GPS (Ver Mapa)</span>
         <ExternalLink size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />
       </a>
     )
@@ -94,14 +94,14 @@ export default function PaginaAgendaClientes() {
     const tel = (cliente.telefono || '').toString().replace(/\D/g, '')
     const nombre = (cliente.nombre || 'amigo').split(' ')[0]
     
-    let mensaje = `Hola ${nombre}, te saludamos de Chefsy! 🍔`
+    let mensaje = `Hola ${nombre}, te saludamos de Chefsy.`
 
     if (tipo === 'vip') {
-      mensaje = `¡Hola ${nombre}! ⭐ Sos uno de los clientes más fieles de Chefsy. ¡Queremos premiarte con un beneficio exclusivo para tu próximo pedido! 🍔🍟`
+      mensaje = `¡Hola ${nombre}! Sos uno de los clientes más fieles de Chefsy. ¡Queremos premiarte con un beneficio exclusivo para tu próximo pedido!`
     } else if (tipo === 'rescate') {
-      mensaje = `¡Hola ${nombre}! ❤️ Hace días que no sabemos de vos en Chefsy. ¡Hoy te regalamos el costo de envío con tu cena! Pedí por la app cuando gustes 🛵🍔`
+      mensaje = `¡Hola ${nombre}! Hace días que no sabemos de vos en Chefsy. ¡Hoy te regalamos el costo de envío con tu cena! Pedí por la app cuando gustes.`
     } else if (tipo === 'favorito' && cliente.platoFavorito && cliente.platoFavorito !== 'Sin registros') {
-      mensaje = `¡Hola ${nombre}! 🍔 Vimos que tu plato favorito en Chefsy es *${cliente.platoFavorito}*. ¡Hoy tenemos una promo especial en cocina para vos!`
+      mensaje = `¡Hola ${nombre}! Vimos que tu plato favorito en Chefsy es *${cliente.platoFavorito}*. ¡Hoy tenemos una promo especial en cocina para vos!`
     }
 
     window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank')
@@ -148,7 +148,7 @@ export default function PaginaAgendaClientes() {
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            📊 Agenda y Métricas
+            Agenda y Métricas
           </button>
           <button
             onClick={() => setPestaña('cuentas')}
@@ -158,7 +158,7 @@ export default function PaginaAgendaClientes() {
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            🛠️ Administrar Cuentas
+            Administrar Cuentas
           </button>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function PaginaAgendaClientes() {
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-          <p className="text-red-500 font-bold text-lg">⚠️ Ocurrió un error</p>
+          <p className="text-red-500 font-bold text-lg">Ocurrió un error</p>
           <p className="text-sm text-gray-500">{error}</p>
         </div>
       ) : (
@@ -242,7 +242,7 @@ export default function PaginaAgendaClientes() {
                 }`}
               >
                 <Star size={13} className={segmentoActivo === 'vip' ? 'fill-white' : 'fill-amber-500 text-amber-500'} />
-                <span>⭐ VIPs (+5)</span>
+                <span>VIPs (+5)</span>
                 <span className="text-[10px] font-mono">({metricas.conteoVip})</span>
               </button>
 
@@ -255,7 +255,7 @@ export default function PaginaAgendaClientes() {
                 }`}
               >
                 <AlertTriangle size={13} />
-                <span>⚠️ En Riesgo (+25d)</span>
+                <span>En Riesgo (+25d)</span>
                 <span className="text-[10px] font-mono">({metricas.conteoEnRiesgo})</span>
               </button>
 
@@ -268,7 +268,7 @@ export default function PaginaAgendaClientes() {
                 }`}
               >
                 <Sparkles size={13} />
-                <span>✨ Nuevos</span>
+                <span>Nuevos</span>
                 <span className="text-[10px] font-mono">({metricas.conteoNuevos})</span>
               </button>
 
@@ -281,7 +281,7 @@ export default function PaginaAgendaClientes() {
                 }`}
               >
                 <Gem size={13} />
-                <span>💎 Top Ticket</span>
+                <span>Top Ticket</span>
                 <span className="text-[10px] font-mono">({metricas.conteoTopTicket})</span>
               </button>
             </div>
@@ -366,17 +366,17 @@ export default function PaginaAgendaClientes() {
                                 <span className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[150px]">{cliente.nombre}</span>
                                 {cliente.esVip && (
                                   <span className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
-                                    ⭐ VIP
+                                    VIP
                                   </span>
                                 )}
                                 {cliente.enRiesgo && (
                                   <span className="bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
-                                    ⚠️ Inactivo
+                                    Inactivo
                                   </span>
                                 )}
                                 {cliente.esNuevo && (
                                   <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
-                                    ✨ Nuevo
+                                    Nuevo
                                   </span>
                                 )}
                               </div>
@@ -406,7 +406,7 @@ export default function PaginaAgendaClientes() {
                         </td>
                         <td className="px-5 py-3.5">
                           <span className="bg-chefsy-50 dark:bg-slate-800 text-chefsy-800 dark:text-chefsy-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block truncate max-w-[140px]" title={cliente.platoFavorito}>
-                            🍔 {cliente.platoFavorito}
+                            {cliente.platoFavorito}
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-right">
@@ -448,12 +448,12 @@ export default function PaginaAgendaClientes() {
                           <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{cliente.nombre}</h4>
                           {cliente.esVip && (
                             <span className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
-                              ⭐ VIP
+                              VIP
                             </span>
                           )}
                           {cliente.enRiesgo && (
                             <span className="bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
-                              ⚠️ Inactivo
+                              Inactivo
                             </span>
                           )}
                         </div>

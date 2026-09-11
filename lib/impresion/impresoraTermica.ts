@@ -498,9 +498,9 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota bold">NOTAS: ${p.ob
 <div class="sub"><b>${p.cliente}</b></div>
 <div class="sep"></div>
 ${p.productos.map(prod => `<div class="prod"><span class="cant">${prod.cantidad}x</span><div class="pname"><div>${prod.nombre}</div>${prod.coccion ? `<div style="display:inline-block;border:2px solid #000;color:#000;font-weight:900;font-size:16px;padding:1px 8px;margin-top:4px;border-radius:3px;letter-spacing:1px">↳ ${prod.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'}</div>` : ''}</div></div>`).join('')}
-${p.observaciones ? `<div class="sep"></div><div class="nota">⚠ ${p.observaciones.toUpperCase()}</div>` : ''}
+${p.observaciones ? `<div class="sep"></div><div class="nota">NOTA: ${p.observaciones.toUpperCase()}</div>` : ''}
 <div class="sep"></div>
-<div class="tipo">${p.tipoEntrega === 'delivery' ? '🛵 DELIVERY' : p.tipoEntrega === 'retiro' ? '🏠 RETIRO EN LOCAL' : '🍽 CONSUMO EN LOCAL'}</div>
+<div class="tipo">${p.tipoEntrega === 'delivery' ? 'DELIVERY' : p.tipoEntrega === 'retiro' ? 'RETIRO EN LOCAL' : 'CONSUMO EN LOCAL'}</div>
 </body></html>`
 
     this.imprimirPorIframe(tipo === 'ticket' ? htmlTicket : htmlCocina)

@@ -113,8 +113,8 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
                 <Clock size={11} /> Horarios de atención (Lunes a Sábado)
               </span>
               <div className="text-xs font-medium text-slate-300 space-y-0.5">
-                <p>☀️ Mediodía: <strong className="text-white">11:30 hs a 14:00 hs</strong></p>
-                <p>🌙 Noche: <strong className="text-white">20:30 hs a 01:00 hs</strong></p>
+                <p>Mediodía: <strong className="text-white">11:30 hs a 14:00 hs</strong></p>
+                <p>Noche: <strong className="text-white">20:30 hs a 01:00 hs</strong></p>
               </div>
               <p className="text-[11px] text-slate-400 italic pt-0.5">
                 Domingos cerrado

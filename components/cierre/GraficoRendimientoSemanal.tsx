@@ -162,7 +162,7 @@ export default function GraficoRendimientoSemanal({ datos }: GraficoRendimientoS
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
-            💰 Facturación Promedio
+            Facturación Promedio
           </button>
           <button
             onClick={() => setMetricaActiva('pedidos')}
@@ -172,7 +172,7 @@ export default function GraficoRendimientoSemanal({ datos }: GraficoRendimientoS
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
-            📦 Pedidos Promedio
+            Pedidos Promedio
           </button>
         </div>
 
@@ -182,7 +182,7 @@ export default function GraficoRendimientoSemanal({ datos }: GraficoRendimientoS
       {diaDeOro && (
         <div className="rounded-2xl p-4 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🌟</span>
+            <Sparkles className="w-8 h-8 text-amber-500 shrink-0" />
             <div>
               <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                 Tu mejor jornada es el <strong className="text-amber-500 font-black uppercase">{diaDeOro.dia}</strong>
@@ -237,19 +237,19 @@ export default function GraficoRendimientoSemanal({ datos }: GraficoRendimientoS
                         </span>
                         {esOro && (
                           <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-black">
-                            DÍA DE ORO 👑
+                            DÍA DESTACADO
                           </span>
                         )}
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center justify-between gap-4 font-semibold text-slate-600 dark:text-slate-300">
-                          <span>💰 Facturación Promedio:</span>
+                          <span>Facturación Promedio:</span>
                           <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
                             {formatearPrecio(item?.promedioFacturacion)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4 font-semibold text-slate-600 dark:text-slate-300">
-                          <span>📦 Pedidos Promedio:</span>
+                          <span>Pedidos Promedio:</span>
                           <span className="font-extrabold text-blue-600 dark:text-blue-400">
                             {item?.promedioPedidos} pedidos
                           </span>

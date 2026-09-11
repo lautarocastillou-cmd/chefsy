@@ -75,7 +75,7 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
       >
         <Sparkles size={11} className="text-emerald-600 dark:text-emerald-400" />
         <span>
-          📍 Cerca de <strong>{primerVecino.pedido.cliente.split(' ')[0]}</strong> ({primerVecino.distanciaMetros}m)
+          Cerca de <strong>{primerVecino.pedido.cliente.split(' ')[0]}</strong> ({primerVecino.distanciaMetros}m)
           {vecinos.length > 1 ? ` +${vecinos.length - 1}` : ''}
         </span>
       </button>
@@ -110,7 +110,7 @@ export default function BadgeSmartBatch({ pedido }: PropsBadgeSmartBatch) {
                     {v.pedido.cliente}
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    {v.pedido.cadete_nombre ? `🛵 ${v.pedido.cadete_nombre}` : 'Sin cadete'}
+                    {v.pedido.cadete_nombre ? `Cadete: ${v.pedido.cadete_nombre}` : 'Sin cadete'}
                   </span>
                 </div>
                 <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-full shrink-0">

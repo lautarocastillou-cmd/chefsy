@@ -93,9 +93,8 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
 
       toast.success(
         payload.tipo_pago === 'anotado'
-          ? `📝 Consumo anotado a ${payload.persona_nombre} ($${(payload.precio * payload.cantidad).toLocaleString('es-AR')})`
-          : `💵 Consumo de ${payload.persona_nombre} registrado (Pagado)`,
-        { icon: '🥤' }
+          ? `Consumo anotado a ${payload.persona_nombre} ($${(payload.precio * payload.cantidad).toLocaleString('es-AR')})`
+          : `Consumo de ${payload.persona_nombre} registrado (Pagado)`
       )
       return true
     } catch (error: any) {
@@ -123,7 +122,7 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
       if (!res.ok) {
         throw new Error('El servidor respondió con error')
       }
-      toast.success(saldado ? '✅ Marcado como saldado' : '↩️ Marcado como pendiente')
+      toast.success(saldado ? 'Marcado como saldado' : 'Marcado como pendiente')
     } catch (err) {
       console.error('[Consumos] Error al saldar:', err)
       toast.error('Error al guardar en base de datos')
@@ -152,7 +151,7 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
       if (!res.ok) {
         throw new Error('El servidor respondió con error')
       }
-      toast.success(`🎉 Se saldaron todos los consumos anotados de ${personaNombre}`)
+      toast.success(`Se saldaron todos los consumos anotados de ${personaNombre}`)
     } catch (err) {
       console.error('[Consumos] Error al saldar persona:', err)
       toast.error('Error al saldar en base de datos')
@@ -177,7 +176,7 @@ export function ProveedorConsumosPersonal({ children }: { children: React.ReactN
       if (!res.ok) {
         throw new Error('El servidor respondió con error')
       }
-      toast.success('🗑️ Registro de consumo eliminado')
+      toast.success('Registro de consumo eliminado')
     } catch (err) {
       console.error('[Consumos] Error al eliminar:', err)
       toast.error('Error al eliminar en base de datos')

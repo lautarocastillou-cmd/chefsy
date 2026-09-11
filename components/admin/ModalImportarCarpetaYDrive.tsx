@@ -446,7 +446,7 @@ export default function ModalImportarCarpetaYDrive({
             }`}
           >
             <HardDrive size={15} />
-            <span>📁 Carpeta de Windows / Drive (Arrastrar o Examinar)</span>
+            <span>Carpeta de Windows / Drive (Arrastrar o Examinar)</span>
             {fotosEscaneadas.length > 0 && (
               <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
                 {fotosEscaneadas.length}
@@ -466,7 +466,7 @@ export default function ModalImportarCarpetaYDrive({
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.71 3.5L1.15 15l3.43 6l6.55-11.5L7.71 3.5zm8.58 0l-6.56 11.5l3.43 6l6.56-11.5l-3.43-6zm-5.15 9l-3.43 6h13.14l3.43-6H11.14z" />
             </svg>
-            <span>🔗 Pegar Enlaces Web de Drive</span>
+            <span>Pegar Enlaces Web de Drive</span>
             {idsDriveDetectados.length > 0 && (
               <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
                 {idsDriveDetectados.length}
@@ -586,7 +586,7 @@ export default function ModalImportarCarpetaYDrive({
                                   : 'bg-slate-900 text-slate-400 hover:text-white'
                               }`}
                             >
-                              📁 {c} ({fotosEscaneadas.filter(f => f.carpetaPadre === c).length})
+                              {c} ({fotosEscaneadas.filter(f => f.carpetaPadre === c).length})
                             </button>
                           ))}
                         </div>

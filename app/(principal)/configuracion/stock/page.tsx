@@ -9,7 +9,7 @@ import { TabCategorias } from '@/components/stock/TabCategorias'
 import { TabInsumos } from '@/components/stock/TabInsumos'
 import { TabRecetas } from '@/components/stock/TabRecetas'
 import { TabKardexAuditoria } from '@/components/stock/TabKardexAuditoria'
-import { CheckCircle, History } from 'lucide-react'
+import { CheckCircle, History, Package, FileText, Tag } from 'lucide-react'
 
 type TabType = 'insumos' | 'recetas' | 'categorias' | 'kardex'
 
@@ -51,12 +51,10 @@ export default function PaginaStock() {
 
     if (sinReceta.length === 0) {
       toast.success('¡Todo en orden! Todos los productos activos tienen receta asignada.', {
-        icon: '✅',
         duration: 4000,
       })
     } else {
       toast.error(`Atención: Hay ${sinReceta.length} producto(s) activo(s) sin receta asignada.`, {
-        icon: '⚠️',
         duration: 5000,
       })
       console.warn('Productos sin receta:', sinReceta.map(p => p.nombre).join(', '))
@@ -80,33 +78,36 @@ export default function PaginaStock() {
         <div className="flex gap-1.5 sm:gap-2 overflow-x-auto bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-2xl w-full md:w-fit shrink-0 border border-slate-200 dark:border-slate-700/60 scrollbar-none">
           <button
             onClick={() => setTabActivo('insumos')}
-            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               tabActivo === 'insumos'
                 ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            📦 Insumos y Stock
+            <Package size={14} />
+            <span>Insumos y Stock</span>
           </button>
           <button
             onClick={() => setTabActivo('recetas')}
-            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               tabActivo === 'recetas'
                 ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            📋 Asignar Recetas
+            <FileText size={14} />
+            <span>Asignar Recetas</span>
           </button>
           <button
             onClick={() => setTabActivo('categorias')}
-            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               tabActivo === 'categorias'
                 ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-[1.02]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            🏷️ Categorías
+            <Tag size={14} />
+            <span>Categorías</span>
           </button>
           <button
             onClick={() => setTabActivo('kardex')}
@@ -117,7 +118,7 @@ export default function PaginaStock() {
             }`}
           >
             <History size={14} />
-            <span>📜 Kardex y Auditoría</span>
+            <span>Kardex y Auditoría</span>
           </button>
         </div>
 

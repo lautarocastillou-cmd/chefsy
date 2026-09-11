@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           .from('pedidos')
           .update(updatePayload)
           .eq('id', id)
-          .select('cadete_id, tipoEntrega, cliente, productos')
+          .select('id, cadete_id, tipoEntrega, cliente, productos')
 
         if (error) throw error
         
@@ -208,8 +208,8 @@ export async function POST(request: Request) {
         if (estado === 'listo' && pedidoAct?.cadete_id && pedidoAct?.tipoEntrega === 'delivery') {
           await enviarNotificacionCadete(
             pedidoAct.cadete_id,
-            '¡Pedido Listo para Retirar! 🛵',
-            `El pedido de ${pedidoAct.cliente} ya está listo en cocina.`
+            '¡Pedido Listo para Retirar!',
+            `Tu pedido #${(pedidoAct?.id || id || '').slice(-4).toUpperCase()} ya está listo en el local para que pases a buscarlo. ¡Te esperamos!`
           )
         }
 
@@ -435,7 +435,7 @@ export async function POST(request: Request) {
         if (cadete_id && pedidoAct) {
           enviarNotificacionCadete(
             cadete_id,
-            '🛵 Nuevo Pedido Asignado',
+            'Nuevo Pedido Asignado',
             `Se te ha asignado el pedido de ${pedidoAct.cliente || 'un cliente'}.`
           ).catch((err) => console.error('[Push Cadete] Error enviando notificación:', err))
         }

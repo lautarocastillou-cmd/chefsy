@@ -18,12 +18,12 @@ interface PropsModalPagoExtraCadete {
 }
 
 const MOTIVOS_SUGERIDOS = [
-  { texto: 'Viaje a la carnicería', icono: '🥩' },
-  { texto: 'Compra de insumos / verdulería', icono: '🥬' },
-  { texto: 'Retiro de packaging / cajas', icono: '📦' },
-  { texto: 'Búsqueda de cambio / banco', icono: '🏦' },
-  { texto: 'Propina / Bonificación extra', icono: '⭐' },
-  { texto: 'Viaje logístico / Mandado', icono: '🛵' },
+  'Viaje a la carnicería',
+  'Compra de insumos / verdulería',
+  'Retiro de packaging / cajas',
+  'Búsqueda de cambio / banco',
+  'Propina / Bonificación extra',
+  'Viaje logístico / Mandado',
 ]
 
 const MONTOS_SUGERIDOS = [1000, 1500, 2000, 2500, 3000, 4000, 5000]
@@ -136,8 +136,8 @@ export default function ModalPagoExtraCadete({
         {/* Header */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl shadow-inner">
-              🥩
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-inner">
+              <DollarSign className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
               <h3 className="font-black text-base text-white leading-tight flex items-center gap-1.5">
@@ -178,7 +178,7 @@ export default function ModalPagoExtraCadete({
             >
               {cadetesDisponibles.map(c => (
                 <option key={c.id} value={c.id}>
-                  🛵 {c.nombre}
+                  {c.nombre}
                 </option>
               ))}
             </select>
@@ -241,19 +241,18 @@ export default function ModalPagoExtraCadete({
 
             {/* Sugerencias Rápidas */}
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {MOTIVOS_SUGERIDOS.map(item => (
+              {MOTIVOS_SUGERIDOS.map(txt => (
                 <button
                   type="button"
-                  key={item.texto}
-                  onClick={() => setMotivo(item.texto)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 ${
-                    motivo === item.texto
-                      ? 'bg-blue-600 text-white border-blue-400 shadow-xs'
+                  key={txt}
+                  onClick={() => setMotivo(txt)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                    motivo === txt
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-xs'
                       : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                   }`}
                 >
-                  <span>{item.icono}</span>
-                  <span>{item.texto}</span>
+                  <span>{txt}</span>
                 </button>
               ))}
             </div>

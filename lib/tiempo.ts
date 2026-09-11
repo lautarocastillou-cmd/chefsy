@@ -92,9 +92,9 @@ export function detectarTipoTurnoActual(fechaReferencia: Date = new Date()): 'me
  * Devuelve una etiqueta legible con ícono para un tipo de turno.
  */
 export function obtenerEtiquetaTurno(tipo?: string | null): string {
-  if (tipo === 'mediodia') return '☀️ Mediodía'
-  if (tipo === 'noche') return '🌙 Noche'
-  return '☀️/🌙 General'
+  if (tipo === 'mediodia') return 'Mediodía'
+  if (tipo === 'noche') return 'Noche'
+  return 'General'
 }
 
 /**

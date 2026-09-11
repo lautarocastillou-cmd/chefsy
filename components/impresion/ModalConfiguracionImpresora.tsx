@@ -198,7 +198,7 @@ export default function ModalConfiguracionImpresora({
                       className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs border border-slate-700"
                       title="Para impresoras con puerto virtual COM"
                     >
-                      <span>📟 Puerto COM / Serie</span>
+                      <span>Puerto COM / Serie</span>
                     </button>
                   </div>
 
@@ -229,7 +229,7 @@ export default function ModalConfiguracionImpresora({
             {/* Guía para impresoras de Windows */}
             {!info.conectada && (
               <div className="p-2.5 bg-slate-900/80 border border-slate-800/80 rounded-xl text-[11px] text-slate-400 leading-relaxed">
-                💡 <strong>Tip para Unnion TP85:</strong> Si tu impresora ya está instalada en Windows, no hace falta vincularla; Chefsy imprimirá automáticamente tus tickets de 80mm usando el controlador de Windows.
+                <strong>Tip para Unnion TP85:</strong> Si tu impresora ya está instalada en Windows, no hace falta vincularla; Chefsy imprimirá automáticamente tus tickets de 80mm usando el controlador de Windows.
               </div>
             )}
           </div>

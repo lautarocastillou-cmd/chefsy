@@ -103,7 +103,7 @@ export default function TarjetaProductoEstrella({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              🏆 General
+              General
             </button>
             <button
               onClick={() => setTabTurno('mediodia')}
@@ -235,7 +235,7 @@ export default function TarjetaProductoEstrella({
           <div className="space-y-3">
             {topProductos.map((prod, index) => {
               const porcentajeBarra = Math.round((prod.unidades / maxUnidades) * 100)
-              const insignia = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
+              const insignia = `#${index + 1}`
 
               return (
                 <div 

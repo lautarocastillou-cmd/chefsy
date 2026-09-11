@@ -62,7 +62,7 @@ export default function BannerSugerenciasRuta() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[11px] font-black tracking-wider uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full">
-                    💡 Oportunidad: Viaje Conjunto ({grupo.pedidos.length} pedidos)
+                    Oportunidad: Viaje Conjunto ({grupo.pedidos.length} pedidos)
                   </span>
                   <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
                     <MapPin size={12} /> A solo {grupo.distanciaMaximaMetros}m entre sí

@@ -379,10 +379,10 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
   // 4. Tipo de Entrega en Marco
   const tipoEntregaStr =
     pedido.tipoEntrega === 'delivery'
-      ? '🛵 >> DELIVERY <<'
+      ? '>> DELIVERY <<'
       : pedido.tipoEntrega === 'retiro'
-      ? '🏠 >> RETIRO EN LOCAL <<'
-      : '🍽 >> CONSUMO EN LOCAL <<'
+      ? '>> RETIRO EN LOCAL <<'
+      : '>> CONSUMO EN LOCAL <<'
 
   builder
     .alinear('centro')

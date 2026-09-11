@@ -196,7 +196,7 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
       ) {
         try {
           new Notification('Chefsy', {
-            body: mensaje.replace(/[🛵🔔💵📍💬]/g, '').trim(),
+            body: mensaje.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim(),
             icon: '/logo.jpg',
           })
         } catch {}
@@ -265,7 +265,7 @@ function ToastItem({
   const saliendo = Boolean(n.saliendo || saliendoLocal)
   const duracionMs = n.accion ? 4200 : 2600
 
-  const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.includes('🛵')
+  const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.toLowerCase().includes('entrega') || n.mensaje.toLowerCase().includes('llevar')
 
   const Icono = esEntrega
     ? Bike

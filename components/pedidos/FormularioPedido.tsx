@@ -7,7 +7,7 @@ import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Settings } from 'lucide-react'
+import { Settings, AlertCircle, Sparkles, Check, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const claseInput =
@@ -52,7 +52,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
       {error && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
-            <span className="text-lg">⚠️</span>
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
         </div>
@@ -111,8 +111,8 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                     className="mt-3 w-full bg-chefsy-50 hover:bg-chefsy-100 dark:bg-chefsy-950/20 dark:hover:bg-chefsy-900/30 border border-chefsy-200 dark:border-chefsy-900/50 text-chefsy-800 dark:text-chefsy-300 rounded-xl p-3 flex flex-col items-start text-left transition-all shadow-sm active:scale-95 animate-[slideIn_0.2s_ease-out]"
                   >
                     <div className="flex items-center justify-between w-full mb-1">
-                      <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="text-sm">✨</span> Cliente registrado
+                      <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 text-chefsy-700 dark:text-chefsy-400">
+                        <Sparkles className="w-3.5 h-3.5" /> Cliente registrado
                       </span>
                       <span className="text-[9px] font-black bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-sm">
                         Cargar datos y dirección →
@@ -120,7 +120,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                     </div>
                     <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
                     <span className="block text-[10px] opacity-80 mt-1 truncate w-full">
-                      Última vez: {clienteEncontrado.direccion ? `📍 ${clienteEncontrado.direccion}` : '🏪 Retiro en local'}
+                      Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
                     </span>
                   </button>
                 )}
@@ -140,7 +140,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                 </div>
               ) : (
                 <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-xl px-4 py-3 text-xs font-semibold flex items-center gap-2 mt-4">
-                  <span className="text-base">✓</span>
+                  <Check size={16} className="shrink-0" />
                   {tipoEntrega === 'retiro'
                     ? 'Retiro por mostrador. No hace falta dirección.'
                     : 'Consumo en el local. No hace falta dirección.'}
@@ -181,11 +181,11 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                     onChange={(e) => setMetodoPago(e.target.value as MetodoPago)}
                     className={claseInput}
                   >
-                    <option value="sin_especificar">⚠️ Sin especificar</option>
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="transferencia">📱 Transferencia</option>
-                    <option value="tarjeta">💳 Tarjeta / Posnet</option>
-                    <option value="mixto">💵📱 Mixto (Dividido)</option>
+                    <option value="sin_especificar">Sin especificar</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="tarjeta">Tarjeta / Posnet</option>
+                    <option value="mixto">Mixto (Dividido)</option>
                   </select>
                 </div>
 
@@ -194,7 +194,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                     <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Desglose del pago dividido</p>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">💵 Efectivo</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Efectivo</label>
                         <input
                           type="number"
                           value={montoEfectivo}
@@ -205,7 +205,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">📱 Transf.</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Transf.</label>
                         <input
                           type="number"
                           value={montoTransferencia}
@@ -216,7 +216,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">💳 Tarjeta</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Tarjeta</label>
                         <input
                           type="number"
                           value={montoTarjeta}
@@ -327,7 +327,8 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                 onClick={manejarEnvio}
                 className="flex-1 bg-chefsy hover:bg-chefsy-700 text-white p-4 rounded-xl font-bold text-base transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
-                ✓ {pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}
+                <Check className="w-5 h-5" />
+                <span>{pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}</span>
               </button>
               <button
                 type="button"
@@ -384,7 +385,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
             className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white py-3 px-4 rounded-2xl font-black text-xs transition-all shadow-lg shadow-emerald-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>{pedidoInicial ? 'Guardar Cambios' : 'Confirmar Pedido'}</span>
-            <span>➔</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>

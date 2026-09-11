@@ -10,6 +10,7 @@ import {
   buscarDireccionPorCoordenadas
 } from '@/lib/ubicacion'
 import ModalSelectorUbicacion from './ModalSelectorUbicacion'
+import { MapPin, Pencil, Check } from 'lucide-react'
 
 function dmsToDecimal(degrees: number, minutes: number, seconds: number, direction: string): number {
   let decimal = degrees + minutes / 60 + seconds / 3600;
@@ -358,17 +359,19 @@ export default function CampoUbicacion({
         <button
           type="button"
           onClick={() => setModalAbierto(true)}
-          className="text-sm border border-chefsy-300 text-chefsy-700 px-3 py-2 rounded-md hover:bg-chefsy-50 shadow-sm"
+          className="text-sm border border-chefsy-300 text-chefsy-700 px-3 py-2 rounded-md hover:bg-chefsy-50 shadow-sm inline-flex items-center gap-1.5"
         >
-          📍 Señalar ubicación en el mapa
+          <MapPin className="w-4 h-4" />
+          <span>Señalar ubicación en el mapa</span>
         </button>
 
         <button
           type="button"
           onClick={() => setIngresoManual(!ingresoManual)}
-          className="text-sm border border-gray-300 text-gray-600 px-3 py-2 rounded-md hover:bg-gray-50 shadow-sm"
+          className="text-sm border border-gray-300 text-gray-600 px-3 py-2 rounded-md hover:bg-gray-50 shadow-sm inline-flex items-center gap-1.5"
         >
-          ✏️ Ingresar coordenadas manualmente
+          <Pencil className="w-4 h-4" />
+          <span>Ingresar coordenadas manualmente</span>
         </button>
 
         {coordenadas && (
@@ -419,9 +422,12 @@ export default function CampoUbicacion({
       {coordenadas && (
         <div className="text-xs text-gray-600 bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center justify-between shadow-sm">
           <div>
-            <p>✅ <span className="font-semibold">Ubicación señalada:</span> {formatearCoordenadas(coordenadas)}</p>
+            <p className="flex items-center gap-1.5 font-medium text-emerald-800">
+              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="font-semibold">Ubicación señalada:</span> {formatearCoordenadas(coordenadas)}
+            </p>
             {distanciaKm !== undefined && distanciaKm > 0 && (
-              <p className="mt-0.5 text-chefsy-700 font-medium text-[11px] uppercase tracking-wide">📏 Distancia al local: <span className="font-bold text-chefsy-900">{distanciaKm} km</span></p>
+              <p className="mt-0.5 text-chefsy-700 font-medium text-[11px] uppercase tracking-wide">Distancia al local: <span className="font-bold text-chefsy-900">{distanciaKm} km</span></p>
             )}
             <a
               href={crearEnlaceGoogleMaps(coordenadas)}

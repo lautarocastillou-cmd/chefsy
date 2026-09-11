@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
@@ -153,7 +153,7 @@ export default function TorreControlPage() {
                     <CardContent className="p-3.5">
                       <div className="flex justify-between items-start mb-2">
                         <div className="font-bold text-gray-900 text-sm line-clamp-1 flex-1 pr-2 flex items-center gap-1.5">
-                          <span>🛵</span>
+                          <Bike className="w-4 h-4 text-slate-500 shrink-0" />
                           <span>{cadete.nombre}</span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
@@ -200,7 +200,7 @@ export default function TorreControlPage() {
                         {cadete.pedidoActivo ? (
                           <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-1">
                             <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
-                              <span>📦 EN VIAJE ({cadete.pedidoActivo.estado.toUpperCase()})</span>
+                              <span>EN VIAJE ({cadete.pedidoActivo.estado.toUpperCase()})</span>
                               {cadete.pedidoActivo.total ? (
                                 <span className="text-gray-900 font-black">{formatearPrecio(cadete.pedidoActivo.total)}</span>
                               ) : null}
@@ -210,7 +210,7 @@ export default function TorreControlPage() {
                             </p>
                             {cadete.pedidoActivo.direccion ? (
                               <p className="text-gray-600 text-[11px] flex items-start gap-1">
-                                <span>📍</span>
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                                 <span className="line-clamp-2">{cadete.pedidoActivo.direccion}</span>
                               </p>
                             ) : null}
@@ -234,7 +234,7 @@ export default function TorreControlPage() {
                           </div>
                         ) : (
                           <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 flex items-center justify-between text-emerald-700">
-                            <span className="font-bold text-[11px]">🟢 DISPONIBLE</span>
+                            <span className="font-bold text-[11px]">DISPONIBLE</span>
                             <span className="text-[11px] text-gray-500">En espera</span>
                           </div>
                         )}
@@ -267,7 +267,8 @@ export default function TorreControlPage() {
                           }}
                           className="flex-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
                         >
-                          <span>🥩 + Viaje Extra</span>
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <span>Viaje Extra</span>
                         </button>
 
                         {cadete.gps_activo && (
@@ -303,19 +304,19 @@ export default function TorreControlPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Cadete Disponible (🛵)</span>
+            <span className="text-gray-700 font-medium">Cadete Disponible</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-orange-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Cadete en Viaje (🛵)</span>
+            <span className="text-gray-700 font-medium">Cadete en Viaje</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Destino Cliente (🏠)</span>
+            <span className="text-gray-700 font-medium">Destino Cliente</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-red-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Local Chefsy (🏪)</span>
+            <span className="text-gray-700 font-medium">Local Chefsy</span>
           </div>
         </div>
       </div>

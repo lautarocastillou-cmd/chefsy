@@ -39,7 +39,7 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
     const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
     const noEstaEnCamino = pedido.estado !== 'en_camino'
     const mensaje = noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
-      ? '¡Link copiado y pedido marcado en camino! 🛵'
+      ? '¡Link copiado y pedido marcado en camino!'
       : '¡Link de seguimiento copiado al portapapeles!'
     const ok = await copiarConNotificacion(url, mensaje)
     if (ok) {
@@ -118,7 +118,7 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
           <div className="min-w-0 flex-1">
             {pedido.observaciones && (
               <p className="text-xs text-amber-300 bg-amber-950/50 border border-amber-800/50 px-3 py-1.5 rounded-xl truncate max-w-md inline-block">
-                ⚠️ <strong className="font-bold">Nota:</strong> {pedido.observaciones}
+                <strong className="font-bold">Nota:</strong> {pedido.observaciones}
               </p>
             )}
           </div>

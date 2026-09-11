@@ -121,7 +121,7 @@ function SelectorProductoBuscableBanco({
     <div className="space-y-2.5 bg-slate-950 p-3 rounded-2xl border border-indigo-500/50 shadow-2xl animate-in fade-in">
       <div className="flex items-center justify-between">
         <label className="text-[11px] font-black text-indigo-300 flex items-center gap-1.5">
-          <span>🔍</span>
+          <Search size={12} className="text-indigo-400" />
           <span>Buscar plato a asignar:</span>
         </label>
         <span className="text-[10px] text-slate-500 font-bold">
@@ -144,9 +144,9 @@ function SelectorProductoBuscableBanco({
           <button
             type="button"
             onClick={() => setBusqueda('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs cursor-pointer"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs cursor-pointer flex items-center justify-center"
           >
-            ✕
+            <X size={13} />
           </button>
         )}
       </div>
@@ -212,9 +212,9 @@ function SelectorProductoBuscableBanco({
         <button
           type="button"
           onClick={onCancelar}
-          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
         >
-          ✕
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -495,7 +495,7 @@ export default function DevToolsPage() {
       }
 
       setGaleriaFotos(prev => [...prev, ...fotosProcesadas])
-      mostrarToast(`¡${archivos.length === 1 ? '1 foto añadida' : `${archivos.length} fotos añadidas`} a la galería! 📸`, 'success')
+      mostrarToast(`¡${archivos.length === 1 ? '1 foto añadida' : `${archivos.length} fotos añadidas`} a la galería!`, 'success')
     } catch (err) {
       console.error('Error procesando fotos:', err)
       mostrarToast('Error al procesar una de las imágenes.', 'error')
@@ -543,7 +543,7 @@ export default function DevToolsPage() {
         setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
       }
 
-      mostrarToast(`¡${completadas} fotos subidas y optimizadas a WebP con éxito! 📸`, 'success')
+      mostrarToast(`¡${completadas} fotos subidas y optimizadas a WebP con éxito!`, 'success')
       await cargarFotosStorage()
       await cargarMetadata()
     } catch (err: any) {
@@ -680,7 +680,7 @@ export default function DevToolsPage() {
       setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
 
       mostrarToast(
-        `¡${urlsNuevas.length === 1 ? 'Foto' : `${urlsNuevas.length} fotos`} de "${prod.nombre}" actualizada${urlsNuevas.length === 1 ? '' : 's'} con éxito! 📸`,
+        `¡${urlsNuevas.length === 1 ? 'Foto' : `${urlsNuevas.length} fotos`} de "${prod.nombre}" actualizada${urlsNuevas.length === 1 ? '' : 's'} con éxito!`,
         'success'
       )
     } catch (err: any) {
@@ -710,8 +710,8 @@ export default function DevToolsPage() {
 
       mostrarToast(
         nuevoEstado
-          ? `"${prod.nombre}" ahora está VISIBLE en la tienda pública 👁️`
-          : `"${prod.nombre}" fue PAUSADO/OCULTADO de la tienda pública ⏸️`,
+          ? `"${prod.nombre}" ahora está VISIBLE en la tienda pública`
+          : `"${prod.nombre}" fue PAUSADO/OCULTADO de la tienda pública`,
         'success'
       )
     } catch (err: any) {
@@ -745,7 +745,7 @@ export default function DevToolsPage() {
         return copia
       })
 
-      mostrarToast('¡Fondo eliminado con IA! El plato quedó recortado transparente. ✨', 'success')
+      mostrarToast('¡Fondo eliminado con IA! El plato quedó recortado transparente.', 'success')
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al recortar fondo: ' + (err.message || 'Error desconocido'), 'error')
@@ -874,7 +874,7 @@ export default function DevToolsPage() {
       copia.unshift(item)
       return copia
     })
-    mostrarToast('Foto seleccionada como portada principal ⭐', 'success')
+    mostrarToast('Foto seleccionada como portada principal', 'success')
   }
 
   // Mover foto a la izquierda/derecha
@@ -927,9 +927,9 @@ export default function DevToolsPage() {
           esNueva: false,
         })),
       ])
-      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive añadida${urls.length === 1 ? '' : 's'} a la galería! 📸`, 'success')
+      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive añadida${urls.length === 1 ? '' : 's'} a la galería!`, 'success')
     } else {
-      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive guardada${urls.length === 1 ? '' : 's'} en el Banco de la Casa! 📸`, 'success')
+      mostrarToast(`¡${urls.length} ${urls.length === 1 ? 'foto' : 'fotos'} de Google Drive guardada${urls.length === 1 ? '' : 's'} en el Banco de la Casa!`, 'success')
     }
   }
 
@@ -1105,7 +1105,7 @@ export default function DevToolsPage() {
       })
 
       setEdicionesTabla({})
-      mostrarToast(`¡Se guardaron los textos de ${itemsAGuardar.length} platos con éxito! ⚡`, 'success')
+      mostrarToast(`¡Se guardaron los textos de ${itemsAGuardar.length} platos con éxito!`, 'success')
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al guardar: ' + (err.message || 'Error desconocido'), 'error')
@@ -1145,7 +1145,7 @@ export default function DevToolsPage() {
         return copia
       })
 
-      mostrarToast('Plato guardado con éxito ⚡', 'success')
+      mostrarToast('Plato guardado con éxito', 'success')
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al guardar: ' + (err.message || 'Error desconocido'), 'error')
@@ -1416,7 +1416,7 @@ export default function DevToolsPage() {
         throw new Error(metaData.error || 'Error al guardar en el servidor')
       }
 
-      mostrarToast(`¡Foto asignada a "${prod.nombre}" con éxito! 📸`, 'success')
+      mostrarToast(`¡Foto asignada a "${prod.nombre}" con éxito!`, 'success')
     } catch (err: any) {
       console.error(err)
       mostrarToast('Error al asignar foto: ' + (err.message || 'Error desconocido'), 'error')
@@ -1503,7 +1503,7 @@ export default function DevToolsPage() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            <span>🎨</span>
+            <Wrench size={16} />
             <span>Diseño Visual (Fotos y Textos)</span>
           </button>
           <button
@@ -1514,7 +1514,7 @@ export default function DevToolsPage() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            <span>🖼️</span>
+            <ImageIcon size={16} />
             <span>Banco de Fotos de la Casa ({bancoFotos.length})</span>
           </button>
           <button
@@ -1525,7 +1525,7 @@ export default function DevToolsPage() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            <span>🪙</span>
+            <Star size={16} />
             <span>Tienda Chefsitos</span>
           </button>
         </div>
@@ -1833,31 +1833,31 @@ export default function DevToolsPage() {
                             <div className="flex flex-wrap gap-1.5 pt-1">
                               {tieneFotosPropias ? (
                                 <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                  <span>📸</span>
+                                  <ImageIcon size={11} className="shrink-0" />
                                   <span>{fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'}</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                  <span>⚠️</span>
+                                  <AlertTriangle size={11} className="shrink-0" />
                                   <span>Sin foto</span>
                                 </span>
                               )}
 
                               {tieneDescripcion ? (
                                 <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                  <span>📝</span>
+                                  <Check size={11} className="shrink-0" />
                                   <span>Con descripción</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                  <span>✍️</span>
+                                  <AlertTriangle size={11} className="shrink-0" />
                                   <span>Falta descripción</span>
                                 </span>
                               )}
 
                               {esNombreModificado && (
                                 <span className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                  <span>✏️</span>
+                                  <Wrench size={11} className="shrink-0" />
                                   <span>Nombre personalizado</span>
                                 </span>
                               )}
@@ -2363,7 +2363,8 @@ export default function DevToolsPage() {
                         {item.productosUsados.length === 0 ? (
                           <div className="flex items-center gap-1.5 py-1">
                             <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-black px-2.5 py-0.5 rounded-md inline-flex items-center gap-1">
-                              <span>✨ Nueva en el Banco (Sin asignar)</span>
+                              <Sparkles size={11} className="shrink-0" />
+                              <span>Nueva en el Banco (Sin asignar)</span>
                             </span>
                           </div>
                         ) : (
@@ -2558,7 +2559,7 @@ export default function DevToolsPage() {
 
                         <div className="bg-slate-950/60 border border-slate-800 p-3 rounded-2xl space-y-2">
                           <label className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
-                            <span>🪙</span>
+                            <Star size={13} className="text-amber-400" />
                             <span>Canje por Chefsitos (Puntos)</span>
                           </label>
                           <div className="flex items-center gap-2">
@@ -2792,7 +2793,8 @@ export default function DevToolsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                      <span>📸 Galería de Fotos</span>
+                      <ImageIcon size={14} className="text-slate-400" />
+                      <span>Galería de Fotos</span>
                       <span className="bg-slate-800 text-slate-300 text-[10px] font-black px-2 py-0.5 rounded-md">
                         {galeriaFotos.length} {galeriaFotos.length === 1 ? 'foto' : 'fotos'}
                       </span>
@@ -2853,7 +2855,7 @@ export default function DevToolsPage() {
                                   }))
 
                                 setGaleriaFotos(prev => [...prev, ...nuevasParaAgregar])
-                                mostrarToast(`¡${nuevasParaAgregar.length} fotos añadidas a la galería! 📸`, 'success')
+                                mostrarToast(`¡${nuevasParaAgregar.length} fotos añadidas a la galería!`, 'success')
                                 setBancoSeleccionMultiple([])
                               }}
                               className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[11px] font-black transition-colors cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95"

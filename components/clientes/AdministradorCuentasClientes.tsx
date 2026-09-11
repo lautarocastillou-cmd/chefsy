@@ -136,7 +136,7 @@ export default function AdministradorCuentasClientes() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al cambiar la contraseña')
       setModalClave(null)
-      alert('✅ Contraseña actualizada exitosamente')
+      alert('Contraseña actualizada exitosamente')
     } catch (err: any) {
       setFormError(err.message)
     } finally {
@@ -285,7 +285,7 @@ export default function AdministradorCuentasClientes() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-amber-200/50 dark:border-amber-800/50">
-                        🪙 {c.puntos_actuales || 0} pts
+                        {c.puntos_actuales || 0} pts
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-400">
@@ -327,7 +327,7 @@ export default function AdministradorCuentasClientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5 animate-in zoom-in-95 will-change-transform">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">✨ Crear Cuenta de Cliente</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Crear Cuenta de Cliente</h3>
               <button onClick={() => setModalCrear(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                 <X size={20} />
               </button>
@@ -382,7 +382,7 @@ export default function AdministradorCuentasClientes() {
 
               {formError && (
                 <p className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
-                  ⚠️ {formError}
+                  {formError}
                 </p>
               )}
 
@@ -413,7 +413,7 @@ export default function AdministradorCuentasClientes() {
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5 animate-in zoom-in-95 will-change-transform">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">🔑 Cambiar Contraseña</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Cambiar Contraseña</h3>
                 <p className="text-xs text-slate-400">Cliente: {modalClave.nombre} ({modalClave.telefono})</p>
               </div>
               <button onClick={() => setModalClave(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
@@ -435,7 +435,7 @@ export default function AdministradorCuentasClientes() {
 
               {formError && (
                 <p className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
-                  ⚠️ {formError}
+                  {formError}
                 </p>
               )}
 
@@ -465,7 +465,7 @@ export default function AdministradorCuentasClientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5 animate-in zoom-in-95 will-change-transform">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">✏️ Editar Cuenta</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Editar Cuenta</h3>
               <button onClick={() => setModalEditar(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                 <X size={20} />
               </button>
@@ -504,7 +504,7 @@ export default function AdministradorCuentasClientes() {
 
               {formError && (
                 <p className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
-                  ⚠️ {formError}
+                  {formError}
                 </p>
               )}
 

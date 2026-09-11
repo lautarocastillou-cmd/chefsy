@@ -65,13 +65,11 @@ function CatalogoProductosComponente({
         <div className="text-left border-b border-white/10 pb-4 flex items-center justify-between">
           <div>
             <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
-              {catDetalles.icono === '🍔' ? (
+              {catDetalles.icono?.toLowerCase().includes('burger') ? (
                 <img src="/burger-icon.png" alt="Burger" className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
-              ) : catDetalles.icono.startsWith('/') ? (
+              ) : catDetalles.icono && catDetalles.icono.startsWith('/') ? (
                 <img src={catDetalles.icono} alt={catDetalles.nombre} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
-              ) : (
-                <span>{catDetalles.icono}</span>
-              )}
+              ) : null}
               {catDetalles.nombre === 'Menú Especial'
                 ? (categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre.toUpperCase() || catDetalles.nombre)
                 : (esCategoriaCombinada ? 'Burgers / Patys' : catDetalles.nombre)}

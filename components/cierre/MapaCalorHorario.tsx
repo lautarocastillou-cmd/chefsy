@@ -224,7 +224,9 @@ export default function MapaCalorHorario({ matriz, picoMaximo, horasOperativas }
             <span className="text-[10px]">Media</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-md bg-emerald-500 border border-emerald-400 text-white flex items-center justify-center text-[8px] font-bold">★</span>
+            <span className="relative w-4 h-4 rounded-md bg-emerald-500 border border-emerald-400 text-white flex items-center justify-center">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+            </span>
             <span className="text-[10px]">Horario pico</span>
           </div>
         </div>

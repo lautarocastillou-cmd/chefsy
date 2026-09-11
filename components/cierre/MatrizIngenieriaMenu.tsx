@@ -447,7 +447,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
       {/* ── TARJETAS DE LOS 4 CUADRANTES ESTRATÉGICOS ─────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
-        {/* 🌟 1. PLATOS ESTRELLA */}
+        {/* 1. PLATOS ESTRELLA */}
         <button
           onClick={() => setFiltroCuadrante(filtroCuadrante === 'estrella' ? 'todos' : 'estrella')}
           className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
@@ -486,7 +486,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
           </div>
         </button>
 
-        {/* ⚡ 2. CABALLOS DE BATALLA */}
+        {/* 2. CABALLOS DE BATALLA */}
         <button
           onClick={() => setFiltroCuadrante(filtroCuadrante === 'caballo' ? 'todos' : 'caballo')}
           className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
@@ -525,7 +525,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
           </div>
         </button>
 
-        {/* 🎯 3. ROMPECABEZAS / OPORTUNIDAD */}
+        {/* 3. ROMPECABEZAS / OPORTUNIDAD */}
         <button
           onClick={() => setFiltroCuadrante(filtroCuadrante === 'rompecabezas' ? 'todos' : 'rompecabezas')}
           className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
@@ -564,7 +564,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
           </div>
         </button>
 
-        {/* 📦 4. PLATOS LASTRE / PERROS */}
+        {/* 4. PLATOS LASTRE / PERROS */}
         <button
           onClick={() => setFiltroCuadrante(filtroCuadrante === 'lastre' ? 'todos' : 'lastre')}
           className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
@@ -1115,7 +1115,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                         )}
                         <div>
                           <strong className="block font-bold">
-                            {platoSeleccionado.rentabilidadReal.estadoSalud === 'saludable' ? '🟢 Margen Excelente' : platoSeleccionado.rentabilidadReal.estadoSalud === 'moderado' ? '🟡 Margen Equilibrado' : '🔴 Atención con el Costo'}
+                            {platoSeleccionado.rentabilidadReal.estadoSalud === 'saludable' ? 'Margen Excelente' : platoSeleccionado.rentabilidadReal.estadoSalud === 'moderado' ? 'Margen Equilibrado' : 'Atención con el Costo'}
                           </strong>
                           <span className="leading-snug">{platoSeleccionado.rentabilidadReal.explicacionSalud}</span>
                         </div>
@@ -1252,7 +1252,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                     </div>
 
                     <p className="text-[11px] text-slate-400">
-                      💡 <strong>Cálculo al instante:</strong> Con ingresar el costo una sola vez, Chefsy proyecta tu margen limpio y te avisa qué descuento podés hacer en promociones sin perder plata.
+                      <strong>Cálculo al instante:</strong> Con ingresar el costo una sola vez, Chefsy proyecta tu margen limpio y te avisa qué descuento podés hacer en promociones sin perder plata.
                     </p>
                   </div>
                 )}
@@ -1351,7 +1351,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                         : 'bg-white dark:bg-[#2c2c2c] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#444] hover:bg-slate-50'
                     }`}
                   >
-                    📈 ¿Qué pasa si aumento el precio?
+                    ¿Qué pasa si aumento el precio?
                   </button>
 
                   <button
@@ -1363,7 +1363,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                         : 'bg-white dark:bg-[#2c2c2c] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#444] hover:bg-slate-50'
                     }`}
                   >
-                    🛑 ¿Me conviene discontinuarlo?
+                    ¿Me conviene discontinuarlo?
                   </button>
 
                   <button
@@ -1375,7 +1375,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                         : 'bg-white dark:bg-[#2c2c2c] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#444] hover:bg-slate-50'
                     }`}
                   >
-                    🎁 ¿Qué promo armo con él?
+                    ¿Qué promo armo con él?
                   </button>
                 </div>
 
@@ -1498,15 +1498,15 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                   let explicacionVeredicto = ''
 
                   if (esBajoVolumen && esBajoAporte) {
-                    tituloVeredicto = '🛑 Discontinuar Recomendada'
+                    tituloVeredicto = 'Discontinuar Recomendada'
                     colorClase = 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
                     explicacionVeredicto = `Vendió apenas ${unidades} unidades en todo el período y aporta solo el ${pctVenta}% de la caja (${formatearPrecio(platoSeleccionado.facturacionTotal)}). Si te exige masa fresca, vegetales que se marchitan o cortes que se echan a perder, retiralo sin culpa: tu cocina trabajará más ágil y evitarás tirar mercadería a la basura.`
                   } else if (platoSeleccionado.cuadrante === 'rompecabezas') {
-                    tituloVeredicto = '⚠️ Poner a prueba 10 días antes de retirar'
+                    tituloVeredicto = 'Poner a prueba 10 días antes de retirar'
                     colorClase = 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
                     explicacionVeredicto = `Tiene un precio excelente (${formatearPrecio(platoSeleccionado.precioPromedio)}) pero le falta rotación (${unidades} u.). Antes de sacarlo, dale una oportunidad: cambiale la foto por una que dé hambre y lanzalo en promo un fin de semana. Si en 10 días no supera las 10 ventas, ahí sí retiralo.`
                   } else {
-                    tituloVeredicto = '🟢 ¡Prohibido sacar de la carta!'
+                    tituloVeredicto = '¡Prohibido sacar de la carta!'
                     colorClase = 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                     explicacionVeredicto = `Es uno de los motores comerciales del negocio (${unidades} unidades y ${pctVenta}% de la venta de comida). Tus clientes habituales lo buscan. Sacarlo sería un tiro en el pie para tu recaudación.`
                   }
@@ -1647,19 +1647,19 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    <span className="font-extrabold text-amber-700 dark:text-amber-400 block mb-0.5">🌟 Platos Estrella</span>
+                    <span className="font-extrabold text-amber-700 dark:text-amber-400 block mb-0.5">Platos Estrella</span>
                     Alta venta + Alto ticket. No tocarlos, proteger stock y no aplicar descuentos.
                   </div>
                   <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                    <span className="font-extrabold text-blue-700 dark:text-blue-400 block mb-0.5">⚡ Caballos de Batalla</span>
+                    <span className="font-extrabold text-blue-700 dark:text-blue-400 block mb-0.5">Caballos de Batalla</span>
                     Alta venta + Bajo ticket. Crear combos con bebida o papas para elevar el ticket.
                   </div>
                   <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                    <span className="font-extrabold text-purple-700 dark:text-purple-400 block mb-0.5">🎯 Rompecabezas</span>
+                    <span className="font-extrabold text-purple-700 dark:text-purple-400 block mb-0.5">Rompecabezas</span>
                     Baja venta + Alto ticket. Mejorar fotos y visibilidad antes de evaluar cambios.
                   </div>
                   <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                    <span className="font-extrabold text-rose-700 dark:text-rose-400 block mb-0.5">📦 Lastre / A Revisar</span>
+                    <span className="font-extrabold text-rose-700 dark:text-rose-400 block mb-0.5">Lastre / A Revisar</span>
                     Baja venta + Bajo ticket. Evaluar simplificar insumos o discontinuar.
                   </div>
                 </div>

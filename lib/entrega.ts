@@ -14,19 +14,19 @@ export const opcionesTipoEntrega: {
   {
     valor: 'delivery',
     etiqueta: 'Delivery',
-    icono: '🛵',
+    icono: '',
     descripcion: 'Envío a domicilio con dirección',
   },
   {
     valor: 'retiro',
     etiqueta: 'Retiro',
-    icono: '🏪',
+    icono: '',
     descripcion: 'El cliente retira en el local',
   },
   {
     valor: 'consumo_local',
     etiqueta: 'Consumo en local',
-    icono: '🍽️',
+    icono: '',
     descripcion: 'Para comer en el local',
   },
 ]
@@ -40,7 +40,7 @@ export function obtenerEtiquetaTipoEntrega(tipoEntrega: TipoEntrega): string {
 }
 
 export function obtenerIconoTipoEntrega(tipoEntrega: TipoEntrega): string {
-  return opcionesTipoEntrega.find((o) => o.valor === tipoEntrega)?.icono ?? '🛵'
+  return ''
 }
 
 /** Texto a mostrar donde antes iba solo la dirección */

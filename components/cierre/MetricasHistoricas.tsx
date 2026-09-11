@@ -520,7 +520,7 @@ export default function MetricasHistoricas() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'
               }`}
             >
-              ☀️/🌙 Ambos
+              Ambos
             </button>
             <button
               onClick={() => setFiltroTurno('mediodia')}
@@ -594,7 +594,7 @@ export default function MetricasHistoricas() {
             <div className="flex flex-col sm:items-end gap-1">
               <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Reparto de Ventas</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold text-amber-400">{statsTurnos.pctFacturacionMediodia.toFixed(1)}% ☀️</span>
+                <span className="text-xs font-extrabold text-amber-400">{statsTurnos.pctFacturacionMediodia.toFixed(1)}%</span>
                 <div className="w-32 sm:w-44 h-3 bg-slate-800 rounded-full overflow-hidden flex border border-white/10">
                   <div 
                     className="bg-amber-500 h-full transition-all duration-500" 
@@ -605,7 +605,7 @@ export default function MetricasHistoricas() {
                     style={{ width: `${statsTurnos.pctFacturacionNoche}%` }} 
                   />
                 </div>
-                <span className="text-xs font-extrabold text-indigo-400">🌙 {statsTurnos.pctFacturacionNoche.toFixed(1)}%</span>
+                <span className="text-xs font-extrabold text-indigo-400">{statsTurnos.pctFacturacionNoche.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -613,7 +613,7 @@ export default function MetricasHistoricas() {
           {/* Tarjetas Comparativas de los 2 Turnos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* ☀️ Tarjeta Turno Mediodía */}
+            {/* Tarjeta Turno Mediodía */}
             <div className="bg-white/5 border border-amber-500/30 hover:border-amber-500/50 transition-all rounded-2xl p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -656,7 +656,7 @@ export default function MetricasHistoricas() {
               </div>
             </div>
 
-            {/* 🌙 Tarjeta Turno Noche */}
+            {/* Tarjeta Turno Noche */}
             <div className="bg-white/5 border border-indigo-500/30 hover:border-indigo-500/50 transition-all rounded-2xl p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -704,7 +704,7 @@ export default function MetricasHistoricas() {
           {/* Insights Inteligentes */}
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-slate-300">
-              <span className="text-amber-400 font-bold">💡 Conclusión:</span>
+              <span className="text-amber-400 font-bold">Conclusión:</span>
               <span>
                 {statsTurnos.noche.facturacion >= statsTurnos.mediodia.facturacion
                   ? `El Turno Noche lidera las ventas con un ${statsTurnos.pctFacturacionNoche.toFixed(0)}% del volumen total.`
@@ -820,10 +820,10 @@ export default function MetricasHistoricas() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
-                📈 {filtroTurno === 'todos' ? 'Comparativa de Ingresos por Turno' : 'Evolución de Ingresos'}
+                {filtroTurno === 'todos' ? 'Comparativa de Ingresos por Turno' : 'Evolución de Ingresos'}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {filtroTurno === 'todos' ? '☀️ Mediodía (Ámbar) vs 🌙 Noche (Índigo)' : `Facturación neta en turno ${filtroTurno}`}
+                {filtroTurno === 'todos' ? 'Mediodía (Ámbar) vs Noche (Índigo)' : `Facturación neta en turno ${filtroTurno}`}
               </p>
             </div>
 
@@ -871,11 +871,11 @@ export default function MetricasHistoricas() {
                             </p>
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-4 text-amber-600 dark:text-amber-400 font-semibold">
-                                <span>☀️ Mediodía:</span>
+                                <span>Mediodía:</span>
                                 <span>{formatearPrecio(item?.ingresosMediodia || 0)}</span>
                               </div>
                               <div className="flex items-center justify-between gap-4 text-indigo-600 dark:text-indigo-400 font-semibold">
-                                <span>🌙 Noche:</span>
+                                <span>Noche:</span>
                                 <span>{formatearPrecio(item?.ingresosNoche || 0)}</span>
                               </div>
                             </div>
@@ -954,7 +954,7 @@ export default function MetricasHistoricas() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
-                📊 Volumen de Comandas por Día
+                Volumen de Comandas por Día
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {filtroTurno === 'todos' ? 'Pedidos repartidos entre Mediodía y Noche' : `Comandas despachadas en turno ${filtroTurno}`}
@@ -996,11 +996,11 @@ export default function MetricasHistoricas() {
                             </p>
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-4 text-amber-500 font-bold">
-                                <span>☀️ Mediodía:</span>
+                                <span>Mediodía:</span>
                                 <span>{item?.pedidosMediodia || 0} ped.</span>
                               </div>
                               <div className="flex items-center justify-between gap-4 text-indigo-400 font-bold">
-                                <span>🌙 Noche:</span>
+                                <span>Noche:</span>
                                 <span>{item?.pedidosNoche || 0} ped.</span>
                               </div>
                             </div>
@@ -1146,7 +1146,7 @@ export default function MetricasHistoricas() {
           <div className="p-5 border-b border-slate-100 dark:border-[#3d3d3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-[#e6e6e6]">
-                📜 Historial de Cierres de Turno ({datosActuales.length})
+                Historial de Cierres de Turno ({datosActuales.length})
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {filtroTurno === 'todos' ? 'Listado de todos los cierres de Mediodía y Noche' : `Cierres correspondientes a turno ${filtroTurno}`}
@@ -1193,7 +1193,7 @@ export default function MetricasHistoricas() {
                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                             : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
                         }`}>
-                          {esMediodia ? '☀️ Mediodía' : '🌙 Noche'}
+                          {esMediodia ? 'Mediodía' : 'Noche'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-semibold">{row.pedidos}</td>
@@ -1207,9 +1207,9 @@ export default function MetricasHistoricas() {
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
                         <span className="inline-flex items-center gap-2">
-                          <span>🛵 {row.total_envios_delivery || 0}</span>
-                          <span>🏪 {row.total_retiros || 0}</span>
-                          <span>🍽️ {row.total_consumo_local || 0}</span>
+                          <span>Delivery: {row.total_envios_delivery || 0}</span>
+                          <span>Retiro: {row.total_retiros || 0}</span>
+                          <span>Local: {row.total_consumo_local || 0}</span>
                         </span>
                       </td>
                     </tr>

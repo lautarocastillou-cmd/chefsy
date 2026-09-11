@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image'
-import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
+import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2, FileText, Check } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio, optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
 import { usarCarrito } from '@/contexto/CarritoContexto'
@@ -415,7 +415,7 @@ export default function ModalPersonalizacion({
                   {descripcion && descripcion.trim() && (
                     <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs">📋</span>
+                        <FileText size={12} className="text-amber-400 shrink-0" />
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                           Ingredientes & Detalles
                         </span>
@@ -463,7 +463,7 @@ export default function ModalPersonalizacion({
                                 <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
                                   seleccionado ? 'bg-chefsy-500 border-transparent' : 'border-slate-600 bg-transparent'
                                 }`}>
-                                  {seleccionado && <span className="text-[6px] text-white font-black">✓</span>}
+                                  {seleccionado && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
                                 </span>
                                 {modObj.nombre}
                               </span>
@@ -516,7 +516,7 @@ export default function ModalPersonalizacion({
                           : 'bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white shadow-lg shadow-chefsy-500/20 active:scale-[0.98] cursor-pointer'
                       }`}
                     >
-                      {estaCerrado ? '🔒 Local Cerrado' : `Agregar · ${formatearPrecio(precioUnitarioTotal * cantidadModal)}`}
+                      {estaCerrado ? 'Local Cerrado' : `Agregar · ${formatearPrecio(precioUnitarioTotal * cantidadModal)}`}
                     </button>
                   </div>
                 </div>
@@ -565,7 +565,7 @@ export default function ModalPersonalizacion({
                 {descripcion && descripcion.trim() && (
                   <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs">📋</span>
+                      <FileText size={12} className="text-amber-400 shrink-0" />
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Ingredientes & Detalles
                       </span>
@@ -613,7 +613,7 @@ export default function ModalPersonalizacion({
                               <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${
                                 seleccionado ? 'bg-chefsy-500 border-transparent' : 'border-slate-600 bg-transparent'
                               }`}>
-                                {seleccionado && <span className="text-[6px] text-white font-black">✓</span>}
+                                {seleccionado && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
                               </span>
                               {modObj.nombre}
                             </span>
@@ -664,7 +664,7 @@ export default function ModalPersonalizacion({
                         : 'bg-gradient-to-r from-chefsy-500 to-chefsy-600 hover:from-chefsy-400 hover:to-chefsy-500 text-white shadow-lg shadow-chefsy-500/20 active:scale-[0.98] cursor-pointer'
                     }`}
                   >
-                    {estaCerrado ? '🔒 Local Cerrado' : `Agregar · ${formatearPrecio(precioUnitarioTotal * cantidadModal)}`}
+                    {estaCerrado ? 'Local Cerrado' : `Agregar · ${formatearPrecio(precioUnitarioTotal * cantidadModal)}`}
                   </button>
                 </div>
               </div>

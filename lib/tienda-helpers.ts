@@ -75,7 +75,7 @@ export const OBTENER_DETALLES_COMPLEMENTARIOS = (categoriaId: string, nombre: st
 export const OBTENER_DETALLES_CATEGORIA = (catId: string) => {
   switch (catId) {
     case 'todos': 
-      return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y pedí 🔥', icono: '/burger-icon.png' }
+      return { nombre: 'Nuestro Menú', subtitulo: 'Elegí, personalizá y hacé tu pedido', icono: '/burger-icon.png' }
     case 'lomos':
     case 'milas':
     case 'cat-1780506096615':

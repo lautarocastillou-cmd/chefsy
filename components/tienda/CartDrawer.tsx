@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation } from 'lucide-react'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation, Lock, AlertTriangle } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
@@ -329,8 +329,9 @@ export default function CartDrawer() {
         {/* Contenido Principal */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {carrito.length === 0 ? (
-            <div className="text-center py-20 px-5 text-slate-400 text-xs">
-              🛒 Tu carrito está vacío.<br />Agrega algunos platos ricos de la tienda.
+            <div className="text-center py-20 px-5 text-slate-400 text-xs flex flex-col items-center justify-center">
+              <ShoppingCart size={32} className="text-slate-600 mb-2 stroke-[1.5]" />
+              Tu carrito está vacío.<br />Agregá algunos platos del menú.
             </div>
           ) : !mostrarCheckout ? (
             <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4">
@@ -667,10 +668,10 @@ export default function CartDrawer() {
                                 : 'border-[#3d3d3d] text-white'
                             }`}
                           >
-                            <option value="sin_especificar" disabled>⚠️ FALTA MÉTODO DE PAGO</option>
-                            <option value="efectivo">💵 Efectivo al recibir</option>
-                            <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
-                            <option value="transferencia">📲 Transferencia Bancaria</option>
+                            <option value="sin_especificar" disabled>Seleccionar método de pago</option>
+                            <option value="efectivo">Efectivo al recibir</option>
+                            <option value="tarjeta">Tarjeta (Débito/Crédito)</option>
+                            <option value="transferencia">Transferencia Bancaria</option>
                           </select>
                           <ChevronRight size={16} className="absolute right-4 text-slate-500 rotate-90 pointer-events-none" />
                         </div>
@@ -696,7 +697,8 @@ export default function CartDrawer() {
                       {turnoActivo === false ? (
                         <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in space-y-1.5">
                           <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
-                            <span>🔒</span> {esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}
+                            <Lock size={14} className="text-red-400" />
+                            <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}</span>
                           </p>
                           <p className="text-slate-200 text-xs font-semibold leading-relaxed">
                             {mensajeCierre}
@@ -765,7 +767,8 @@ export default function CartDrawer() {
             {turnoActivo === false ? (
               <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in space-y-1.5">
                 <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
-                  <span>🔒</span> {esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}
+                  <Lock size={14} className="text-red-400" />
+                  <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}</span>
                 </p>
                 <p className="text-slate-200 text-xs font-semibold leading-relaxed">
                   {mensajeCierre}
@@ -802,8 +805,8 @@ export default function CartDrawer() {
           }`}
         >
           <div className="bg-[#181818] border border-amber-500/50 text-white px-5 py-3.5 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(245,158,11,0.2)] flex items-center gap-3.5 border-l-4 border-l-amber-500">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-lg font-bold shadow-inner">
-              ⚠️
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 shadow-inner">
+              <AlertTriangle size={18} />
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">

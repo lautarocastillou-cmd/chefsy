@@ -97,7 +97,7 @@ export default function ComparativaTurnoVivo({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-400/20">
-                📊 Comparativa en Vivo
+                Comparativa en Vivo
               </span>
               <span className="text-xs text-indigo-300 flex items-center gap-1 font-medium">
                 <Calendar size={12} /> vs {diaNombre} anterior ({fechaFormateada})

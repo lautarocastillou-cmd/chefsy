@@ -34,7 +34,7 @@ const estados = ['nuevo', 'en_cocina', 'listo', 'en_camino', 'nuevo', 'en_cocina
 const metodosPago = ['efectivo', 'transferencia', 'tarjeta']
 
 async function main() {
-  console.log('🚀 Iniciando simulación de ola masiva de pedidos en Chefsy...')
+  console.log('[SIMULACION] Iniciando simulación de ola masiva de pedidos en Chefsy...')
 
   // 1. Activar turno si no estuviera
   await supabase.from('turnos').upsert({ id: 1, activo: true, updated_at: new Date().toISOString() })
@@ -86,16 +86,16 @@ async function main() {
     }
   })
 
-  console.log(`📦 Insertando ${pedidosAInsertar.length} pedidos realistas...`)
+  console.log(`Insertando ${pedidosAInsertar.length} pedidos realistas...`)
 
   const { data, error } = await supabase.from('pedidos').insert(pedidosAInsertar).select('id')
 
   if (error) {
-    console.error('❌ Error al insertar pedidos:', error)
+    console.error('Error al insertar pedidos:', error)
     process.exit(1)
   }
 
-  console.log(`✅ ¡${data.length} pedidos insertados exitosamente en Supabase!`)
+  console.log(`¡${data.length} pedidos insertados exitosamente en Supabase!`)
 }
 
 main().catch(console.error)

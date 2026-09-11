@@ -36,7 +36,7 @@ export default function AccesoRestringido() {
 
         {/* Información Adicional */}
         <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 text-[11px] text-slate-650 dark:text-slate-350 leading-normal max-w-xs mx-auto">
-          🔒 Esta zona está reservada para el personal de administración. Si crees que esto es un error, por favor contactá al administrador.
+          Esta zona está reservada para el personal de administración. Si crees que esto es un error, por favor contactá al administrador.
         </div>
 
         {/* Acciones */}

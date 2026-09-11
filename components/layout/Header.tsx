@@ -8,6 +8,7 @@
 
 import { usePathname } from 'next/navigation'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { Bike, Battery, BatteryWarning } from 'lucide-react'
 
 const titulosPorRuta: Record<string, string> = {
   '/dashboard':     'Dashboard',
@@ -48,9 +49,11 @@ export default function Header() {
           <div className="hidden md:flex gap-4 border-l border-slate-200 pl-6 h-6 items-center">
             {cadetesConBateria.map(c => (
               <div key={c.id} className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-                <span>🛵 {c.nombre.split(' ')[0]}</span>
-                <span className={`font-bold ${c.bateria! < 20 ? 'text-red-600 animate-pulse' : c.bateria! < 50 ? 'text-orange-500' : 'text-emerald-600'}`}>
-                  {c.bateria}% {c.bateria! < 20 ? '🪫' : '🔋'}
+                <Bike className="w-3.5 h-3.5 text-slate-500" />
+                <span>{c.nombre.split(' ')[0]}</span>
+                <span className={`font-bold inline-flex items-center gap-1 ${c.bateria! < 20 ? 'text-red-600 animate-pulse' : c.bateria! < 50 ? 'text-orange-500' : 'text-emerald-600'}`}>
+                  <span>{c.bateria}%</span>
+                  {c.bateria! < 20 ? <BatteryWarning className="w-3.5 h-3.5 text-red-600" /> : <Battery className="w-3.5 h-3.5 text-emerald-600" />}
                 </span>
               </div>
             ))}

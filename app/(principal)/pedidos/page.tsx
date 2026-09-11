@@ -365,7 +365,7 @@ export default function PaginaPedidos() {
             <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
               <div>
                 <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                  {pedidoAEditar ? '✏️ Editar Pedido' : '📝 Nuevo Pedido'}
+                  {pedidoAEditar ? 'Editar Pedido' : 'Nuevo Pedido'}
                 </h2>
                 <p className="text-[11px] text-gray-400 dark:text-slate-400">
                   {pedidoAEditar ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}

@@ -110,8 +110,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const localIcon = L.divIcon({
         html: `
           <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="font-size: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #2A6348; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-              🏪
+            <div style="background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #2A6348; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A6348" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
             </div>
             <div style="margin-top:2px;background:#2A6348;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #ffffff;">
               Chefsy Local
@@ -183,8 +183,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const clienteIcon = L.divIcon({
         html: `
           <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="font-size:20px;background:#2563EB;color:#fff;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
-              🏠
+            <div style="background:#2563EB;color:#fff;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </div>
             <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
               ${pedido.cliente || 'Tu Domicilio'}
@@ -255,8 +255,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
           <div class="cadete-radar-pulse"></div>
           <!-- Badge circular 3D de la moto (permanece siempre derecho con ruedas al piso) -->
           <div class="cadete-moto-badge" style="width:44px; height:44px; background:#E11D48; border:2.5px solid white; border-radius:50%; box-shadow:0 4px 14px rgba(225,29,72,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <span class="cadete-moto-flip" style="display:inline-block; font-size:24px; line-height:1; transition:transform 0.15s ease-out; transform:${esOesteInicial ? 'scaleX(-1)' : 'scaleX(1)'};">
-              🛵
+            <span class="cadete-moto-flip" style="display:inline-flex; align-items:center; justify-content:center; line-height:1; transition:transform 0.15s ease-out; transform:${esOesteInicial ? 'scaleX(-1)' : 'scaleX(1)'};">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
             </span>
           </div>
           <!-- Flecha direccional de navegación en 360° -->
@@ -283,7 +283,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       markersRef.current.cadete = L.marker([targetLat, targetLng], {
         icon: cadeteIcon,
         zIndexOffset: 300,
-      }).addTo(leafletMapRef.current).bindPopup(`🛵 Repartidor: ${pedido.cadete_nombre || 'En camino'}`)
+      }).addTo(leafletMapRef.current).bindPopup(`Repartidor: ${pedido.cadete_nombre || 'En camino'}`)
       return
     }
 

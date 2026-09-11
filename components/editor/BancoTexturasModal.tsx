@@ -122,7 +122,7 @@ export default function BancoTexturasModal({
             )}
           >
             <div className="w-full h-16 rounded-xl bg-black border border-white/10 flex items-center justify-center text-slate-500 text-xs font-bold">
-              🚫 Sin Textura (Color Puro)
+              Sin Textura (Color Puro)
             </div>
             <div className="mt-2">
               <div className="text-xs font-bold text-slate-200">Fondo Plano</div>

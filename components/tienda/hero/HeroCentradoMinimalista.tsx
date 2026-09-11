@@ -73,12 +73,12 @@ export default function HeroCentradoMinimalista({
         </div>
       </div>
 
-      {/* ── Badges de Confianza y Rating ⭐ 4.9 ───────────────────── */}
+      {/* ── Badges de Confianza y Rating 4.9 ───────────────────── */}
       <div className="flex flex-wrap items-center justify-center gap-2">
         {/* Rating Google */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 shadow-md">
           <Star size={13} className="fill-amber-400 text-amber-400" />
-          <span>{configuracion?.hero_badge_texto || '⭐ 4.9 en Google (+500 reseñas)'}</span>
+          <span>{configuracion?.hero_badge_texto || '4.9 en Google (+500 reseñas)'}</span>
         </div>
 
         {/* Estado en Vivo / Horario */}

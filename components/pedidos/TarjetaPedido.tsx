@@ -24,7 +24,9 @@ import {
   MoreHorizontal,
   Phone,
   MessageCircle,
-  Bike
+  MessageSquare,
+  Bike,
+  ChefHat
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -158,23 +160,23 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     
     let direccionTexto = ''
     if (pedido.direccion && pedido.direccion.trim() !== '') {
-      direccionTexto = `📍 ${pedido.direccion.trim()}`
+      direccionTexto = `Dirección: ${pedido.direccion.trim()}`
       const linkMapa = crearEnlaceGoogleMaps(pedido.coordenadas, pedido.direccion)
       if (linkMapa) {
-        direccionTexto += `\n🗺️ Mapa: ${linkMapa}`
+        direccionTexto += `\nMapa: ${linkMapa}`
       }
     } else if (pedido.tipoEntrega && pedido.tipoEntrega !== 'delivery') {
-      direccionTexto = `📍 ${pedido.tipoEntrega === 'retiro' ? 'Retiro en el local' : 'Consumo en el local'}`
+      direccionTexto = `Tipo: ${pedido.tipoEntrega === 'retiro' ? 'Retiro en el local' : 'Consumo en el local'}`
     }
 
     const texto = `*Pedido de ${pedido.cliente}*
-📞 ${pedido.telefono}
+Tel: ${pedido.telefono}
 ${direccionTexto ? `${direccionTexto}\n` : ''}
 *Detalle:*
 ${productosText}
 
-💵 Total: ${formatearPrecio(pedido.total)} (${etiquetaMetodoPago[pedido.metodoPago]})
-${pedido.observaciones ? `💬 ${pedido.observaciones}` : ''}`.trim()
+Total: ${formatearPrecio(pedido.total)} (${etiquetaMetodoPago[pedido.metodoPago]})
+${pedido.observaciones ? `Nota: ${pedido.observaciones}` : ''}`.trim()
 
     const ok = await copiarConNotificacion(texto, '¡Pedido para WhatsApp copiado al portapapeles!')
     if (ok) {
@@ -304,7 +306,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     const ok = await copiarConNotificacion(
       url,
       noEstaEnCamino
-        ? '¡Link copiado y pedido marcado en camino! 🛵'
+        ? '¡Link copiado y pedido marcado en camino!'
         : '¡Link de seguimiento copiado al portapapeles!'
     )
     if (ok && noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
@@ -453,7 +455,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               <span className="truncate">{producto.nombre}</span>
               {producto.coccion && (
                 <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
-                  {producto.coccion === 'fritas' ? '🥟 Fritas' : '🔥 Al Horno'}
+                  {producto.coccion === 'fritas' ? 'Fritas' : 'Al Horno'}
                 </span>
               )}
             </span>
@@ -481,19 +483,19 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 : "bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6]"
             )}
           >
-            <option value="sin_especificar">⚠️ Falta Pago</option>
-            <option value="efectivo">💵 Efectivo</option>
-            <option value="tarjeta">💳 Tarjeta</option>
-            <option value="transferencia">📱 Transf.</option>
-            <option value="mixto">💵📱 Mixto</option>
+            <option value="sin_especificar">Falta Pago</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transf.</option>
+            <option value="mixto">Mixto</option>
           </select>
           {pedido.metodoPago === 'mixto' && (
             <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded">
-              {pedido.montoEfectivo ? `💵${formatearPrecio(pedido.montoEfectivo)}` : ''}
+              {pedido.montoEfectivo ? `Ef: ${formatearPrecio(pedido.montoEfectivo)}` : ''}
               {pedido.montoEfectivo && (pedido.montoTransferencia || pedido.montoTarjeta) ? ' + ' : ''}
-              {pedido.montoTransferencia ? `📱${formatearPrecio(pedido.montoTransferencia)}` : ''}
+              {pedido.montoTransferencia ? `Transf: ${formatearPrecio(pedido.montoTransferencia)}` : ''}
               {pedido.montoTransferencia && pedido.montoTarjeta ? ' + ' : ''}
-              {pedido.montoTarjeta ? `💳${formatearPrecio(pedido.montoTarjeta)}` : ''}
+              {pedido.montoTarjeta ? `Tarj: ${formatearPrecio(pedido.montoTarjeta)}` : ''}
             </span>
           )}
           {pedido.tipoEntrega === 'delivery' && (
@@ -511,10 +513,10 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               disabled={soloLectura}
               className="bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#444] text-slate-700 dark:text-[#e6e6e6] px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold border-none outline-none cursor-pointer transition-colors"
             >
-              <option value="">🛵 Sin Cadete</option>
+              <option value="">Sin Cadete</option>
               {cadetes.map(c => (
                 <option key={c.id} value={c.id}>
-                  🛵 {c.nombre} {c.gps_activo ? '🟢 (GPS)' : '⚪ (GPS apagado)'}
+                  {c.nombre} {c.gps_activo ? '(GPS)' : '(Sin GPS)'}
                 </option>
               ))}
             </select>
@@ -557,7 +559,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
               className="inline-flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ml-1"
               title="Este pedido de delivery no tiene costo de envío sumado. Hacé clic para sumarle el costo en 1 clic."
             >
-              <span>⚠️ + Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
+              <span>+ Envío ({formatearPrecio(pedido.distanciaKm ? calcularCostoEnvio(pedido.distanciaKm) : 1500)})</span>
             </button>
           )}
           {!pedido.observaciones && !editandoNota && !soloLectura && (
@@ -625,7 +627,7 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             )}
             title={!soloLectura ? "Hacé clic para editar la aclaración" : undefined}
           >
-            <span className="shrink-0">💬</span>
+            <MessageSquare className="w-3.5 h-3.5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="flex-1 pr-8">{pedido.observaciones}</p>
             {!soloLectura && (
               <span className="text-[9px] text-amber-600 dark:text-amber-400 underline opacity-0 group-hover:opacity-100 absolute right-2 top-1.5 transition-opacity duration-150">
@@ -821,7 +823,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 onClick={() => imprimirSilencioso('ticket')}
                 className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-chefsy-200 dark:border-chefsy-800/60 hover:border-chefsy hover:bg-chefsy-50/40 dark:hover:bg-chefsy-900/20 transition-all text-left group"
               >
-                <span className="text-2xl">🧾</span>
+                <div className="w-10 h-10 rounded-xl bg-chefsy-500/10 flex items-center justify-center shrink-0">
+                  <Receipt className="w-6 h-6 text-chefsy-600 dark:text-chefsy-400" />
+                </div>
                 <div>
                   <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-chefsy-700 dark:group-hover:text-chefsy-300 transition-colors">
                     Ticket para el Cliente
@@ -837,7 +841,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
                 onClick={() => imprimirSilencioso('cocina')}
                 className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800/60 hover:border-orange-500 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 transition-all text-left group"
               >
-                <span className="text-2xl">🍳</span>
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <ChefHat className="w-6 h-6 text-orange-500" />
+                </div>
                 <div>
                   <p className="font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
                     Comanda para Cocina

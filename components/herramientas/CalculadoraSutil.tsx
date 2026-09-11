@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Calculator } from 'lucide-react'
+import { X, Calculator, Delete } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const evaluarExpresion = (expr: string): string => {
@@ -187,7 +187,7 @@ export default function CalculadoraSutil() {
             <div className="grid grid-cols-4 gap-1 p-2.5 bg-zinc-950">
               {/* Fila 1 */}
               <button onClick={limpiar} className={cn(btnSpec, 'col-span-2 text-xs')}>AC</button>
-              <button onClick={borrar} className={cn(btnSpec, 'text-xs')}>⌫</button>
+              <button onClick={borrar} className={cn(btnSpec, 'text-xs flex items-center justify-center')} title="Borrar"><Delete size={13} /></button>
               <button onClick={() => inputOperacion('÷')} className={btnOp}>÷</button>
 
               {/* Fila 2 */}

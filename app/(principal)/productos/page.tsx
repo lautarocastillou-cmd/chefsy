@@ -20,6 +20,7 @@ import {
   Tag,
   Sliders,
   UtensilsCrossed,
+  AlertCircle,
 } from 'lucide-react'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 
@@ -534,7 +535,7 @@ export default function PaginaAdministracionCatalogos() {
                                 <div className="flex items-center gap-2">
                                   {prod.esCombo && (
                                     <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-                                      🎁 COMBO
+                                      COMBO
                                     </span>
                                   )}
                                   <span className="font-semibold text-slate-800 dark:text-slate-100">{prod.nombre}</span>
@@ -647,7 +648,7 @@ export default function PaginaAdministracionCatalogos() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {prod.esCombo && (
                                 <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm">
-                                  🎁 COMBO
+                                  COMBO
                                 </span>
                               )}
                               <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold">
@@ -751,8 +752,9 @@ export default function PaginaAdministracionCatalogos() {
               </div>
 
               {errorProd && (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold">
-                  ⚠️ {errorProd}
+                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorProd}</span>
                 </div>
               )}
 
@@ -870,7 +872,7 @@ export default function PaginaAdministracionCatalogos() {
                       onChange={(e) => setFormProducto({ ...formProducto, esCombo: e.target.checked })}
                       className="w-4 h-4 rounded text-chefsy focus:ring-chefsy border-slate-300 dark:border-slate-700 dark:bg-slate-800"
                     />
-                    <span>🎁 Es un Combo / Promo especial</span>
+                    <span>Es un Combo / Promo especial</span>
                   </label>
 
                   {/* Activo */}
@@ -1059,8 +1061,9 @@ export default function PaginaAdministracionCatalogos() {
               </div>
 
               {errorCat && (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold">
-                  ⚠️ {errorCat}
+                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorCat}</span>
                 </div>
               )}
 
@@ -1250,8 +1253,9 @@ export default function PaginaAdministracionCatalogos() {
               </div>
 
               {errorMod && (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold">
-                  ⚠️ {errorMod}
+                <div className="bg-red-50 dark:bg-red-950/30 border border-red-150 dark:border-red-900/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-300 font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMod}</span>
                 </div>
               )}
 
