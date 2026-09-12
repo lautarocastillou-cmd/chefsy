@@ -33,6 +33,22 @@ export default function TorreControlPage() {
   const [pedidoParaBreadcrumb, setPedidoParaBreadcrumb] = useState<any | null>(null)
   const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
+  const [vistaMobile, setVistaMobile] = useState<'mapa' | 'cadetes'>('mapa')
+  const [mostrarReferenciasMobile, setMostrarReferenciasMobile] = useState(false)
+
+  // Disparar resize para que Leaflet recalcule tiles al alternar a la pestaña Mapa
+  useEffect(() => {
+    if (vistaMobile === 'mapa') {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [vistaMobile])
+
+  const cadetesActivosConGpsCount = cadetes.filter(
+    (c) => c.gps_activo && c.lat != null && c.lng != null
+  ).length
 
   const fetchTorreData = async () => {
     setIsRefreshing(true)
@@ -86,13 +102,49 @@ export default function TorreControlPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-[calc(100vh-7rem)] min-h-[550px] bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Sidebar: Lista de Cadetes */}
-      <div className="w-full md:w-80 lg:w-96 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50/40">
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-emerald-500" />
+    <div className="flex flex-col w-full h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-7rem)] min-h-[460px]">
+      {/* Selector de Pestañas Móvil */}
+      <div className="md:hidden flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 mb-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => setVistaMobile('mapa')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            vistaMobile === 'mapa'
+              ? 'bg-white text-gray-900 shadow-xs'
+              : 'text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Mapa en Vivo</span>
+          {cadetesActivosConGpsCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setVistaMobile('cadetes')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            vistaMobile === 'cadetes'
+              ? 'bg-white text-gray-900 shadow-xs'
+              : 'text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <Bike className="w-3.5 h-3.5 text-slate-600" />
+          <span>Cadetes</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-bold ml-1">
+            {cadetes.length}
+          </Badge>
+        </button>
+      </div>
+
+      {/* Contenedor Principal (Lado a lado en Desktop, Pestaña activa en Móvil) */}
+      <div className="flex-1 flex flex-col md:flex-row w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden min-h-0">
+        {/* Sidebar: Lista de Cadetes */}
+        <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} md:flex w-full md:w-80 lg:w-96 shrink-0 border-r border-gray-200 flex-col bg-gray-50/40 h-full min-h-0`}>
+          <div className="p-4 border-b border-gray-200 bg-white shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-emerald-500" />
               Torre de Control
             </h1>
             <div className="flex items-center gap-1.5">
@@ -126,7 +178,7 @@ export default function TorreControlPage() {
           </p>
         </div>
 
-        <ScrollArea className="flex-1 p-3">
+        <ScrollArea className="flex-1 p-3 min-h-0">
           <div className="space-y-3">
             {isLoading && cadetes.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm animate-pulse">
@@ -144,7 +196,12 @@ export default function TorreControlPage() {
                 return (
                   <Card
                     key={cadete.id}
-                    onClick={() => setFocusedId(cadete.id)}
+                    onClick={() => {
+                      setFocusedId(cadete.id)
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                        setVistaMobile('mapa')
+                      }
+                    }}
                     className={`overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer border ${
                       isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/20' : 'border-gray-200 bg-white'
                     }`}
@@ -248,6 +305,7 @@ export default function TorreControlPage() {
                           onClick={(e) => {
                             e.stopPropagation()
                             setFocusedId(cadete.id)
+                            setVistaMobile('mapa')
                           }}
                           className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
                         >
@@ -294,32 +352,43 @@ export default function TorreControlPage() {
       </div>
 
       {/* Main Area: Mapa */}
-      <div className="flex-1 h-[50vh] md:h-full min-h-[400px] relative border-t md:border-t-0 md:border-l border-gray-200">
+      <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} md:flex flex-1 h-full min-h-0 relative border-t md:border-t-0 md:border-l border-gray-200 flex-col`}>
         <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
 
+        {/* Botón flotante para alternar referencias en móvil */}
+        <button
+          type="button"
+          onClick={() => setMostrarReferenciasMobile(!mostrarReferenciasMobile)}
+          className="sm:hidden absolute bottom-4 left-4 z-[500] px-2.5 py-1.5 bg-white/95 backdrop-blur-xs rounded-xl shadow-md border border-gray-200 text-[11px] font-bold text-gray-700 flex items-center gap-1.5 cursor-pointer"
+        >
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>{mostrarReferenciasMobile ? 'Ocultar Referencias' : 'Referencias'}</span>
+        </button>
+
         {/* Overlay Legend */}
-        <div className="absolute bottom-6 right-6 z-[1000] bg-white p-3.5 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-none">
+        <div className={`${mostrarReferenciasMobile ? 'block' : 'hidden sm:block'} absolute bottom-14 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[500] bg-white/95 backdrop-blur-xs p-3 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-auto sm:pointer-events-none transition-all`}>
           <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1 border-b pb-1">
             Referencias en Mapa
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Cadete Disponible</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Cadete Disponible</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-orange-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Cadete en Viaje</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Cadete en Viaje</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Destino Cliente</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Destino Cliente</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium">Local Chefsy</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Local Chefsy</span>
           </div>
         </div>
       </div>
+    </div>
 
       {/* Modal Interactivo de Repetición de Ruta (Breadcrumb Trail) */}
       {pedidoParaBreadcrumb && (

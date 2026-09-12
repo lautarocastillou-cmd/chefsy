@@ -149,7 +149,7 @@ export default function ProductCardV2({
               <p
                 className={cn(
                   "text-xs text-slate-400 font-normal leading-relaxed",
-                  !expandido && "line-clamp-2"
+                  !expandido ? "line-clamp-2" : "md:line-clamp-2"
                 )}
               >
                 {descripcionVisible}
@@ -160,7 +160,7 @@ export default function ProductCardV2({
                       e.stopPropagation()
                       setExpandido(false)
                     }}
-                    className="text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
+                    className="md:hidden text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
                   >
                     ver menos
                   </button>
@@ -173,7 +173,7 @@ export default function ProductCardV2({
                     e.stopPropagation()
                     setExpandido(true)
                   }}
-                  className="text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
+                  className="md:hidden text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
                 >
                   ... ver más
                 </button>
