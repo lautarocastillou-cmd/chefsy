@@ -7,6 +7,7 @@ import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { leerPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
+import { notificarAviso, notificarError } from '@/lib/notificaciones'
 
 interface PantallaExitoProps {
   pedido: Pedido
@@ -53,7 +54,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
       
       // Validar si soporta Service Workers y Push
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert('Tu navegador no soporta notificaciones push. Probá con Chrome o Safari actualizado.')
+        notificarAviso('Tu navegador no soporta notificaciones push. Probá con Chrome o Safari actualizado.')
         setSuscribiendo(false)
         return
       }
@@ -61,7 +62,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
       // Pedir permiso
       const permiso = await Notification.requestPermission()
       if (permiso !== 'granted') {
-        alert('Tenés que permitir las notificaciones en tu navegador para que te avisemos.')
+        notificarAviso('Tenés que permitir las notificaciones en tu navegador para que te avisemos.')
         setSuscribiendo(false)
         return
       }
@@ -97,7 +98,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
       setSuscrito(true)
     } catch (err) {
       console.error('Error al suscribir', err)
-      alert('Hubo un problema al activar las notificaciones.')
+      notificarError('Hubo un problema al activar las notificaciones.')
     } finally {
       setSuscribiendo(false)
     }

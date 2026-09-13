@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit3, X, Check, ImageIcon, Smartphone, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { notificarAviso } from '@/lib/notificaciones'
 
 export interface PromoSlide {
   id: string
@@ -305,7 +306,7 @@ function ModalEditorBanners({
 
   const eliminarBanner = (id: string) => {
     if (lista.length <= 1) {
-      alert('Tenés que mantener al menos un banner activo.')
+      notificarAviso('Tenés que mantener al menos un banner activo.')
       return
     }
     setLista(lista.filter((p) => p.id !== id))

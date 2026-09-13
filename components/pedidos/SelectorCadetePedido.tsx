@@ -167,7 +167,7 @@ export default function SelectorCadetePedido({
             width: '210px',
             zIndex: 99999,
           }}
-          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-100 text-slate-800 dark:text-slate-100 select-none"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-100 text-slate-800 dark:text-slate-100 select-none"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Cabecera sutil */}

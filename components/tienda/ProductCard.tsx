@@ -8,6 +8,7 @@ import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { esImagenValida } from '@/lib/tienda-helpers'
+import { mostrarCartel } from '@/lib/notificaciones'
 
 interface ProductCardProps {
   prod:        ProductoCatalogo
@@ -97,7 +98,12 @@ function ProductCard({
       ref={ref}
       onClick={() => {
         if (estaCerrado) {
-          alert(mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
+          mostrarCartel({
+            tipo: 'cerrado',
+            titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+            mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+            botonTexto: 'Entendido',
+          })
           return
         }
         if (!agotado) {

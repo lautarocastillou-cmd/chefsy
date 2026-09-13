@@ -25,6 +25,7 @@ import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from 
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
 import { ListOrdered, Activity } from 'lucide-react'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
+import { notificarError } from '@/lib/notificaciones'
 
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
@@ -95,7 +96,7 @@ function TarjetaPedidoCadete({
       cambiarEstado(pedido.id, 'entregado', false)
       localStorage.removeItem(`original-pago-${pedido.id}`)
     } catch (e) {
-      alert('Error al intentar marcar como entregado. Reintentá.')
+      notificarError('Error al intentar marcar como entregado. Reintentá.')
       throw e
     }
   }
@@ -109,7 +110,7 @@ function TarjetaPedidoCadete({
       }
       cambiarEstado(pedido.id, 'listo', false)
     } catch (e) {
-      alert('Error al marcar como listo. Reintentá.')
+      notificarError('Error al marcar como listo. Reintentá.')
       throw e
     }
   }

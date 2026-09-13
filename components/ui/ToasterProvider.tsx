@@ -15,29 +15,35 @@ export default function ToasterProvider() {
   return (
     <Toaster
       position="bottom-center"
-      gutter={8}
+      gutter={10}
       containerStyle={{
         bottom: 36,
         zIndex: 9999999,
       }}
       toastOptions={{
-        duration: 2200,
+        duration: 2800,
         style: {
           background: '#0f172a',
           color: '#ffffff',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
-          borderRadius: '9999px',
-          padding: '10px 24px',
+          border: '1px solid rgba(255, 255, 255, 0.16)',
+          borderRadius: '16px',
+          padding: '11px 20px',
           fontSize: '13.5px',
           fontWeight: '600',
           textAlign: 'center',
-          maxWidth: '90vw',
-          whiteSpace: 'nowrap',
+          maxWidth: '92vw',
+          lineHeight: '1.4',
           boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
         },
         success: {
           iconTheme: {
             primary: '#10b981',
+            secondary: '#ffffff',
+          },
+        },
+        error: {
+          iconTheme: {
+            primary: '#ef4444',
             secondary: '#ffffff',
           },
         },

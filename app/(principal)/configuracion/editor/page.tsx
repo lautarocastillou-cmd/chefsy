@@ -45,6 +45,7 @@ import PaginaTienda from '@/app/page'
 import BancoTexturasModal from '@/components/editor/BancoTexturasModal'
 import HistorialVersionesModal from '@/components/editor/HistorialVersionesModal'
 import { cn } from '@/lib/utils'
+import { notificarError, notificarAviso } from '@/lib/notificaciones'
 
 type DeviceType = 'desktop' | 'ios' | 'android' | 'tablet'
 type TabType = 'hero' | 'tarjetas' | 'colores' | 'tipografia' | 'recursos' | 'redes'
@@ -175,7 +176,7 @@ export default function EditorTienda() {
       setToastGuardado(true)
       setTimeout(() => setToastGuardado(false), 3500)
     } else {
-      alert('Error al guardar y publicar el diseño.')
+      notificarError('Error al guardar y publicar el diseño.')
     }
   }
 
@@ -254,7 +255,7 @@ export default function EditorTienda() {
       }
     } catch (err: any) {
       console.error(err)
-      alert(err.message || 'Error al subir el archivo.')
+      notificarError(err.message || 'Error al subir el archivo.')
     } finally {
       setSubiendoImagen(null)
     }
@@ -283,7 +284,10 @@ export default function EditorTienda() {
 
   const eliminarSlide = (slideId: string) => {
     const slides = configLive?.hero_carrusel_slides || []
-    if (slides.length <= 1) return alert('Debe quedar al menos 1 slide.')
+    if (slides.length <= 1) {
+      notificarAviso('Debe quedar al menos 1 slide.')
+      return
+    }
     handleChange('hero_carrusel_slides', slides.filter((s) => s.id !== slideId))
   }
 

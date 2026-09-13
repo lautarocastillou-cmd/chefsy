@@ -11,6 +11,7 @@ import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gaug
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
+import { notificarError } from '@/lib/notificaciones'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
 const MapaGlobal = dynamic(
@@ -91,11 +92,11 @@ export default function TorreControlPage() {
         await fetchTorreData()
       } else {
         const err = await res.json().catch(() => ({}))
-        alert(err.error || 'No se pudo apagar el GPS.')
+        notificarError(err.error || 'No se pudo apagar el GPS.')
       }
     } catch (error) {
       console.error('Error apagando GPS:', error)
-      alert('Error de red al intentar apagar el GPS')
+      notificarError('Error de red al intentar apagar el GPS')
     } finally {
       setApagandoId(null)
     }
@@ -359,14 +360,14 @@ export default function TorreControlPage() {
         <button
           type="button"
           onClick={() => setMostrarReferenciasMobile(!mostrarReferenciasMobile)}
-          className="sm:hidden absolute bottom-4 left-4 z-[500] px-2.5 py-1.5 bg-white/95 backdrop-blur-xs rounded-xl shadow-md border border-gray-200 text-[11px] font-bold text-gray-700 flex items-center gap-1.5 cursor-pointer"
+          className="sm:hidden absolute bottom-4 left-4 z-[500] px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-gray-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
         >
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
           <span>{mostrarReferenciasMobile ? 'Ocultar Referencias' : 'Referencias'}</span>
         </button>
 
         {/* Overlay Legend */}
-        <div className={`${mostrarReferenciasMobile ? 'block' : 'hidden sm:block'} absolute bottom-14 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[500] bg-white/95 backdrop-blur-xs p-3 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 pointer-events-auto sm:pointer-events-none transition-all`}>
+        <div className={`${mostrarReferenciasMobile ? 'block' : 'hidden sm:block'} absolute bottom-14 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[500] bg-white dark:bg-slate-900 p-3 rounded-xl shadow-xl border border-gray-200 dark:border-slate-800 text-xs space-y-2 pointer-events-auto sm:pointer-events-none transition-all`}>
           <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1 border-b pb-1">
             Referencias en Mapa
           </div>
