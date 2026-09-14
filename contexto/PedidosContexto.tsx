@@ -772,22 +772,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const finalizarTurno = async () => {
     try {
       const todosPedidosActivos = estado.pedidos
-      const tipoTurnoActual = (estadoTurno?.activo && estadoTurno?.tipoTurno) ? estadoTurno.tipoTurno : detectarTipoTurnoActual()
+      const tipoTurnoActual: TipoTurno = 'noche'
 
-      // ── Solo operar sobre los pedidos del turno que se está cerrando ─────────
-      // Fallback por hora para pedidos sin turno_tipo etiquetado (usando parsearFechaHora para soportar 12h y 24h)
-      const pedidosDelTurnoActual = todosPedidosActivos.filter((p) => {
-        if (p.turno_tipo) return p.turno_tipo === tipoTurnoActual
-        // Fallback por hora si el pedido no tiene turno_tipo (datos viejos o sin etiquetar)
-        const fechaRef = p.fecha || obtenerFechaNegocio()
-        const horaRef = p.hora || ''
-        const horaNum = horaRef
-          ? parsearFechaHora(fechaRef, horaRef).getHours()
-          : 20
-        const esMediodia = horaNum >= 10 && horaNum < 16
-        return tipoTurnoActual === 'mediodia' ? esMediodia : !esMediodia
-      })
-
+      // Al cerrar turno nocturno, todos los pedidos activos del panel corresponden al turno actual
+      const pedidosDelTurnoActual = todosPedidosActivos
       const idsDelTurno = pedidosDelTurnoActual.map((p) => p.id)
 
       if (idsDelTurno.length > 0) {
@@ -856,8 +844,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       })
       setEstadoTurno(turnoCerrado)
 
-      const etiquetaTurno = tipoTurnoActual === 'mediodia' ? 'Mediodía' : 'Noche'
-      agregarNotificacion(`Turno ${etiquetaTurno} finalizado. Panel limpio para el próximo turno.`, 'success')
+      agregarNotificacion('Turno Noche finalizado. Panel limpio para el próximo turno.', 'success')
     } catch (err) {
       console.error('[Servidor/Supabase] Error al finalizar turno:', err)
       agregarNotificacion('Error al finalizar el turno en la nube. Intente nuevamente.', 'warning')

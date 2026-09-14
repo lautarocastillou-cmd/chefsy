@@ -302,9 +302,7 @@ export async function POST(request: Request) {
           const argTime = new Date(now.getTime() + utcOffset * 3600000)
           const fechaStr = argTime.toISOString().split('T')[0]
 
-          const argHora = argTime.getHours()
-          const fallbackTipo = argHora >= 10 && argHora < 17 ? 'mediodia' : 'noche'
-          const turnoTipo = snapshot?.turno_tipo || fallbackTipo
+          const turnoTipo = snapshot?.turno_tipo || 'noche'
 
           // Consultar TODOS los pedidos de hoy en la base de datos para consolidar
           const { data: pedidosDelDia } = await supabaseAdmin
@@ -313,22 +311,8 @@ export async function POST(request: Request) {
             .eq('fecha', fechaStr)
 
           if (pedidosDelDia && pedidosDelDia.length > 0) {
-            // Filtrar todos los pedidos que pertenecen a este turno
-            const pedidosDelTurno = pedidosDelDia.filter((p: any) => {
-              if (p.turno_tipo) return p.turno_tipo === turnoTipo
-              let horaNum = 20
-              if (p.hora) {
-                const esPM = /p\.?\s*m\.?|pm/i.test(p.hora)
-                const esAM = /a\.?\s*m\.?|am/i.test(p.hora)
-                const numStr = p.hora.replace(/[^0-9:]/g, '').split(':')[0]
-                let h = Number(numStr) || 0
-                if (esPM && h < 12) h += 12
-                else if (esAM && h === 12) h = 0
-                horaNum = h
-              }
-              const esMediodia = horaNum >= 10 && horaNum < 16
-              return turnoTipo === 'mediodia' ? esMediodia : !esMediodia
-            })
+            // En servicio exclusivamente nocturno, todos los pedidos de la fecha corresponden a este turno
+            const pedidosDelTurno = pedidosDelDia
 
             const validos = pedidosDelTurno.filter((p: any) => p.estado !== 'cancelado')
             const facturacion_neta = validos.reduce((acc: number, p: any) => acc + (p.total - (p.costoEnvio || 0)), 0)

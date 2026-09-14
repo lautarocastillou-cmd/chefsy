@@ -120,7 +120,7 @@ export default function PaginaDashboard() {
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${estadoTurno.activo ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${estadoTurno.activo ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                 </span>
-                <span>{estadoTurno.activo ? `Turno ${estadoTurno.tipoTurno === 'mediodia' ? 'Mediodía' : 'Noche'} Activo` : 'Turno Cerrado'}</span>
+                <span>{estadoTurno.activo ? 'Turno Noche Activo' : 'Turno Cerrado'}</span>
               </div>
             </div>
 

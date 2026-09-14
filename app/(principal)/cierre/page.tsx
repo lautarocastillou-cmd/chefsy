@@ -22,7 +22,6 @@ import {
   X,
   BarChart3,
   Wallet,
-  Sun,
   Moon,
   Clock,
   Zap,
@@ -45,10 +44,7 @@ export default function PaginaCierreCaja() {
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
-  const [filtroTurno, setFiltroTurno] = useState<'todos' | 'mediodia' | 'noche'>(() =>
-    // Por defecto, filtrar por el turno que detectamos según la hora actual
-    detectarTipoTurnoActual()
-  )
+  const [filtroTurno, setFiltroTurno] = useState<'todos' | 'noche'>('noche')
   // cajaInicial del snapshot histórico (cuando se ve "Por Fecha" de un turno ya cerrado)
   const [cajaInicialHistorica, setCajaInicialHistorica] = useState<number | null>(null)
 
@@ -57,60 +53,35 @@ export default function PaginaCierreCaja() {
   // Estado para el modal de Iniciar Turno
   const [modalInicioAbierto, setModalInicioAbierto] = useState(false)
   const [cajaInicialInput, setCajaInicialInput] = useState('')
-  const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>(() => detectarTipoTurnoActual())
+  const [tipoTurnoInput, setTipoTurnoInput] = useState<TipoTurno>('noche')
   const [guardandoTurno, setGuardandoTurno] = useState(false)
 
   const abrirModalIniciarTurno = () => {
-    setTipoTurnoInput(detectarTipoTurnoActual())
+    setTipoTurnoInput('noche')
     setModalInicioAbierto(true)
   }
 
   // Sincronizar filtroTurno con el turno activo cuando el modo es En Vivo
-  // Esto garantiza que al entrar en modo En Vivo nunca se vean turnos mezclados
   useEffect(() => {
-    if (modoOrigen === 'en_vivo' && estadoTurno.tipoTurno) {
-      setFiltroTurno(estadoTurno.tipoTurno)
+    if (modoOrigen === 'en_vivo') {
+      setFiltroTurno('noche')
     }
-  }, [modoOrigen, estadoTurno.tipoTurno])
+  }, [modoOrigen])
 
-  // Detectar si hay pedidos activos de un turno distinto al activo (aviso de mezcla)
+  // Detectar si hay pedidos activos de una fecha anterior sin finalizar
   const infoTurnoPendiente = useMemo(() => {
     const activosNoArchivados = pedidos.filter(p => !p.archivado)
     if (activosNoArchivados.length === 0) return null
 
-    // Detectar pedidos de un tipo de turno diferente al activo
-    const tipoActivo = estadoTurno.tipoTurno || detectarTipoTurnoActual()
-    const deOtroTurno = activosNoArchivados.filter(p => {
-      if (p.turno_tipo) return p.turno_tipo !== tipoActivo
-      // Fallback por hora — usar parsearFechaHora para manejar 12h y 24h
-      const fechaRef = p.fecha || obtenerFechaNegocio()
-      const horaRef = p.hora || ''
-      const horaNum = horaRef ? parsearFechaHora(fechaRef, horaRef).getHours() : 20
-      const esMediodia = horaNum >= 10 && horaNum < 16
-      return tipoActivo === 'mediodia' ? !esMediodia : esMediodia
-    })
-
-    if (deOtroTurno.length === 0) {
-      // Fallback: detectar por fecha diferente (comportamiento anterior)
-      const distintos = activosNoArchivados.filter(p => p.fecha && p.fecha !== fechaSeleccionada)
-      if (distintos.length === 0) return null
-      const fechaPendiente = distintos[0].fecha
-      return {
-        fechaPendiente,
-        cantidad: distintos.length,
-        totalMonto: distintos.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0),
-        tipoOtroTurno: null as TipoTurno | null,
-      }
-    }
-
-    const tipoOtroTurno = (tipoActivo === 'mediodia' ? 'noche' : 'mediodia') as TipoTurno
+    const distintos = activosNoArchivados.filter(p => p.fecha && p.fecha !== fechaSeleccionada)
+    if (distintos.length === 0) return null
+    const fechaPendiente = distintos[0].fecha
     return {
-      fechaPendiente: deOtroTurno[0].fecha || null,
-      cantidad: deOtroTurno.length,
-      totalMonto: deOtroTurno.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0),
-      tipoOtroTurno,
+      fechaPendiente,
+      cantidad: distintos.length,
+      totalMonto: distintos.reduce((acc, p) => acc + (p.estado !== 'cancelado' ? p.total : 0), 0),
     }
-  }, [pedidos, fechaSeleccionada, estadoTurno.tipoTurno])
+  }, [pedidos, fechaSeleccionada])
 
   // Cargar pagos extras de cadetes correspondientes a la fecha y turno
   useEffect(() => {
@@ -173,22 +144,14 @@ export default function PaginaCierreCaja() {
     }
   }, [modoOrigen, fechaSeleccionada, obtenerPedidosPorFecha, pedidos])
 
-  // Filtrar pedidos por tipo de turno seleccionado (mediodía vs noche)
+  // Filtrar pedidos por tipo de turno seleccionado
   const pedidosFiltradosPorTurno = useMemo(() => {
-    if (filtroTurno === 'todos') return pedidosDelDia
+    if (modoOrigen === 'en_vivo' || filtroTurno === 'todos') return pedidosDelDia
     return pedidosDelDia.filter((p) => {
-      if (p.turno_tipo) return p.turno_tipo === filtroTurno
-      // Fallback por hora si no fue etiquetado (pedidos pre-fix)
-      // Usamos parsearFechaHora para manejar formatos 12h ("01:18 p. m.") y 24h ("13:18")
-      const fechaRef = p.fecha || obtenerFechaNegocio()
-      const horaRef = p.hora || ''
-      const horaNum = horaRef
-        ? parsearFechaHora(fechaRef, horaRef).getHours()
-        : 20 // fallback a noche solo si no hay hora alguna
-      const esMediodia = horaNum >= 10 && horaNum < 16
-      return filtroTurno === 'mediodia' ? esMediodia : !esMediodia
+      if (p.turno_tipo) return p.turno_tipo === 'noche'
+      return true
     })
-  }, [pedidosDelDia, filtroTurno])
+  }, [pedidosDelDia, filtroTurno, modoOrigen])
 
 
   // Pedidos válidos (no cancelados) para estadísticas de caja
@@ -506,9 +469,7 @@ _Generado automáticamente desde Chefsy_`.trim()
             )}
           >
             <Play size={16} />
-            {estadoTurno.activo
-              ? (estadoTurno.tipoTurno === 'mediodia' ? 'Turno Mediodía activo' : 'Turno Noche activo')
-              : 'Iniciar Turno'}
+            {estadoTurno.activo ? 'Turno Noche activo' : 'Iniciar Turno'}
           </button>
           <button
             onClick={manejarFinalizarTurno}
@@ -587,8 +548,8 @@ _Generado automáticamente desde Chefsy_`.trim()
           </button>
         </div>
 
-        {/* Filtro por Turno (solo visible en Calculadora) */}
-        {tabActual === 'calculadora' && (
+        {/* Filtro por Turno (solo visible en Calculadora en modo histórico por fecha) */}
+        {tabActual === 'calculadora' && modoOrigen === 'fecha' && (
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#282828] p-1 rounded-xl border border-slate-200 dark:border-[#3d3d3d] text-xs self-start sm:self-auto mb-2 sm:mb-0">
             <button
               onClick={() => setFiltroTurno('todos')}
@@ -599,19 +560,7 @@ _Generado automáticamente desde Chefsy_`.trim()
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               )}
             >
-              Ambos Turnos
-            </button>
-            <button
-              onClick={() => setFiltroTurno('mediodia')}
-              className={cn(
-                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
-                filtroTurno === 'mediodia'
-                  ? "bg-amber-500 text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              )}
-            >
-              <Sun size={13} />
-              Mediodía
+              Todos los Pedidos
             </button>
             <button
               onClick={() => setFiltroTurno('noche')}
@@ -623,7 +572,7 @@ _Generado automáticamente desde Chefsy_`.trim()
               )}
             >
               <Moon size={13} />
-              Noche
+              Turno Noche
             </button>
           </div>
         )}
@@ -920,7 +869,7 @@ _Generado automáticamente desde Chefsy_`.trim()
         {/* Comparativa de Turno en Vivo vs Histórico */}
         <ComparativaTurnoVivo
           fecha={fechaSeleccionada}
-          turnoTipo={filtroTurno === 'noche' ? 'noche' : 'mediodia'}
+          turnoTipo="noche"
           metricasActuales={{
             facturacionNeta,
             totalPedidos,
@@ -952,41 +901,19 @@ _Generado automáticamente desde Chefsy_`.trim()
             </div>
             
             <form onSubmit={manejarIniciarTurno} className="p-5 space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
-                  Tipo de Turno
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTipoTurnoInput('mediodia')}
-                    className={cn(
-                      "p-3 rounded-xl border font-bold text-xs flex flex-col items-center gap-1.5 transition-all",
-                      tipoTurnoInput === 'mediodia'
-                        ? "bg-amber-500 text-white border-amber-600 shadow-md scale-[1.02]"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                    )}
-                  >
-                    <Sun size={18} />
-                    <span>Mediodía</span>
-                    <span className="text-[10px] font-normal opacity-80">11:30 a 14:00</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setTipoTurnoInput('noche')}
-                    className={cn(
-                      "p-3 rounded-xl border font-bold text-xs flex flex-col items-center gap-1.5 transition-all",
-                      tipoTurnoInput === 'noche'
-                        ? "bg-indigo-600 text-white border-indigo-700 shadow-md scale-[1.02]"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                    )}
-                  >
-                    <Moon size={18} />
-                    <span>Noche</span>
-                    <span className="text-[10px] font-normal opacity-80">20:30 a 01:00</span>
-                  </button>
+              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <Moon size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Turno Noche</p>
+                    <p className="text-xs text-slate-400">Horario habitual: 20:30 a 01:00 hs</p>
+                  </div>
                 </div>
+                <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Activo
+                </span>
               </div>
 
               <div>
@@ -1045,7 +972,7 @@ _Generado automáticamente desde Chefsy_`.trim()
         }
         cadetePreseleccionadoId={cadeteParaPagoExtra}
         fecha={modoOrigen === 'en_vivo' ? obtenerFechaNegocio() : fechaSeleccionada}
-        turno_tipo={filtroTurno === 'todos' ? detectarTipoTurnoActual() : filtroTurno}
+        turno_tipo="noche"
         onGuardado={(nuevo) => {
           setPagosExtras(prev => [nuevo, ...prev])
         }}

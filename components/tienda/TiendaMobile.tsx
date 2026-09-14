@@ -346,7 +346,7 @@ export default function TiendaMobile() {
                   {esDomingoCerrado ? 'Local Cerrado los Domingos' : 'Local Cerrado en este momento'}
                 </p>
                 <p className="text-[10px] text-rose-200/80 leading-tight mt-0.5">
-                  {mensajeCierre || 'Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'}
+                  {mensajeCierre || 'Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.'}
                 </p>
               </div>
             </div>

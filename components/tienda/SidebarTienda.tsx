@@ -308,7 +308,7 @@ export default function SidebarTienda({
                   <span>Horarios de Atención</span>
                 </div>
                 <p className="text-[11px] text-slate-400 pl-6 leading-tight">
-                  Lun a Sáb: 11:30 a 14:00 • 20:30 a 01:00 hs
+                  Lun a Sáb: 20:30 a 01:00 hs
                 </p>
                 <p className="text-[11px] text-rose-400/90 pl-6">
                   Domingos: Cerrado

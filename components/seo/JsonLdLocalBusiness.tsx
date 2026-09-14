@@ -54,21 +54,7 @@ export default function JsonLdLocalBusiness() {
         name: 'Valle Viejo',
       },
     ],
-    hasMenu: 'https://chefsy.xyz/tienda',
     openingHoursSpecification: [
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: [
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-        ],
-        opens: '11:30',
-        closes: '14:00',
-      },
       {
         '@type': 'OpeningHoursSpecification',
         dayOfWeek: [

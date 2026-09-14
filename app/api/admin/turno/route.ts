@@ -27,18 +27,13 @@ export async function GET() {
       })
     }
     
-    let tipoTurnoCalculado = data.tipo_turno
-    if (!tipoTurnoCalculado && data.fecha_inicio) {
-      const fechaInicio = new Date(data.fecha_inicio)
-      const horaArg = (fechaInicio.getUTCHours() - 3 + 24) % 24
-      tipoTurnoCalculado = horaArg >= 10 && horaArg < 16 ? 'mediodia' : 'noche'
-    }
+    const tipoTurnoCalculado = 'noche'
 
     return NextResponse.json({
       activo: data.activo,
       cajaInicial: data.caja_inicial,
       fechaInicio: data.fecha_inicio,
-      tipoTurno: tipoTurnoCalculado || 'noche'
+      tipoTurno: tipoTurnoCalculado
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
@@ -78,7 +73,7 @@ export async function POST(request: Request) {
       activo, 
       caja_inicial: cajaInicial, 
       fecha_inicio: fechaInicio,
-      tipo_turno: tipoTurno || 'noche'
+      tipo_turno: 'noche'
     }
 
     let { error } = await supabase.from('turnos').upsert(payloadConTipo)

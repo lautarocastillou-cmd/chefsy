@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { Crown, Trophy, Award, ShoppingBag, DollarSign, Sparkles, Sun, Moon, Utensils } from 'lucide-react'
+import { Crown, Trophy, Award, ShoppingBag, DollarSign, Sparkles, Moon, Utensils } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS } from '@/lib/tienda-helpers'
 
@@ -33,15 +33,13 @@ export default function TarjetaProductoEstrella({
   topProductos,
   totalComandas
 }: TarjetaProductoEstrellaProps) {
-  const [tabTurno, setTabTurno] = useState<'general' | 'mediodia' | 'noche'>('general')
+  const [tabTurno, setTabTurno] = useState<'general' | 'noche'>('general')
 
   // Determinar qué producto estrella mostrar según el tab activo
   const estrellaActiva = 
-    tabTurno === 'mediodia' 
-      ? (estrellaMediodia || estrellaGeneral)
-      : tabTurno === 'noche' 
-        ? (estrellaNoche || estrellaGeneral)
-        : estrellaGeneral
+    tabTurno === 'noche' 
+      ? (estrellaNoche || estrellaGeneral)
+      : estrellaGeneral
 
   // Resolver imagen complementaria del producto
   const detalles = estrellaActiva
@@ -104,17 +102,6 @@ export default function TarjetaProductoEstrella({
               }`}
             >
               General
-            </button>
-            <button
-              onClick={() => setTabTurno('mediodia')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
-                tabTurno === 'mediodia'
-                  ? 'bg-amber-400 text-black shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Sun size={13} />
-              Mediodía
             </button>
             <button
               onClick={() => setTabTurno('noche')}

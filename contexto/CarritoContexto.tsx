@@ -80,7 +80,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [turnoActivo, setTurnoActivo] = useState<boolean | null>(null)
   const [esDomingoCerrado, setEsDomingoCerrado] = useState(false)
   const [mensajeCierre, setMensajeCierre] = useState(
-    'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'
+    'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.'
   )
   const [procesandoCompra, setProcesandoCompra] = useState(false)
 
@@ -178,7 +178,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       mostrarCartel({
         tipo: 'cerrado',
         titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
-        mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+        mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
         botonTexto: 'Entendido',
       })
       return
@@ -402,7 +402,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           mostrarCartel({
             tipo: 'cerrado',
             titulo: dataTurno.esDomingo ? 'Domingos Cerrado' : 'Local Cerrado',
-            mensaje: dataTurno.mensaje || mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+            mensaje: dataTurno.mensaje || mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
             botonTexto: 'Entendido',
           })
           return

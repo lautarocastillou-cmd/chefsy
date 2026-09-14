@@ -101,7 +101,7 @@ function ProductCard({
           mostrarCartel({
             tipo: 'cerrado',
             titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
-            mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+            mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
             botonTexto: 'Entendido',
           })
           return
