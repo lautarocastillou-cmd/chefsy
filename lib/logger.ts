@@ -9,10 +9,45 @@ export interface EntradaLog {
   mensaje: string
 }
 
-const MAX_LOGS = 10
+const MAX_LOGS = 20
 let logsEnMemoria: EntradaLog[] = []
 
-export function registrarLogSistema(nivel: 'error' | 'warn' | 'info', modulo: string, mensaje: string) {
+// Despacho no bloqueante al servidor para alertar en Telegram
+function enviarReporteAlServidor(modulo: string, mensaje: string, stack?: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    const payload = JSON.stringify({
+      mensaje,
+      modulo,
+      url: window.location.href,
+      stack,
+      severidad: 'error',
+    })
+
+    // navigator.sendBeacon es el método más seguro y no bloqueante en navegadores
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' })
+      navigator.sendBeacon('/api/reportar-error', blob)
+    } else {
+      fetch('/api/reportar-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {})
+    }
+  } catch {
+    // Si falla el reporte silencioso, no generar error adicional en consola
+  }
+}
+
+export function registrarLogSistema(
+  nivel: 'error' | 'warn' | 'info',
+  modulo: string,
+  mensaje: string,
+  stack?: string
+) {
   if (typeof window === 'undefined') return
 
   const ahora = new Date()
@@ -27,6 +62,45 @@ export function registrarLogSistema(nivel: 'error' | 'warn' | 'info', modulo: st
 
   logsEnMemoria = [entrada, ...logsEnMemoria.slice(0, MAX_LOGS - 1)]
   window.dispatchEvent(new CustomEvent('chefsy:nuevo-log', { detail: entrada }))
+
+  // Si es un error real, enviarlo al bot de Telegram
+  if (nivel === 'error') {
+    enviarReporteAlServidor(modulo, mensaje, stack)
+  }
+}
+
+/**
+ * Permite reportar manualmente un error atrapado en un bloque catch de cualquier componente
+ */
+export function reportarErrorManualmente(
+  error: unknown,
+  modulo = 'Manual',
+  contexto?: Record<string, unknown>
+) {
+  const mensaje = error instanceof Error ? error.message : String(error)
+  const stack = error instanceof Error ? error.stack : undefined
+
+  registrarLogSistema('error', modulo, mensaje, stack)
+
+  if (contexto && typeof window !== 'undefined') {
+    try {
+      fetch('/api/reportar-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mensaje,
+          modulo,
+          url: window.location.href,
+          stack,
+          contexto,
+          severidad: 'error',
+        }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      // Ignorar fallo de envío
+    }
+  }
 }
 
 export function obtenerLogsSistema(): EntradaLog[] {
@@ -40,16 +114,17 @@ export function limpiarLogsSistema(): void {
   }
 }
 
-// Capturar excepciones no controladas en el navegador
+// Capturar excepciones no controladas en el navegador del cliente
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => {
     if (e.message) {
-      registrarLogSistema('error', 'UI Error', e.message)
+      registrarLogSistema('error', 'UI Crash', e.message, e.error?.stack)
     }
   })
 
   window.addEventListener('unhandledrejection', (e) => {
-    const razon = e.reason?.message || String(e.reason || 'Promesa asíncrona rechazada')
-    registrarLogSistema('error', 'Async/Fetch', razon)
+    const razon = e.reason instanceof Error ? e.reason.message : String(e.reason || 'Promesa asíncrona rechazada')
+    const stack = e.reason instanceof Error ? e.reason.stack : undefined
+    registrarLogSistema('error', 'Async Rejection', razon, stack)
   })
 }
