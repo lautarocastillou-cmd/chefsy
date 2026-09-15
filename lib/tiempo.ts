@@ -62,7 +62,7 @@ export function obtenerEstadoHorarioLocal(turnoActivo: boolean | null | undefine
       abierto: false,
       esDomingo: false,
       motivo: 'turno_cerrado' as const,
-      mensaje: 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+      mensaje: 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
     }
   }
 
@@ -75,21 +75,14 @@ export function obtenerEstadoHorarioLocal(turnoActivo: boolean | null | undefine
 }
 
 /**
- * Detecta si el turno es Mediodía o Noche según la hora local de Argentina.
- * - 10:00 a 16:00 hs: Mediodía (11:30 a 14:00)
- * - Resto del tiempo: Noche (20:30 a 01:00)
+ * Detecta si el turno es Noche (operación comercial única de noche).
  */
-export function detectarTipoTurnoActual(fechaReferencia: Date = new Date()): 'mediodia' | 'noche' {
-  const horaArg = obtenerHoraArgentina(fechaReferencia)
-  const hora = horaArg.getHours()
-  if (hora >= 10 && hora < 16) {
-    return 'mediodia'
-  }
+export function detectarTipoTurnoActual(_fechaReferencia: Date = new Date()): 'noche' {
   return 'noche'
 }
 
 /**
- * Devuelve una etiqueta legible con ícono para un tipo de turno.
+ * Devuelve una etiqueta legible para un tipo de turno.
  */
 export function obtenerEtiquetaTurno(tipo?: string | null): string {
   if (tipo === 'mediodia') return 'Mediodía'

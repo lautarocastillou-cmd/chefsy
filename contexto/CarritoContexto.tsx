@@ -11,6 +11,7 @@ import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { supabase } from '@/lib/supabase'
 import { guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
+import { mostrarCartel, notificarAviso } from '@/lib/notificaciones'
 
 // TTL para los datos del checkout: 30 días.
 // Permite pre-rellenar el formulario en visitas posteriores pero evita mostrar
@@ -79,7 +80,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [turnoActivo, setTurnoActivo] = useState<boolean | null>(null)
   const [esDomingoCerrado, setEsDomingoCerrado] = useState(false)
   const [mensajeCierre, setMensajeCierre] = useState(
-    'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'
+    'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.'
   )
   const [procesandoCompra, setProcesandoCompra] = useState(false)
 
@@ -174,7 +175,12 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
 
   const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
     if (turnoActivo === false || esDomingoCerrado) {
-      alert(mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
+      mostrarCartel({
+        tipo: 'cerrado',
+        titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+        mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
+        botonTexto: 'Entendido',
+      })
       return
     }
     setProductoAPersonalizar(prod)
@@ -278,27 +284,27 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     if (procesandoCompra) return
     if (carrito.length === 0) {
       if (onError) onError('Tu carrito está vacío.')
-      else alert('Tu carrito está vacío.')
+      else notificarAviso('Tu carrito está vacío.')
       return
     }
     if (!nombreCliente.trim()) {
       if (onError) onError('¡Por favor ingresá tu nombre!')
-      else alert('Por favor ingresá tu nombre.')
+      else notificarAviso('Por favor ingresá tu nombre.')
       return
     }
     if (telefonoCliente.replace(/\D/g, '').length < 8) {
       if (onError) onError('¡Ingresá un número de teléfono válido!')
-      else alert('Por favor ingresá un número de teléfono válido (al menos 8 dígitos).')
+      else notificarAviso('Por favor ingresá un número de teléfono válido (al menos 8 dígitos).')
       return
     }
     if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
       if (onError) onError('¡Ingresá tu dirección para la entrega!')
-      else alert('Por favor ingresa la dirección para la entrega del delivery.')
+      else notificarAviso('Por favor ingresá la dirección para la entrega del delivery.')
       return
     }
     if (metodoPago === 'sin_especificar') {
       if (onError) onError('¡Elegí un método de pago!')
-      else alert('Por favor selecciona un método de pago antes de confirmar el pedido.')
+      else notificarAviso('Por favor seleccioná un método de pago antes de confirmar el pedido.')
       return
     }
 
@@ -393,13 +399,18 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         const dataTurno = await resTurno.json()
         if (!dataTurno.activo) {
           setTurnoActivo(false)
-          alert('El local se encuentra cerrado en este momento. Horarios: Lunes a Sábado de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.')
+          mostrarCartel({
+            tipo: 'cerrado',
+            titulo: dataTurno.esDomingo ? 'Domingos Cerrado' : 'Local Cerrado',
+            mensaje: dataTurno.mensaje || mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
+            botonTexto: 'Entendido',
+          })
           return
         }
       }
     } catch (e) {
       console.error('Error verificando turno en compra:', e)
-      alert('No pudimos verificar si el local está abierto. Por favor comprobá tu conexión a internet o intentá de nuevo.')
+      notificarAviso('No pudimos verificar si el local está abierto. Por favor comprobá tu conexión a internet o intentá de nuevo.')
       return
     }
 
@@ -408,7 +419,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Error enviando pedido', err)
       const mensajeError = err?.message || 'Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.'
-      alert(mensajeError)
+      const esCerrado = mensajeError.toLowerCase().includes('cerrado') || mensajeError.toLowerCase().includes('domingo')
+      mostrarCartel({
+        tipo: esCerrado ? 'cerrado' : 'error',
+        titulo: esCerrado ? 'Local Cerrado' : 'No pudimos procesar tu pedido',
+        mensaje: mensajeError,
+        botonTexto: 'Entendido',
+      })
       return
     }
 

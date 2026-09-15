@@ -94,7 +94,13 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   const focusedIdRef = useRef<string | null | undefined>(focusedId)
   const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
   const modoCamaraRef = useRef<'todo' | 'cadete' | 'manual'>('todo')
-  const [mostrarPanelVelocidad, setMostrarPanelVelocidad] = useState(true)
+  const [mostrarPanelVelocidad, setMostrarPanelVelocidad] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setMostrarPanelVelocidad(true)
+    }
+  }, [])
 
   const cadetesActivosConGps = useMemo(() => {
     return cadetes.filter((c) => c.gps_activo && c.lat != null && c.lng != null)
@@ -689,8 +695,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       {/* Contenedor del Mapa Leaflet */}
       <div
         ref={mapContainerRef}
-        className="w-full h-full min-h-[400px]"
-        style={{ width: '100%', height: '100%', minHeight: '400px' }}
+        className="w-full h-full min-h-[260px]"
+        style={{ width: '100%', height: '100%' }}
       />
 
       {/* HUD de Botones de Cámara Inteligente en Torre de Control */}
@@ -721,7 +727,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       </div>
 
       {/* Widget Flotante: Velocímetro y Telemetría en Vivo */}
-      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[280px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
+      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[200px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
         <div
           onClick={() => setMostrarPanelVelocidad(!mostrarPanelVelocidad)}
           className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"

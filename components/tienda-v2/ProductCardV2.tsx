@@ -7,6 +7,7 @@ import { formatearPrecio, optimizarUrlImagen, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { esImagenValida } from '@/lib/tienda-helpers'
+import { mostrarCartel } from '@/lib/notificaciones'
 
 interface ProductCardV2Props {
   prod: ProductoCatalogo
@@ -66,10 +67,14 @@ export default function ProductCardV2({
 
   const handleClick = () => {
     if (estaCerrado) {
-      alert(
-        mensajeCierre ||
-          'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.'
-      )
+      mostrarCartel({
+        tipo: 'cerrado',
+        titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+        mensaje:
+          mensajeCierre ||
+          'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 11:30 a 14:00 y 20:30 a 01:00 hs. Domingos cerrado.',
+        botonTexto: 'Entendido',
+      })
       return
     }
     if (!agotado) {
@@ -149,7 +154,7 @@ export default function ProductCardV2({
               <p
                 className={cn(
                   "text-xs text-slate-400 font-normal leading-relaxed",
-                  !expandido && "line-clamp-2"
+                  !expandido ? "line-clamp-2" : "md:line-clamp-2"
                 )}
               >
                 {descripcionVisible}
@@ -160,7 +165,7 @@ export default function ProductCardV2({
                       e.stopPropagation()
                       setExpandido(false)
                     }}
-                    className="text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
+                    className="md:hidden text-amber-400/90 hover:text-amber-300 font-bold text-[11px] ml-1.5 hover:underline cursor-pointer inline"
                   >
                     ver menos
                   </button>
@@ -173,7 +178,7 @@ export default function ProductCardV2({
                     e.stopPropagation()
                     setExpandido(true)
                   }}
-                  className="text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
+                  className="md:hidden text-amber-400 hover:text-amber-300 font-bold text-[11px] hover:underline mt-0.5 cursor-pointer inline-block"
                 >
                   ... ver más
                 </button>

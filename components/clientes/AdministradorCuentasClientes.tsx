@@ -5,6 +5,7 @@ import {
   Search, Plus, Key, Edit2, Trash2, X, Check, AlertTriangle, User, Phone, Coins, ShieldAlert
 } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
+import { notificarExito, notificarError } from '@/lib/notificaciones'
 
 interface CuentaCliente {
   id: string
@@ -136,7 +137,7 @@ export default function AdministradorCuentasClientes() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al cambiar la contraseña')
       setModalClave(null)
-      alert('Contraseña actualizada exitosamente')
+      notificarExito('Contraseña actualizada exitosamente')
     } catch (err: any) {
       setFormError(err.message)
     } finally {
@@ -187,7 +188,7 @@ export default function AdministradorCuentasClientes() {
       setModalEliminar(null)
       cargarClientes()
     } catch (err: any) {
-      alert(err.message)
+      notificarError(err.message)
     } finally {
       setGuardando(false)
     }

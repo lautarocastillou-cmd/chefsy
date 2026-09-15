@@ -25,6 +25,7 @@ import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from 
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
 import { ListOrdered, Activity } from 'lucide-react'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
+import { notificarError } from '@/lib/notificaciones'
 
 
 function redireccionarWhatsApp(telefono: string, cliente: string) {
@@ -95,7 +96,7 @@ function TarjetaPedidoCadete({
       cambiarEstado(pedido.id, 'entregado', false)
       localStorage.removeItem(`original-pago-${pedido.id}`)
     } catch (e) {
-      alert('Error al intentar marcar como entregado. Reintentá.')
+      notificarError('Error al intentar marcar como entregado. Reintentá.')
       throw e
     }
   }
@@ -109,7 +110,7 @@ function TarjetaPedidoCadete({
       }
       cambiarEstado(pedido.id, 'listo', false)
     } catch (e) {
-      alert('Error al marcar como listo. Reintentá.')
+      notificarError('Error al marcar como listo. Reintentá.')
       throw e
     }
   }
@@ -361,6 +362,8 @@ export default function PaginaCadeteria() {
   // Guardar última ubicación y marca de tiempo para el control/throttling de GPS
   const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
   const ultimaActualizacionGpsRef = useRef<number>(0)
+  const bufferPuntosOfflineRef = useRef<Array<{ lat: number; lng: number; t: string; speed?: number }>>([])
+  const enviandoGpsRef = useRef<boolean>(false)
 
   // Cadetería: solo pedidos delivery listos o en preparación de este cadete (o todos si es admin)
   const pedidosCadeteria = pedidos.filter(
@@ -510,9 +513,35 @@ export default function PaginaCadeteria() {
             }
           }
 
-          // Guardar referencias del último envío exitoso
+          // 1. Encolar punto actual en el buffer local offline
+          const puntoCapturado = {
+            lat: coords.latitud,
+            lng: coords.longitud,
+            t: new Date().toISOString(),
+            speed: position.coords.speed != null && position.coords.speed >= 0 ? position.coords.speed : undefined,
+          }
+
+          const buf = bufferPuntosOfflineRef.current
+          const ultimoBuf = buf[buf.length - 1]
+          if (
+            !ultimoBuf ||
+            Math.abs(ultimoBuf.lat - puntoCapturado.lat) > 0.00005 ||
+            Math.abs(ultimoBuf.lng - puntoCapturado.lng) > 0.00005
+          ) {
+            buf.push(puntoCapturado)
+            if (buf.length > 50) buf.shift()
+          }
+
+          // Guardar referencias del último registro
           ultimasCoordenadasRef.current = coords
           ultimaActualizacionGpsRef.current = ahora
+
+          if (enviandoGpsRef.current) {
+            return
+          }
+          enviandoGpsRef.current = true
+
+          const rafagaAEnviar = [...buf]
 
           try {
             const respuesta = await fetch('/api/admin/cadetes', {
@@ -523,7 +552,8 @@ export default function PaginaCadeteria() {
               body: JSON.stringify({
                 lat: coords.latitud,
                 lng: coords.longitud,
-                gps_activo: true
+                gps_activo: true,
+                bufferPuntos: rafagaAEnviar,
               })
             })
 
@@ -531,8 +561,19 @@ export default function PaginaCadeteria() {
               const errorData = await respuesta.json().catch(() => ({}))
               throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
             }
+
+            // Entrega exitosa: remover únicamente los puntos que se enviaron en esta ráfaga
+            // para preservar cualquier punto nuevo ingresado al buffer durante la petición en vuelo
+            if (bufferPuntosOfflineRef.current.length >= rafagaAEnviar.length) {
+              bufferPuntosOfflineRef.current.splice(0, rafagaAEnviar.length)
+            } else {
+              bufferPuntosOfflineRef.current = []
+            }
           } catch (e) {
-            console.error('Error enviando coordenadas de cadete', e)
+            // Si no hay internet o falla la red, el buffer queda intacto para reintentar en el próximo tick
+            console.warn('Conexión de red interrumpida: punto guardado en buffer offline local.', e)
+          } finally {
+            enviandoGpsRef.current = false
           }
         },
         (error) => {

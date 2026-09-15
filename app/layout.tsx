@@ -19,6 +19,7 @@ import {
 import GlobalEvents from '@/components/GlobalEvents'
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 import ToasterProvider from '@/components/ui/ToasterProvider'
+import CartelAvisoGlobal from '@/components/ui/CartelAvisoGlobal'
 import ModalHerramientasTesteo from '@/components/dev/ModalHerramientasTesteo'
 import JsonLdLocalBusiness from '@/components/seo/JsonLdLocalBusiness'
 import SeoFallbackContent from '@/components/seo/SeoFallbackContent'
@@ -176,6 +177,7 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
                 <SmoothScrollProvider>
                   <GlobalEvents />
                   <ToasterProvider />
+                  <CartelAvisoGlobal />
                   <ModalHerramientasTesteo />
                   {children}
                 </SmoothScrollProvider>

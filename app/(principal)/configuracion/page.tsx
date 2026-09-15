@@ -4,6 +4,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { notificarError } from '@/lib/notificaciones'
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
@@ -82,10 +83,10 @@ function PestanaUsuarios() {
         refrescarCadetes()
       } else {
         const data = await res.json()
-        alert(data.error || 'Error al eliminar')
+        notificarError(data.error || 'Error al eliminar')
       }
     } catch (e) {
-      alert('Error de conexión al eliminar')
+      notificarError('Error de conexión al eliminar')
     }
   }
 

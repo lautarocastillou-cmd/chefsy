@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { EstadoTurno } from '@/contexto/PedidosContexto'
+import { TipoTurno } from '@/tipos'
 
 interface UseTurnoProps {
   agregarNotificacion: (mensaje: string, tipo: 'info' | 'success' | 'warning') => void
@@ -40,7 +41,7 @@ export function useTurno({ agregarNotificacion, isAdmin = false }: UseTurnoProps
     cargarTurno()
   }, [isAdmin])
 
-  const iniciarTurno = async (cajaInicial: number, tipoTurno: 'mediodia' | 'noche' = 'noche'): Promise<boolean> => {
+  const iniciarTurno = async (cajaInicial: number, tipoTurno: TipoTurno = 'noche'): Promise<boolean> => {
     try {
       const nuevoTurno = {
         activo: true,

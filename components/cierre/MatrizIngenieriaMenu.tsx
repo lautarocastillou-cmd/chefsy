@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import { formatearPrecio } from '@/lib/utils'
+import { notificarAviso, notificarError } from '@/lib/notificaciones'
 import {
   Star,
   Zap,
@@ -180,7 +181,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
     if (!platoSeleccionado) return
     const costoNum = Math.max(0, Number(costoInput.replace(/[^0-9]/g, '')) || 0)
     if (costoNum <= 0) {
-      alert('Por favor ingresá un costo de elaboración mayor a $0.')
+      notificarAviso('Por favor ingresá un costo de elaboración mayor a $0.')
       return
     }
     const insumoNum = Math.max(0, Number(desgloseInsumo.replace(/[^0-9]/g, '')) || 0)
@@ -249,7 +250,7 @@ export default function MatrizIngenieriaMenu({ resumen, platos }: Props) {
       setEditandoCosto(false)
     } catch (err) {
       console.error(err)
-      alert('Hubo un problema al guardar el costo. Intentá nuevamente.')
+      notificarError('Hubo un problema al guardar el costo. Intentá nuevamente.')
     } finally {
       setGuardandoCosto(false)
     }

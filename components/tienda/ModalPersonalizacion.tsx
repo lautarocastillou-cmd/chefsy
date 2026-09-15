@@ -9,6 +9,7 @@ import { usarCarrito } from '@/contexto/CarritoContexto'
 import VisorFotosFullscreen from './VisorFotosFullscreen'
 import ImagenProgresiva from './ImagenProgresiva'
 import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
+import { mostrarCartel } from '@/lib/notificaciones'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -504,7 +505,12 @@ export default function ModalPersonalizacion({
                     <button
                       onClick={() => {
                         if (estaCerrado) {
-                          alert(mensajeCierre || 'El local se encuentra cerrado en este momento.')
+                          mostrarCartel({
+                            tipo: 'cerrado',
+                            titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+                            mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento.',
+                            botonTexto: 'Entendido',
+                          })
                           return
                         }
                         onAgregar(false)
@@ -652,7 +658,12 @@ export default function ModalPersonalizacion({
                   <button
                     onClick={() => {
                       if (estaCerrado) {
-                        alert(mensajeCierre || 'El local se encuentra cerrado en este momento.')
+                        mostrarCartel({
+                          tipo: 'cerrado',
+                          titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+                          mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento.',
+                          botonTexto: 'Entendido',
+                        })
                         return
                       }
                       onAgregar(false)

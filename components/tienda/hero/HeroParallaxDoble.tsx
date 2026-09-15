@@ -83,7 +83,7 @@ export default function HeroParallaxDoble({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full flex flex-col px-4 md:px-12 py-4 md:py-8 lg:py-12 overflow-visible select-none"
+      className="relative w-full flex flex-col px-4 md:px-12 py-6 md:py-10 lg:py-16 overflow-visible select-none min-h-[280px] md:min-h-[360px] lg:min-h-[420px]"
     >
       {/* Estilos CSS para animaciones flotantes */}
       <style jsx>{`
@@ -106,34 +106,34 @@ export default function HeroParallaxDoble({
       `}</style>
 
       {/* Contenedor Principal del Hero en Grilla */}
-      <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-2 max-w-[1600px] mx-auto w-full gap-x-8 gap-y-4 items-center">
+      <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-[1fr_auto] max-w-[1400px] mx-auto w-full gap-x-4 gap-y-6 items-center">
         
         {/* 1. Tipografía Gigante (Hero) Adaptada a Móvil */}
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1">
           <h1 
-            className={`hero-title-1 ${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.9] uppercase drop-shadow-xl`}
+            className={`hero-title-1 ${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight leading-[0.88] uppercase drop-shadow-xl`}
             style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
           >
             {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
           </h1>
           <h2 
-            className={`hero-title-2 ${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.9] uppercase drop-shadow-xl mt-0.5`}
+            className={`hero-title-2 ${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight leading-[0.88] uppercase drop-shadow-xl mt-1`}
             style={efectoEstiloLinea2}
           >
             {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
           </h2>
         </div>
 
-        {/* 2. Imagen de Producto Flotante Proporcionada */}
-        <div className="relative w-full flex items-center justify-center lg:justify-end z-20 order-2 lg:row-span-2">
+        {/* 2. Imagen de Producto Flotante — tamaño controlado, sin overflow */}
+        <div className="relative flex items-center justify-center lg:justify-end z-20 order-2 lg:row-span-2 lg:pl-4">
           <div 
-            className="burger-float-wrapper relative w-full max-w-[200px] sm:max-w-[280px] md:max-w-[480px] lg:max-w-[620px] aspect-square transition-transform duration-200 ease-out"
+            className="burger-float-wrapper relative w-[180px] h-[180px] sm:w-[240px] sm:h-[240px] md:w-[300px] md:h-[300px] lg:w-[340px] lg:h-[340px] xl:w-[400px] xl:h-[400px] transition-transform duration-200 ease-out"
             style={{
               transform: isHovered ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)` : 'none'
             }}
           >
             {/* Sombra de apoyo en el suelo */}
-            <div className="absolute inset-x-0 bottom-4 h-1/4 bg-black/40 rounded-full blur-xl -z-10 opacity-70"></div>
+            <div className="absolute inset-x-0 bottom-2 h-1/5 bg-black/50 rounded-full blur-2xl -z-10 opacity-60"></div>
             
             {/* Imagen Principal */}
             <div className="w-full h-full relative anim-float-1">
@@ -142,7 +142,7 @@ export default function HeroParallaxDoble({
                 alt="Plato Estrella" 
                 fill
                 priority
-                sizes="(max-width: 768px) 200px, 620px"
+                sizes="(max-width: 640px) 180px, (max-width: 768px) 240px, (max-width: 1024px) 300px, 400px"
                 className="object-contain transition-all duration-300"
                 style={{
                   objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
@@ -158,7 +158,7 @@ export default function HeroParallaxDoble({
                   src={img2} 
                   alt="Acompañamiento" 
                   fill
-                  sizes="(max-width: 768px) 140px, 350px"
+                  sizes="(max-width: 768px) 120px, 280px"
                   className="object-contain"
                 />
               </div>
@@ -166,10 +166,10 @@ export default function HeroParallaxDoble({
           </div>
         </div>
 
-        {/* 3. Subtítulo y Buscador (Solo Desktop, ya que mobile tiene buscador superior) */}
-        <div className="hidden md:flex flex-col gap-3 w-full max-w-lg relative z-40 order-3 lg:self-start">
+        {/* 3. Subtítulo y Buscador */}
+        <div className="hidden md:flex flex-col gap-4 w-full max-w-md relative z-40 order-3 lg:self-start lg:pt-2">
           <p 
-            className="font-bebas text-3xl md:text-5xl tracking-wide leading-none uppercase"
+            className="font-bebas text-4xl md:text-5xl lg:text-6xl tracking-wide leading-none uppercase"
             style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
           >
             {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}

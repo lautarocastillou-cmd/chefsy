@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { cn, formatearPrecio } from '@/lib/utils'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
+import { notificarAviso } from '@/lib/notificaciones'
 import { usarConsumosPersonal } from '@/contexto/ConsumosPersonalContexto'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { ProductoCatalogo } from '@/tipos/catalogo'
@@ -114,16 +115,16 @@ export default function ConsumoPersonalFlotante() {
   const handleRegistrar = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!productoSeleccionado) {
-      alert('Por favor seleccioná un producto de la lista.')
+      notificarAviso('Por favor seleccioná un producto de la lista.')
       return
     }
     if (!personaNombre.trim()) {
-      alert('Por favor ingresá el nombre de la persona que consumió.')
+      notificarAviso('Por favor ingresá el nombre de la persona que consumió.')
       return
     }
     const precioNum = parseFloat(precio) || 0
     if (precioNum < 0) {
-      alert('El precio no puede ser negativo.')
+      notificarAviso('El precio no puede ser negativo.')
       return
     }
 

@@ -13,6 +13,7 @@ import { usarCarrito } from '@/contexto/CarritoContexto'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ItemCarrito as TipoItemCarrito } from '@/tipos/tienda'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
+import { notificarAviso, notificarError } from '@/lib/notificaciones'
 
 interface PropsItemCarritoFila {
   item: TipoItemCarrito
@@ -213,7 +214,7 @@ export default function CartDrawer() {
 
   const obtenerUbicacion = () => {
     if (!navigator.geolocation) {
-      alert('Tu navegador no soporta geolocalización.')
+      notificarAviso('Tu navegador no soporta geolocalización.')
       return
     }
     setBuscandoUbicacion(true)
@@ -231,14 +232,14 @@ export default function CartDrawer() {
         onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
         setCoordsMapa({ latitud: latitude, longitud: longitude })
       } catch {
-        alert('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Por favor agrégalo manualmente.')
+        notificarAviso('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Por favor agrégalo manualmente.')
         onSetCoordenadasCliente({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
         setCoordsMapa({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
       } finally {
         setBuscandoUbicacion(false)
       }
     }, () => {
-      alert('No se pudo obtener tu ubicación. Por favor verifica que tengas activado el GPS y permisos en el navegador.')
+      notificarError('No se pudo obtener tu ubicación. Por favor verificá que tengas activado el GPS y permisos.')
       setBuscandoUbicacion(false)
     }, { enableHighAccuracy: true, timeout: 10000 })
   }

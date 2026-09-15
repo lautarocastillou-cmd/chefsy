@@ -25,7 +25,7 @@ export default function SeoFallbackContent() {
         <h2>Zona de Cobertura y Horarios de Atención</h2>
         <p>
           Envíos a domicilio en San Fernando del Valle de Catamarca y zonas aledañas (Valle Viejo).
-          Atendemos de Lunes a Sábados de 11:30 a 14:00 hs y de 20:30 a 01:00 hs. Domingos cerrado.
+          Atendemos de Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.
           Teléfono de contacto y pedidos por WhatsApp: +54 383 422-5445.
         </p>
       </section>

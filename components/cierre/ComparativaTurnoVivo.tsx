@@ -75,7 +75,7 @@ export default function ComparativaTurnoVivo({
   // Formatear fecha anterior DD/MM
   const fechaPartes = fechaAnterior.split('-')
   const fechaFormateada = `${fechaPartes[2]}/${fechaPartes[1]}`
-  const turnoTexto = turnoTipo === 'mediodia' ? 'mediodía' : 'noche'
+  const turnoTexto = 'noche'
 
   return (
     <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-lg border border-indigo-800/40 relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">

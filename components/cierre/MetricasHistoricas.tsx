@@ -15,7 +15,6 @@ import {
   Receipt,
   Filter,
   Minus,
-  Sun,
   Moon,
   Bike,
   Store,
@@ -35,7 +34,7 @@ import RendimientoModalidades from '@/components/cierre/RendimientoModalidades'
 import ConsultorChefsyModal from '@/components/cierre/ConsultorChefsyModal'
 
 type TipoRango = '7d' | '30d' | 'este_mes' | 'mes_anterior' | 'todo'
-type FiltroTurnoMetricas = 'todos' | 'mediodia' | 'noche'
+type FiltroTurnoMetricas = 'todos' | 'noche'
 type SeccionMetricas = 'todo' | 'menu' | 'sla' | 'heatmap' | 'fidelidad' | 'canales'
 
 interface CierreItem {
@@ -280,53 +279,9 @@ export default function MetricasHistoricas() {
     cargarMetricasAnaliticas()
   }, [registrosRangoActual, filtroTurno, rango])
 
-  // ── Estadísticas Específicas por Turno (Mediodía vs Noche) ──────────────────
-  const statsTurnos = useMemo(() => {
-    const mediodiaRegistros = registrosRangoActual.filter(d => d.turno_tipo === 'mediodia')
-    const nocheRegistros = registrosRangoActual.filter(d => d.turno_tipo === 'noche')
-
-    const calcularStats = (regs: CierreItem[]) => {
-      const facturacion = regs.reduce((acc, r) => acc + r.ingresos, 0)
-      const pedidos = regs.reduce((acc, r) => acc + r.pedidos, 0)
-      const ticketPromedio = pedidos > 0 ? facturacion / pedidos : 0
-      const efectivo = regs.reduce((acc, r) => acc + r.efectivo_ventas, 0)
-      const digital = regs.reduce((acc, r) => acc + r.tarjeta_total + r.transferencia_total, 0)
-      const delivery = regs.reduce((acc, r) => acc + r.total_envios_delivery, 0)
-      const retiro = regs.reduce((acc, r) => acc + r.total_retiros, 0)
-      const local = regs.reduce((acc, r) => acc + r.total_consumo_local, 0)
-      const cantTurnos = regs.length
-      const promedioPorTurno = cantTurnos > 0 ? facturacion / cantTurnos : 0
-
-      return {
-        facturacion,
-        pedidos,
-        ticketPromedio,
-        efectivo,
-        digital,
-        delivery,
-        retiro,
-        local,
-        cantTurnos,
-        promedioPorTurno
-      }
-    }
-
-    const mediodia = calcularStats(mediodiaRegistros)
-    const noche = calcularStats(nocheRegistros)
-    const facturacionTotalAmbos = mediodia.facturacion + noche.facturacion
-    const pedidosTotalAmbos = mediodia.pedidos + noche.pedidos
-
-    const pctFacturacionMediodia = facturacionTotalAmbos > 0 ? (mediodia.facturacion / facturacionTotalAmbos) * 100 : 0
-    const pctFacturacionNoche = facturacionTotalAmbos > 0 ? (noche.facturacion / facturacionTotalAmbos) * 100 : 0
-
-    return {
-      mediodia,
-      noche,
-      facturacionTotalAmbos,
-      pedidosTotalAmbos,
-      pctFacturacionMediodia,
-      pctFacturacionNoche
-    }
+  // Cantidad de turnos noche registrados
+  const cantTurnosNoche = useMemo(() => {
+    return registrosRangoActual.filter(d => d.turno_tipo === 'noche').length
   }, [registrosRangoActual])
 
   // ── Cálculo de KPIs Principales ─────────────────────────────────────────────
@@ -363,51 +318,36 @@ export default function MetricasHistoricas() {
     }
   }, [datosPrevios, kpisActuales])
 
-  // ── Datos Preparados para Gráfico Comparativo Día por Día ───────────────────
-  const datosGraficoComparativo = useMemo(() => {
+  // ── Datos Consolidados por Fecha para Gráficos ─────────────────────────────
+  const datosGrafico = useMemo(() => {
     const mapaFechas = new Map<string, {
       fecha: string
       fechaCortada: string
       fechaCortaNum: string
       fechaCompleta: string
-      ingresosMediodia: number
-      ingresosNoche: number
-      pedidosMediodia: number
-      pedidosNoche: number
-      totalDia: number
-      pedidosTotalDia: number
+      ingresos: number
+      pedidos: number
     }>()
 
-    registrosRangoActual.forEach(item => {
+    datosActuales.forEach(item => {
       if (!mapaFechas.has(item.fecha)) {
         mapaFechas.set(item.fecha, {
           fecha: item.fecha,
           fechaCortada: item.fechaCortada,
           fechaCortaNum: item.fechaCortaNum,
           fechaCompleta: item.fechaCompleta,
-          ingresosMediodia: 0,
-          ingresosNoche: 0,
-          pedidosMediodia: 0,
-          pedidosNoche: 0,
-          totalDia: 0,
-          pedidosTotalDia: 0,
+          ingresos: 0,
+          pedidos: 0,
         })
       }
 
       const dia = mapaFechas.get(item.fecha)!
-      if (item.turno_tipo === 'mediodia') {
-        dia.ingresosMediodia += item.ingresos
-        dia.pedidosMediodia += item.pedidos
-      } else {
-        dia.ingresosNoche += item.ingresos
-        dia.pedidosNoche += item.pedidos
-      }
-      dia.totalDia += item.ingresos
-      dia.pedidosTotalDia += item.pedidos
+      dia.ingresos += item.ingresos
+      dia.pedidos += item.pedidos
     })
 
     return Array.from(mapaFechas.values())
-  }, [registrosRangoActual])
+  }, [datosActuales])
 
   // Helper para renderizar badge de porcentaje de crecimiento
   const renderTrendBadge = (pct: number | null) => {
@@ -520,18 +460,7 @@ export default function MetricasHistoricas() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'
               }`}
             >
-              Ambos
-            </button>
-            <button
-              onClick={() => setFiltroTurno('mediodia')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
-                filtroTurno === 'mediodia'
-                  ? 'bg-amber-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'
-              }`}
-            >
-              <Sun size={14} />
-              <span>Mediodía ({statsTurnos.mediodia.cantTurnos})</span>
+              Historial Completo
             </button>
             <button
               onClick={() => setFiltroTurno('noche')}
@@ -542,7 +471,7 @@ export default function MetricasHistoricas() {
               }`}
             >
               <Moon size={14} />
-              <span>Noche ({statsTurnos.noche.cantTurnos})</span>
+              <span>Turno Noche ({cantTurnosNoche})</span>
             </button>
           </div>
         </div>
@@ -576,148 +505,7 @@ export default function MetricasHistoricas() {
         })}
       </div>
 
-      {/* ── SECCIÓN CARA A CARA: MEDIODÍA VS NOCHE (COMPARATIVA EN VIVO) ──────── */}
-      {seccionActiva === 'todo' && filtroTurno === 'todos' && statsTurnos.facturacionTotalAmbos > 0 && (
-        <div className="bg-gradient-to-br from-slate-900 via-[#181a20] to-[#12141a] text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-black tracking-tight">Comparativa Cara a Cara: Mediodía vs Noche</h2>
-                <p className="text-xs text-slate-400">Distribución de ventas y comportamiento del cliente por turno</p>
-              </div>
-            </div>
 
-            {/* Barra de Distribución Porcentual */}
-            <div className="flex flex-col sm:items-end gap-1">
-              <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Reparto de Ventas</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold text-amber-400">{statsTurnos.pctFacturacionMediodia.toFixed(1)}%</span>
-                <div className="w-32 sm:w-44 h-3 bg-slate-800 rounded-full overflow-hidden flex border border-white/10">
-                  <div 
-                    className="bg-amber-500 h-full transition-all duration-500" 
-                    style={{ width: `${statsTurnos.pctFacturacionMediodia}%` }} 
-                  />
-                  <div 
-                    className="bg-indigo-500 h-full transition-all duration-500" 
-                    style={{ width: `${statsTurnos.pctFacturacionNoche}%` }} 
-                  />
-                </div>
-                <span className="text-xs font-extrabold text-indigo-400">{statsTurnos.pctFacturacionNoche.toFixed(1)}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tarjetas Comparativas de los 2 Turnos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Tarjeta Turno Mediodía */}
-            <div className="bg-white/5 border border-amber-500/30 hover:border-amber-500/50 transition-all rounded-2xl p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
-                    <Sun size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-amber-300">Turno Mediodía</h3>
-                    <p className="text-[11px] text-slate-400">{statsTurnos.mediodia.cantTurnos} turnos registrados (11:30 - 14:00)</p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {statsTurnos.pctFacturacionMediodia.toFixed(0)}% del total
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Facturación Total</p>
-                  <p className="text-lg font-black text-amber-400">{formatearPrecio(statsTurnos.mediodia.facturacion)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Promedio: {formatearPrecio(statsTurnos.mediodia.promedioPorTurno)}/turno</p>
-                </div>
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Ticket Promedio</p>
-                  <p className="text-lg font-black text-white">{formatearPrecio(statsTurnos.mediodia.ticketPromedio)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{statsTurnos.mediodia.pedidos} pedidos totales</p>
-                </div>
-              </div>
-
-              {/* Canales y Métodos */}
-              <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-xs text-slate-300">
-                <div className="flex items-center justify-between bg-white/[0.03] px-2.5 py-1.5 rounded-lg">
-                  <span className="flex items-center gap-1 text-slate-400"><Bike size={13} /> Delivery:</span>
-                  <span className="font-bold">{statsTurnos.mediodia.delivery}</span>
-                </div>
-                <div className="flex items-center justify-between bg-white/[0.03] px-2.5 py-1.5 rounded-lg">
-                  <span className="flex items-center gap-1 text-slate-400"><Store size={13} /> Retiro/Local:</span>
-                  <span className="font-bold">{statsTurnos.mediodia.retiro + statsTurnos.mediodia.local}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tarjeta Turno Noche */}
-            <div className="bg-white/5 border border-indigo-500/30 hover:border-indigo-500/50 transition-all rounded-2xl p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
-                    <Moon size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-indigo-300">Turno Noche</h3>
-                    <p className="text-[11px] text-slate-400">{statsTurnos.noche.cantTurnos} turnos registrados (20:30 - 01:00)</p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {statsTurnos.pctFacturacionNoche.toFixed(0)}% del total
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Facturación Total</p>
-                  <p className="text-lg font-black text-indigo-400">{formatearPrecio(statsTurnos.noche.facturacion)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Promedio: {formatearPrecio(statsTurnos.noche.promedioPorTurno)}/turno</p>
-                </div>
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Ticket Promedio</p>
-                  <p className="text-lg font-black text-white">{formatearPrecio(statsTurnos.noche.ticketPromedio)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{statsTurnos.noche.pedidos} pedidos totales</p>
-                </div>
-              </div>
-
-              {/* Canales y Métodos */}
-              <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-xs text-slate-300">
-                <div className="flex items-center justify-between bg-white/[0.03] px-2.5 py-1.5 rounded-lg">
-                  <span className="flex items-center gap-1 text-slate-400"><Bike size={13} /> Delivery:</span>
-                  <span className="font-bold">{statsTurnos.noche.delivery}</span>
-                </div>
-                <div className="flex items-center justify-between bg-white/[0.03] px-2.5 py-1.5 rounded-lg">
-                  <span className="flex items-center gap-1 text-slate-400"><Store size={13} /> Retiro/Local:</span>
-                  <span className="font-bold">{statsTurnos.noche.retiro + statsTurnos.noche.local}</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Insights Inteligentes */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="text-amber-400 font-bold">Conclusión:</span>
-              <span>
-                {statsTurnos.noche.facturacion >= statsTurnos.mediodia.facturacion
-                  ? `El Turno Noche lidera las ventas con un ${statsTurnos.pctFacturacionNoche.toFixed(0)}% del volumen total.`
-                  : `El Turno Mediodía aporta un fuerte ${statsTurnos.pctFacturacionMediodia.toFixed(0)}% de los ingresos.`}
-              </span>
-            </div>
-            <div className="text-slate-400">
-              Diferencia de ticket: <strong className="text-white">{formatearPrecio(Math.abs(statsTurnos.noche.ticketPromedio - statsTurnos.mediodia.ticketPromedio))}</strong> a favor {statsTurnos.noche.ticketPromedio >= statsTurnos.mediodia.ticketPromedio ? 'de la Noche' : 'del Mediodía'}
-            </div>
-          </div>
-
-        </div>
-      )}
 
       {/* ── SECCIONES DEL PANEL GENERAL ─────────────────────────────────────── */}
       {seccionActiva === 'todo' && (
@@ -733,7 +521,7 @@ export default function MetricasHistoricas() {
                 <DollarSign size={18} />
               </div>
               <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {filtroTurno === 'todos' ? 'Venta Total de Comida' : filtroTurno === 'mediodia' ? 'Facturación Mediodía' : 'Facturación Noche'}
+                {filtroTurno === 'todos' ? 'Venta Total de Comida' : 'Facturación Turno Noche'}
               </h3>
             </div>
             {renderTrendBadge(comparativas.ingresosPct)}
@@ -815,141 +603,76 @@ export default function MetricasHistoricas() {
       {/* ── GRÁFICOS ANALÍTICOS (EN CUADRÍCULA DE 2 COLUMNAS) ────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* ── GRÁFICO 1: EVOLUCIÓN DE FACTURACIÓN (COMPARATIVO O ACUMULADO) ────── */}
+        {/* ── GRÁFICO 1: EVOLUCIÓN DE FACTURACIÓN ────── */}
         <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-800 dark:text-[#e6e6e6] flex items-center gap-2">
-                {filtroTurno === 'todos' ? 'Comparativa de Ingresos por Turno' : 'Evolución de Ingresos'}
+                Evolución de Facturación
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {filtroTurno === 'todos' ? 'Mediodía (Ámbar) vs Noche (Índigo)' : `Facturación neta en turno ${filtroTurno}`}
+                {filtroTurno === 'todos' ? 'Ingresos diarios consolidados' : 'Facturación en Turno Noche'}
               </p>
             </div>
-
-            {filtroTurno === 'todos' && (
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <span className="flex items-center gap-1 text-amber-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Mediodía
-                </span>
-                <span className="flex items-center gap-1 text-indigo-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Noche
-                </span>
-              </div>
-            )}
           </div>
 
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              {filtroTurno === 'todos' ? (
-                /* Gráfico de barras apiladas o comparativas para ambos turnos */
-                <BarChart data={datosGraficoComparativo} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
-                  <XAxis 
-                    dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    interval={0}
-                    tick={{ fontSize: datosGraficoComparativo.length > 20 ? 9 : 11, fill: '#888' }} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 11, fill: '#888' }}
-                    tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)', radius: 8 }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const item = payload[0]?.payload
-                        return (
-                          <div className="bg-white dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
-                            <p className="font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                              {item?.fechaCompleta || label}
-                            </p>
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between gap-4 text-amber-600 dark:text-amber-400 font-semibold">
-                                <span>Mediodía:</span>
-                                <span>{formatearPrecio(item?.ingresosMediodia || 0)}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-4 text-indigo-600 dark:text-indigo-400 font-semibold">
-                                <span>Noche:</span>
-                                <span>{formatearPrecio(item?.ingresosNoche || 0)}</span>
-                              </div>
-                            </div>
-                            <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between font-black text-slate-900 dark:text-white">
-                              <span>Total Día:</span>
-                              <span className="text-emerald-600 dark:text-emerald-400">{formatearPrecio(item?.totalDia || 0)}</span>
-                            </div>
-                          </div>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                  <Bar dataKey="ingresosMediodia" fill="#f59e0b" name="Mediodía" stackId="ingresos" radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="ingresosNoche" fill="#6366f1" name="Noche" stackId="ingresos" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              ) : (
-                /* Gráfico de Área para un solo turno */
-                <AreaChart data={datosActuales} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorIngresosFiltro" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={filtroTurno === 'mediodia' ? '#f59e0b' : '#6366f1'} stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor={filtroTurno === 'mediodia' ? '#f59e0b' : '#6366f1'} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
-                  <XAxis 
-                    dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    interval={0}
-                    tick={{ fontSize: datosActuales.length > 20 ? 9 : 11, fill: '#888' }} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 11, fill: '#888' }}
-                    tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip 
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const item = payload[0]?.payload
-                        return (
-                          <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
-                            <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
-                              {item?.fechaCompleta || label}
-                            </p>
-                            <p className={`font-extrabold text-sm ${filtroTurno === 'mediodia' ? 'text-amber-500' : 'text-indigo-400'}`}>
-                              {formatearPrecio(Number(payload[0].value))}
-                            </p>
-                          </div>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="ingresos" 
-                    stroke={filtroTurno === 'mediodia' ? '#f59e0b' : '#6366f1'} 
-                    strokeWidth={2.5}
-                    fillOpacity={1} 
-                    fill="url(#colorIngresosFiltro)" 
-                    dot={{ r: 3, fill: filtroTurno === 'mediodia' ? '#f59e0b' : '#6366f1', strokeWidth: 1.5, stroke: '#fff' }}
-                  />
-                </AreaChart>
-              )}
+              <AreaChart data={datosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIngresosFiltro" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
+                <XAxis 
+                  dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  interval={0}
+                  tick={{ fontSize: datosGrafico.length > 20 ? 9 : 11, fill: '#888' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#888' }}
+                  tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const item = payload[0]?.payload
+                      return (
+                        <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            {item?.fechaCompleta || label}
+                          </p>
+                          <p className="font-extrabold text-sm text-indigo-400">
+                            {formatearPrecio(Number(payload[0].value))}
+                          </p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="ingresos" 
+                  stroke="#6366f1" 
+                  strokeWidth={2.5}
+                  fillOpacity={1} 
+                  fill="url(#colorIngresosFiltro)" 
+                  dot={{ r: 3, fill: '#6366f1', strokeWidth: 1.5, stroke: '#fff' }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* ── GRÁFICO 2: VOLUMEN DE PEDIDOS POR TURNO ──────────────────────────── */}
+        {/* ── GRÁFICO 2: VOLUMEN DE PEDIDOS ──────────────────────────── */}
         <div className="bg-white dark:bg-[#252525] p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div>
@@ -957,128 +680,67 @@ export default function MetricasHistoricas() {
                 Volumen de Comandas por Día
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {filtroTurno === 'todos' ? 'Pedidos repartidos entre Mediodía y Noche' : `Comandas despachadas en turno ${filtroTurno}`}
+                {filtroTurno === 'todos' ? 'Total de comandas procesadas' : 'Comandas en Turno Noche'}
               </p>
             </div>
-            <span className="self-start sm:self-auto text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60">
+            <span className="self-start sm:self-auto text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
               {kpisActuales.totalPedidos} pedidos
             </span>
           </div>
 
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              {filtroTurno === 'todos' ? (
-                <BarChart data={datosGraficoComparativo} margin={{ top: 25, right: 15, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
-                  <XAxis 
-                    dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    interval={0}
-                    tick={{ fontSize: datosGraficoComparativo.length > 20 ? 9 : 11, fill: '#888' }} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#888' }}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.05)', radius: 8 }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const item = payload[0]?.payload
-                        return (
-                          <div className="bg-white dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs space-y-2">
-                            <p className="font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                              {item?.fechaCompleta || label}
-                            </p>
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between gap-4 text-amber-500 font-bold">
-                                <span>Mediodía:</span>
-                                <span>{item?.pedidosMediodia || 0} ped.</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-4 text-indigo-400 font-bold">
-                                <span>Noche:</span>
-                                <span>{item?.pedidosNoche || 0} ped.</span>
-                              </div>
-                            </div>
-                            <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between font-black text-slate-900 dark:text-white">
-                              <span>Total Día:</span>
-                              <span className="text-blue-500">{item?.pedidosTotalDia || 0} pedidos</span>
-                            </div>
-                          </div>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                  <Bar dataKey="pedidosMediodia" fill="#f59e0b" name="Mediodía" stackId="pedidos" radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="pedidosNoche" fill="#6366f1" name="Noche" stackId="pedidos" radius={[6, 6, 0, 0]}>
-                    <LabelList 
-                      dataKey="pedidosTotalDia" 
-                      position="top" 
-                      fill="#64748b" 
-                      fontSize={11} 
-                      fontWeight={700} 
-                      offset={8} 
-                    />
-                  </Bar>
-                </BarChart>
-              ) : (
-                <BarChart data={datosActuales} margin={{ top: 25, right: 15, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
-                  <XAxis 
-                    dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    interval={0}
-                    tick={{ fontSize: datosActuales.length > 20 ? 9 : 11, fill: '#888' }} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#888' }}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.05)', radius: 8 }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const item = payload[0]?.payload
-                        return (
-                          <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
-                            <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
-                              {item?.fechaCompleta || label}
-                            </p>
-                            <p className="text-blue-600 dark:text-blue-400 font-extrabold text-sm">
-                              {payload[0].value} {Number(payload[0].value) === 1 ? 'pedido' : 'pedidos'}
-                            </p>
-                          </div>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                  <Bar 
+              <BarChart data={datosGrafico} margin={{ top: 25, right: 15, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" opacity={0.15} />
+                <XAxis 
+                  dataKey={rango === '7d' ? 'fechaCortada' : 'fechaCortaNum'} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  interval={0}
+                  tick={{ fontSize: datosGrafico.length > 20 ? 9 : 11, fill: '#888' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#888' }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(99, 102, 241, 0.05)', radius: 8 }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const item = payload[0]?.payload
+                      return (
+                        <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-xl border border-slate-200 dark:border-[#383838] shadow-xl text-xs">
+                          <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                            {item?.fechaCompleta || label}
+                          </p>
+                          <p className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">
+                            {payload[0].value} {Number(payload[0].value) === 1 ? 'pedido' : 'pedidos'}
+                          </p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
+                />
+                <Bar 
+                  dataKey="pedidos" 
+                  fill="#6366f1" 
+                  radius={[8, 8, 4, 4]} 
+                  maxBarSize={38}
+                >
+                  <LabelList 
                     dataKey="pedidos" 
-                    fill={filtroTurno === 'mediodia' ? '#f59e0b' : '#6366f1'} 
-                    radius={[8, 8, 4, 4]} 
-                    maxBarSize={38}
-                  >
-                    <LabelList 
-                      dataKey="pedidos" 
-                      position="top" 
-                      fill="#64748b" 
-                      fontSize={11} 
-                      fontWeight={700} 
-                      offset={8} 
-                    />
-                  </Bar>
-                </BarChart>
-              )}
+                    position="top" 
+                    fill="#64748b" 
+                    fontSize={11} 
+                    fontWeight={700} 
+                    offset={8} 
+                  />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
