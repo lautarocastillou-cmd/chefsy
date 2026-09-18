@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { cookies } from 'next/headers'
+import { obtenerSesion } from '@/lib/auth-server'
 
 export async function POST(request: Request) {
   try {
     // 1. Verificar sesión de administrador usando el token
-    const cookieStore = await cookies()
-    const token = cookieStore.get('chefsy-token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado. Se requiere sesión de administrador.' }, { status: 403 })
     }
 
     const { imagen, transformacion } = await request.json()

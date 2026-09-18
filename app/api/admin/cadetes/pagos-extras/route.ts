@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerFechaNegocio, detectarTipoTurnoActual } from '@/lib/tiempo'
 
 export async function GET(request: Request) {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const fecha = searchParams.get('fecha') || obtenerFechaNegocio()
     const turno_tipo = searchParams.get('turno_tipo')
@@ -35,6 +41,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const body = await request.json()
     const {
       cadete_id,
@@ -86,6 +97,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion || sesion.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 

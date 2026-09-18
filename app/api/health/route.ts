@@ -21,7 +21,7 @@ export async function GET() {
     )
 
     const consultaPromesa = supabaseAnon
-      .from('configuracion')
+      .from('configuracion_tienda')
       .select('id')
       .limit(1)
 
