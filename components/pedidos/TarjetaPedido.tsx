@@ -1,16 +1,8 @@
 'use client'
 
-import { Pedido } from '@/tipos'
-import { formatearPrecio } from '@/lib/utils'
-import {
-  obtenerEtiquetaAccionEstado,
-  obtenerSiguienteEstado,
-} from '@/lib/entrega'
-import { usarPedidos } from '@/contexto/PedidosContexto'
-import BadgeEstado from './BadgeEstado'
-import InfoEntregaPedido from './InfoEntregaPedido'
-import TimerPedido from './TimerPedido'
-import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
+import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+import { createPortal } from 'react-dom'
 import {
   Copy,
   Check,
@@ -26,27 +18,37 @@ import {
   MessageCircle,
   MessageSquare,
   Bike,
-  ChefHat
+  ChefHat,
+  Sliders,
+  Zap
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { cn } from '@/lib/utils'
+import { Pedido } from '@/tipos'
+import { formatearPrecio, cn } from '@/lib/utils'
+import {
+  obtenerEtiquetaAccionEstado,
+  obtenerSiguienteEstado,
+} from '@/lib/entrega'
+import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
+import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
+import { copiarConNotificacion } from '@/lib/notificaciones'
+import BadgeEstado from './BadgeEstado'
+import InfoEntregaPedido from './InfoEntregaPedido'
+import TimerPedido from './TimerPedido'
+import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
 import ModalVistaMapa from './ModalVistaMapa'
-import dynamic from 'next/dynamic'
-const FormularioPedidoLazy = dynamic(() => import('./FormularioPedido'), {
-  loading: () => <div className="p-8 text-center text-sm text-slate-400">Cargando formulario...</div>
-})
+import BadgeSmartBatch from './BadgeSmartBatch'
+import SelectorCadetePedido from './SelectorCadetePedido'
+import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
+
 const ModalBreadcrumbTrail = dynamic(() => import('@/components/cadeteria/ModalBreadcrumbTrail'), {
   ssr: false
 })
-import { usarCatalogo } from '@/contexto/CatalogoContexto'
-import BadgeSmartBatch from './BadgeSmartBatch'
-import SelectorCadetePedido from './SelectorCadetePedido'
-import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
-import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
-import { Sliders, Zap } from 'lucide-react'
-import { copiarConNotificacion } from '@/lib/notificaciones'
+const FormularioPedidoLazy = dynamic(() => import('./FormularioPedido'), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center text-sm text-slate-400">Cargando formulario...</div>
+})
 
 const etiquetaMetodoPago: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -77,8 +79,6 @@ interface PropsTarjetaPedido {
   soloLectura?: boolean
   onEditarPedido?: (pedido: Pedido) => void
 }
-
-import React from 'react'
 
 const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = false, onEditarPedido }: PropsTarjetaPedido) {
   const { cambiarEstado, editarPedido, eliminarPedido, marcarPagoConfirmado, asignarCadete, cambiarMetodoPago, revertirEstado, cadetes } = usarPedidos()

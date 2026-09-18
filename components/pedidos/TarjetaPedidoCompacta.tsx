@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Pedido } from '@/tipos'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { obtenerSiguienteEstado } from '@/lib/entrega'
@@ -21,8 +22,6 @@ interface PropsTarjetaCompacta {
   pedido: Pedido
   onClickDetalle?: () => void
 }
-
-import React from 'react'
 
 const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido, onClickDetalle }: PropsTarjetaCompacta) {
   const { cambiarEstado } = usarPedidos()

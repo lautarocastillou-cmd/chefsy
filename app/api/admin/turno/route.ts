@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { invalidarCache } from '@/lib/cache-servidor'
 
 export async function GET() {
   try {
@@ -91,6 +92,9 @@ export async function POST(request: Request) {
     }
 
     if (error) throw error
+
+    // Invalidar caché en memoria de inmediato para que clientes y cadetes vean el cambio al instante
+    invalidarCache('turno')
 
     return NextResponse.json({ ok: true })
   } catch (error: any) {

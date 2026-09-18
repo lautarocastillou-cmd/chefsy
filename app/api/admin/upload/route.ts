@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import { createClient } from '@supabase/supabase-js'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
 
 export async function POST(request: Request) {
@@ -78,10 +78,7 @@ export async function POST(request: Request) {
 
     const fileName = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseAdmin = obtenerSupabaseAdmin()
 
     if (oldUrl) {
       try {
@@ -103,7 +100,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('[Upload API] Error subiendo a Supabase:', error)
-      return NextResponse.json({ error: 'Error al subir la imagen al servidor.' }, { status: 500 })
+      return NextResponse.json({ error: error.message || 'Error al subir la imagen al servidor.' }, { status: 500 })
     }
 
     const { data: publicData } = supabaseAdmin.storage

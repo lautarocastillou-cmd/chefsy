@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { registrarVentaKardex } from '@/lib/stock-motor'
+import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 
 // Token compartido con la app Flutter
 const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
+
+// Columnas esenciales para el portal de cadete (excluye ruta_historial para ahorrar 90% de egress)
+const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costo_envio, metodoPago, pago_confirmado, estado, hora, fecha, productos, notas, observaciones, coordenadas, orden_entrega, en_camino_at, entregado_at, cadete_id, cadete_nombre, tipoEntrega'
 
 // GET /api/public/pedidos?cadeteId=paulo
 // Devuelve todos los datos del pedido asignado al cadete (en_cocina, listo, en_camino, entregado)
@@ -28,7 +32,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('pedidos')
-      .select('*')
+      .select(COLUMNAS_PEDIDOS_CADETE)
       .or(`cadete_id.ilike.${cadeteIdNorm},cadete_nombre.ilike.${cadeteIdNorm}`)
       .in('estado', ['nuevo', 'en_cocina', 'listo', 'en_camino', 'entregado'])
       .eq('archivado', false)
@@ -39,20 +43,30 @@ export async function GET(request: Request) {
     // Consultar viajes y pagos extras asignados al cadete en el turno/fecha de negocio actual
     const { data: extrasData } = await supabase
       .from('cadetes_pagos_extras')
-      .select('*')
+      .select('id, cadete_id, cadete_nombre, monto, motivo, viaje_numero, created_at, fecha')
       .or(`cadete_id.ilike.${cadeteIdNorm},cadete_nombre.ilike.${cadeteIdNorm}`)
       .eq('fecha', fechaHoy)
       .order('created_at', { ascending: false })
 
-    // Consultar estado del turno y monto base configurado para cadetes
-    const [turnoRes, configRes] = await Promise.all([
-      supabase.from('turnos').select('activo, tipo_turno').eq('id', 1).maybeSingle(),
-      supabase.from('configuracion_operativa').select('prioridades').eq('id', 1).maybeSingle()
-    ])
+    // Consultar estado del turno y monto base configurado (Cacheado 30s en memoria para eliminar ~33k queries diarias)
+    const CACHE_TURNO_CONFIG = 'cache_turno_y_config_cadetes'
+    let turnoConfig = obtenerDeCache<{ turnoActivo: boolean; montoBaseConfigurado: number }>(CACHE_TURNO_CONFIG)
 
-    const turnoActivo = turnoRes.data?.activo ?? false
-    const prioridades = configRes.data?.prioridades || {}
-    const montoBaseConfigurado = Number(prioridades.montoBaseCadete ?? 4000)
+    if (!turnoConfig) {
+      const [turnoRes, configRes] = await Promise.all([
+        supabase.from('turnos').select('activo, tipo_turno').eq('id', 1).maybeSingle(),
+        supabase.from('configuracion_operativa').select('prioridades').eq('id', 1).maybeSingle()
+      ])
+
+      const turnoActivo = turnoRes.data?.activo ?? false
+      const prioridades = configRes.data?.prioridades || {}
+      const montoBaseConfigurado = Number(prioridades.montoBaseCadete ?? 4000)
+
+      turnoConfig = { turnoActivo, montoBaseConfigurado }
+      guardarEnCache(CACHE_TURNO_CONFIG, turnoConfig, 30) // 30 segundos TTL
+    }
+
+    const { turnoActivo, montoBaseConfigurado } = turnoConfig
 
     // La base aplica desde que se inicia el turno (activo) O si el cadete ya tiene actividad hoy
     const tieneActividad = (data && data.length > 0) || (extrasData && extrasData.length > 0)

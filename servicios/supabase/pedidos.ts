@@ -2,13 +2,16 @@ import { supabase, supabaseAnon } from '@/lib/supabase'
 import { Pedido } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
+// Columnas estándar para listados (excluye ruta_historial para no descargar miles de puntos GPS innecesariamente)
+const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, envioManual, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, en_camino_at, entregado_at, cadete_coordenadas, pago_confirmado, cadete_id, cadete_nombre, notificacion_manual, montoEfectivo, montoTransferencia, montoTarjeta, push_subscription, turno_tipo, archivado, orden_entrega'
+
 /**
  * Obtiene todos los pedidos ordenados de forma descendente (más nuevos primero)
  * históricamente de una fecha específica.
  */
 export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
   try {
-    let query = supabaseAnon.from('pedidos').select('*')
+    let query = supabaseAnon.from('pedidos').select(COLUMNAS_PEDIDO_LISTA)
     if (fecha) {
       query = query.eq('fecha', fecha)
     }
@@ -33,7 +36,7 @@ export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]
 export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
   const { data, error } = await supabaseAnon
     .from('pedidos')
-    .select('*')
+    .select(COLUMNAS_PEDIDO_LISTA)
     .eq('archivado', false)
     .order('created_at', { ascending: false })
     .limit(limite)

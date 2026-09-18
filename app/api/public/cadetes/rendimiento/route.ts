@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerFechaNegocio, obtenerRangoSemanaISO } from '@/lib/tiempo'
 import { consolidarMetricasCadetes, MetricasCadeteConsolidadas } from '@/lib/telemetriaCadetes'
+import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 
 const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
 
@@ -30,6 +31,21 @@ export async function GET(request: Request) {
     }
 
     const cadeteIdNorm = cadeteIdParam.trim().toLowerCase()
+    const fechaHoy = obtenerFechaNegocio()
+
+    // 0. Revisar caché en memoria (TTL de 120 segundos)
+    // Evita recalcular y descargar miles de coordenadas GPS cada 15 segundos
+    const cacheKey = `cache_rendimiento_${cadeteIdNorm}_${fechaHoy}`
+    const resultadoCache = obtenerDeCache<any>(cacheKey)
+    if (resultadoCache) {
+      return NextResponse.json(resultadoCache, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+          'X-Chefsy-Cache': 'HIT'
+        }
+      })
+    }
+
     const supabase = obtenerSupabaseAdmin()
 
     // 1. Obtener cadetes registrados
@@ -48,8 +64,7 @@ export async function GET(request: Request) {
     )
     const nombreCadeteActual = cadeteActual?.nombre || cadeteIdParam
 
-    // 2. Fechas de negocio y rango de la semana ISO
-    const fechaHoy = obtenerFechaNegocio()
+    // 2. Rango de la semana ISO (fechaHoy ya obtenida para caché)
     const rangoSemana = obtenerRangoSemanaISO(fechaHoy)
 
     // 3. Consultar pedidos entregados de la semana actual (incluye hoy)
@@ -223,7 +238,7 @@ export async function GET(request: Request) {
       es_mas_rapido: masRapidoSemana ? (masRapidoSemana.cadete_id.toLowerCase() === cadeteIdNorm || masRapidoSemana.nombre.toLowerCase() === cadeteIdNorm) : false
     }
 
-    return NextResponse.json({
+    const respuestaFinal = {
       ok: true,
       cadete_id: cadeteIdNorm,
       cadete_nombre: nombreCadeteActual,
@@ -266,6 +281,16 @@ export async function GET(request: Request) {
         es_mas_rapido_semana: h.es_mas_rapido_semana,
         posicion_ranking: h.posicion_ranking
       }))
+    }
+
+    // Guardar en caché del servidor (120 segundos) para no volver a consultar toda la semana GPS
+    guardarEnCache(cacheKey, respuestaFinal, 120)
+
+    return NextResponse.json(respuestaFinal, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'X-Chefsy-Cache': 'MISS'
+      }
     })
   } catch (error) {
     console.error('[API Rendimiento Cadetes GET] Error fatal:', error)

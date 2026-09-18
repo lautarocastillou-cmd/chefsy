@@ -514,6 +514,7 @@ export default function DevToolsPage() {
 
     try {
       let completadas = 0
+      let ultimoError = ''
       const urlsNuevas: string[] = []
 
       for (let i = 0; i < archivos.length; i++) {
@@ -535,6 +536,7 @@ export default function DevToolsPage() {
             completadas++
           }
         } else {
+          ultimoError = uploadData?.error || `Error (${uploadRes.status})`
           console.warn('Error subiendo archivo:', file.name, uploadData?.error)
         }
       }
@@ -543,7 +545,13 @@ export default function DevToolsPage() {
         setFotosLibresBanco(prev => [...new Set([...urlsNuevas, ...prev])])
       }
 
-      mostrarToast(`¡${completadas} fotos subidas y optimizadas a WebP con éxito!`, 'success')
+      if (completadas === 0) {
+        mostrarToast(`No se pudo subir la foto: ${ultimoError || 'Error del servidor'}`, 'error')
+      } else if (completadas < archivos.length) {
+        mostrarToast(`Se subieron ${completadas} de ${archivos.length} fotos. Algunas fallaron (${ultimoError})`, 'info')
+      } else {
+        mostrarToast(`¡${completadas} ${completadas === 1 ? 'foto subida y optimizada' : 'fotos subidas y optimizadas'} a WebP con éxito!`, 'success')
+      }
       await cargarFotosStorage()
       await cargarMetadata()
     } catch (err: any) {

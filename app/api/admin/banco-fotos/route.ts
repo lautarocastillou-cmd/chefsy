@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import { createClient } from '@supabase/supabase-js'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
-
-function obtenerSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Variables Supabase faltantes')
-  return createClient(url, key, { auth: { persistSession: false } })
-}
 
 export async function GET() {
   try {
@@ -24,7 +17,7 @@ export async function GET() {
     const { data: files, error } = await supabaseAdmin.storage
       .from('images')
       .list('', {
-        limit: 200,
+        limit: 500,
         sortBy: { column: 'created_at', order: 'desc' },
       })
 
