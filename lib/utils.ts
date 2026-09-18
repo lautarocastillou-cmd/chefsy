@@ -6,6 +6,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { EstadoPedido, TipoEntrega } from '@/tipos'
+import { FilaProductoPedido } from '@/tipos/catalogo'
 import { obtenerSiguienteEstado as siguienteEstadoPorTipo } from '@/lib/entrega'
 
 /** Combina clases de Tailwind evitando conflictos */
@@ -38,6 +39,17 @@ export function generarId(): string {
 /** Genera un ID único para productos dentro de un formulario */
 export function generarIdProducto(): string {
   return `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+}
+
+/** Crea una fila de producto vacía para el formulario de pedido */
+export function crearFilaProductoVacia(): FilaProductoPedido {
+  return {
+    id: generarIdProducto(),
+    idCategoria: '',
+    idProductoCatalogo: '',
+    cantidad: 1,
+    precio: 0,
+  }
 }
 
 export const BLUR_DATA_URL_DEFAULT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyMjIyMjIiLz48L3N2Zz4="

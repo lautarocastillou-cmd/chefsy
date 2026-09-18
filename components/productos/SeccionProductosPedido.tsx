@@ -8,7 +8,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { FilaProductoPedido, ProductoCatalogo } from '@/tipos/catalogo'
 import { calcularTotalFilas, esProductoEmpanada } from '@/lib/catalogo'
-import { formatearPrecio, generarIdProducto, cn } from '@/lib/utils'
+import { formatearPrecio, generarIdProducto, cn, crearFilaProductoVacia } from '@/lib/utils'
 import FilaProductoPedidoComponente from './FilaProductoPedido'
 import SelectorCatalogoTactilMobile from './SelectorCatalogoTactilMobile'
 import ModalCoccionEmpanada from './ModalCoccionEmpanada'
@@ -18,16 +18,6 @@ import { Plus, Search, X, LayoutGrid, List } from 'lucide-react'
 interface PropsSeccionProductosPedido {
   filas: FilaProductoPedido[]
   onFilasChange: (filas: FilaProductoPedido[]) => void
-}
-
-export function crearFilaProductoVacia(): FilaProductoPedido {
-  return {
-    id: generarIdProducto(),
-    idCategoria: '',
-    idProductoCatalogo: '',
-    cantidad: 1,
-    precio: 0,
-  }
 }
 
 export default function SeccionProductosPedido({
