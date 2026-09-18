@@ -3,7 +3,7 @@ import { Pedido } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 // Columnas estándar para listados (excluye ruta_historial para no descargar miles de puntos GPS innecesariamente)
-const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, envioManual, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, en_camino_at, entregado_at, cadete_coordenadas, pago_confirmado, cadete_id, cadete_nombre, notificacion_manual, montoEfectivo, montoTransferencia, montoTarjeta, push_subscription, turno_tipo, archivado, orden_entrega'
+const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, push_subscription, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega'
 
 /**
  * Obtiene todos los pedidos ordenados de forma descendente (más nuevos primero)
