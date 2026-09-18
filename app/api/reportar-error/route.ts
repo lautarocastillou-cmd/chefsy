@@ -3,7 +3,7 @@ import { enviarAlertaTelegram } from '@/lib/telegram-alertas'
 
 export const dynamic = 'force-dynamic'
 
-// Errores comunes causados por extensiones del navegador de clientes que no competen al código de Chefsy
+// Errores comunes causados por extensiones del navegador de clientes o WebViews de redes sociales que no competen al código de Chefsy
 const ERRORES_IGNORADOS = [
   'ResizeObserver loop completed with undelivered notifications',
   'ResizeObserver loop limit exceeded',
@@ -14,6 +14,10 @@ const ERRORES_IGNORADOS = [
   'Failed to fetch', // A menudo usuarios que cierran la pestaña o se quedan sin 4G súbitamente
   'NetworkError when attempting to fetch resource',
   'The operation was aborted',
+  'Java object is gone', // WebView de Meta/Instagram/Facebook al cerrar o cambiar de app
+  'iabjs://', // Scripts inyectados por el navegador interno de Instagram/Facebook
+  'navigation_performance_logger',
+  'postMessage: Java object is gone',
 ]
 
 export async function POST(req: NextRequest) {

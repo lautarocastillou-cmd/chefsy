@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
+import TarjetaPedidoErrorBoundary from '@/components/pedidos/TarjetaPedidoErrorBoundary'
 import VistaKanban from '@/components/pedidos/VistaKanban'
 import { EstadoPedido, TipoEntrega, Pedido } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
@@ -334,11 +335,12 @@ export default function PaginaPedidos() {
             : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5"
         )}>
           {pedidosFiltrados.map((pedido) => (
-            <TarjetaPedido 
-              key={pedido.id} 
-              pedido={pedido} 
-              onEditarPedido={(p) => setPedidoAEditar(p)} 
-            />
+            <TarjetaPedidoErrorBoundary key={pedido.id} pedidoId={pedido.id} cliente={pedido.cliente}>
+              <TarjetaPedido 
+                pedido={pedido} 
+                onEditarPedido={(p) => setPedidoAEditar(p)} 
+              />
+            </TarjetaPedidoErrorBoundary>
           ))}
         </div>
       )}

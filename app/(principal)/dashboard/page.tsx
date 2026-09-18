@@ -10,6 +10,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import dynamic from 'next/dynamic'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
+import TarjetaPedidoErrorBoundary from '@/components/pedidos/TarjetaPedidoErrorBoundary'
 import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
 import Link from 'next/link'
 
@@ -233,11 +234,12 @@ export default function PaginaDashboard() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {pedidosRecientes.map((pedido) => (
-                <TarjetaPedido 
-                  key={pedido.id} 
-                  pedido={pedido} 
-                  onEditarPedido={(p) => setPedidoSeleccionadoParaEditar(p)} 
-                />
+                <TarjetaPedidoErrorBoundary key={pedido.id} pedidoId={pedido.id} cliente={pedido.cliente}>
+                  <TarjetaPedido 
+                    pedido={pedido} 
+                    onEditarPedido={(p) => setPedidoSeleccionadoParaEditar(p)} 
+                  />
+                </TarjetaPedidoErrorBoundary>
               ))}
             </div>
           )}

@@ -118,12 +118,19 @@ export function limpiarLogsSistema(): void {
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => {
     if (e.message) {
+      // Ignorar fallos de in-app browsers de terceros (ej: Instagram/Facebook WebView cerrándose)
+      if (e.message.includes('Java object is gone') || e.message.includes('iabjs://') || e.filename?.includes('iabjs://')) {
+        return
+      }
       registrarLogSistema('error', 'UI Crash', e.message, e.error?.stack)
     }
   })
 
   window.addEventListener('unhandledrejection', (e) => {
     const razon = e.reason instanceof Error ? e.reason.message : String(e.reason || 'Promesa asíncrona rechazada')
+    if (razon.includes('Java object is gone') || razon.includes('iabjs://')) {
+      return
+    }
     const stack = e.reason instanceof Error ? e.reason.stack : undefined
     registrarLogSistema('error', 'Async Rejection', razon, stack)
   })
