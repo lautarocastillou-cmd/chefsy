@@ -579,8 +579,8 @@ export default function PaginaCadeteria() {
         (error) => {
           console.error('Error obteniendo ubicación', error)
           const mensajes: Record<number, string> = {
-            1: 'Permiso de ubicación denegado. Habilitá el acceso al GPS en la barra del navegador para poder transmitir tu recorrido.',
-            2: 'Ubicación no disponible. Asegurá de tener el GPS activado o de que el emulador esté enviando coordenadas.',
+            1: 'Debes encender la ubicación para poder entrar en servicio.',
+            2: 'Debes encender la ubicación para poder entrar en servicio.',
             3: 'Tiempo de espera agotado al buscar señal GPS. Reintentando...',
           }
           setErrorGps(mensajes[error.code] || 'Error al obtener la ubicación.')
@@ -842,11 +842,11 @@ export default function PaginaCadeteria() {
         )}
         
         {errorGps && (
-          <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-[pulse_2s_infinite]">
-            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="bg-slate-900/90 border border-slate-700/60 text-slate-200 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm">
+            <MapPin className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">Advertencia de Ubicación:</p>
-              <p className="mt-0.5 leading-relaxed">{errorGps}</p>
+              <p className="font-bold text-slate-100">Ubicación requerida</p>
+              <p className="mt-0.5 leading-relaxed text-slate-300">{errorGps}</p>
             </div>
           </div>
         )}
