@@ -1,7 +1,7 @@
 // -----------------------------------------------------
 // lib/pedidoActivo.ts
 // Funciones puras de lectura/escritura de pedidos activos
-// en localStorage. Extraídas de BotonPedidoFlotante.tsx
+// en localStorage. ExtraÃ­das de BotonPedidoFlotante.tsx
 // para evitar que CarritoContexto importe de un componente React.
 // -----------------------------------------------------
 
