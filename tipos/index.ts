@@ -97,3 +97,27 @@ export interface CadetePagoExtra {
 }
 
 export type { CategoriaCatalogo, ProductoCatalogo, FilaProductoPedido } from './catalogo'
+
+/** Usuario autenticado (admin o cadete) */
+export interface Usuario {
+  usuario: string
+  nombre:  string
+  rol:     'admin' | 'cadete'
+}
+
+/** Estado del turno operativo activo */
+export interface EstadoTurno {
+  activo: boolean
+  cajaInicial: number
+  fechaInicio: string | null
+  tipoTurno?: TipoTurno
+}
+
+/** Pedido activo almacenado en localStorage para el botón flotante de la tienda */
+export interface PedidoActivo {
+  id: string
+  clienteNombre: string
+  tipoEntrega: 'delivery' | 'retiro'
+  timestamp: number
+  estado?: string
+}

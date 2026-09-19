@@ -8,8 +8,7 @@
 // ─────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
-import { EstadoTurno } from '@/contexto/PedidosContexto'
-import { TipoTurno } from '@/tipos'
+import { EstadoTurno, TipoTurno } from '@/tipos'
 
 interface UseTurnoProps {
   agregarNotificacion: (mensaje: string, tipo: 'info' | 'success' | 'warning') => void

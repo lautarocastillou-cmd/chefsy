@@ -3,85 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, X } from 'lucide-react'
+import { PedidoActivo } from '@/tipos'
+import {
+  guardarPedidoActivo,
+  leerPedidoActivo,
+  leerTodosPedidosActivos,
+  limpiarPedidoActivo,
+} from '@/lib/pedidoActivo'
 
-const STORAGE_KEY = 'chefsy_pedidos_activos'
-const MAX_EDAD_HS = 4     // Expira si tiene más de 4 horas
-const MAX_PEDIDOS  = 3    // Máximo 3 pedidos en paralelo
-
-export interface PedidoActivo {
-  id: string
-  clienteNombre: string
-  tipoEntrega: 'delivery' | 'retiro'
-  timestamp: number
-  estado?: string
-}
-
-// ── Helpers internos ──────────────────────────────────────────────────────────
-
-function esPedidoExpirado(p: PedidoActivo): boolean {
-  const hs = (Date.now() - p.timestamp) / 1000 / 3600
-  return hs > MAX_EDAD_HS || p.estado === 'entregado' || p.estado === 'cancelado'
-}
-
-function leerArray(): PedidoActivo[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const arr: PedidoActivo[] = JSON.parse(raw)
-    if (!Array.isArray(arr)) return []
-    // Filtrar expirados
-    return arr.filter(p => !esPedidoExpirado(p))
-  } catch { return [] }
-}
-
-function escribirArray(arr: PedidoActivo[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr))
-    window.dispatchEvent(new Event('pedidoActivo:cambio'))
-  } catch {}
-}
-
-// ── API pública ───────────────────────────────────────────────────────────────
-
-/** Agrega o actualiza un pedido activo en el array localStorage */
-export function guardarPedidoActivo(data: Omit<PedidoActivo, 'timestamp'>) {
-  try {
-    const arr = leerArray()
-    const idx = arr.findIndex(p => p.id === data.id)
-    const payload: PedidoActivo = { ...data, timestamp: idx >= 0 ? arr[idx].timestamp : Date.now() }
-    if (idx >= 0) {
-      arr[idx] = payload  // Actualizar existente (estado, etc.)
-    } else {
-      arr.unshift(payload)  // Agregar al principio (más reciente primero)
-      if (arr.length > MAX_PEDIDOS) arr.pop()  // Limitar a MAX_PEDIDOS
-    }
-    escribirArray(arr)
-  } catch {}
-}
-
-/** Devuelve el pedido activo más reciente (para el botón flotante) */
-export function leerPedidoActivo(): PedidoActivo | null {
-  const arr = leerArray()
-  return arr.length > 0 ? arr[0] : null
-}
-
-/** Devuelve todos los pedidos activos */
-export function leerTodosPedidosActivos(): PedidoActivo[] {
-  return leerArray()
-}
-
-/** Elimina un pedido específico del array */
-export function limpiarPedidoActivo(id?: string) {
-  try {
-    if (!id) {
-      localStorage.removeItem(STORAGE_KEY)
-    } else {
-      const arr = leerArray().filter(p => p.id !== id)
-      escribirArray(arr)
-    }
-    window.dispatchEvent(new Event('pedidoActivo:cambio'))
-  } catch {}
-}
+// Re-exportamos para que los imports existentes no se rompan
+export type { PedidoActivo }
+export { guardarPedidoActivo, leerPedidoActivo, leerTodosPedidosActivos, limpiarPedidoActivo }
 
 // ── Componente Botón Flotante ─────────────────────────────────────────────────
 export default function BotonPedidoFlotante() {

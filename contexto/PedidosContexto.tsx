@@ -27,7 +27,7 @@ import React, {
   useRef,
   ReactNode,
 } from 'react'
-import { Pedido, EstadoPedido, TipoTurno } from '@/tipos'
+import { Pedido, EstadoPedido, TipoTurno, EstadoTurno } from '@/tipos'
 import { Cadete } from '@/lib/entrega'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
@@ -142,13 +142,10 @@ function reducerPedidos(estado: EstadoGlobal, accion: AccionPedidos): EstadoGlob
 }
 
 // ── Tipos exportados ──────────────────────────────────
-
-export interface EstadoTurno {
-  activo: boolean
-  cajaInicial: number
-  fechaInicio: string | null
-  tipoTurno?: TipoTurno
-}
+// EstadoTurno vive en @/tipos para evitar el ciclo circular
+// PedidosContexto → useTurno → PedidosContexto.
+// Lo re-exportamos para compatibilidad.
+export type { EstadoTurno } from '@/tipos'
 
 interface ValorContextoPedidosInterno {
   pedidos: Pedido[]

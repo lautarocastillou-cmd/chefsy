@@ -10,7 +10,7 @@ import { generarId } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { supabase } from '@/lib/supabase'
-import { guardarPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
+import { guardarPedidoActivo } from '@/lib/pedidoActivo'
 import { mostrarCartel, notificarAviso } from '@/lib/notificaciones'
 
 // TTL para los datos del checkout: 30 días.

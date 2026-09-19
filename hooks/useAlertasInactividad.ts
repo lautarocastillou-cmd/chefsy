@@ -11,9 +11,8 @@
 // ─────────────────────────────────────────────────────
 
 import { useEffect, useRef, MutableRefObject } from 'react'
-import { Pedido, EstadoPedido } from '@/tipos'
+import { Pedido, EstadoPedido, Usuario } from '@/tipos'
 import { reproducirSonidoNotificacion } from '@/contexto/TemaNotificacionContexto'
-import { Usuario } from '@/contexto/AuthContexto'
 
 interface UseAlertasInactividadProps {
   pedidos: Pedido[]

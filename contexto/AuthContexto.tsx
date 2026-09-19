@@ -11,16 +11,15 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { setCache, getCache, removeCache } from '@/lib/localCache'
+import { Usuario } from '@/tipos'
 
 // TTL de la sesión del admin: 8 horas (un turno de trabajo).
 // Si la cookie del servidor expira, el caché local tampoco sobrevive.
 const TTL_ADMIN_HS = 8
 
-export interface Usuario {
-  usuario: string
-  nombre:  string
-  rol:     'admin' | 'cadete'
-}
+// Usuario vive en @/tipos para evitar que hooks deban importar de contextos React.
+// Re-exportamos para compatibilidad con todos los consumers existentes.
+export type { Usuario } from '@/tipos'
 
 interface ValorContextoAuth {
   usuarioActivo:  Usuario | null
