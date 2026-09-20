@@ -58,7 +58,7 @@ export function calcularCostoEnvio(distanciaKm: number): number {
   if (distanciaKm <= 1) return 1500
   if (distanciaKm <= 2) return 2000
   if (distanciaKm <= 3) return 2500
-  if (distanciaKm <= 4) return 3000
+  if (distanciaKm <= 4) return 3500
   if (distanciaKm <= 5) return 4000
   if (distanciaKm <= 6) return 4500
   if (distanciaKm <= 7) return 5000
