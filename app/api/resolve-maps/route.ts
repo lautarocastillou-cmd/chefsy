@@ -58,8 +58,11 @@ export async function GET(request: Request) {
   const destinoLat = searchParams.get('destinoLat')
 
   if (origenLon && origenLat && destinoLon && destinoLat) {
+    const conGeometria = searchParams.get('geometria') === 'true' || searchParams.get('overview') === 'full'
+    const queryParams = conGeometria ? 'overview=full&geometries=geojson' : 'overview=false'
+
     try {
-      const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?overview=false`
+      const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?${queryParams}`
       const res1 = await fetch(url1, { 
         headers: { 'User-Agent': 'ChefsyApp/1.0' },
         signal: AbortSignal.timeout(5000)
@@ -67,8 +70,12 @@ export async function GET(request: Request) {
       if (res1.ok) {
         const data1 = await res1.json()
         if (data1?.routes?.[0]?.distance !== undefined) {
+          const payload: any = { distance: data1.routes[0].distance / 1000 }
+          if (conGeometria && data1.routes[0].geometry?.coordinates) {
+            payload.coordinates = data1.routes[0].geometry.coordinates
+          }
           return NextResponse.json(
-            { distance: data1.routes[0].distance / 1000 },
+            payload,
             { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
           )
         }
@@ -76,13 +83,17 @@ export async function GET(request: Request) {
     } catch (err) {}
 
     try {
-      const url2 = `https://router.project-osrm.org/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?overview=false`
+      const url2 = `https://router.project-osrm.org/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?${queryParams}`
       const res2 = await fetch(url2, { signal: AbortSignal.timeout(5000) })
       if (res2.ok) {
         const data2 = await res2.json()
         if (data2?.routes?.[0]?.distance !== undefined) {
+          const payload: any = { distance: data2.routes[0].distance / 1000 }
+          if (conGeometria && data2.routes[0].geometry?.coordinates) {
+            payload.coordinates = data2.routes[0].geometry.coordinates
+          }
           return NextResponse.json(
-            { distance: data2.routes[0].distance / 1000 },
+            payload,
             { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
           )
         }

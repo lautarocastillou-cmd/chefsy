@@ -1,5 +1,5 @@
 import { supabase, supabaseAnon } from '@/lib/supabase'
-import { Pedido } from '@/tipos'
+import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 // Columnas estándar para listados (excluye ruta_historial para no descargar miles de puntos GPS innecesariamente)
@@ -95,4 +95,24 @@ export function suscribirAPedidos(
       }
     )
     .subscribe()
+}
+
+/**
+ * Obtiene el historial de ruta GPS real de un pedido específico.
+ * Se consulta bajo demanda para no sobrecargar los listados principales.
+ */
+export async function obtenerRutaHistorialPedido(id: string): Promise<PuntoRutaBreadcrumb[] | null> {
+  try {
+    const { data, error } = await supabaseAnon
+      .from('pedidos')
+      .select('ruta_historial')
+      .eq('id', id)
+      .single()
+
+    if (error || !data) return null
+    return (data.ruta_historial as PuntoRutaBreadcrumb[]) || null
+  } catch (err) {
+    console.error('[obtenerRutaHistorialPedido] Error al obtener ruta:', err)
+    return null
+  }
 }

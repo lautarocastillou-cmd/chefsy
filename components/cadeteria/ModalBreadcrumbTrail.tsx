@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
+import { obtenerRutaHistorialPedido } from '@/servicios/supabase/pedidos'
 import {
   X,
   Play,
@@ -16,7 +17,8 @@ import {
   Bike,
   Home,
   Store,
-  LocateFixed
+  LocateFixed,
+  RefreshCw
 } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -52,6 +54,18 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
   const polylineRecorridaRef = useRef<any>(null)
   const motoMarkerRef = useRef<any>(null)
 
+  // ── Estados de Ruta y Carga Asíncrona ──────────────────────────────────────
+  const [puntos, setPuntos] = useState<PuntoRutaBreadcrumb[]>(() => {
+    if (pedido.ruta_historial && Array.isArray(pedido.ruta_historial) && pedido.ruta_historial.length >= 2) {
+      return pedido.ruta_historial
+    }
+    return []
+  })
+  const [cargandoRuta, setCargandoRuta] = useState<boolean>(() => {
+    return !(pedido.ruta_historial && Array.isArray(pedido.ruta_historial) && pedido.ruta_historial.length >= 2)
+  })
+  const [origenRuta, setOrigenRuta] = useState<'real' | 'calle_osrm' | 'directa'>('real')
+
   // ── Estados de Reproducción / Simulación ────────────────────────────────────
   const [progresoDecimal, setProgresoDecimal] = useState<number>(0) // De 0 a (puntos.length - 1)
   const [estaReproduciendo, setEstaReproduciendo] = useState(false)
@@ -85,31 +99,127 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     setMontado(true)
   }, [])
 
-  // ── Extraer puntos de telemetría reales o fallback ──────────────────────────
-  const puntos: PuntoRutaBreadcrumb[] = useMemo(() => {
-    if (pedido.ruta_historial && Array.isArray(pedido.ruta_historial) && pedido.ruta_historial.length >= 2) {
-      return pedido.ruta_historial
-    }
-    // Fallback interpolado si hay 0 o 1 punto
-    const destLat = pedido.coordenadas?.latitud || UBICACION_LOCAL.latitud
-    const destLng = pedido.coordenadas?.longitud || UBICACION_LOCAL.longitud
-    const fechaRef = pedido.en_camino_at || pedido.created_at || new Date().toISOString()
-    const fechaFin = pedido.entregado_at || new Date(Date.now() + 600000).toISOString()
+  // ── Carga Asíncrona de Ruta (DB real -> OSRM trazado por calles -> Directa) ──
+  useEffect(() => {
+    let activo = true
 
-    // Si no hay historial, generar al menos 10 puntos de muestra suaves para simulación
-    const samplePoints: PuntoRutaBreadcrumb[] = []
-    const steps = 10
-    for (let i = 0; i <= steps; i++) {
-      const frac = i / steps
-      samplePoints.push({
-        lat: UBICACION_LOCAL.latitud + (destLat - UBICACION_LOCAL.latitud) * frac,
-        lng: UBICACION_LOCAL.longitud + (destLng - UBICACION_LOCAL.longitud) * frac,
-        t: new Date(new Date(fechaRef).getTime() + (new Date(fechaFin).getTime() - new Date(fechaRef).getTime()) * frac).toISOString(),
-        speed: i === 0 || i === steps ? 0 : 25 + Math.sin(i) * 5
-      })
+    async function cargar() {
+      // 1. Si ya viene con telemetría en el prop pedido
+      if (pedido.ruta_historial && Array.isArray(pedido.ruta_historial) && pedido.ruta_historial.length >= 2) {
+        if (activo) {
+          setPuntos(pedido.ruta_historial)
+          setOrigenRuta('real')
+          setCargandoRuta(false)
+        }
+        return
+      }
+
+      setCargandoRuta(true)
+
+      // 2. Consultar historial GPS grabado en Supabase
+      try {
+        const rutaDb = await obtenerRutaHistorialPedido(pedido.id)
+        if (!activo) return
+
+        if (rutaDb && Array.isArray(rutaDb) && rutaDb.length >= 2) {
+          setPuntos(rutaDb)
+          setOrigenRuta('real')
+          setCargandoRuta(false)
+          return
+        }
+      } catch (err) {
+        console.warn('[ModalBreadcrumbTrail] Error al consultar ruta en BD:', err)
+      }
+
+      // 3. Si no hay GPS grabado, trazar por calles exactas usando OSRM
+      const destLat = pedido.coordenadas?.latitud
+      const destLng = pedido.coordenadas?.longitud
+
+      if (destLat && destLng) {
+        let coordsGeojson: [number, number][] | null = null
+
+        // Intento 1: Proxy interno Next.js
+        try {
+          const res = await fetch(
+            `/api/resolve-maps?origenLon=${UBICACION_LOCAL.longitud}&origenLat=${UBICACION_LOCAL.latitud}&destinoLon=${destLng}&destinoLat=${destLat}&geometria=true`
+          )
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data?.coordinates) && data.coordinates.length >= 2) {
+              coordsGeojson = data.coordinates
+            }
+          }
+        } catch (e) {}
+
+        // Intento 2: Servidor público OSRM
+        if (!coordsGeojson) {
+          try {
+            const res = await fetch(
+              `https://router.project-osrm.org/route/v1/driving/${UBICACION_LOCAL.longitud},${UBICACION_LOCAL.latitud};${destLng},${destLat}?overview=full&geometries=geojson`
+            )
+            if (res.ok) {
+              const data = await res.json()
+              if (Array.isArray(data?.routes?.[0]?.geometry?.coordinates)) {
+                coordsGeojson = data.routes[0].geometry.coordinates
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (coordsGeojson && coordsGeojson.length >= 2 && activo) {
+          const fechaRef = pedido.en_camino_at || pedido.created_at || new Date(Date.now() - 600000).toISOString()
+          const fechaFin = pedido.entregado_at || new Date().toISOString()
+          const tInicio = new Date(fechaRef).getTime()
+          const tFin = new Date(fechaFin).getTime()
+          const deltaT = Math.max(60000, tFin - tInicio)
+
+          const puntosOSRM: PuntoRutaBreadcrumb[] = coordsGeojson.map(([lon, lat], index) => {
+            const frac = index / (coordsGeojson!.length - 1)
+            return {
+              lat,
+              lng: lon,
+              t: new Date(tInicio + deltaT * frac).toISOString(),
+              speed: index === 0 || index === coordsGeojson!.length - 1 ? 0 : 26 + (index % 3) * 3
+            }
+          })
+
+          setPuntos(puntosOSRM)
+          setOrigenRuta('calle_osrm')
+          setCargandoRuta(false)
+          return
+        }
+      }
+
+      // 4. Último fallback interpolado si no hay coordenadas ni internet
+      if (activo) {
+        const destLatFallback = destLat || UBICACION_LOCAL.latitud
+        const destLngFallback = destLng || UBICACION_LOCAL.longitud
+        const fechaRef = pedido.en_camino_at || pedido.created_at || new Date().toISOString()
+        const fechaFin = pedido.entregado_at || new Date(Date.now() + 600000).toISOString()
+
+        const samplePoints: PuntoRutaBreadcrumb[] = []
+        const steps = 10
+        for (let i = 0; i <= steps; i++) {
+          const frac = i / steps
+          samplePoints.push({
+            lat: UBICACION_LOCAL.latitud + (destLatFallback - UBICACION_LOCAL.latitud) * frac,
+            lng: UBICACION_LOCAL.longitud + (destLngFallback - UBICACION_LOCAL.longitud) * frac,
+            t: new Date(new Date(fechaRef).getTime() + (new Date(fechaFin).getTime() - new Date(fechaRef).getTime()) * frac).toISOString(),
+            speed: i === 0 || i === steps ? 0 : 25 + Math.sin(i) * 5
+          })
+        }
+        setPuntos(samplePoints)
+        setOrigenRuta('directa')
+        setCargandoRuta(false)
+      }
     }
-    return samplePoints
-  }, [pedido])
+
+    cargar()
+
+    return () => {
+      activo = false
+    }
+  }, [pedido.id, pedido.ruta_historial, pedido.coordenadas, pedido.en_camino_at, pedido.entregado_at, pedido.created_at])
 
   // ── Métricas de telemetría calculadas con precisión cinemática ──────────────
   const metricas = useMemo(() => {
@@ -298,7 +408,12 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
 
     // Auto-encuadre inicial de la ruta
     try {
-      map.fitBounds(polylineTotalRef.current.getBounds(), { padding: [50, 50], maxZoom: 16 })
+      if (latlngs.length > 0) {
+        const b = polylineTotalRef.current.getBounds()
+        if (b.isValid()) {
+          map.fitBounds(b, { padding: [50, 50], maxZoom: 16 })
+        }
+      }
     } catch {}
 
     // InvalidateSize continuo con ResizeObserver para evitar pantalla negra
@@ -329,7 +444,41 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         mapInstanceRef.current = null
       }
     }
-  }, [montado, puntos, pedido])
+  }, [montado, pedido.id])
+
+  // ── Actualizar polilíneas y encuadre cuando cambian los puntos ──────────────
+  useEffect(() => {
+    if (!mapInstanceRef.current || puntos.length === 0) return
+
+    const latlngs = puntos.map(p => [p.lat, p.lng])
+
+    if (polylineTotalRef.current) {
+      polylineTotalRef.current.setLatLngs(latlngs)
+    }
+
+    const p0 = puntos[0]
+    if (polylineRecorridaRef.current && p0) {
+      polylineRecorridaRef.current.setLatLngs([[p0.lat, p0.lng]])
+    }
+
+    if (motoMarkerRef.current && p0) {
+      motoMarkerRef.current.setLatLng([p0.lat, p0.lng])
+    }
+
+    try {
+      if (polylineTotalRef.current) {
+        const bounds = polylineTotalRef.current.getBounds()
+        if (bounds.isValid()) {
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 })
+        }
+      }
+    } catch {}
+
+    setProgresoDecimal(0)
+    progresoDecimalRef.current = 0
+    setEstaReproduciendo(false)
+    aplicarFrameEnMapa(0)
+  }, [puntos, aplicarFrameEnMapa])
 
   // ── Bucle de Reproducción a 60 FPS (RequestAnimationFrame) ───────────────────
   useEffect(() => {
@@ -524,6 +673,21 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold">
                   Pedido #{pedido.id ? pedido.id.slice(-6).toUpperCase() : ''}
                 </span>
+
+                {cargandoRuta ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold flex items-center gap-1">
+                    <RefreshCw size={11} className="animate-spin" /> Cargando ruta...
+                  </span>
+                ) : origenRuta === 'real' ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    GPS Real ({puntos.length} pts)
+                  </span>
+                ) : origenRuta === 'calle_osrm' ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 font-bold flex items-center gap-1">
+                    Trazado por Calles
+                  </span>
+                ) : null}
               </div>
               <p className="text-xs text-slate-400 truncate">
                 Cadete: <strong className="text-slate-200">{pedido.cadete_nombre || 'Leonel'}</strong> • Cliente: <strong className="text-slate-200">{pedido.cliente}</strong>
@@ -597,6 +761,14 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         <div className="flex-1 relative w-full min-h-0 bg-slate-950 overflow-hidden">
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
+          {/* Overlay de Carga */}
+          {cargandoRuta && (
+            <div className="absolute inset-0 z-[600] bg-slate-950/70 backdrop-blur-xs flex flex-col items-center justify-center gap-2 text-slate-300">
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-semibold">Cargando telemetría del viaje...</p>
+            </div>
+          )}
+
           {/* Telemetría Flotante en Vivo */}
           <div className="absolute top-3 right-3 z-[500] bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 pointer-events-none min-w-[130px]">
             <div className="flex items-center justify-between text-[11px]">
@@ -653,7 +825,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
               step={0.01}
               value={progresoDecimal}
               onChange={handleSliderChange}
-              className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              disabled={cargandoRuta || puntos.length < 2}
+              className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
             />
             <span className="text-xs font-mono text-slate-400 w-12">
               {puntos[puntos.length - 1]?.t ? new Date(puntos[puntos.length - 1].t).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '00:00'}
@@ -666,7 +839,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
               <button
                 type="button"
                 onClick={togglePlayPause}
-                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer ${
+                disabled={cargandoRuta || puntos.length < 2}
+                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   estaReproduciendo
                     ? 'bg-amber-600 hover:bg-amber-500 text-white'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -679,7 +853,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
               <button
                 type="button"
                 onClick={reiniciarAnimacion}
-                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer"
+                disabled={cargandoRuta || puntos.length < 2}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Reiniciar al inicio"
               >
                 <RotateCcw size={15} />
