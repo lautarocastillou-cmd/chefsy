@@ -104,16 +104,6 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const tieneTelefonoValido = Boolean(pedido.telefono && pedido.telefono !== 'Sin especificar' && pedido.telefono.replace(/\D/g, '').length >= 6)
   const enlaceWhatsAppDirecto = tieneTelefonoValido ? obtenerEnlaceWhatsAppDirecto(pedido.telefono!) : null
 
-  const abrirWhatsAppDirecto = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (!enlaceWhatsAppDirecto) {
-      copiarParaWhatsApp()
-      return
-    }
-    // Protocolo nativo whatsapp:// para abrir directo WhatsApp Desktop en PC sin abrir navegador web
-    window.location.href = enlaceWhatsAppDirecto
-  }
-
   const llamarDirecto = () => {
     if (!pedido.telefono || pedido.telefono === 'Sin especificar') return
     const cleanTel = pedido.telefono.replace(/\D/g, '')
@@ -383,16 +373,6 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
           {/* Botones de escritorio (hidden en mobile) */}
           <div className="hidden md:flex items-center gap-1">
-            {enlaceWhatsAppDirecto && (
-              <a
-                href={enlaceWhatsAppDirecto}
-                onClick={(e) => e.stopPropagation()}
-                className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors p-1 rounded-md border border-emerald-100 dark:border-emerald-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer flex items-center justify-center"
-                title="Abrir chat en WhatsApp para PC"
-              >
-                <MessageCircle size={11} />
-              </a>
-            )}
             <button 
               onClick={() => onEditarPedido ? onEditarPedido(pedido) : setEditandoPedidoCompleto(true)}
               className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"
