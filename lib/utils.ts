@@ -142,3 +142,31 @@ export function generarBlurUrl(url: string): string {
 
   return BLUR_DATA_URL_DEFAULT
 }
+
+/**
+ * Normaliza un número telefónico para WhatsApp (formato internacional numérico sin signos).
+ * En Argentina agrega el código de país '549' requerido para móviles por WhatsApp.
+ */
+export function normalizarTelefonoWhatsApp(telefono: string): string {
+  let limpio = telefono.replace(/\D/g, '')
+  if (limpio.startsWith('0')) {
+    limpio = limpio.slice(1)
+  }
+  if (limpio.startsWith('549')) {
+    return limpio
+  }
+  if (limpio.startsWith('54')) {
+    return `549${limpio.slice(2)}`
+  }
+  return `549${limpio}`
+}
+
+/**
+ * Genera el enlace de protocolo nativo para WhatsApp (whatsapp://)
+ * Abre directamente la aplicación de escritorio en PC (o app nativa en móvil)
+ * sin abrir pestañas ni páginas intermedias en el navegador web y sin mensaje predefinido.
+ */
+export function obtenerEnlaceWhatsAppDirecto(telefono: string): string {
+  const tel = normalizarTelefonoWhatsApp(telefono)
+  return `whatsapp://send?phone=${tel}`
+}

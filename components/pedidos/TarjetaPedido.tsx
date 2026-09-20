@@ -23,7 +23,7 @@ import {
   Zap
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
-import { formatearPrecio, cn } from '@/lib/utils'
+import { formatearPrecio, cn, obtenerEnlaceWhatsAppDirecto } from '@/lib/utils'
 import {
   obtenerEtiquetaAccionEstado,
   obtenerSiguienteEstado,
@@ -101,15 +101,17 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
     setMontado(true)
   }, [])
 
-  const abrirWhatsAppDirecto = () => {
-    if (!pedido.telefono || pedido.telefono === 'Sin especificar') {
+  const tieneTelefonoValido = Boolean(pedido.telefono && pedido.telefono !== 'Sin especificar' && pedido.telefono.replace(/\D/g, '').length >= 6)
+  const enlaceWhatsAppDirecto = tieneTelefonoValido ? obtenerEnlaceWhatsAppDirecto(pedido.telefono!) : null
+
+  const abrirWhatsAppDirecto = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (!enlaceWhatsAppDirecto) {
       copiarParaWhatsApp()
       return
     }
-    const cleanTel = pedido.telefono.replace(/\D/g, '')
-    const formattedTel = cleanTel.startsWith('54') ? cleanTel : `549${cleanTel}`
-    const textoMensaje = `¡Hola ${pedido.cliente}! Te escribimos de Chefsy por tu pedido #${pedido.id.slice(-4)}.`
-    window.open(`https://wa.me/${formattedTel}?text=${encodeURIComponent(textoMensaje)}`, '_blank')
+    // Protocolo nativo whatsapp:// para abrir directo WhatsApp Desktop en PC sin abrir navegador web
+    window.location.href = enlaceWhatsAppDirecto
   }
 
   const llamarDirecto = () => {
@@ -338,24 +340,25 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-snug" title={pedido.cliente}>
               {pedido.cliente}
             </h4>
-            {/* Acciones directas táctiles en mobile */}
-            {pedido.telefono && pedido.telefono !== 'Sin especificar' && (
-              <div className="flex items-center gap-1 md:hidden">
-                <button
-                  onClick={abrirWhatsAppDirecto}
-                  className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-90 transition-transform"
-                  title="Escribir por WhatsApp"
-                >
-                  <MessageCircle size={14} />
-                </button>
-                <button
-                  onClick={llamarDirecto}
-                  className="p-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 active:scale-90 transition-transform"
-                  title="Llamar al cliente"
-                >
-                  <Phone size={14} />
-                </button>
-              </div>
+            {/* Acciones directas de contacto */}
+            {enlaceWhatsAppDirecto && (
+              <a
+                href={enlaceWhatsAppDirecto}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-90 transition-transform flex items-center justify-center cursor-pointer"
+                title="Abrir chat en WhatsApp para PC"
+              >
+                <MessageCircle size={14} />
+              </a>
+            )}
+            {tieneTelefonoValido && (
+              <button
+                onClick={llamarDirecto}
+                className="p-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 active:scale-90 transition-transform md:hidden cursor-pointer"
+                title="Llamar al cliente"
+              >
+                <Phone size={14} />
+              </button>
             )}
           </div>
           <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs text-slate-500 dark:text-[#a8a8a8] font-medium">
@@ -380,6 +383,16 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
           {/* Botones de escritorio (hidden en mobile) */}
           <div className="hidden md:flex items-center gap-1">
+            {enlaceWhatsAppDirecto && (
+              <a
+                href={enlaceWhatsAppDirecto}
+                onClick={(e) => e.stopPropagation()}
+                className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors p-1 rounded-md border border-emerald-100 dark:border-emerald-900/50 bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer flex items-center justify-center"
+                title="Abrir chat en WhatsApp para PC"
+              >
+                <MessageCircle size={11} />
+              </a>
+            )}
             <button 
               onClick={() => onEditarPedido ? onEditarPedido(pedido) : setEditandoPedidoCompleto(true)}
               className="text-slate-450 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors p-1 rounded-md border border-slate-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2f2f2f] shadow-sm cursor-pointer"

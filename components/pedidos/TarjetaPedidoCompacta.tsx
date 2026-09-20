@@ -2,11 +2,11 @@
 
 import React from 'react'
 import { Pedido } from '@/tipos'
-import { formatearPrecio, cn } from '@/lib/utils'
+import { formatearPrecio, cn, obtenerEnlaceWhatsAppDirecto } from '@/lib/utils'
 import { obtenerSiguienteEstado } from '@/lib/entrega'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
-import { ChevronRight, ChefHat, Package, Bike, CheckCircle2 } from 'lucide-react'
+import { ChevronRight, ChefHat, Package, Bike, CheckCircle2, MessageCircle } from 'lucide-react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 
 const bordesPorEstado: Record<Pedido['estado'], string> = {
@@ -91,6 +91,16 @@ const TarjetaPedidoCompacta = React.memo(function TarjetaPedidoCompacta({ pedido
             <h4 className="font-extrabold text-slate-800 dark:text-[#e6e6e6] text-sm truncate leading-none" title={pedido.cliente}>
               {pedido.cliente}
             </h4>
+            {pedido.telefono && pedido.telefono !== 'Sin especificar' && (
+              <a
+                href={obtenerEnlaceWhatsAppDirecto(pedido.telefono)}
+                onClick={(e) => e.stopPropagation()}
+                className="p-0.5 rounded text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-colors cursor-pointer inline-flex items-center"
+                title="Abrir chat en WhatsApp para PC"
+              >
+                <MessageCircle size={13} />
+              </a>
+            )}
           </div>
         </div>
         
