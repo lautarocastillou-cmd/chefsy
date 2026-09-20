@@ -7,6 +7,18 @@ import { CartelOpciones } from '@/lib/notificaciones'
 export default function CartelAvisoGlobal() {
   const [cartel, setCartel] = useState<CartelOpciones | null>(null)
 
+  const cerrar = React.useCallback((aceptado: boolean) => {
+    setCartel((actual) => {
+      if (!actual) return null
+      if (aceptado) {
+        actual.onAceptar?.()
+      } else {
+        actual.onCancelar?.()
+      }
+      return null
+    })
+  }, [])
+
   useEffect(() => {
     const handleCartel = (e: Event) => {
       const customEvent = e as CustomEvent<CartelOpciones>
@@ -15,34 +27,31 @@ export default function CartelAvisoGlobal() {
       }
     }
 
+    window.addEventListener('chefsy-cartel', handleCartel)
+    return () => {
+      window.removeEventListener('chefsy-cartel', handleCartel)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!cartel) return
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         cerrar(false)
       }
     }
 
-    window.addEventListener('chefsy-cartel', handleCartel)
     window.addEventListener('keydown', handleEscape)
-
     return () => {
-      window.removeEventListener('chefsy-cartel', handleCartel)
       window.removeEventListener('keydown', handleEscape)
     }
-  }, [cartel])
+  }, [cartel, cerrar])
 
   if (!cartel) return null
 
   const tipo = cartel.tipo || 'aviso'
   const titulo = cartel.titulo || (tipo === 'cerrado' ? 'Local Cerrado' : tipo === 'error' ? 'Error' : 'Aviso')
-
-  const cerrar = (aceptado: boolean) => {
-    if (aceptado) {
-      cartel.onAceptar?.()
-    } else {
-      cartel.onCancelar?.()
-    }
-    setCartel(null)
-  }
 
   return (
     <div
