@@ -212,7 +212,7 @@ export default function ModalVerificacionCierre({
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-[#333] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Cabecera del Modal */}
