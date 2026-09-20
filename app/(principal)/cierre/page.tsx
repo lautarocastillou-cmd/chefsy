@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Copy,
   Check,
+  CheckCheck,
   Play,
   X,
   BarChart3,
@@ -31,9 +32,20 @@ import { Pedido, TipoTurno, CadetePagoExtra } from '@/tipos'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 import ComparativaTurnoVivo from '@/components/cierre/ComparativaTurnoVivo'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
+import ModalVerificacionCierre from '@/components/cierre/ModalVerificacionCierre'
 
 export default function PaginaCierreCaja() {
-  const { pedidos, obtenerPedidosPorFecha, finalizarTurno, estadoTurno, iniciarTurno, configuracionOperativa, cadetes } = usarPedidos()
+  const {
+    pedidos,
+    obtenerPedidosPorFecha,
+    finalizarTurno,
+    estadoTurno,
+    iniciarTurno,
+    configuracionOperativa,
+    cadetes,
+    cambiarMetodoPago,
+    marcarPagoConfirmado,
+  } = usarPedidos()
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [modoOrigen, setModoOrigen] = useState<'en_vivo' | 'fecha'>('en_vivo')
@@ -41,6 +53,7 @@ export default function PaginaCierreCaja() {
   const [pagosExtras, setPagosExtras] = useState<CadetePagoExtra[]>([])
   const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
+  const [modalVerificacionAbierto, setModalVerificacionAbierto] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
@@ -367,17 +380,21 @@ _Generado automáticamente desde Chefsy_`.trim()
       })
   }
 
-  // Finalizar el turno (Archivar pedidos de la pantalla)
+  // Finalizar el turno (Archivar pedidos con asistente de verificación)
   const manejarFinalizarTurno = async () => {
-    const confirmacion = window.confirm(
-      '¿Estás seguro de que deseas FINALIZAR EL TURNO?\n\n' +
-      'Esto archivará todos los pedidos que estén actualmente visibles en la pantalla (dashboard, pedidos y cadetería) ' +
-      'para dejar el panel limpio para el próximo turno.\n\n' +
-      'Los pedidos no se borrarán de la base de datos; podrás consultarlos en cualquier momento seleccionando esta fecha en esta misma pantalla.'
-    )
-    if (confirmacion) {
-      await finalizarTurno()
+    if (pedidosFiltradosPorTurno.length === 0) {
+      const confirmacion = window.confirm(
+        '¿Estás seguro de que deseas FINALIZAR EL TURNO?\n\n' +
+        'Esto archivará todos los pedidos que estén actualmente visibles en la pantalla (dashboard, pedidos y cadetería) ' +
+        'para dejar el panel limpio para el próximo turno.\n\n' +
+        'Los pedidos no se borrarán de la base de datos; podrás consultarlos en cualquier momento seleccionando esta fecha en esta misma pantalla.'
+      )
+      if (confirmacion) {
+        await finalizarTurno()
+      }
+      return
     }
+    setModalVerificacionAbierto(true)
   }
 
   const manejarIniciarTurno = async (e: React.FormEvent) => {
@@ -470,6 +487,15 @@ _Generado automáticamente desde Chefsy_`.trim()
           >
             <Play size={16} />
             {estadoTurno.activo ? 'Turno Noche activo' : 'Iniciar Turno'}
+          </button>
+          <button
+            onClick={() => setModalVerificacionAbierto(true)}
+            disabled={pedidosFiltradosPorTurno.length === 0}
+            className="bg-slate-100 dark:bg-[#333] hover:bg-slate-200 dark:hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#444] px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer"
+            title="Verificar y conciliar transferencias, arqueo físico y métodos de pago"
+          >
+            <CheckCheck size={16} />
+            Verificar Caja
           </button>
           <button
             onClick={manejarFinalizarTurno}
@@ -976,6 +1002,17 @@ _Generado automáticamente desde Chefsy_`.trim()
         onGuardado={(nuevo) => {
           setPagosExtras(prev => [nuevo, ...prev])
         }}
+      />
+
+      {/* Asistente y Modal de Verificación de Cierre de Caja */}
+      <ModalVerificacionCierre
+        abierto={modalVerificacionAbierto}
+        onCerrar={() => setModalVerificacionAbierto(false)}
+        pedidos={pedidosFiltradosPorTurno}
+        cajaInicial={cajaInicialEfectiva}
+        onFinalizarTurno={finalizarTurno}
+        cambiarMetodoPago={cambiarMetodoPago}
+        marcarPagoConfirmado={marcarPagoConfirmado}
       />
     </div>
   )
