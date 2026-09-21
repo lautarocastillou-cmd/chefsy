@@ -25,6 +25,7 @@ import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from 
 import { UBICACION_LOCAL } from '@/lib/ubicacion'
 import { ListOrdered, Activity } from 'lucide-react'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
+import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
 import { notificarError } from '@/lib/notificaciones'
 
 
@@ -318,6 +319,7 @@ export default function PaginaCadeteria() {
   const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
   const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: Pedido[] } | null>(null)
   const [tabAdmin, setTabAdmin] = useState<'pedidos' | 'rendimiento'>('pedidos')
+  const [modalCompartirUbicacionAbierto, setModalCompartirUbicacionAbierto] = useState(false)
 
   // Estado GPS de los cadetes activos (para el admin)
   const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
@@ -703,6 +705,17 @@ export default function PaginaCadeteria() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setModalCompartirUbicacionAbierto(true)}
+                className="text-xs bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-sky-500/30 shrink-0 cursor-pointer"
+                title="Compartir ubicación en vivo de un cadete sin necesidad de login"
+              >
+                <Radio size={14} className="animate-pulse" />
+                <span className="hidden sm:inline">Compartir Ubicación</span>
+                <span className="sm:hidden">Ubicación</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -1109,6 +1122,12 @@ export default function PaginaCadeteria() {
           pedidos={cadeteParaOrganizar.pedidos}
         />
       )}
+
+      {/* Modal Compartir Ubicación en Vivo */}
+      <ModalCompartirUbicacion
+        abierto={modalCompartirUbicacionAbierto}
+        onClose={() => setModalCompartirUbicacionAbierto(false)}
+      />
     </div>
   )
 }
