@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import type { Map as MapaLeaflet, Marker as MarcadorLeaflet } from 'leaflet'
 import { Coordenadas } from '@/tipos'
+import { CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 
 interface PropsMapaSelector {
   centro: Coordenadas
@@ -66,8 +67,8 @@ export default function MapaSelector({
         return
       }
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO &copy; OpenStreetMap',
+      L.tileLayer(CARTO_VOYAGER_URL, {
+        attribution: CARTO_ATTRIBUTION,
         subdomains: 'abcd',
         maxZoom: 20,
       }).addTo(mapa)

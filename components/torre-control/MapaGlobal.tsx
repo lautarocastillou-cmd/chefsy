@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
@@ -164,8 +164,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
     })
 
     // Capa CARTO Voyager
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CARTO &copy; OpenStreetMap',
+    L.tileLayer(CARTO_VOYAGER_URL, {
+      attribution: CARTO_ATTRIBUTION,
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map)

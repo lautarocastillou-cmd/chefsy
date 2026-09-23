@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { UBICACION_LOCAL } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { Bike, Navigation, Compass, Layers, LocateFixed, Store } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -85,8 +85,8 @@ export default function MapaSeguimientoCadetePublico({
     })
 
     // Capa HD de CARTO Voyager
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CARTO &copy; OpenStreetMap',
+    L.tileLayer(CARTO_VOYAGER_URL, {
+      attribution: CARTO_ATTRIBUTION,
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map)

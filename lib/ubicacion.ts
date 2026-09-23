@@ -13,6 +13,10 @@ export const UBICACION_LOCAL: Coordenadas = {
 // Para retrocompatibilidad y centrado de mapas
 export const CENTRO_POR_DEFECTO: Coordenadas = UBICACION_LOCAL
 
+export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3ul8_1_0d6b5b9afb4cfc068d667127'
+export const CARTO_VOYAGER_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`
+export const CARTO_ATTRIBUTION = '&copy; CARTO &copy; OpenStreetMap'
+
 export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): number {
   const R = 6371 // Radio de la Tierra en km
   const dLat = (coord2.latitud - coord1.latitud) * (Math.PI / 180)

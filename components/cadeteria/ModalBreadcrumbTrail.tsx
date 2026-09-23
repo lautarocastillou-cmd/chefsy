@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
 import { obtenerRutaHistorialPedido } from '@/servicios/supabase/pedidos'
 import {
@@ -304,8 +304,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     })
 
     // Capa de Mapa CARTO Voyager
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CARTO &copy; OpenStreetMap',
+    L.tileLayer(CARTO_VOYAGER_URL, {
+      attribution: CARTO_ATTRIBUTION,
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map)
