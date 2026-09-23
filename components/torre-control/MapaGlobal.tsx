@@ -163,9 +163,10 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       attributionControl: false,
     })
 
-    // Google Maps HD
-    L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
-      attribution: '&copy; Google Maps',
+    // Capa CARTO Voyager
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CARTO &copy; OpenStreetMap',
+      subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map)
 

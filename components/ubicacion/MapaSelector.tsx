@@ -66,8 +66,9 @@ export default function MapaSelector({
         return
       }
 
-      L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
-        attribution: '&copy; Google Maps',
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CARTO &copy; OpenStreetMap',
+        subdomains: 'abcd',
         maxZoom: 20,
       }).addTo(mapa)
 
