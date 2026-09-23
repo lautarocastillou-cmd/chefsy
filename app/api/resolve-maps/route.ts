@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
+import { buscarDireccionPorCoordenadas } from '@/lib/ubicacion'
 
 function extraerCoordenadasDeUrl(rawUrl: string) {
   if (!rawUrl) return null
@@ -104,11 +105,6 @@ export async function GET(request: Request) {
   }
   // -- FIN PROXY OSRM --
 
-  const sesion = await obtenerSesion()
-  if (!sesion) {
-    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-  }
-
   if (!urlParam) {
     return NextResponse.json({ error: 'URL o coordenadas no provistas.' }, { status: 400 })
   }
@@ -123,13 +119,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'URL inválida.' }, { status: 400 })
   }
 
+  const responderConDireccion = async (coords: { latitud: number; longitud: number }) => {
+    let direccion: string | undefined
+    try {
+      const encontrada = await buscarDireccionPorCoordenadas(coords)
+      if (encontrada) direccion = encontrada
+    } catch (_) {}
+    return NextResponse.json({
+      ...coords,
+      direccion,
+    })
+  }
+
   try {
     let currentUrl = urlParam
     let coordinates = extraerCoordenadasDeUrl(currentUrl)
 
     // Si ya tiene coordenadas en la URL inicial, devolverlas de inmediato
     if (coordinates) {
-      return NextResponse.json(coordinates)
+      return await responderConDireccion(coordinates)
     }
 
     // Seguir redirecciones manualmente buscando las coordenadas en cada hop
@@ -158,7 +166,7 @@ export async function GET(request: Request) {
           // Intentar extraer coordenadas de la nueva URL
           coordinates = extraerCoordenadasDeUrl(currentUrl)
           if (coordinates) {
-            return NextResponse.json(coordinates)
+            return await responderConDireccion(coordinates)
           }
           continue
         }
@@ -182,7 +190,7 @@ export async function GET(request: Request) {
     }
 
     if (coordinates) {
-      return NextResponse.json(coordinates)
+      return await responderConDireccion(coordinates)
     }
 
     return NextResponse.json(

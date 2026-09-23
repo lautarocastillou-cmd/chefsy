@@ -8,6 +8,7 @@ import { formatearPrecio } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { leerPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
 import { notificarAviso, notificarError } from '@/lib/notificaciones'
+import { esEnlaceOCoordenadas } from '@/lib/ubicacion'
 
 interface PantallaExitoProps {
   pedido: Pedido
@@ -158,7 +159,9 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
             </div>
             <div className="col-span-2">
               <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Destino</p>
-              <p className="font-semibold text-slate-200 text-xs leading-snug">{pedido.direccion}</p>
+              <p className="font-semibold text-slate-200 text-xs leading-snug">
+                {esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : (pedido.direccion || 'Sin dirección')}
+              </p>
             </div>
             <div>
               <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Método de Pago</p>

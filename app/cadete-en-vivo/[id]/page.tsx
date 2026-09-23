@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { supabaseAnon } from '@/lib/supabase'
 import { formatearPrecio } from '@/lib/utils'
+import { resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import { 
   Flame, 
@@ -127,6 +128,31 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [paradaActual, setParadaActual]     = useState(1)
   const [esProximaEntrega, setEsProximaEntrega] = useState(true)
   const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
+  const [direccionLegible, setDireccionLegible] = useState<string>('')
+
+  // ── Resolver dirección legible humana si es un enlace o coordenadas ─────────
+  useEffect(() => {
+    if (!pedido?.direccion) {
+      setDireccionLegible('')
+      return
+    }
+
+    if (!esEnlaceOCoordenadas(pedido.direccion)) {
+      setDireccionLegible(pedido.direccion)
+      return
+    }
+
+    let cancelado = false
+    resolverDireccionHumana(pedido.direccion, pedido.coordenadas).then((dir) => {
+      if (!cancelado && dir) {
+        setDireccionLegible(dir)
+      }
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [pedido?.direccion, pedido?.coordenadas])
 
   // ── Fetch del pedido principal ──────────────────────────────────────────────
   useEffect(() => {
@@ -485,7 +511,9 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                 <MapPin size={15} className="text-[#2A6348] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Entrega en</span>
-                  <span className="font-semibold text-slate-700 leading-tight block truncate">{pedido.direccion}</span>
+                  <span className="font-semibold text-slate-700 leading-tight block truncate" title={direccionLegible || pedido.direccion}>
+                    {direccionLegible || (esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : pedido.direccion)}
+                  </span>
                 </div>
               </div>
             )}

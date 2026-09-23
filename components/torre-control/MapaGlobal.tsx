@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
@@ -536,7 +536,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             <div style="border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:6px;">
               <b style="font-size:13px;color:#1e40af;">Entrega: ${pedido.cliente}</b>
             </div>
-            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">${pedido.direccion}</div>` : ''}
+            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">${esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : pedido.direccion}</div>` : ''}
             <div style="font-size:11px;color:#64748b;">Cadete asignado: <b>${cadete.nombre}</b></div>
             ${pedido.total ? `<div style="font-size:11px;font-weight:bold;color:#0f172a;margin-top:2px;">Total: ${formatearPrecio(pedido.total)}</div>` : ''}
           </div>

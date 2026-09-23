@@ -39,7 +39,7 @@ export default function InfoEntregaPedido({ pedido, destacado = false }: PropsIn
         >
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
             {esDelivery ? 'Dirección de entrega' : 'Modalidad'}
-            {esDelivery && pedido.coordenadas && <span className="text-chefsy-600">(Ver mapa)</span>}
+            {esDelivery && pedido.coordenadas && <span className="text-chefsy-600 font-bold">(Ver mapa y fachada)</span>}
             {esDelivery && !pedido.coordenadas && (
               <a
                 href={crearEnlaceGoogleMaps(null, pedido.direccion)}

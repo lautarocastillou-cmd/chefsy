@@ -5,7 +5,7 @@ import { setCache, getCache, removeCache } from '@/lib/localCache'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion, resolverDireccionHumana } from '@/lib/ubicacion'
 import { generarId } from '@/lib/utils'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
@@ -332,6 +332,14 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         }
       }
 
+      // Modo Estricto: Si tras el fallback aún no hay coordenadas en delivery, bloquear la compra
+      if (tipoEntrega === 'delivery' && !coordsFinal) {
+        setProcesandoCompra(false)
+        if (onError) onError('Es obligatorio confirmar la ubicación en el mapa para calcular el costo de envío exacto.')
+        else notificarAviso('Por favor confirmá tu ubicación en el mapa para calcular el envío exacto.')
+        return
+      }
+
     // Obtener sesión actual (cliente logueado) con timeout de 5s
     let clienteId: string | undefined
     try {
@@ -348,12 +356,19 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     const puntosGanados = Math.floor(totalCarrito * 0.05) // 5% de cashback en puntos
     const costoEnvioGarantizado = tipoEntrega === 'delivery' ? Math.max(costoFinal || 1500, 1500) : 0
 
+    let direccionFinal = tipoEntrega === 'delivery' ? direccionCliente.trim() : 'Retiro por el local'
+    if (tipoEntrega === 'delivery') {
+      try {
+        direccionFinal = await resolverDireccionHumana(direccionFinal, coordsFinal)
+      } catch (_) {}
+    }
+
     const nuevoPedido: Pedido & { cliente_id?: string; puntos_gastados?: number; puntos_ganados?: number } = {
       id: generarId(),
       cliente: nombreCliente.trim(),
       telefono: telefonoCliente.trim(),
       tipoEntrega,
-      direccion: tipoEntrega === 'delivery' ? direccionCliente.trim() : 'Retiro por el local',
+      direccion: direccionFinal,
       productos: carrito.map(item => {
         let nombreFormateado = item.producto.nombre
         const anexos = []

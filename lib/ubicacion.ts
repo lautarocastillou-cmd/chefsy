@@ -87,13 +87,119 @@ export function crearEnlaceOpenStreetMap(coordenadas: Coordenadas): string {
   return `https://www.openstreetmap.org/?mlat=${coordenadas.latitud}&mlon=${coordenadas.longitud}#map=17/${coordenadas.latitud}/${coordenadas.longitud}`
 }
 
+export function dmsToDecimal(degrees: number, minutes: number, seconds: number, direction: string): number {
+  let decimal = degrees + minutes / 60 + seconds / 3600
+  if (['S', 's', 'W', 'w', 'O', 'o'].includes(direction)) {
+    decimal = -decimal
+  }
+  return decimal
+}
+
+export function extraerUrlDeGoogleMaps(texto: string): string | null {
+  if (!texto) return null
+  const match = texto.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?google\.[a-z]+(?:\.[a-z]+)?\/maps[^\s]*|(?:https?:\/\/)?maps\.app\.goo\.gl\/[^\s]*|(?:https?:\/\/)?goo\.gl\/maps\/[^\s]*/i)
+  return match ? match[0] : null
+}
+
+export function extraerCoordenadasDeTexto(rawTexto: string): Coordenadas | null {
+  if (!rawTexto) return null
+  let texto = rawTexto
+  try {
+    texto = decodeURIComponent(rawTexto)
+  } catch (e) {}
+
+  // 1. Coordenadas de pin en URL de Google Maps (!3d...!4d)
+  const match3d4d = texto.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
+  if (match3d4d) {
+    return { latitud: parseFloat(match3d4d[1]), longitud: parseFloat(match3d4d[2]) }
+  }
+
+  // 2. Query string q=lat,lng o query=lat,lng
+  const matchQ = texto.match(/[?&](?:q|query)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchQ) {
+    return { latitud: parseFloat(matchQ[1]), longitud: parseFloat(matchQ[2]) }
+  }
+
+  // 3. Formato destino daddr=lat,lng
+  const matchDaddr = texto.match(/[?&]daddr=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchDaddr) {
+    return { latitud: parseFloat(matchDaddr[1]), longitud: parseFloat(matchDaddr[2]) }
+  }
+
+  // 4. Formato ll=lat,lng / center=lat,lng
+  const matchLl = texto.match(/[?&](?:ll|sll|center)=(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchLl) {
+    return { latitud: parseFloat(matchLl[1]), longitud: parseFloat(matchLl[2]) }
+  }
+
+  // 5. Formato /place/lat,lng o /dir/.../lat,lng
+  const matchPath = texto.match(/\/(?:place|dir)\/(?:[^\/]+\/)?(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchPath) {
+    return { latitud: parseFloat(matchPath[1]), longitud: parseFloat(matchPath[2]) }
+  }
+
+  // 6. Formato @lat,lng
+  const matchAt = texto.match(/@(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchAt) {
+    return { latitud: parseFloat(matchAt[1]), longitud: parseFloat(matchAt[2]) }
+  }
+
+  // 7. Formato DMS (ej: 28°27'13.5"S 65°47'00.5"W)
+  const dmsRegex = /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])\s*[,/]?\s*(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([WOEwoeOo])/
+  const matchDms = texto.match(dmsRegex)
+  if (matchDms) {
+    const lat = dmsToDecimal(parseFloat(matchDms[1]), parseFloat(matchDms[2]), parseFloat(matchDms[3]), matchDms[4])
+    const lng = dmsToDecimal(parseFloat(matchDms[5]), parseFloat(matchDms[6]), parseFloat(matchDms[7]), matchDms[8])
+    return { latitud: lat, longitud: lng }
+  }
+
+  // 8. Coordenadas numéricas directas (ej: -28.468200, -65.782100)
+  const matchCoordsSueltas = texto.match(/(-?\d+\.\d+)\s*(?:,|%2[cC])\s*(-?\d+\.\d+)/i)
+  if (matchCoordsSueltas) {
+    const lat = parseFloat(matchCoordsSueltas[1])
+    const lng = parseFloat(matchCoordsSueltas[2])
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { latitud: lat, longitud: lng }
+    }
+  }
+
+  return null
+}
+
 export async function buscarCoordenadasPorDireccion(
   direccion: string
 ): Promise<Coordenadas | null> {
-  const texto = direccion.trim()
+  const texto = (direccion || '').trim()
   if (!texto) return null
 
-  let queryBuscar = texto
+  // 1. Extraer si ya son coordenadas explícitas o URL con parámetros
+  const directas = extraerCoordenadasDeTexto(texto)
+  if (directas) return directas
+
+  // 2. Si es una URL acortada o enlace de Google Maps, resolver mediante /api/resolve-maps
+  const urlMaps = extraerUrlDeGoogleMaps(texto)
+  if (urlMaps) {
+    try {
+      const res = await fetch(`/api/resolve-maps?url=${encodeURIComponent(urlMaps)}`, {
+        signal: AbortSignal.timeout(4000)
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data && typeof data.latitud === 'number' && typeof data.longitud === 'number') {
+          return { latitud: data.latitud, longitud: data.longitud }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Limpiar prefijos comunes y formatear query para Catamarca
+  const limpio = texto
+    .replace(/^b[°º.]?\s*/i, '')
+    .replace(/^barrio\s+/i, '')
+    .replace(/^av[.]?\s+/i, 'Avenida ')
+    .trim()
+
+  let queryBuscar = limpio || texto
   if (!queryBuscar.toLowerCase().includes('catamarca')) {
     queryBuscar = `${queryBuscar}, Catamarca`
   }
@@ -108,7 +214,7 @@ export async function buscarCoordenadasPorDireccion(
       bounded: '1',
     })
 
-    const fetchSignal = AbortSignal.timeout(3000)
+    const fetchSignal = AbortSignal.timeout(3500)
     let respuesta = await fetch(
       `https://nominatim.openstreetmap.org/search?${parametros}`,
       { headers: { 'Accept-Language': 'es' }, signal: fetchSignal }
@@ -143,6 +249,59 @@ export async function buscarCoordenadasPorDireccion(
   }
 }
 
+export function esEnlaceOCoordenadas(texto?: string | null): boolean {
+  if (!texto) return false
+  const t = texto.trim()
+  return (
+    t.startsWith('http://') ||
+    t.startsWith('https://') ||
+    t.includes('maps.app.goo.gl') ||
+    t.includes('goo.gl/maps') ||
+    t.includes('google.com/maps') ||
+    t.includes('maps.google') ||
+    /^-?\d+\.\d+\s*,\s*-?\d+\.\d+$/.test(t) ||
+    /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])/.test(t)
+  )
+}
+
+export async function resolverDireccionHumana(
+  direccionActual?: string | null,
+  coordenadas?: Coordenadas | null
+): Promise<string> {
+  const dir = (direccionActual || '').trim()
+
+  // Si ya es un texto normal comprensible y no es un link ni coordenadas sueltas, devolverlo
+  if (dir && !esEnlaceOCoordenadas(dir)) {
+    return dir
+  }
+
+  // Si tenemos coordenadas válidas, resolver mediante geocodificación inversa (OSRM / Nominatim)
+  if (
+    coordenadas &&
+    typeof coordenadas.latitud === 'number' &&
+    typeof coordenadas.longitud === 'number' &&
+    !isNaN(coordenadas.latitud) &&
+    !isNaN(coordenadas.longitud) &&
+    (coordenadas.latitud !== 0 || coordenadas.longitud !== 0)
+  ) {
+    try {
+      const encontrada = await buscarDireccionPorCoordenadas(coordenadas)
+      if (encontrada && encontrada.trim()) {
+        return encontrada
+      }
+    } catch (e) {
+      console.warn('Error resolviendo dirección legible por coordenadas:', e)
+    }
+  }
+
+  // Si era un link o coordenadas pero no pudimos resolver la calle, no mostramos el link crudo
+  if (esEnlaceOCoordenadas(dir)) {
+    return 'Ubicación seleccionada en el mapa'
+  }
+
+  return dir || 'Sin dirección especificada'
+}
+
 const cacheDirecciones = new Map<string, string | null>()
 
 export async function buscarDireccionPorCoordenadas(
@@ -163,7 +322,13 @@ export async function buscarDireccionPorCoordenadas(
 
     const respuesta = await fetch(
       `https://nominatim.openstreetmap.org/reverse?${parametros}`,
-      { headers: { 'Accept-Language': 'es' }, signal: AbortSignal.timeout(3000) }
+      { 
+        headers: { 
+          'Accept-Language': 'es',
+          'User-Agent': 'ChefsyApp/1.0' 
+        }, 
+        signal: AbortSignal.timeout(4000) 
+      }
     )
 
     if (!respuesta.ok) return null
@@ -171,15 +336,18 @@ export async function buscarDireccionPorCoordenadas(
     const resultado = await respuesta.json()
     if (!resultado || !resultado.address) return null
 
-    const { road, house_number, city, town, village, suburb } = resultado.address
-    const calle = road || ''
-    const numero = house_number || ''
+    const { road, pedestrian, footway, house_number, city, town, village, suburb, neighbourhood } = resultado.address
+    const calle = road || pedestrian || footway || neighbourhood || ''
+    const numero = house_number ? ` ${house_number}` : ''
     const barrio = suburb ? `, Barrio ${suburb}` : ''
     const localidad = city || town || village || ''
 
-    if (!calle) return null
+    if (!calle && !localidad) {
+      const fallbackDisplay = resultado.display_name?.split(',')?.[0]?.trim()
+      return fallbackDisplay || null
+    }
 
-    const dir = `${calle} ${numero}${barrio}, ${localidad}`.trim().replace(/,$/, '')
+    const dir = `${calle}${numero}${barrio}${localidad ? `, ${localidad}` : ''}`.trim().replace(/^,|,$/g, '').trim()
     
     if (cacheDirecciones.size > 50) {
       const firstKey = cacheDirecciones.keys().next().value

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
-import { calcularDistanciaKm } from '@/lib/ubicacion'
+import { calcularDistanciaKm, resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 
 // Coordenadas del local Chefsy (San Fernando del Valle de Catamarca)
 const LOCAL_LAT = -28.462809031658047
@@ -170,6 +170,24 @@ export async function GET(request: Request) {
       }
     }
 
+    let direccionLimpia = data.direccion ?? ''
+    if (data.tipoEntrega === 'delivery' && (esEnlaceOCoordenadas(direccionLimpia) || !direccionLimpia)) {
+      try {
+        const resuelta = await resolverDireccionHumana(direccionLimpia, data.coordenadas)
+        if (resuelta && resuelta !== direccionLimpia) {
+          direccionLimpia = resuelta
+          // Auto-sanar el registro en la base de datos en background
+          if (!esEnlaceOCoordenadas(resuelta)) {
+            supabase
+              .from('pedidos')
+              .update({ direccion: resuelta })
+              .eq('id', data.id)
+              .then(() => {}, () => {})
+          }
+        }
+      } catch (_) {}
+    }
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
@@ -189,7 +207,7 @@ export async function GET(request: Request) {
       tipoEntrega: data.tipoEntrega ?? 'delivery',
       total: data.total ?? 0,
       metodoPago: data.metodoPago ?? 'efectivo',
-      direccion: data.direccion ?? '',
+      direccion: direccionLimpia,
       observaciones: data.observaciones ?? '',
       costoEnvio: data.costoEnvio ?? 0,
       hora: data.hora ?? '',

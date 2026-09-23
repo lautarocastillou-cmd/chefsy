@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
 import { obtenerRutaHistorialPedido } from '@/servicios/supabase/pedidos'
 import {
@@ -355,9 +355,10 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
         iconSize: [90, 52],
         iconAnchor: [45, 18],
       })
+      const dirPopup = pedido.direccion ? (esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : pedido.direccion) : ''
       L.marker([pedido.coordenadas.latitud, pedido.coordenadas.longitud], { icon: clienteIcon, zIndexOffset: 200 })
         .addTo(map)
-        .bindPopup(`<b>${pedido.cliente}</b><br/>${pedido.direccion || ''}`)
+        .bindPopup(`<b>${pedido.cliente}</b>${dirPopup ? `<br/>${dirPopup}` : ''}`)
     }
 
     // 3. Polilínea Total de Fondo (Gris / Azul guía)

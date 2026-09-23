@@ -8,9 +8,10 @@ import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { formatearPrecio, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus, Lock, AlertTriangle, AlertOctagon, Radio } from 'lucide-react'
+import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus, Lock, AlertTriangle, AlertOctagon, Radio, Camera } from 'lucide-react'
+import StreetViewFachada from '@/components/ubicacion/StreetViewFachada'
 import { mutate } from 'swr'
-import { crearEnlaceGoogleMaps, calcularDistanciaKm } from '@/lib/ubicacion'
+import { crearEnlaceGoogleMaps, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
@@ -67,6 +68,7 @@ function TarjetaPedidoCadete({
   onAbrirOrganizar?: () => void
 }) {
   const [metodoOriginal, setMetodoOriginal] = useState<string | null>(null)
+  const [mostrarFachada, setMostrarFachada] = useState(false)
 
   useEffect(() => {
     const key = `original-pago-${pedido.id}`
@@ -215,6 +217,16 @@ function TarjetaPedidoCadete({
             <MapPin size={12} /> Google Maps
           </a>
         )}
+        {esPedidoDelivery(pedido) && pedido.coordenadas && (
+          <button
+            type="button"
+            onClick={() => setMostrarFachada(true)}
+            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold px-2.5 py-1.5 rounded-full transition-colors shrink-0 shadow-sm border border-slate-600 cursor-pointer active:scale-95"
+            title="Ver fotografía de la fachada de la casa en Street View"
+          >
+            <Camera size={12} className="text-emerald-400" /> Fachada
+          </button>
+        )}
       </div>
 
       <InfoEntregaPedido pedido={pedido} destacado />
@@ -304,6 +316,37 @@ function TarjetaPedidoCadete({
             texto="Deslizá para Entregar"
             variante="rojo"
           />
+        </div>
+      )}
+      {mostrarFachada && pedido.coordenadas && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-3 sm:p-4 animate-in fade-in"
+          onClick={() => setMostrarFachada(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-4 space-y-3 relative shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 className="font-extrabold text-white text-sm">
+                Fachada • {pedido.cliente}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setMostrarFachada(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <StreetViewFachada
+              lat={pedido.coordenadas.latitud}
+              lng={pedido.coordenadas.longitud}
+              modoCadete={true}
+              titulo={`Frente del domicilio de ${pedido.cliente}`}
+              subtitulo={esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : (pedido.direccion || 'Sin dirección especificada')}
+            />
+          </div>
         </div>
       )}
     </div>

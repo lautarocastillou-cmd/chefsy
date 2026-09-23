@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Pedido } from '@/tipos'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { X, ArrowUp, ArrowDown, Sparkles, MapPin, Check, Bike } from 'lucide-react'
 
 interface PropsModalOrganizarRecorridoCadete {
@@ -181,7 +181,7 @@ export default function ModalOrganizarRecorridoCadete({
                       {pedido.cliente}
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {pedido.direccion || 'Sin dirección'}
+                      {esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación en el mapa' : (pedido.direccion || 'Sin dirección')}
                     </p>
                     <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
                       <MapPin size={10} />

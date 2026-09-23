@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { X, ShoppingBag, Truck, Store, UtensilsCrossed, Clock, CheckCircle2, AlertCircle, Receipt } from 'lucide-react'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
+import { esEnlaceOCoordenadas } from '@/lib/ubicacion'
 
 interface ProductoPedido {
   nombre: string
@@ -58,9 +59,11 @@ function obtenerDetallesEstado(estado?: string) {
 function obtenerTipoEntregaUI(tipo?: string, direccion?: string) {
   const t = tipo?.toLowerCase() || ''
   if (t === 'delivery') {
+    const dirTexto = direccion?.trim()
+    const subtituloLimpio = dirTexto && esEnlaceOCoordenadas(dirTexto) ? 'Ubicación en el mapa' : (dirTexto || 'A domicilio')
     return {
       titulo: 'Delivery',
-      subtitulo: direccion || 'A domicilio',
+      subtitulo: subtituloLimpio,
       icono: Truck,
       clase: 'bg-blue-950/40 text-blue-300 border-blue-800/40'
     }

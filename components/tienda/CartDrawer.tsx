@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation, Lock, AlertTriangle } from 'lucide-react'
+import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation, Lock, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
@@ -102,6 +102,7 @@ export default function CartDrawer() {
     setMetodoPago: onSetMetodoPago,
     setObservaciones: onSetObservaciones,
     procesarCompra: onProcesarCompra,
+    distanciaClienteKm,
     coordenadasCliente,
     setCoordenadasCliente: onSetCoordenadasCliente,
     turnoActivo,
@@ -115,6 +116,8 @@ export default function CartDrawer() {
 
   const [checkoutStep, setCheckoutStep] = useState(1)
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
+  const [verificandoDireccion, setVerificandoDireccion] = useState(false)
+  const [errorDireccionNoUbicada, setErrorDireccionNoUbicada] = useState<string | null>(null)
   
   // Estados para el selector de mapa
   const [mostrarMapa, setMostrarMapa] = useState(false)
@@ -188,6 +191,8 @@ export default function CartDrawer() {
         const coords = await buscarCoordenadasPorDireccion(direccionCliente)
         if (coords && !controller.signal.aborted) {
           onSetCoordenadasCliente(coords)
+          setCoordsMapa(coords)
+          setErrorDireccionNoUbicada(null)
         }
       } catch (e) {}
     }, 1200)
@@ -201,15 +206,20 @@ export default function CartDrawer() {
   const seleccionarSugerencia = (sug: SugerenciaDireccion) => {
     onSetDireccionCliente(sug.nombre)
     onSetCoordenadasCliente(sug.coordenadas)
+    setCoordsMapa(sug.coordenadas)
     setMostrarSugerencias(false)
     setSugerencias([])
+    setErrorDireccionNoUbicada(null)
   }
 
   const [usadoGpsActual, setUsadoGpsActual] = useState(false)
 
   // Resetear paso cuando se cierra el carrito o se abre el checkout
   useEffect(() => {
-    if (!mostrarCheckout) setCheckoutStep(1)
+    if (!mostrarCheckout) {
+      setCheckoutStep(1)
+      setErrorDireccionNoUbicada(null)
+    }
   }, [mostrarCheckout])
 
   const obtenerUbicacion = () => {
@@ -219,6 +229,7 @@ export default function CartDrawer() {
     }
     setBuscandoUbicacion(true)
     setUsadoGpsActual(true)
+    setErrorDireccionNoUbicada(null)
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         const { latitude, longitude } = pos.coords
@@ -231,10 +242,12 @@ export default function CartDrawer() {
         onSetDireccionCliente(dir)
         onSetCoordenadasCliente({ latitud: latitude, longitud: longitude })
         setCoordsMapa({ latitud: latitude, longitud: longitude })
+        setErrorDireccionNoUbicada(null)
       } catch {
-        notificarAviso('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Por favor agrégalo manualmente.')
+        notificarAviso('Obtuvimos tus coordenadas pero no pudimos leer el nombre de la calle. Podés escribirla manualmente.')
         onSetCoordenadasCliente({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
         setCoordsMapa({ latitud: pos.coords.latitude, longitud: pos.coords.longitude })
+        setErrorDireccionNoUbicada(null)
       } finally {
         setBuscandoUbicacion(false)
       }
@@ -259,13 +272,60 @@ export default function CartDrawer() {
         onSetDireccionCliente('Ubicación seleccionada en mapa')
       }
       onSetCoordenadasCliente({ latitud, longitud })
+      setErrorDireccionNoUbicada(null)
     } catch (error) {
       console.error('Error en geocoding inverso del mapa:', error)
       onSetDireccionCliente('Ubicación seleccionada en mapa')
       onSetCoordenadasCliente({ latitud, longitud })
+      setErrorDireccionNoUbicada(null)
     } finally {
       setCargandoMapaDir(false)
       setMostrarMapa(false)
+    }
+  }
+
+  const handleSiguientePaso2 = async () => {
+    if (tipoEntrega === 'retiro') {
+      setCheckoutStep(3)
+      return
+    }
+
+    const dirLimpia = (direccionCliente || '').trim()
+    if (!dirLimpia) {
+      mostrarAvisoInferior('Ingresá tu dirección de entrega')
+      return
+    }
+
+    // Si ya tenemos coordenadas confirmadas, avanzar de inmediato
+    if (coordenadasCliente) {
+      setErrorDireccionNoUbicada(null)
+      setCheckoutStep(3)
+      return
+    }
+
+    // Modo Estricto: intentar geocodificar antes de permitir avanzar
+    setVerificandoDireccion(true)
+    setErrorDireccionNoUbicada(null)
+    try {
+      const coords = await buscarCoordenadasPorDireccion(dirLimpia)
+      if (coords) {
+        onSetCoordenadasCliente(coords)
+        setCoordsMapa(coords)
+        setErrorDireccionNoUbicada(null)
+        setCheckoutStep(3)
+      } else {
+        setErrorDireccionNoUbicada(
+          'No pudimos localizar la dirección en el mapa para calcular el costo exacto del envío. Por favor, confirmá la ubicación en el mapa o usá tu GPS.'
+        )
+        setMostrarMapa(true)
+      }
+    } catch {
+      setErrorDireccionNoUbicada(
+        'Ocurrió un inconveniente al verificar la dirección. Por favor, confirmala en el mapa para calcular el costo de tu envío.'
+      )
+      setMostrarMapa(true)
+    } finally {
+      setVerificandoDireccion(false)
     }
   }
 
@@ -538,6 +598,7 @@ export default function CartDrawer() {
                               onChange={(e) => {
                                 onSetDireccionCliente(e.target.value)
                                 setMostrarSugerencias(true)
+                                setErrorDireccionNoUbicada(null)
                                 if (coordenadasCliente) onSetCoordenadasCliente(null)
                               }}
                               onFocus={() => {
@@ -578,11 +639,61 @@ export default function CartDrawer() {
                             )}
                           </div>
 
-                          {/* Mensaje de confirmación en verde chefsy si el usuario activó GPS */}
-                          {usadoGpsActual && (
-                            <p className="text-xs font-bold text-chefsy-400 dark:text-chefsy-400 mt-1.5 text-left flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                              <span>¡Por favor, compruebe si la dirección esta correcta!</span>
-                            </p>
+                          {/* Estado del costo de envío / verificación de ubicación */}
+                          {tipoEntrega === 'delivery' && (
+                            <div className="mt-2 text-left">
+                              {coordenadasCliente ? (
+                                <div className="bg-chefsy-950/60 border border-chefsy-500/40 rounded-xl p-3 flex items-center justify-between gap-2.5 animate-in fade-in duration-200">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-extrabold text-emerald-300 truncate">
+                                        Envío confirmado: {formatearPrecio(costoEnvio)}
+                                      </p>
+                                      {typeof distanciaClienteKm === 'number' && distanciaClienteKm > 0 && (
+                                        <p className="text-[11px] text-slate-400 font-medium">
+                                          Distancia calculada: ~{distanciaClienteKm.toFixed(1)} km del local
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCoordsMapa(coordenadasCliente)
+                                      setMostrarMapa(true)
+                                    }}
+                                    className="text-[11px] font-bold text-chefsy-400 hover:text-white underline underline-offset-2 shrink-0 cursor-pointer"
+                                  >
+                                    Ajustar en mapa
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="bg-[#222222] border border-[#3d3d3d] rounded-xl p-2.5 flex items-center gap-2 text-slate-400 text-xs">
+                                  <AlertCircle size={15} className="text-amber-400 shrink-0" />
+                                  <span className="text-[11px] leading-tight">
+                                    Ubicación pendiente de confirmación en el mapa para calcular el costo de envío
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Alerta de error si el sistema no encontró la dirección tipeada */}
+                          {errorDireccionNoUbicada && (
+                            <div className="mt-2 bg-red-950/50 border border-red-500/50 rounded-xl p-3 text-left animate-in fade-in duration-200">
+                              <div className="flex items-start gap-2.5">
+                                <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                  <p className="text-xs font-bold text-red-200 leading-snug">
+                                    {errorDireccionNoUbicada}
+                                  </p>
+                                  <p className="text-[11px] text-slate-300">
+                                    Arrastrá el marcador a tu casa en el mapa para calcular el valor exacto del viaje.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           )}
 
                           {/* Botón para abrir/cerrar mapa */}
@@ -595,7 +706,7 @@ export default function CartDrawer() {
                                 }
                                 setMostrarMapa(!mostrarMapa)
                               }}
-                              className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                              className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
                             >
                               <Map size={12} />
                               {mostrarMapa ? 'Ocultar mapa' : 'Elegir en el mapa'}
@@ -620,7 +731,7 @@ export default function CartDrawer() {
                                 type="button"
                                 onClick={confirmarUbicacionMapa}
                                 disabled={cargandoMapaDir}
-                                className="w-full mt-2.5 bg-[#252525] hover:bg-[#3d3d3d] text-white text-xs font-bold py-2 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full mt-2.5 bg-[#252525] hover:bg-[#3d3d3d] text-white text-xs font-bold py-2 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                               >
                                 {cargandoMapaDir ? 'Cargando dirección...' : 'Confirmar esta ubicación'}
                               </button>
@@ -633,16 +744,21 @@ export default function CartDrawer() {
                     <div className="mt-3 pb-4">
                       <button
                         type="button"
-                        onClick={() => {
-                          if (tipoEntrega === 'delivery' && !direccionCliente.trim()) {
-                            mostrarAvisoInferior('¡Ingresá tu dirección de envío!')
-                          } else {
-                            setCheckoutStep(3)
-                          }
-                        }}
-                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2"
+                        onClick={handleSiguientePaso2}
+                        disabled={verificandoDireccion}
+                        className="w-full bg-chefsy-500 hover:bg-chefsy-600 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-[0_4px_20px_rgba(42,99,72,0.3)] transition-[background-color,transform] duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                       >
-                        SIGUIENTE PASO <ChevronRight size={18} />
+                        {verificandoDireccion ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <span>Verificando ubicación y envío...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>SIGUIENTE PASO</span>
+                            <ChevronRight size={18} />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -715,10 +831,22 @@ export default function CartDrawer() {
                           type="button"
                           onClick={() => {
                             if (metodoPago === 'sin_especificar') {
-                              mostrarAvisoInferior('¡Elige un método de pago!')
+                              mostrarAvisoInferior('Seleccioná un método de pago')
                               return
                             }
-                            onProcesarCompra((msg) => mostrarAvisoInferior(msg))
+                            if (tipoEntrega === 'delivery' && !coordenadasCliente) {
+                              mostrarAvisoInferior('Por favor confirmá la ubicación en el mapa para calcular el costo de envío')
+                              setCheckoutStep(2)
+                              setMostrarMapa(true)
+                              return
+                            }
+                            onProcesarCompra((msg) => {
+                              mostrarAvisoInferior(msg)
+                              if (tipoEntrega === 'delivery' && !coordenadasCliente) {
+                                setCheckoutStep(2)
+                                setMostrarMapa(true)
+                              }
+                            })
                           }}
                           disabled={procesandoCompra}
                           className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-50"

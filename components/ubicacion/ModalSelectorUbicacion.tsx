@@ -13,6 +13,7 @@ import {
 } from '@/lib/ubicacion'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { Navigation, X } from 'lucide-react'
+import StreetViewFachada from './StreetViewFachada'
 
 const MapaSelector = dynamic(() => import('./MapaSelector'), {
   ssr: false,
@@ -159,20 +160,28 @@ export default function ModalSelectorUbicacion({
           />
 
           {coordenadasSeleccionadas && (
-            <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 space-y-1">
-              <p>
-                <span className="font-medium">Coordenadas:</span>{' '}
-                {formatearCoordenadas(coordenadasSeleccionadas)}
-              </p>
-              <a
-                href={crearEnlaceGoogleMaps(coordenadasSeleccionadas)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-chefsy-700 underline"
-              >
-                Abrir en Google Maps para verificar
-              </a>
-            </div>
+            <>
+              {/* Vista previa de Fachada de Google Street View (Estilo DiDi) */}
+              <StreetViewFachada
+                lat={coordenadasSeleccionadas.latitud}
+                lng={coordenadasSeleccionadas.longitud}
+              />
+
+              <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 space-y-1">
+                <p>
+                  <span className="font-medium">Coordenadas:</span>{' '}
+                  {formatearCoordenadas(coordenadasSeleccionadas)}
+                </p>
+                <a
+                  href={crearEnlaceGoogleMaps(coordenadasSeleccionadas)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-chefsy-700 underline"
+                >
+                  Abrir en Google Maps para verificar
+                </a>
+              </div>
+            </>
           )}
 
           {mensaje && <p className="text-xs text-gray-600">{mensaje}</p>}

@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerEstadoHorarioLocal } from '@/lib/tiempo'
-import { calcularCostoEnvio } from '@/lib/ubicacion'
+import { calcularCostoEnvio, resolverDireccionHumana, esEnlaceOCoordenadas, calcularDistanciaKm, UBICACION_LOCAL } from '@/lib/ubicacion'
 
 // ── Rate limiting en memoria por IP ───────────────────────────────────────────
 const rateLimitIP = new Map<string, { intentos: number; ultimoReset: number }>()
@@ -205,8 +205,14 @@ export async function POST(request: Request) {
     if (body.tipoEntrega === 'delivery') {
       if (body.distanciaKm && typeof body.distanciaKm === 'number' && body.distanciaKm > 0) {
         costoEnvioCalculado = calcularCostoEnvio(body.distanciaKm)
+      } else if (body.coordenadas && typeof body.coordenadas.latitud === 'number' && typeof body.coordenadas.longitud === 'number') {
+        const dist = calcularDistanciaKm(UBICACION_LOCAL, body.coordenadas) * 1.25
+        costoEnvioCalculado = calcularCostoEnvio(dist)
       } else {
-        costoEnvioCalculado = 1500 // Tarifa base mínima para envíos urbanos
+        return NextResponse.json(
+          { error: 'Para pedidos con delivery es obligatorio contar con la ubicación exacta en el mapa para calcular el costo de envío.' },
+          { status: 400 }
+        )
       }
       // Garantizar que ningún delivery cobre menos del piso operativo ($1.500)
       costoEnvioCalculado = Math.max(costoEnvioCalculado, 1500)
@@ -273,9 +279,17 @@ export async function POST(request: Request) {
     }
 
     // ── 11. Inserción Autorizada del Pedido con Valores Auditados ────────────
+    let direccionAuditada = body.direccion || ''
+    if (body.tipoEntrega === 'delivery') {
+      try {
+        direccionAuditada = await resolverDireccionHumana(direccionAuditada, body.coordenadas)
+      } catch (_) {}
+    }
+
     const payload = {
       ...body,
       id: pedidoId,
+      direccion: direccionAuditada,
       total: totalCalculado, // Total verificado por el servidor
       costoEnvio: costoEnvioCalculado, // Costo de envío verificado
       puntos_gastados: totalPuntosAGastar,

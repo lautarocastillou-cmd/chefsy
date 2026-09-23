@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────
 
 import { EstadoPedido, Pedido, TipoEntrega } from '@/tipos'
+import { esEnlaceOCoordenadas } from '@/lib/ubicacion'
 
 export const opcionesTipoEntrega: {
   valor: TipoEntrega
@@ -47,7 +48,10 @@ export function obtenerIconoTipoEntrega(tipoEntrega: TipoEntrega): string {
 export function obtenerResumenEntrega(pedido: Pedido): string {
   if (pedido.tipoEntrega === 'retiro') return 'Retiro en el local'
   if (pedido.tipoEntrega === 'consumo_local') return 'Consumo en el local'
-  return pedido.direccion.trim() || 'Sin dirección'
+  const dir = (pedido.direccion || '').trim()
+  if (!dir) return 'Sin dirección'
+  if (esEnlaceOCoordenadas(dir)) return 'Ubicación en el mapa'
+  return dir
 }
 
 export function esPedidoDelivery(pedido: Pedido): boolean {
