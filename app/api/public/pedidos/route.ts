@@ -8,7 +8,7 @@ import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
 
 // Columnas esenciales para el portal de cadete (excluye ruta_historial para ahorrar 90% de egress)
-const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costoEnvio, metodoPago, pago_confirmado, estado, hora, fecha, productos, observaciones, coordenadas, orden_entrega, en_camino_at, entregado_at, cadete_id, cadete_nombre, tipoEntrega'
+const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costoEnvio, distanciaKm, metodoPago, pago_confirmado, estado, hora, fecha, productos, observaciones, coordenadas, orden_entrega, en_camino_at, entregado_at, cadete_id, cadete_nombre, tipoEntrega'
 
 // GET /api/public/pedidos?cadeteId=paulo
 // Devuelve todos los datos del pedido asignado al cadete (en_cocina, listo, en_camino, entregado)
