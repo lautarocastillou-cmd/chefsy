@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
@@ -171,14 +171,10 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       attributionControl: false,
     })
 
-    // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
+    // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
-      subdomains: CARTO_SUBDOMAINS,
       maxZoom: 20,
-      keepBuffer: 4,
-      updateWhenIdle: false,
-      updateInterval: 100,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)

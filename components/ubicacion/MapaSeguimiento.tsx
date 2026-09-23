@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Pedido } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -94,14 +94,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
         attributionControl: false,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
-      // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
+      // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
       L.tileLayer(CARTO_VOYAGER_URL, {
         attribution: CARTO_ATTRIBUTION,
-        subdomains: CARTO_SUBDOMAINS,
         maxZoom: 20,
-        keepBuffer: 4,
-        updateWhenIdle: false,
-        updateInterval: 100,
       }).addTo(mapa)
 
       L.control.zoom({ position: 'bottomright' }).addTo(mapa)

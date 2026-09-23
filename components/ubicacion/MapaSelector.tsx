@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import type { Map as MapaLeaflet, Marker as MarcadorLeaflet } from 'leaflet'
 import { Coordenadas } from '@/tipos'
-import { CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
+import { CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 
 interface PropsMapaSelector {
   centro: Coordenadas
@@ -67,14 +67,10 @@ export default function MapaSelector({
         return
       }
 
-      // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
+      // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
       L.tileLayer(CARTO_VOYAGER_URL, {
         attribution: CARTO_ATTRIBUTION,
-        subdomains: CARTO_SUBDOMAINS,
         maxZoom: 20,
-        keepBuffer: 4,
-        updateWhenIdle: false,
-        updateInterval: 100,
       }).addTo(mapa)
 
       const marcador = L.marker([posicionInicial.latitud, posicionInicial.longitud], {

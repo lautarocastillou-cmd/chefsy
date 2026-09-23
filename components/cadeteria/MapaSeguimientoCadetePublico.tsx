@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { UBICACION_LOCAL, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
 import { Bike, Navigation, Compass, Layers, LocateFixed, Store } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -84,14 +84,10 @@ export default function MapaSeguimientoCadetePublico({
       attributionControl: false,
     })
 
-    // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
+    // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
-      subdomains: CARTO_SUBDOMAINS,
       maxZoom: 20,
-      keepBuffer: 4,
-      updateWhenIdle: false,
-      updateInterval: 100,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
