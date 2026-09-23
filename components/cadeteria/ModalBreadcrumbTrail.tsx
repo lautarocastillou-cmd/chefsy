@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
 import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
 import { obtenerRutaHistorialPedido } from '@/servicios/supabase/pedidos'
 import {
@@ -303,11 +303,14 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       attributionControl: false,
     })
 
-    // Capa de Mapa CARTO Voyager
+    // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
-      subdomains: 'abcd',
+      subdomains: CARTO_SUBDOMAINS,
       maxZoom: 20,
+      keepBuffer: 4,
+      updateWhenIdle: false,
+      updateInterval: 100,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)

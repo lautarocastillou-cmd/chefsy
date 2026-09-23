@@ -15,12 +15,14 @@ export const CENTRO_POR_DEFECTO: Coordenadas = UBICACION_LOCAL
 
 export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3ul8_1_0d6b5b9afb4cfc068d667127'
 
-// Capa activa: Google Maps HD (ultra fluida a 60 FPS, alto contraste y mínimo consumo de GPU)
-export const MAPA_TILES_URL = 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}'
+// Capa activa: Google Maps HD (ultra fluida a 60 FPS, alto contraste y descargas paralelas en 4 servidores)
+export const MAPA_TILES_URL = 'https://mt{s}.google.com/vt/lyrs=r&x={x}&y={y}&z={z}'
+export const MAPA_SUBDOMAINS = ['0', '1', '2', '3']
 export const MAPA_ATTRIBUTION = '&copy; Google Maps'
 
 export const CARTO_VOYAGER_URL = MAPA_TILES_URL
 export const CARTO_ATTRIBUTION = MAPA_ATTRIBUTION
+export const CARTO_SUBDOMAINS = MAPA_SUBDOMAINS
 
 export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): number {
   const R = 6371 // Radio de la Tierra en km

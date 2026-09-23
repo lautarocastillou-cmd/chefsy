@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, CARTO_SUBDOMAINS } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
@@ -73,6 +73,7 @@ interface CadeteAnimState {
   rumboDestino: number
   startTime: number
   duracion: number
+  terminado?: boolean
 }
 
 export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaGlobalProps) {
@@ -121,28 +122,35 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
     modoCamaraRef.current = modoCamara
   }, [modoCamara])
 
-  // Helper para rotar elementos del marcador en CSS sin recrear el DOM
+  // Helper ultra optimizado para rotar elementos del marcador con caché directa en el nodo
   const aplicarRotacionCadete = useCallback((cadeteId: string, rumbo: number) => {
     const marker = markersRef.current.cadetes[cadeteId]
     if (!marker) return
     const el = marker.getElement()
     if (!el) return
 
-    // 1. Rotar faro delantero y flecha direccional en 360° siguiendo la calle
-    const rotatables = el.querySelectorAll('.cadete-rotatable')
-    rotatables.forEach((item: any) => {
-      if (item.classList.contains('cadete-direction-arrow')) {
-        item.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
-      } else {
-        item.style.transform = `rotate(${rumbo}deg)`
+    let cached = (el as any)._rotCache
+    if (!cached) {
+      cached = {
+        arrow: el.querySelector('.cadete-direction-arrow') as HTMLElement | null,
+        cone: el.querySelector('.cadete-headlight-cone') as HTMLElement | null,
+        moto: el.querySelector('.cadete-moto-flip') as HTMLElement | null,
       }
-    })
+      ;(el as any)._rotCache = cached
+    }
 
-    // 2. Espejar la moto horizontalmente si va al Oeste (NUNCA patas para arriba)
-    const motoIcon = el.querySelector('.cadete-moto-flip') as HTMLElement
-    if (motoIcon) {
+    // 1. Rotar faro delantero y flecha direccional en 360°
+    if (cached.arrow) {
+      cached.arrow.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
+    }
+    if (cached.cone) {
+      cached.cone.style.transform = `rotate(${rumbo}deg)`
+    }
+
+    // 2. Espejar la moto horizontalmente si va al Oeste
+    if (cached.moto) {
       const esOeste = rumbo > 180 && rumbo < 360
-      motoIcon.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
+      cached.moto.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
     }
   }, [])
 
@@ -163,11 +171,14 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       attributionControl: false,
     })
 
-    // Capa CARTO Voyager
+    // Capa HD (Google Maps con 4 subdominios paralelos y buffer extendido)
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
-      subdomains: 'abcd',
+      subdomains: CARTO_SUBDOMAINS,
       maxZoom: 20,
+      keepBuffer: 4,
+      updateWhenIdle: false,
+      updateInterval: 100,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -230,7 +241,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   }, [])
 
 
-  // ── 2. Bucle Global de Animación a 60 FPS (Gliding Multi-Cadete) ────────────
+  // ── 2. Bucle Global de Animación a 60 FPS (Gliding Multi-Cadete Optimizado) ──
   useEffect(() => {
     const loopAnimacion = (timestamp: number) => {
       const states = animStatesRef.current
@@ -238,10 +249,15 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       const focused = focusedIdRef.current
       const map = mapInstanceRef.current
 
-      Object.keys(states).forEach((id) => {
+      const ids = Object.keys(states)
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
         const s = states[id]
         const marker = markersRef.current.cadetes[id]
-        if (!s || !marker) return
+        if (!s || !marker) continue
+
+        // Si ya completó la interpolación, no recalcular ni mutar el DOM innecesariamente
+        if (s.terminado) continue
 
         const tiempoPasado = timestamp - s.startTime
         const progresoCrudo = Math.min(tiempoPasado / s.duracion, 1)
@@ -287,7 +303,11 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         if (focused === id && modoCamaraRef.current === 'cadete' && map) {
           map.panTo([lat, lng], { animate: false })
         }
-      })
+
+        if (progresoCrudo >= 1) {
+          s.terminado = true
+        }
+      }
 
       animFrameRef.current = requestAnimationFrame(loopAnimacion)
     }
@@ -363,6 +383,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           rumboDestino: 0,
           startTime: ahora,
           duracion: duracionAnim,
+          terminado: true,
         }
       } else {
         const distDelta = Math.sqrt(
@@ -381,6 +402,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           estadoActual.rumboDestino = targetHeading
           estadoActual.startTime = ahora
           estadoActual.duracion = duracionAnim
+          estadoActual.terminado = false
         }
       }
 
@@ -494,15 +516,23 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       `
 
       if (markersRef.current.cadetes[cadete.id]) {
-        markersRef.current.cadetes[cadete.id].setIcon(cadeteIcon)
-        markersRef.current.cadetes[cadete.id].setPopupContent(popupContent)
+        const existingMarker = markersRef.current.cadetes[cadete.id]
+        if ((existingMarker as any)._lastHtml !== cadeteHtml) {
+          existingMarker.setIcon(cadeteIcon)
+          ;(existingMarker as any)._lastHtml = cadeteHtml
+          const el = existingMarker.getElement()
+          if (el) delete (el as any)._rotCache
+        }
+        existingMarker.setPopupContent(popupContent)
       } else {
-        markersRef.current.cadetes[cadete.id] = L.marker([targetLat, targetLng], {
+        const newMarker = L.marker([targetLat, targetLng], {
           icon: cadeteIcon,
           zIndexOffset: 300,
         })
           .addTo(map)
           .bindPopup(popupContent)
+        ;(newMarker as any)._lastHtml = cadeteHtml
+        markersRef.current.cadetes[cadete.id] = newMarker
       }
 
       // B) Marcador del Cliente de Entrega
@@ -655,16 +685,19 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           pointer-events: none;
           filter: blur(1px);
           z-index: 1;
+          will-change: transform;
         }
         .cadete-moto-badge {
           position: relative;
           z-index: 2;
           transform-origin: center center;
+          will-change: transform;
         }
         .cadete-direction-arrow {
           position: absolute;
           z-index: 3;
           transform-origin: 50% 27px;
+          will-change: transform;
         }
         .cadete-radar-pulse {
           position: absolute;
@@ -674,6 +707,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           animation: cadete-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
           pointer-events: none;
           z-index: 0;
+          will-change: transform, opacity;
+          transform: translateZ(0);
         }
         @keyframes cadete-pulse {
           0% { transform: scale(0.7); opacity: 0.9; }
