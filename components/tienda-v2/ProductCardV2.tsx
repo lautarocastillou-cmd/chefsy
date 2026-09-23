@@ -33,6 +33,8 @@ export default function ProductCardV2({
 
   const [imgError, setImgError] = useState(false)
   const [expandido, setExpandido] = useState(false)
+  const [puedeTruncar, setPuedeTruncar] = useState(false)
+  const textoRef = useRef<HTMLParagraphElement>(null)
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(index < 8)
 
@@ -64,6 +66,57 @@ export default function ProductCardV2({
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
   const descripcionVisible = meta?.descripcion_publica || detalles.desc
+
+  useEffect(() => {
+    setExpandido(false)
+    setPuedeTruncar(false)
+  }, [prod.id])
+
+  useEffect(() => {
+    const el = textoRef.current
+    if (!el || !descripcionVisible) {
+      setPuedeTruncar(false)
+      return
+    }
+
+    let animationFrameId: number
+
+    const verificarTruncado = () => {
+      if (!expandido) {
+        if (el.clientHeight === 0) return
+        // scrollHeight > clientHeight + 2 detecta con total precisión si el texto
+        // excede las 2 líneas del clamp en la pantalla real del dispositivo
+        const estaCortado = el.scrollHeight > el.clientHeight + 2
+        setPuedeTruncar(estaCortado)
+      }
+    }
+
+    verificarTruncado()
+
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(verificarTruncado).catch(() => {})
+    }
+
+    let observer: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        cancelAnimationFrame(animationFrameId)
+        animationFrameId = requestAnimationFrame(verificarTruncado)
+      })
+      observer.observe(el)
+    } else {
+      window.addEventListener('resize', verificarTruncado)
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+      if (observer) {
+        observer.disconnect()
+      } else {
+        window.removeEventListener('resize', verificarTruncado)
+      }
+    }
+  }, [descripcionVisible, expandido, visible])
 
   const handleClick = () => {
     if (estaCerrado) {
@@ -152,6 +205,7 @@ export default function ProductCardV2({
           {descripcionVisible && (
             <div>
               <p
+                ref={textoRef}
                 className={cn(
                   "text-xs text-slate-400 font-normal leading-relaxed",
                   !expandido ? "line-clamp-2" : "md:line-clamp-2"
@@ -171,7 +225,7 @@ export default function ProductCardV2({
                   </button>
                 )}
               </p>
-              {!expandido && descripcionVisible.length > 60 && (
+              {!expandido && puedeTruncar && (
                 <button
                   type="button"
                   onClick={(e) => {

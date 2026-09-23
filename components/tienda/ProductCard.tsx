@@ -42,6 +42,13 @@ function ProductCard({
   const [visible, setVisible] = useState(index < 4)
   const [imgError, setImgError] = useState(false)
   const [expandido, setExpandido] = useState(false)
+  const [puedeTruncar, setPuedeTruncar] = useState(false)
+  const textoRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    setExpandido(false)
+    setPuedeTruncar(false)
+  }, [prod.id])
 
   useEffect(() => {
     if (index < 4) return
@@ -73,6 +80,50 @@ function ProductCard({
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
   const descripcionVisible = meta?.descripcion_publica || detalles.desc
+
+  useEffect(() => {
+    const el = textoRef.current
+    if (!el || !descripcionVisible) {
+      setPuedeTruncar(false)
+      return
+    }
+
+    let animationFrameId: number
+
+    const verificarTruncado = () => {
+      if (!expandido) {
+        if (el.clientHeight === 0) return
+        const estaCortado = el.scrollHeight > el.clientHeight + 2
+        setPuedeTruncar(estaCortado)
+      }
+    }
+
+    verificarTruncado()
+
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(verificarTruncado).catch(() => {})
+    }
+
+    let observer: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        cancelAnimationFrame(animationFrameId)
+        animationFrameId = requestAnimationFrame(verificarTruncado)
+      })
+      observer.observe(el)
+    } else {
+      window.addEventListener('resize', verificarTruncado)
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+      if (observer) {
+        observer.disconnect()
+      } else {
+        window.removeEventListener('resize', verificarTruncado)
+      }
+    }
+  }, [descripcionVisible, expandido, visible])
 
   // Cálculo de Descuento si existe precio anterior / promocional
   const precioAnterior = (meta as any)?.precio_anterior || (prod as any)?.precio_anterior
@@ -226,6 +277,7 @@ function ProductCard({
         {descripcionVisible && estiloTarjeta !== 'compacto_lista' ? (
           <div className="mt-1">
             <p
+              ref={textoRef}
               className={cn(
                 "text-[11px] sm:text-xs md:text-sm text-slate-300/90 font-medium leading-snug",
                 !expandido ? "line-clamp-2" : "md:line-clamp-2"
@@ -245,7 +297,7 @@ function ProductCard({
                 </button>
               )}
             </p>
-            {!expandido && descripcionVisible.length > 60 && (
+            {!expandido && puedeTruncar && (
               <button
                 type="button"
                 onClick={(e) => {
