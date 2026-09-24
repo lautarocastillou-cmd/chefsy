@@ -55,12 +55,17 @@ export async function POST(request: Request) {
         delete payload.envioManual
         delete payload.turno_tipo
 
-        // 1. Ejecutar transacción de puntos si aplica
+        // 1. Ejecutar transacción de puntos si aplica (con validación de cotas de seguridad)
         if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
+          const puntosAGastar = Math.max(0, Math.min(Number(payload.puntos_gastados) || 0, 50000))
+          // Máximo de puntos ganables limitado al 20% del total para prevenir inyección de saldo infinito
+          const maxPuntosGanables = Math.max(10, Math.floor((Number(payload.total) || 0) * 0.2))
+          const puntosAGanar = Math.max(0, Math.min(Number(payload.puntos_ganados) || 0, maxPuntosGanables))
+
           const { error: rpcError } = await supabaseAdmin.rpc('procesar_compra_puntos', {
             p_cliente_id: payload.cliente_id,
-            p_puntos_a_gastar: payload.puntos_gastados || 0,
-            p_puntos_a_ganar: payload.puntos_ganados || 0
+            p_puntos_a_gastar: puntosAGastar,
+            p_puntos_a_ganar: puntosAGanar
           })
           
           if (rpcError) {
@@ -447,29 +452,47 @@ export async function POST(request: Request) {
       }
 
       case 'actualizar_orden_entrega': {
+        if (rol !== 'admin' && rol !== 'cajero' && rol !== 'cadete') {
+          return NextResponse.json({ error: 'Operación no autorizada.' }, { status: 403 })
+        }
         const { id, orden_entrega } = body
         if (!id) {
           return NextResponse.json({ error: 'ID de pedido requerido.' }, { status: 400 })
         }
-        const { error } = await supabaseAdmin
+        let query = supabaseAdmin
           .from('pedidos')
           .update({ orden_entrega: orden_entrega ?? null })
           .eq('id', id)
 
+        // Seguridad estricta: un cadete solo puede reordenar sus propios pedidos asignados
+        if (rol === 'cadete') {
+          query = query.eq('cadete_id', sesion.usuario)
+        }
+
+        const { error } = await query
         if (error) throw error
         return NextResponse.json({ ok: true })
       }
 
       case 'actualizar_ordenes_cadete': {
+        if (rol !== 'admin' && rol !== 'cajero' && rol !== 'cadete') {
+          return NextResponse.json({ error: 'Operación no autorizada.' }, { status: 403 })
+        }
         const { pedidosOrdenados } = body
         if (!Array.isArray(pedidosOrdenados)) {
           return NextResponse.json({ error: 'pedidosOrdenados inválido.' }, { status: 400 })
         }
         for (const item of pedidosOrdenados) {
-          await supabaseAdmin
+          if (!item?.id) continue
+          let query = supabaseAdmin
             .from('pedidos')
             .update({ orden_entrega: item.orden_entrega ?? null })
             .eq('id', item.id)
+
+          if (rol === 'cadete') {
+            query = query.eq('cadete_id', sesion.usuario)
+          }
+          await query
         }
         return NextResponse.json({ ok: true })
       }

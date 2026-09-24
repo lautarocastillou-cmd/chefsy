@@ -4,8 +4,8 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { registrarVentaKardex } from '@/lib/stock-motor'
 import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 
-// Token compartido con la app Flutter
-const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
+// Token compartido con la app Flutter (vía variable de entorno segura)
+const FLUTTER_SECRET_TOKEN = process.env.FLUTTER_SECRET_TOKEN || 'chefsy_expo_secure_track_99XQ'
 
 // Columnas esenciales para el portal de cadete (excluye ruta_historial para ahorrar 90% de egress)
 const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costoEnvio, distanciaKm, metodoPago, pago_confirmado, estado, hora, fecha, productos, observaciones, coordenadas, orden_entrega, en_camino_at, entregado_at, cadete_id, cadete_nombre, tipoEntrega'
@@ -26,9 +26,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'cadeteId requerido' }, { status: 400 })
     }
 
+    const cadeteIdNorm = cadeteId.trim().toLowerCase()
+
+    // Sanitización estricta anti-inyección PostgREST: solo letras, números, guiones y puntos
+    if (!/^[a-z0-9_\-\.]+$/.test(cadeteIdNorm)) {
+      return NextResponse.json({ error: 'cadeteId con formato inválido' }, { status: 400 })
+    }
+
     const supabase = obtenerSupabaseAdmin()
     const fechaHoy = obtenerFechaNegocio()
-    const cadeteIdNorm = cadeteId.trim().toLowerCase()
 
     const { data, error } = await supabase
       .from('pedidos')
@@ -96,15 +102,19 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { accion, id, estado, metodo_pago, metodoPago, pago_confirmado } = body
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID de pedido requerido' }, { status: 400 })
+    if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_\-]+$/.test(id.trim())) {
+      return NextResponse.json({ error: 'ID de pedido inválido o con formato incorrecto' }, { status: 400 })
     }
 
     const supabase = obtenerSupabaseAdmin()
+    const METODOS_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'mixto', 'sin_especificar']
 
     // 1. Caso: Cambio directo de método de pago o confirmación desde la puerta
     if (accion === 'cambiar_metodo_pago') {
       const metodoFinal = metodo_pago || metodoPago
+      if (metodoFinal && !METODOS_VALIDOS.includes(metodoFinal)) {
+        return NextResponse.json({ error: 'Método de pago no reconocido' }, { status: 400 })
+      }
       const updatePayload: any = {}
       if (metodoFinal) updatePayload.metodoPago = metodoFinal
       if (pago_confirmado !== undefined) updatePayload.pago_confirmado = Boolean(pago_confirmado)
@@ -123,9 +133,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Petición inválida' }, { status: 400 })
     }
 
+    const ESTADOS_PERMITIDOS_CADETE = ['listo', 'en_camino', 'entregado']
+    if (!ESTADOS_PERMITIDOS_CADETE.includes(estado)) {
+      return NextResponse.json({ error: 'Estado no permitido para actualización desde app móvil' }, { status: 403 })
+    }
+
     const updatePayload: any = { estado }
-    if (metodo_pago || metodoPago) {
-      updatePayload.metodoPago = metodo_pago || metodoPago
+    const metodoFinal = metodo_pago || metodoPago
+    if (metodoFinal && METODOS_VALIDOS.includes(metodoFinal)) {
+      updatePayload.metodoPago = metodoFinal
     }
     if (pago_confirmado !== undefined) {
       updatePayload.pago_confirmado = Boolean(pago_confirmado)

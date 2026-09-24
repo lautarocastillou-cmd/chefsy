@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
-// Token compartido con la app Flutter
-const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
+// Token compartido con la app Flutter (vía variable de entorno)
+const FLUTTER_SECRET_TOKEN = process.env.FLUTTER_SECRET_TOKEN || 'chefsy_expo_secure_track_99XQ'
 
 // GET /api/public/cadetes
 // Devuelve la lista de cadetes activos para que la app Flutter llene el selector dinámicamente.

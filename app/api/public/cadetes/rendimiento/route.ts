@@ -4,7 +4,7 @@ import { obtenerFechaNegocio, obtenerRangoSemanaISO } from '@/lib/tiempo'
 import { consolidarMetricasCadetes, MetricasCadeteConsolidadas } from '@/lib/telemetriaCadetes'
 import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 
-const FLUTTER_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
+const FLUTTER_SECRET_TOKEN = process.env.FLUTTER_SECRET_TOKEN || 'chefsy_expo_secure_track_99XQ'
 
 interface CadeteItemRanking {
   posicion: number
