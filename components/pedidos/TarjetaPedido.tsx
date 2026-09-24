@@ -281,16 +281,27 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     }
   }
 
-  const imprimirSilencioso = async (tipo: 'ticket' | 'cocina') => {
+  const imprimirSilencioso = (tipo: 'ticket' | 'cocina') => {
+    // 1. Cerrar el modal al instante (0ms)
     setModalImpresion(false)
-    await gestorImpresora.imprimirPedido(pedido, tipo)
+
+    // 2. Avance inmediato y optimista a "en_cocina" si el pedido es nuevo
     if (pedido.estado === 'nuevo') {
       try {
-        await cambiarEstado(pedido.id, 'en_cocina')
+        cambiarEstado(pedido.id, 'en_cocina')
       } catch (err) {
         console.error('Error auto-avanzando estado al imprimir:', err)
       }
     }
+
+    // 3. Disparar la orden de impresión completamente desacoplada en segundo plano
+    // Damos un micro-respiro (50ms) para que React desmonte el modal y
+    // pinte la tarjeta actualizada antes de que el navegador atienda la impresión
+    setTimeout(() => {
+      gestorImpresora.imprimirPedido(pedido, tipo).catch(err => {
+        console.error('Error en proceso de impresión en background:', err)
+      })
+    }, 50)
   }
 
   const copiarLinkSeguimientoConAutoAvance = async () => {

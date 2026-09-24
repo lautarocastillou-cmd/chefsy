@@ -357,17 +357,6 @@ class GestorImpresoraTermica {
       iframe.className = 'chefsy-print-iframe'
       // No usar width: 0 o display: none para evitar que Chrome bloquee el print
       iframe.style.cssText = 'position:fixed;width:400px;height:400px;bottom:-9999px;left:-9999px;border:0;opacity:0.01;pointer-events:none;'
-      document.body.appendChild(iframe)
-
-      const doc = iframe.contentWindow?.document
-      if (!doc) {
-        window.print()
-        return
-      }
-
-      doc.open()
-      doc.write(html)
-      doc.close()
 
       let impreso = false
       const ejecutarPrint = () => {
@@ -381,13 +370,16 @@ class GestorImpresoraTermica {
         }
       }
 
-      // Disparar cuando cargue el documento interno
+      // Con srcdoc, onload se dispara casi de inmediato tras el parseo (~10ms)
       iframe.onload = () => {
-        setTimeout(ejecutarPrint, 100)
+        setTimeout(ejecutarPrint, 30)
       }
 
-      // Respaldo por si onload no dispara tras doc.close()
-      setTimeout(ejecutarPrint, 250)
+      iframe.srcdoc = html
+      document.body.appendChild(iframe)
+
+      // Respaldo de seguridad rápido por si el evento onload no dispara
+      setTimeout(ejecutarPrint, 120)
 
       // Remover iframe después de que termine
       setTimeout(() => {
