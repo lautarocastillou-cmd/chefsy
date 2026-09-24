@@ -370,7 +370,10 @@ export default function CartDrawer() {
       />
       
       <div 
-        className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl h-[92vh] sm:h-full flex flex-col z-10 rounded-t-[28px] sm:rounded-none border-t sm:border-t-0 sm:border-l border-[#3d3d3d] will-change-transform transform-gpu animate-in slide-in-from-bottom sm:slide-in-from-right duration-350"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Carrito de compras"
+        className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl h-[92vh] sm:h-full flex flex-col z-10 rounded-t-[28px] sm:rounded-none border-t sm:border-t-0 sm:border-l border-[#3d3d3d] will-change-transform transform-gpu animate-in slide-in-from-bottom sm:slide-in-from-right duration-350 overscroll-contain"
         style={{
           transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
           animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
@@ -391,6 +394,7 @@ export default function CartDrawer() {
           <button
             onClick={onCerrar}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] transition-colors focus:outline-none cursor-pointer"
+            aria-label="Cerrar carrito"
           >
             <X size={18} />
           </button>
@@ -404,7 +408,7 @@ export default function CartDrawer() {
               Tu carrito está vacío.<br />Agregá algunos platos del menú.
             </div>
           ) : !mostrarCheckout ? (
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto scrollbar-hide overscroll-contain p-5 space-y-4">
               {carrito.map(item => (
                 <ItemCarritoFila
                   key={item.idCart}
@@ -416,7 +420,7 @@ export default function CartDrawer() {
             </div>
           ) : (
             /* --- FORMULARIO DE CHECKOUT (STEPPER) --- */
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-5">
+            <div className="flex-1 overflow-y-auto scrollbar-hide overscroll-contain p-5">
               <form 
                 onSubmit={(e) => { 
                   e.preventDefault()

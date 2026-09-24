@@ -21,6 +21,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
     if (totalProductosCarrito > prevTotalRef.current) {
       setPopAnimado(true)
       const t = setTimeout(() => setPopAnimado(false), 600)
+      prevTotalRef.current = totalProductosCarrito
       return () => clearTimeout(t)
     }
     prevTotalRef.current = totalProductosCarrito
@@ -86,6 +87,14 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
 
         <button 
           onClick={() => onNavClick('profile')}
+          onMouseEnter={() => {
+            import('@/components/tienda/ModalPerfilCliente')
+            import('@/components/tienda/ModalHistorialPedidos')
+          }}
+          onTouchStart={() => {
+            import('@/components/tienda/ModalPerfilCliente')
+            import('@/components/tienda/ModalHistorialPedidos')
+          }}
           className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'profile' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
           <User size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />

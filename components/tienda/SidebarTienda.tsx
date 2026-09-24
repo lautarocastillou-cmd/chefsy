@@ -77,11 +77,14 @@ export default function SidebarTienda({
   const [pedidosActivos, setPedidosActivos] = useState<any[]>([])
   const [mostrarQuienesSomosModal, setMostrarQuienesSomosModal] = useState(false)
 
-  // Cargar pedidos activos del cliente para acceso rápido de rastreo
+  // Cargar pedidos activos del cliente y prefetch de modales
   useEffect(() => {
     if (abierto) {
       const activos = leerTodosPedidosActivos()
       setPedidosActivos(activos)
+      // Prefetch diferido en background para apertura a 0ms
+      import('@/components/tienda/ModalPerfilCliente').catch(() => {})
+      import('@/components/tienda/ModalHistorialPedidos').catch(() => {})
     }
   }, [abierto])
 

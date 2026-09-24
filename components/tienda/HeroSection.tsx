@@ -73,6 +73,10 @@ export default function HeroSection(props: HeroSectionProps) {
                 if (usuario) setMostrarPerfil(true)
                 else setMostrarLogin(true)
               }}
+              onMouseEnter={() => {
+                import('@/components/tienda/ModalPerfilCliente')
+                import('@/components/tienda/ModalHistorialPedidos')
+              }}
               className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-colors cursor-pointer border border-white/10 shrink-0"
               title={usuario ? `Mi Perfil (${perfil?.nombre || 'Cliente'})` : 'Iniciar Sesión'}
             >

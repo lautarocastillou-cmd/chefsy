@@ -71,6 +71,7 @@ export default function TiendaDesktop() {
     if (totalProductosCarrito > prevTotalRef.current) {
       setPopAnimado(true)
       const t = setTimeout(() => setPopAnimado(false), 600)
+      prevTotalRef.current = totalProductosCarrito
       return () => clearTimeout(t)
     }
     prevTotalRef.current = totalProductosCarrito
