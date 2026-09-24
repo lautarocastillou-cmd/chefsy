@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense, useRef } from 'react'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -62,6 +62,19 @@ export default function TiendaDesktop() {
     pedidoCompletado,
     setPedidoCompletado
   } = usarCarrito()
+
+  const [popAnimado, setPopAnimado] = useState(false)
+  const prevTotalRef = useRef(totalProductosCarrito)
+
+  // Micro-pop al añadir productos al carrito
+  useEffect(() => {
+    if (totalProductosCarrito > prevTotalRef.current) {
+      setPopAnimado(true)
+      const t = setTimeout(() => setPopAnimado(false), 600)
+      return () => clearTimeout(t)
+    }
+    prevTotalRef.current = totalProductosCarrito
+  }, [totalProductosCarrito])
 
   useEffect(() => {
     const tick = () => setAnimatedWordIndex(prev => (prev + 1) % animatedWords.length)
@@ -358,7 +371,9 @@ export default function TiendaDesktop() {
             >
               <div className="relative flex items-center">
                 <ShoppingCart size={24} className="text-white group-hover:scale-110 transition-transform" />
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm">
+                <span className={`absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm transition-all duration-300 ${
+                  popAnimado ? 'scale-150 bg-emerald-400 text-black shadow-[0_0_15px_rgba(52,211,153,0.9)] animate-bounce' : 'scale-100'
+                }`}>
                   {totalProductosCarrito}
                 </span>
               </div>

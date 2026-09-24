@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 
 interface HeroParallax3DProps {
@@ -31,10 +31,49 @@ export default function HeroParallax3D({
   const [rotateY, setRotateY] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [esTactilOReducido, setEsTactilOReducido] = useState(false)
 
-  // Manejo del parallax 3D con cursor / touch
+  // Detectar si el dispositivo es táctil o tiene prefers-reduced-motion
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const touchQuery = window.matchMedia('(pointer: coarse)')
+
+    const evaluarPreferencia = () => {
+      const tieneTouch = 
+        touchQuery.matches || 
+        ('ontouchstart' in window) || 
+        (navigator.maxTouchPoints > 0)
+      const tieneReducedMotion = motionQuery.matches
+      setEsTactilOReducido(tieneTouch || tieneReducedMotion)
+    }
+
+    evaluarPreferencia()
+
+    try {
+      motionQuery.addEventListener('change', evaluarPreferencia)
+      touchQuery.addEventListener('change', evaluarPreferencia)
+    } catch {
+      // Fallback para compatibilidad con navegadores antiguos
+      motionQuery.addListener?.(evaluarPreferencia)
+      touchQuery.addListener?.(evaluarPreferencia)
+    }
+
+    return () => {
+      try {
+        motionQuery.removeEventListener('change', evaluarPreferencia)
+        touchQuery.removeEventListener('change', evaluarPreferencia)
+      } catch {
+        motionQuery.removeListener?.(evaluarPreferencia)
+        touchQuery.removeListener?.(evaluarPreferencia)
+      }
+    }
+  }, [])
+
+  // Manejo del parallax 3D con cursor / mouse (desactivado en táctil o reduced motion)
   const handleMove = useCallback((clientX: number, clientY: number) => {
-    if (!containerRef.current) return
+    if (esTactilOReducido || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     const centerX = rect.left + rect.width / 2
     const centerY = rect.top + rect.height / 2
@@ -46,10 +85,10 @@ export default function HeroParallax3D({
     // Máxima inclinación 16 grados
     setRotateX(-percentY * 16)
     setRotateY(percentX * 16)
-  }, [])
+  }, [esTactilOReducido])
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // Solo aplicar inclinación 3D en pantallas de escritorio con ratón
+    if (esTactilOReducido) return
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
       setIsHovered(true)
       handleMove(e.clientX, e.clientY)
@@ -73,7 +112,7 @@ export default function HeroParallax3D({
         (isVideoBg || bgImage) ? 'bg-transparent' : 'bg-[#0d0d0d]'
       }`}
     >
-      {/* Estilo de levitación ligera para la imagen */}
+      {/* Estilo de levitación ligera para la imagen (se desactiva con prefers-reduced-motion) */}
       <style jsx>{`
         @keyframes floatLevitate {
           0% { transform: translateY(0px); }
@@ -83,18 +122,26 @@ export default function HeroParallax3D({
         .anim-float {
           animation: floatLevitate 5s ease-in-out infinite;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .anim-float {
+            animation: none;
+          }
+        }
       `}</style>
 
       <div className="relative z-10 w-full max-w-md mx-auto flex flex-col items-center justify-center py-2">
         
         {/* Contenedor de la Imagen del Producto */}
         <div 
-          className="relative w-full max-w-[240px] sm:max-w-[270px] aspect-square mx-auto my-2 transition-transform duration-200 ease-out"
+          className="relative w-full max-w-[240px] sm:max-w-[270px] aspect-square mx-auto my-2 transition-all duration-300 ease-out will-change-transform"
           style={{
-            transform: isHovered ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)` : 'none'
+            transform: !esTactilOReducido && isHovered 
+              ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)` 
+              : 'none',
+            opacity: 1
           }}
         >
-          {/* Imagen principal con levitación sobria y rápida */}
+          {/* Imagen principal con levitación sobria */}
           <div className="w-full h-full relative anim-float">
             <Image
               src={imgSrc}
@@ -103,7 +150,7 @@ export default function HeroParallax3D({
               priority
               sizes="(max-width: 768px) 100vw, 320px"
               onError={() => setImgError(true)}
-              className="object-contain"
+              className="object-contain transition-opacity duration-300"
               style={{
                 objectPosition: `${heroPosX}% ${heroPosY}%`,
                 transform: `scale(${heroScale / 100})`

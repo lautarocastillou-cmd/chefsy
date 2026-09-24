@@ -30,6 +30,7 @@ import dynamic from 'next/dynamic'
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
 const ModalLogout = dynamic(() => import('@/components/auth/ModalLogout'), { ssr: false })
 const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHistorialPedidos'), { ssr: false })
+const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfilCliente'), { ssr: false })
 
 const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
 const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
@@ -49,6 +50,7 @@ export default function TiendaMobile() {
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [mostrarConfirmLogout, setMostrarConfirmLogout] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
+  const [mostrarPerfil, setMostrarPerfil] = useState(false)
   const [sidebarAbierto, setSidebarAbierto] = useState(false)
 
   const [selectorAbierto, setSelectorAbierto] = useState(false)
@@ -212,8 +214,11 @@ export default function TiendaMobile() {
         scrollHaciaCategoria(null)
       }, 100)
     } else if (tab === 'profile') {
-      setActiveTab('home')
-      scrollHaciaCategoria(null)
+      if (usuario) {
+        setMostrarPerfil(true)
+      } else {
+        setMostrarLogin(true)
+      }
     } else {
       setActiveTab(tab)
       setBusqueda('')
@@ -446,6 +451,17 @@ export default function TiendaMobile() {
         />
       )}
 
+      {mostrarPerfil && (
+        <ModalPerfilCliente
+          abierto={mostrarPerfil}
+          onCerrar={() => setMostrarPerfil(false)}
+          onAbrirHistorial={() => {
+            setMostrarPerfil(false)
+            setMostrarHistorial(true)
+          }}
+        />
+      )}
+
       {/* Barra Lateral (Sidebar) Mobile con Navegación de Categorías y Soporte */}
       <SidebarTienda
         abierto={sidebarAbierto}
@@ -453,6 +469,9 @@ export default function TiendaMobile() {
         categorias={categoriasActivas}
         categoriaSeleccionada={categoriaActivaNav}
         onSeleccionarCategoria={handleSeleccionarCategoria}
+        onAbrirPerfil={() => setMostrarPerfil(true)}
+        onAbrirLogin={() => setMostrarLogin(true)}
+        onAbrirHistorial={() => setMostrarHistorial(true)}
       />
 
       <BotonPedidoFlotante />

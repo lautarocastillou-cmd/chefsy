@@ -65,9 +65,19 @@ export default function HeroSection(props: HeroSectionProps) {
             <span className="font-bebas text-2xl md:text-3xl text-white tracking-wider">CHEFSY</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <BotonUbicacionLocal />
             <BotonWhatsAppHeader />
+            <button
+              onClick={() => {
+                if (usuario) setMostrarPerfil(true)
+                else setMostrarLogin(true)
+              }}
+              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-colors cursor-pointer border border-white/10 shrink-0"
+              title={usuario ? `Mi Perfil (${perfil?.nombre || 'Cliente'})` : 'Iniciar Sesión'}
+            >
+              <User size={18} className={usuario ? 'text-chefsy-400' : 'text-slate-300'} />
+            </button>
           </div>
         </div>
       </header>
@@ -85,6 +95,9 @@ export default function HeroSection(props: HeroSectionProps) {
           props.onSeleccionarCategoria(id)
           if (id && props.busqueda) props.onBusquedaChange('')
         }}
+        onAbrirPerfil={() => setMostrarPerfil(true)}
+        onAbrirLogin={() => setMostrarLogin(true)}
+        onAbrirHistorial={() => setMostrarHistorial(true)}
       />
 
       {mostrarLogin && (

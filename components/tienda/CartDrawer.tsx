@@ -359,19 +359,28 @@ export default function CartDrawer() {
 
   return (
     <div 
-      className="fixed inset-0 z-[99999] flex justify-end"
+      className="fixed inset-0 z-[99999] flex flex-col justify-end sm:flex-row sm:justify-end"
       onWheel={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
       data-lenis-prevent="true"
     >
       <div 
-        className="fixed inset-0 bg-black/75 transition-opacity duration-200 ease-out" 
+        className="fixed inset-0 bg-black/75 transition-opacity duration-300 ease-out animate-in fade-in" 
         onClick={onCerrar}
       />
       
-      <div className="relative w-full max-w-md bg-[#1c1c1c] shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-right duration-200 ease-out border-l border-[#3d3d3d] will-change-transform transform-gpu">
+      <div 
+        className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl h-[92vh] sm:h-full flex flex-col z-10 rounded-t-[28px] sm:rounded-none border-t sm:border-t-0 sm:border-l border-[#3d3d3d] will-change-transform transform-gpu animate-in slide-in-from-bottom sm:slide-in-from-right duration-350"
+        style={{
+          transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+      >
+        {/* Barra pill handle táctil para mobile (Bottom Sheet nativo iOS/Android) */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Cabecera del Drawer */}
-        <div className="px-5 py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
+        <div className="px-5 py-3.5 sm:py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart className="text-chefsy-500" size={20} />
             <h2 className="font-extrabold text-white text-sm">Tu Carrito</h2>
@@ -381,7 +390,7 @@ export default function CartDrawer() {
           </div>
           <button
             onClick={onCerrar}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] transition-colors focus:outline-none"
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] transition-colors focus:outline-none cursor-pointer"
           >
             <X size={18} />
           </button>

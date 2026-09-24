@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Home, Search, User, ShoppingCart } from 'lucide-react'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { formatearPrecio } from '@/lib/utils'
@@ -13,6 +13,18 @@ interface BottomNavProps {
 export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   const { totalProductosCarrito, subtotalCarrito } = usarCarrito()
   const [esGrande, setEsGrande] = useState(true)
+  const [popAnimado, setPopAnimado] = useState(false)
+  const prevTotalRef = useRef(totalProductosCarrito)
+
+  // Micro-pop al añadir productos al carrito
+  useEffect(() => {
+    if (totalProductosCarrito > prevTotalRef.current) {
+      setPopAnimado(true)
+      const t = setTimeout(() => setPopAnimado(false), 600)
+      return () => clearTimeout(t)
+    }
+    prevTotalRef.current = totalProductosCarrito
+  }, [totalProductosCarrito])
 
   useEffect(() => {
     let ultimoScrollY = window.scrollY
@@ -53,8 +65,8 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
     <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center pointer-events-none px-4 transition-all duration-300">
       <div className={`pointer-events-auto bg-[#161616] border border-white/15 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) flex items-center justify-around ${
         esGrande 
-          ? 'w-full max-w-[230px] py-2 px-4 scale-100' 
-          : 'w-full max-w-[185px] py-1.5 px-3 scale-95 opacity-90 bg-[#121212] border-white/20'
+          ? 'w-full max-w-[280px] py-2 px-3 sm:px-4 scale-100' 
+          : 'w-full max-w-[220px] py-1.5 px-2.5 sm:px-3 scale-95 opacity-90 bg-[#121212] border-white/20'
       }`}>
         <button 
           onClick={() => onNavClick('home')}
@@ -73,13 +85,23 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
         </button>
 
         <button 
+          onClick={() => onNavClick('profile')}
+          className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'profile' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
+        >
+          <User size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
+          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Perfil</span>
+        </button>
+
+        <button 
           onClick={() => onNavClick('cart')}
           className={`relative flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'cart' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
           <div className="relative">
             <ShoppingCart size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
             {totalProductosCarrito > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-chefsy-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#161616] shadow-sm animate-pulse">
+              <span className={`absolute -top-1.5 -right-2 bg-emerald-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#161616] shadow-sm transition-transform duration-300 ${
+                popAnimado ? 'scale-135 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-bounce' : 'scale-100'
+              }`}>
                 {totalProductosCarrito}
               </span>
             )}

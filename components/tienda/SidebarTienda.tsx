@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import {
   Menu,
@@ -18,7 +19,9 @@ import {
   Info,
   ArrowRight,
   ChefHat,
-  Utensils
+  Utensils,
+  User,
+  Receipt
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -53,6 +56,9 @@ interface SidebarTiendaProps {
   categorias: CategoriaCatalogo[]
   categoriaSeleccionada: string | null
   onSeleccionarCategoria: (id: string | null) => void
+  onAbrirPerfil?: () => void
+  onAbrirLogin?: () => void
+  onAbrirHistorial?: () => void
 }
 
 export default function SidebarTienda({
@@ -61,9 +67,13 @@ export default function SidebarTienda({
   categorias,
   categoriaSeleccionada,
   onSeleccionarCategoria,
+  onAbrirPerfil,
+  onAbrirLogin,
+  onAbrirHistorial,
 }: SidebarTiendaProps) {
   const { configuracion } = usarConfiguracionTienda()
   const { turnoActivo, esDomingoCerrado } = usarCarrito()
+  const { usuario, perfil } = usarClienteAuth()
   const [pedidosActivos, setPedidosActivos] = useState<any[]>([])
   const [mostrarQuienesSomosModal, setMostrarQuienesSomosModal] = useState(false)
 
@@ -174,6 +184,53 @@ export default function SidebarTienda({
           data-lenis-prevent="true"
           className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10"
         >
+          {/* SECCIÓN USUARIO / MI CUENTA */}
+          <div className="p-3 bg-white/[0.04] border border-white/10 rounded-2xl">
+            {usuario ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                    {perfil?.nombre?.charAt(0).toUpperCase() || 'C'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">
+                      {perfil?.nombre || 'Mi Perfil'}
+                    </p>
+                    <p className="text-[10px] text-emerald-400 font-semibold">
+                      {perfil?.puntos_actuales ?? 0} pts Chefsy
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCerrar()
+                    onAbrirPerfil?.()
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-white transition-colors cursor-pointer shrink-0"
+                >
+                  Ver Perfil
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-white">¿Tenés cuenta Chefsy?</p>
+                  <p className="text-[10px] text-slate-400">Sumá puntos con tus pedidos</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCerrar()
+                    onAbrirLogin?.()
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[11px] font-bold text-white transition-colors cursor-pointer shrink-0"
+                >
+                  Ingresar
+                </button>
+              </div>
+            )}
+          </div>
           {/* SECCIÓN 1: Pedidos Activos (si hay alguno en camino) */}
           {pedidosActivos.length > 0 && (
             <div>
