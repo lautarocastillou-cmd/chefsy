@@ -10,6 +10,7 @@ import VisorFotosFullscreen from './VisorFotosFullscreen'
 import ImagenProgresiva from './ImagenProgresiva'
 import { esFotoVista, registrarFotoVista } from '@/lib/visorCache'
 import { mostrarCartel } from '@/lib/notificaciones'
+import { dispararVueloAlCarrito } from '@/lib/vueloCarrito'
 
 interface ModalPersonalizacionProps {
   producto: ProductoCatalogo
@@ -156,7 +157,7 @@ export default function ModalPersonalizacion({
         {/* Modal Panel */}
         <div 
           className={`relative w-full h-[100dvh] sm:h-auto bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[88vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 fade-in duration-200 pointer-events-auto ${
-            tieneFotos ? 'sm:max-w-4xl lg:max-w-5xl' : 'sm:max-w-md'
+            tieneFotos ? 'sm:max-w-2xl lg:max-w-3xl' : 'sm:max-w-md'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -167,7 +168,7 @@ export default function ModalPersonalizacion({
               {/* ─────────────────────────────────────────────────────────────
                   COLUMNA FOTOS (Desktop: izquierda / Mobile: Hero superior)
                   ───────────────────────────────────────────────────────────── */}
-              <div className="sm:col-span-6 lg:col-span-7 flex flex-col justify-between bg-[#141414] border-b sm:border-b-0 sm:border-r border-[#2d2d2d] relative shrink-0">
+              <div className="sm:col-span-6 lg:col-span-6 flex flex-col justify-between bg-[#141414] border-b sm:border-b-0 sm:border-r border-[#2d2d2d] relative shrink-0">
                 
                 {/* ── VISTA MOBILE: HERO CAROUSEL ── */}
                 <div className="sm:hidden relative w-full aspect-[4/3] max-h-[300px] bg-[#111] overflow-hidden group">
@@ -276,23 +277,34 @@ export default function ModalPersonalizacion({
                 </div>
 
                 {/* ── VISTA DESKTOP: FOTOGRAFÍA PROTAGONISTA Y MINIATURAS ── */}
-                <div className="hidden sm:flex sm:flex-col justify-between h-full p-6">
+                <div className="hidden sm:flex sm:flex-col justify-between h-full p-4 sm:p-5">
                   {/* Foto Principal en HD */}
                   <div
-                    className="relative w-full aspect-[4/3] lg:aspect-auto lg:h-[440px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-lg flex items-center justify-center"
+                    className="relative w-full aspect-square sm:aspect-auto sm:h-[350px] lg:h-[370px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-lg flex items-center justify-center"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       setLightboxAbierto(true)
                     }}
                   >
+                    {/* Ambient Glow detrás de la imagen para eliminar bordes vacíos */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <Image
+                        src={optimizarUrlImagen(fotoActiva, 100, true)}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover blur-2xl opacity-25 scale-125"
+                      />
+                    </div>
+
                     <ImagenProgresiva
                       src={fotoActiva}
                       alt={`${producto.nombre} - Foto ${indiceFoto + 1}`}
                       anchoDeseado={800}
                       priority
                       objectFit="contain"
-                      sizes="(max-width: 1024px) 50vw, 600px"
+                      sizes="(max-width: 1024px) 50vw, 420px"
                       onLoadSuccess={() => registrarFotoVista(fotoActiva)}
                     />
 
@@ -377,7 +389,7 @@ export default function ModalPersonalizacion({
               {/* ─────────────────────────────────────────────────────────────
                   COLUMNA DETALLES & PEDIDO (Desktop: derecha / Mobile: abajo)
                   ───────────────────────────────────────────────────────────── */}
-              <div className="sm:col-span-6 lg:col-span-5 flex flex-col justify-between h-full overflow-hidden bg-[#1c1c1c]">
+              <div className="sm:col-span-6 lg:col-span-6 flex flex-col justify-between h-full overflow-hidden bg-[#1c1c1c]">
                 
                 {/* Cabecera de Producto */}
                 <div className="px-5 pt-4 sm:pt-6 pb-3 border-b border-[#333] flex items-start justify-between gap-3 text-left relative shrink-0">
@@ -503,7 +515,7 @@ export default function ModalPersonalizacion({
                   {/* Botón agregar */}
                   <div className="flex-1 flex flex-col gap-2">
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
                         if (estaCerrado) {
                           mostrarCartel({
                             tipo: 'cerrado',
@@ -513,6 +525,11 @@ export default function ModalPersonalizacion({
                           })
                           return
                         }
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        dispararVueloAlCarrito({
+                          texto: `${cantidadModal > 1 ? `${cantidadModal}x ` : ''}${producto.nombre}`,
+                          origenRect: rect,
+                        })
                         onAgregar(false)
                       }}
                       disabled={estaCerrado}
@@ -656,7 +673,7 @@ export default function ModalPersonalizacion({
 
                 <div className="flex-1 flex flex-col gap-2">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
                       if (estaCerrado) {
                         mostrarCartel({
                           tipo: 'cerrado',
@@ -666,6 +683,11 @@ export default function ModalPersonalizacion({
                         })
                         return
                       }
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      dispararVueloAlCarrito({
+                        texto: `${cantidadModal > 1 ? `${cantidadModal}x ` : ''}${producto.nombre}`,
+                        origenRect: rect,
+                      })
                       onAgregar(false)
                     }}
                     disabled={estaCerrado}

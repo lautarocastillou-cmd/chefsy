@@ -77,6 +77,21 @@ export default function TiendaDesktop() {
     prevTotalRef.current = totalProductosCarrito
   }, [totalProductosCarrito])
 
+  // Escuchar impacto del vuelo del producto al carrito
+  useEffect(() => {
+    let t: NodeJS.Timeout | null = null
+    const handleCartPop = () => {
+      setPopAnimado(true)
+      if (t) clearTimeout(t)
+      t = setTimeout(() => setPopAnimado(false), 650)
+    }
+    window.addEventListener('chefsy:cart-pop', handleCartPop)
+    return () => {
+      window.removeEventListener('chefsy:cart-pop', handleCartPop)
+      if (t) clearTimeout(t)
+    }
+  }, [])
+
   useEffect(() => {
     const tick = () => setAnimatedWordIndex(prev => (prev + 1) % animatedWords.length)
     let interval = setInterval(tick, 1500)
@@ -364,22 +379,44 @@ export default function TiendaDesktop() {
 
         <FooterTienda />
 
-        {totalProductosCarrito > 0 && !cartAbierto && (
-          <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 fade-in duration-300">
-            <button
-              onClick={() => setCartAbierto(true)}
-              className="bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 md:py-4 px-6 md:px-8 rounded-full flex items-center shadow-[0_10px_40px_rgba(54,101,74,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 gap-3 md:gap-4 group"
-            >
-              <div className="relative flex items-center">
-                <ShoppingCart size={24} className="text-white group-hover:scale-110 transition-transform" />
-                <span className={`absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm transition-all duration-300 ${
-                  popAnimado ? 'scale-150 bg-emerald-400 text-black shadow-[0_0_15px_rgba(52,211,153,0.9)] animate-bounce' : 'scale-100'
-                }`}>
-                  {totalProductosCarrito}
-                </span>
-              </div>
-              <span className="text-sm md:text-lg font-black bg-black/20 px-3 py-1 rounded-full">{formatearPrecio(subtotalCarrito)}</span>
-            </button>
+        {!cartAbierto && (
+          <div
+            id="cart-button-desktop"
+            className="fixed bottom-8 right-8 z-[9999] transition-all duration-300 pointer-events-auto"
+          >
+            {totalProductosCarrito > 0 ? (
+              <button
+                onClick={() => setCartAbierto(true)}
+                className="bg-chefsy hover:bg-chefsy-600 text-white font-extrabold py-3 md:py-4 px-6 md:px-8 rounded-full flex items-center shadow-[0_10px_40px_rgba(54,101,74,0.5)] active:scale-95 transition-all cursor-pointer border border-chefsy-400/30 gap-3 md:gap-4 group animate-in slide-in-from-bottom-3 fade-in duration-200"
+                aria-label={`Ver carrito con ${totalProductosCarrito} productos`}
+              >
+                <div className="relative flex items-center">
+                  <ShoppingCart size={24} className="text-white group-hover:scale-110 transition-transform" />
+                  <span className={`absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-chefsy-600 shadow-sm transition-all duration-300 ${
+                    popAnimado ? 'scale-150 bg-emerald-400 text-black shadow-[0_0_15px_rgba(52,211,153,0.9)] animate-bounce' : 'scale-100'
+                  }`}>
+                    {totalProductosCarrito}
+                  </span>
+                </div>
+                <span className="text-sm md:text-lg font-black bg-black/20 px-3 py-1 rounded-full">{formatearPrecio(subtotalCarrito)}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setCartAbierto(true)}
+                className="bg-[#1c1c1c]/90 hover:bg-[#252525] text-white p-3.5 md:p-4 rounded-full flex items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] active:scale-95 transition-all cursor-pointer border border-white/10 group backdrop-blur-md"
+                title="Ver carrito de compras"
+                aria-label="Ver carrito"
+              >
+                <div className="relative flex items-center">
+                  <ShoppingCart size={22} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span className={`absolute -top-2 -right-2 bg-zinc-800 text-slate-300 text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold border border-white/20 transition-all duration-300 ${
+                    popAnimado ? 'scale-150 bg-emerald-400 text-black shadow-[0_0_15px_rgba(52,211,153,0.9)] animate-bounce' : 'scale-100'
+                  }`}>
+                    0
+                  </span>
+                </div>
+              </button>
+            )}
           </div>
         )}
         {cartAbierto && (

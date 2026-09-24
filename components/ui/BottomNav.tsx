@@ -27,6 +27,21 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
     prevTotalRef.current = totalProductosCarrito
   }, [totalProductosCarrito])
 
+  // Escuchar impacto del vuelo del producto al carrito
+  useEffect(() => {
+    let t: NodeJS.Timeout | null = null
+    const handleCartPop = () => {
+      setPopAnimado(true)
+      if (t) clearTimeout(t)
+      t = setTimeout(() => setPopAnimado(false), 650)
+    }
+    window.addEventListener('chefsy:cart-pop', handleCartPop)
+    return () => {
+      window.removeEventListener('chefsy:cart-pop', handleCartPop)
+      if (t) clearTimeout(t)
+    }
+  }, [])
+
   useEffect(() => {
     let ultimoScrollY = window.scrollY
     let scrollTimeout: NodeJS.Timeout | null = null
@@ -102,6 +117,7 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
         </button>
 
         <button 
+          id="cart-button-mobile"
           onClick={() => onNavClick('cart')}
           className={`relative flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'cart' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
