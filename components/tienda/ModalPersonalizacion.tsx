@@ -157,7 +157,7 @@ export default function ModalPersonalizacion({
         {/* Modal Panel */}
         <div 
           className={`relative w-full h-[100dvh] sm:h-auto bg-[#1c1c1c] shadow-2xl rounded-none sm:rounded-[2rem] overflow-hidden sm:border border-[#3d3d3d] z-10 flex flex-col sm:max-h-[88vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 fade-in duration-200 pointer-events-auto ${
-            tieneFotos ? 'sm:max-w-2xl lg:max-w-3xl' : 'sm:max-w-md'
+            tieneFotos ? 'sm:max-w-3xl lg:max-w-4xl' : 'sm:max-w-md'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -168,7 +168,7 @@ export default function ModalPersonalizacion({
               {/* ─────────────────────────────────────────────────────────────
                   COLUMNA FOTOS (Desktop: izquierda / Mobile: Hero superior)
                   ───────────────────────────────────────────────────────────── */}
-              <div className="sm:col-span-6 lg:col-span-6 flex flex-col justify-between bg-[#141414] border-b sm:border-b-0 sm:border-r border-[#2d2d2d] relative shrink-0">
+              <div className="sm:col-span-6 lg:col-span-6 sm:h-full flex flex-col bg-[#141414] border-b sm:border-b-0 sm:border-r border-[#2d2d2d] relative shrink-0 overflow-hidden">
                 
                 {/* ── VISTA MOBILE: HERO CAROUSEL ── */}
                 <div className="sm:hidden relative w-full aspect-[4/3] max-h-[300px] bg-[#111] overflow-hidden group">
@@ -276,43 +276,43 @@ export default function ModalPersonalizacion({
                   )}
                 </div>
 
-                {/* ── VISTA DESKTOP: FOTOGRAFÍA PROTAGONISTA Y MINIATURAS ── */}
-                <div className="hidden sm:flex sm:flex-col justify-between h-full p-4 sm:p-5">
-                  {/* Foto Principal en HD */}
+                {/* ── VISTA DESKTOP: FOTOGRAFÍA PROTAGONISTA FULL-BLEED ── */}
+                <div className="hidden sm:flex flex-1 flex-col relative w-full h-full min-h-[460px] bg-[#121212] overflow-hidden group">
+                  {/* Foto Principal en HD que llena el 100% de la columna */}
                   <div
-                    className="relative w-full aspect-square sm:aspect-auto sm:h-[350px] lg:h-[370px] rounded-2xl overflow-hidden bg-[#181818] border border-[#2d2d2d] group cursor-zoom-in shadow-lg flex items-center justify-center"
+                    className="relative w-full h-full min-h-[460px] flex-1 cursor-zoom-in overflow-hidden"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       setLightboxAbierto(true)
                     }}
                   >
-                    {/* Ambient Glow detrás de la imagen para eliminar bordes vacíos */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                      <Image
-                        src={optimizarUrlImagen(fotoActiva, 100, true)}
-                        alt=""
-                        fill
-                        unoptimized
-                        className="object-cover blur-2xl opacity-25 scale-125"
-                      />
-                    </div>
-
                     <ImagenProgresiva
                       src={fotoActiva}
                       alt={`${producto.nombre} - Foto ${indiceFoto + 1}`}
-                      anchoDeseado={800}
+                      anchoDeseado={900}
                       priority
-                      objectFit="contain"
-                      sizes="(max-width: 1024px) 50vw, 420px"
+                      objectFit="cover"
+                      sizes="(max-width: 1024px) 50vw, 550px"
                       onLoadSuccess={() => registrarFotoVista(fotoActiva)}
                     />
 
+                    {/* Sombra de viñeta para contraste elegante */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
+
                     {/* Hint flotante de Zoom en Desktop */}
-                    <div className="absolute top-3 right-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1e1e]/95 text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
+                    <div className="absolute top-3.5 right-3.5 z-30 opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
                       <Maximize2 size={13} className="text-chefsy-400" />
-                      <span>Ver en pantalla completa</span>
+                      <span>Ampliar HD</span>
                     </div>
+
+                    {/* Indicador de foto activa si hay más de 1 */}
+                    {listaFotos.length > 1 && (
+                      <div className="absolute top-3.5 left-3.5 z-30 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/15">
+                        <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
+                        Foto {indiceFoto + 1} de {listaFotos.length}
+                      </div>
+                    )}
 
                     {/* Flechas de navegación Desktop sobre la imagen */}
                     {listaFotos.length > 1 && (
@@ -323,10 +323,10 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev - 1 + listaFotos.length) % listaFotos.length)
                           }}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
                           aria-label="Foto anterior"
                         >
-                          <ChevronLeft size={22} />
+                          <ChevronLeft size={20} />
                         </button>
 
                         <button
@@ -335,53 +335,48 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev + 1) % listaFotos.length)
                           }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-[#1a1a1a]/90 hover:bg-[#2a2a2a] text-white flex items-center justify-center border border-white/15 shadow-md transition-colors active:scale-95 cursor-pointer opacity-80 group-hover:opacity-100"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
                           aria-label="Foto siguiente"
                         >
-                          <ChevronRight size={22} />
+                          <ChevronRight size={20} />
                         </button>
-
-                        <div className="absolute bottom-3 left-3 z-30 px-2.5 py-1 rounded-lg bg-[#181818]/90 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/10">
-                          <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
-                          Foto {indiceFoto + 1} de {listaFotos.length}
-                        </div>
                       </>
                     )}
-                  </div>
 
-                  {/* Fila de Miniaturas (Desktop) */}
-                  {listaFotos.length > 1 && (
-                    <div className="flex items-center gap-2 pt-3 overflow-x-auto scrollbar-hide">
-                      {listaFotos.map((foto, idx) => {
-                        const mini = optimizarUrlImagen(foto, 120, true)
-                        const isSelect = idx === indiceFoto
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setIndiceFoto(idx)
-                            }}
-                            className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-transform shrink-0 cursor-pointer active:scale-95 ${
-                              isSelect
-                                ? 'border-chefsy-400 scale-105 shadow-md shadow-chefsy-500/20'
-                                : 'border-[#2d2d2d] opacity-50 hover:opacity-100'
-                            }`}
-                          >
-                            <Image
-                              src={mini}
-                              alt={`Miniatura ${idx + 1}`}
-                              fill
-                              unoptimized={mini.includes('res.cloudinary.com')}
-                              className="object-cover"
-                              sizes="56px"
-                            />
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
+                    {/* Barra de Miniaturas flotante en la parte inferior si hay > 1 foto */}
+                    {listaFotos.length > 1 && (
+                      <div className="absolute bottom-3.5 left-3.5 right-3.5 z-30 flex items-center gap-2 p-1.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 overflow-x-auto scrollbar-hide">
+                        {listaFotos.map((foto, idx) => {
+                          const mini = optimizarUrlImagen(foto, 100, true)
+                          const isSelect = idx === indiceFoto
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setIndiceFoto(idx)
+                              }}
+                              className={`relative w-11 h-11 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                                isSelect
+                                  ? 'border-chefsy-400 scale-105 shadow-md shadow-chefsy-500/20'
+                                  : 'border-white/20 opacity-60 hover:opacity-100'
+                              }`}
+                            >
+                              <Image
+                                src={mini}
+                                alt={`Miniatura ${idx + 1}`}
+                                fill
+                                unoptimized={mini.includes('res.cloudinary.com')}
+                                className="object-cover"
+                                sizes="44px"
+                              />
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
               </div>
@@ -397,7 +392,7 @@ export default function ModalPersonalizacion({
                     <p className="text-[10px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-1">
                       Estás pidiendo
                     </p>
-                    <h3 className="font-bebas text-2xl sm:text-3xl lg:text-4xl text-white leading-none tracking-wide">
+                    <h3 id="modal-producto-nombre" className="font-bebas text-2xl sm:text-3xl lg:text-4xl text-white leading-none tracking-wide">
                       {producto.nombre}
                     </h3>
                   </div>
@@ -559,7 +554,7 @@ export default function ModalPersonalizacion({
               <div className="px-5 pt-5 sm:pt-4 pb-3 border-b border-[#3d3d3d] flex items-start justify-between gap-3 text-left relative overflow-hidden shrink-0 mt-4 sm:mt-0">
                 <div className="relative z-10 flex-1">
                   <p className="text-[9px] font-semibold text-chefsy-400 uppercase tracking-[0.2em] mb-0.5">Estás pidiendo</p>
-                  <h3 className="font-bebas text-2xl sm:text-3xl text-white leading-none tracking-wide">
+                  <h3 id="modal-producto-nombre" className="font-bebas text-2xl sm:text-3xl text-white leading-none tracking-wide">
                     {producto.nombre}
                   </h3>
                 </div>
