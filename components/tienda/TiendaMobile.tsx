@@ -14,6 +14,7 @@ import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
 import Fuse from 'fuse.js'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
+import toast from 'react-hot-toast'
 
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
@@ -60,6 +61,29 @@ export default function TiendaMobile() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [buscadorIluminado, setBuscadorIluminado] = useState(false)
   const timerIluminacionRef = useRef<NodeJS.Timeout | null>(null)
+  const toastActivoRef = useRef(false)
+  const timerToastRef = useRef<NodeJS.Timeout | null>(null)
+
+  const mostrarToastProximamente = () => {
+    if (toastActivoRef.current) {
+      toast.dismiss('toast-perfil-proximamente')
+      toastActivoRef.current = false
+      if (timerToastRef.current) clearTimeout(timerToastRef.current)
+      return
+    }
+
+    toastActivoRef.current = true
+    toast('Próximamente disponible', {
+      id: 'toast-perfil-proximamente',
+      icon: '🚀',
+      duration: 1200,
+    })
+
+    if (timerToastRef.current) clearTimeout(timerToastRef.current)
+    timerToastRef.current = setTimeout(() => {
+      toastActivoRef.current = false
+    }, 1200)
+  }
 
   const {
     cartAbierto,
@@ -224,11 +248,7 @@ export default function TiendaMobile() {
         searchInputRef.current?.focus()
       }, 60)
     } else if (tab === 'profile') {
-      if (usuario) {
-        setMostrarPerfil(true)
-      } else {
-        setMostrarLogin(true)
-      }
+      mostrarToastProximamente()
     } else {
       setActiveTab(tab)
       setBusqueda('')
@@ -504,8 +524,8 @@ export default function TiendaMobile() {
         categorias={categoriasActivas}
         categoriaSeleccionada={categoriaActivaNav}
         onSeleccionarCategoria={handleSeleccionarCategoria}
-        onAbrirPerfil={() => setMostrarPerfil(true)}
-        onAbrirLogin={() => setMostrarLogin(true)}
+        onAbrirPerfil={mostrarToastProximamente}
+        onAbrirLogin={mostrarToastProximamente}
         onAbrirHistorial={() => setMostrarHistorial(true)}
       />
 

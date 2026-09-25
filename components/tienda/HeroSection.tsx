@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Lock, Search, LogOut, User } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -41,6 +42,31 @@ export default function HeroSection(props: HeroSectionProps) {
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [mostrarPerfil, setMostrarPerfil] = useState(false)
   const [sidebarAbierto, setSidebarAbierto] = useState(false)
+  const toastActivoRef = useRef(false)
+  const timerToastRef = useRef<NodeJS.Timeout | null>(null)
+
+  const mostrarToastProximamente = () => {
+    // Si ya está en pantalla y vuelven a tocar -> descartar inmediatamente (cerrar)
+    if (toastActivoRef.current) {
+      toast.dismiss('toast-perfil-proximamente')
+      toastActivoRef.current = false
+      if (timerToastRef.current) clearTimeout(timerToastRef.current)
+      return
+    }
+
+    // Mostrar con duración rápida (1.2s) e ID único (imposible de spamear)
+    toastActivoRef.current = true
+    toast('Próximamente disponible', {
+      id: 'toast-perfil-proximamente',
+      icon: '🚀',
+      duration: 1200,
+    })
+
+    if (timerToastRef.current) clearTimeout(timerToastRef.current)
+    timerToastRef.current = setTimeout(() => {
+      toastActivoRef.current = false
+    }, 1200)
+  }
 
   return (
     <>
@@ -69,18 +95,11 @@ export default function HeroSection(props: HeroSectionProps) {
             <BotonUbicacionLocal />
             <BotonWhatsAppHeader />
             <button
-              onClick={() => {
-                if (usuario) setMostrarPerfil(true)
-                else setMostrarLogin(true)
-              }}
-              onMouseEnter={() => {
-                import('@/components/tienda/ModalPerfilCliente')
-                import('@/components/tienda/ModalHistorialPedidos')
-              }}
+              onClick={mostrarToastProximamente}
               className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-colors cursor-pointer border border-white/10 shrink-0"
-              title={usuario ? `Mi Perfil (${perfil?.nombre || 'Cliente'})` : 'Iniciar Sesión'}
+              title="Próximamente disponible"
             >
-              <User size={18} className={usuario ? 'text-chefsy-400' : 'text-slate-300'} />
+              <User size={18} className="text-slate-300" />
             </button>
           </div>
         </div>
@@ -99,8 +118,8 @@ export default function HeroSection(props: HeroSectionProps) {
           props.onSeleccionarCategoria(id)
           if (id && props.busqueda) props.onBusquedaChange('')
         }}
-        onAbrirPerfil={() => setMostrarPerfil(true)}
-        onAbrirLogin={() => setMostrarLogin(true)}
+        onAbrirPerfil={mostrarToastProximamente}
+        onAbrirLogin={mostrarToastProximamente}
         onAbrirHistorial={() => setMostrarHistorial(true)}
       />
 
