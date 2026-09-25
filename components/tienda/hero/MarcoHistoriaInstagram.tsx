@@ -31,8 +31,8 @@ export default function MarcoHistoriaInstagram({
 
   return (
     <div className={`relative select-none ${className}`}>
-      {/* Marco simple proporción 9:16 (tamaño historia de Instagram) */}
-      <div className="relative w-[260px] sm:w-[280px] lg:w-[300px] xl:w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-2xl shadow-black/80">
+      {/* Marco simple proporción 9:16 (tamaño historia de Instagram) adaptado para celular, iPad y PC */}
+      <div className="relative w-[200px] xs:w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] xl:w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-2xl shadow-black/80">
         {lista.map((item, idx) => {
           const esActiva = idx === indiceActual
           return (
@@ -48,7 +48,7 @@ export default function MarcoHistoriaInstagram({
                 fill
                 priority={idx === 0}
                 className="object-cover"
-                sizes="(max-width: 768px) 280px, 320px"
+                sizes="(max-width: 640px) 220px, (max-width: 1024px) 280px, 320px"
               />
             </div>
           )
