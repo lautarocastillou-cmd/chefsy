@@ -76,7 +76,7 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       estilo_bordes: 'suaves',
       textura_fondo_url: '',
       whatsapp_mensaje: '¡Hola Chefsy! Hice un pedido online:',
-      link_instagram: '',
+      link_instagram: 'https://instagram.com/chefsy_fastfood_',
       link_tiktok: '',
       hero_layout: 'parallax_doble',
       hero_video_url: '',

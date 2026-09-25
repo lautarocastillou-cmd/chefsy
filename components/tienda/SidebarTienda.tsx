@@ -118,7 +118,10 @@ export default function SidebarTienda({
   const rawTel = (configuracion as any)?.telefono_negocio || '5493834225445'
   const telLimpio = rawTel.toString().replace(/\D/g, '') || '5493834225445'
   const whatsappUrl = `https://wa.me/${telLimpio}?text=${encodeURIComponent('¡Hola Chefsy! Tengo una consulta.')}`
-  const instagramUrl = (configuracion as any)?.instagram_url || 'https://instagram.com/chefsy'
+  const rawIg = (configuracion as any)?.instagram_url || configuracion?.link_instagram
+  const instagramUrl = (!rawIg || rawIg.includes('instagram.com/chefsy') && !rawIg.includes('chefsy_fastfood_'))
+    ? 'https://instagram.com/chefsy_fastfood_'
+    : (rawIg.startsWith('http') ? rawIg : `https://instagram.com/${rawIg.replace(/^@/, '')}`)
 
   return (
     <>
