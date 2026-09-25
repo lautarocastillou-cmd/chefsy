@@ -110,10 +110,7 @@ export default function HeroParallaxDoble({
               : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)'
           }}
         >
-          <MarcoHistoriaInstagram
-            logoUrl={configuracion?.logo_url || '/logo.jpg'}
-            usuarioInstagram="chefsy_fastfood_"
-          />
+          <MarcoHistoriaInstagram />
         </div>
 
         {/* 3. Subtítulo y Buscador */}
