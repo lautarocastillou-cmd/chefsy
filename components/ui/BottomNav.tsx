@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Home, Search, User, ShoppingCart } from 'lucide-react'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { formatearPrecio } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface BottomNavProps {
   onNavClick: (tab: 'home' | 'search' | 'profile' | 'cart') => void
@@ -15,6 +16,8 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
   const [esGrande, setEsGrande] = useState(true)
   const [popAnimado, setPopAnimado] = useState(false)
   const prevTotalRef = useRef(totalProductosCarrito)
+  const toastActivoRef = useRef(false)
+  const timerToastRef = useRef<NodeJS.Timeout | null>(null)
 
   // Micro-pop al añadir productos al carrito
   useEffect(() => {
@@ -102,9 +105,26 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
 
         <button 
           onClick={() => {
-            import('react-hot-toast').then(mod => {
-              mod.toast('Próximamente disponible', { icon: '🚀' })
+            // Si ya está en pantalla y vuelven a tocar -> descartar inmediatamente (cerrar)
+            if (toastActivoRef.current) {
+              toast.dismiss('toast-perfil-proximamente')
+              toastActivoRef.current = false
+              if (timerToastRef.current) clearTimeout(timerToastRef.current)
+              return
+            }
+
+            // Mostrar con duración rápida (1.2s) e ID único (imposible de spamear)
+            toastActivoRef.current = true
+            toast('Próximamente disponible', {
+              id: 'toast-perfil-proximamente',
+              icon: '🚀',
+              duration: 1200,
             })
+
+            if (timerToastRef.current) clearTimeout(timerToastRef.current)
+            timerToastRef.current = setTimeout(() => {
+              toastActivoRef.current = false
+            }, 1200)
           }}
           className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'profile' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >

@@ -13,7 +13,7 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
     scrollHaciaCategoria(id)
     timerRef.current = setTimeout(() => {
       setCategoriaPresionada(null)
-    }, 320)
+    }, 850)
   }
 
   return (
@@ -48,7 +48,7 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
                 key={cat.id}
                 type="button"
                 onClick={() => handlePress(cat.id)}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm outline-none select-none transition-all duration-300 ease-out cursor-pointer active:scale-95 ${
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm outline-none select-none transition-all duration-500 ease-out cursor-pointer active:scale-95 ${
                   estaPresionado
                     ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30 scale-95 ring-2 ring-chefsy/50'
                     : 'bg-white/5 text-slate-400 active:bg-chefsy active:text-white [@media(hover:hover)]:hover:bg-white/10 [@media(hover:hover)]:hover:text-white'
