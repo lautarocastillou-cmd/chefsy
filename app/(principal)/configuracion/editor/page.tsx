@@ -7,6 +7,8 @@ import {
   CarruselSlide,
   ImagenLoopHero,
   IMAGENES_LOOP_DEFAULT,
+  TransicionLoopHero,
+  OPCIONES_TRANSICION_LOOP,
   obtenerConfiguracionTienda,
   actualizarConfiguracionTienda,
 } from '@/servicios/supabase/configuracion'
@@ -659,6 +661,41 @@ export default function EditorTienda() {
                     ))}
                   </div>
 
+                  {/* Selector rápido de animación de transición */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-emerald-400" />
+                        <span>Efecto de Transición</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                        {OPCIONES_TRANSICION_LOOP.find(o => o.id === (configLive.hero_loop_transicion || 'fade'))?.nombre || 'Fundido'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {OPCIONES_TRANSICION_LOOP.map((opc) => {
+                        const esActiva = (configLive.hero_loop_transicion || 'fade') === opc.id
+                        return (
+                          <button
+                            key={opc.id}
+                            type="button"
+                            onClick={() => handleChange('hero_loop_transicion', opc.id)}
+                            className={`p-1.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                              esActiva
+                                ? 'bg-emerald-950/80 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/50'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                            }`}
+                            title={opc.descripcion}
+                          >
+                            <span className="text-sm">{opc.icono}</span>
+                            <span className="text-[10px] font-bold leading-tight">{opc.nombre}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setModalLoopAbierto(true)}
@@ -1292,8 +1329,17 @@ export default function EditorTienda() {
       <ModalConfiguracionLoop
         abierto={modalLoopAbierto}
         imagenes={configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT}
+        transicion={configLive.hero_loop_transicion || 'fade'}
         onCerrar={() => setModalLoopAbierto(false)}
-        onGuardar={(nuevas) => handleChange('hero_loop_imagenes', nuevas)}
+        onGuardar={(nuevas, transicionSeleccionada) => {
+          if (!configLive) return
+          const actualizada = {
+            ...configLive,
+            hero_loop_imagenes: nuevas,
+            ...(transicionSeleccionada ? { hero_loop_transicion: transicionSeleccionada } : {})
+          }
+          registrarCambio(actualizada)
+        }}
       />
 
     </div>

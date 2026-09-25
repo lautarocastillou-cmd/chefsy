@@ -3,23 +3,26 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { X, Plus, Trash2, Upload, Loader2, Sparkles, Clock, Check, RefreshCw, Image as ImageIcon } from 'lucide-react'
-import { ImagenLoopHero, IMAGENES_LOOP_DEFAULT } from '@/servicios/supabase/configuracion'
+import { ImagenLoopHero, IMAGENES_LOOP_DEFAULT, TransicionLoopHero, OPCIONES_TRANSICION_LOOP } from '@/servicios/supabase/configuracion'
 import { cn } from '@/lib/utils'
 
 interface Props {
   abierto: boolean
   imagenes: ImagenLoopHero[]
+  transicion?: TransicionLoopHero
   onCerrar: () => void
-  onGuardar: (imagenes: ImagenLoopHero[]) => void
+  onGuardar: (imagenes: ImagenLoopHero[], transicion?: TransicionLoopHero) => void
 }
 
 export default function ModalConfiguracionLoop({
   abierto,
   imagenes,
+  transicion = 'fade',
   onCerrar,
   onGuardar,
 }: Props) {
   const [lista, setLista] = useState<ImagenLoopHero[]>([])
+  const [transicionSeleccionada, setTransicionSeleccionada] = useState<TransicionLoopHero>('fade')
   const [subiendoIndex, setSubiendoIndex] = useState<number | null>(null)
   const [errorSubida, setErrorSubida] = useState<string | null>(null)
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({})
@@ -31,9 +34,10 @@ export default function ModalConfiguracionLoop({
       } else {
         setLista(IMAGENES_LOOP_DEFAULT.map(item => ({ ...item })))
       }
+      setTransicionSeleccionada(transicion || 'fade')
       setErrorSubida(null)
     }
-  }, [abierto, imagenes])
+  }, [abierto, imagenes, transicion])
 
   if (!abierto) return null
 
@@ -92,7 +96,7 @@ export default function ModalConfiguracionLoop({
   }
 
   const handleGuardar = () => {
-    onGuardar(lista)
+    onGuardar(lista, transicionSeleccionada)
     onCerrar()
   }
 
@@ -142,6 +146,49 @@ export default function ModalConfiguracionLoop({
 
         {/* Contenido / Lista de Slots de Imágenes */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+          {/* Selector de Animación de Transición */}
+          <div className="p-4 rounded-2xl bg-zinc-900/90 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={15} className="text-emerald-400" />
+                <span className="text-xs font-black text-white uppercase tracking-wider">
+                  Animación de Transición
+                </span>
+              </div>
+              <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                {OPCIONES_TRANSICION_LOOP.find(o => o.id === transicionSeleccionada)?.nombre || 'Fundido'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {OPCIONES_TRANSICION_LOOP.map((opc) => {
+                const esActiva = transicionSeleccionada === opc.id
+                return (
+                  <button
+                    key={opc.id}
+                    type="button"
+                    onClick={() => setTransicionSeleccionada(opc.id)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-0.5 transition-all cursor-pointer ${
+                      esActiva
+                        ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-500/10 ring-1 ring-emerald-500/50'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{opc.icono}</span>
+                      {esActiva && <Check size={12} className="text-emerald-400" />}
+                    </div>
+                    <span className={`text-xs font-black ${esActiva ? 'text-white' : 'text-slate-300'}`}>
+                      {opc.nombre}
+                    </span>
+                    <span className="text-[10px] text-slate-400 leading-tight">
+                      {opc.descripcion}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           {lista.map((item, index) => {
             const estaSubiendo = subiendoIndex === index
             return (

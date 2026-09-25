@@ -44,8 +44,31 @@ export interface ConfiguracionTienda {
   efecto_titulo_hero?: 'none' | 'gradient' | 'neon_glow' | 'stroke'
   color_titulo_secundario?: string
   hero_loop_imagenes?: ImagenLoopHero[]
+  hero_loop_transicion?: TransicionLoopHero
   fuente_tienda_catalogo?: string
 }
+
+export type TransicionLoopHero = 
+  | 'fade'
+  | 'slide_left'
+  | 'slide_up'
+  | 'zoom'
+  | 'flip'
+  | 'blur'
+
+export const OPCIONES_TRANSICION_LOOP: {
+  id: TransicionLoopHero
+  nombre: string
+  descripcion: string
+  icono: string
+}[] = [
+  { id: 'fade', nombre: 'Fundido', descripcion: 'Desvanecimiento suave', icono: '✨' },
+  { id: 'slide_left', nombre: 'Stories', descripcion: 'Deslizar horizontal', icono: '📲' },
+  { id: 'slide_up', nombre: 'Reels', descripcion: 'Deslizar vertical', icono: '⬆️' },
+  { id: 'zoom', nombre: 'Zoom', descripcion: 'Escala cinemática', icono: '🔍' },
+  { id: 'flip', nombre: 'Giro 3D', descripcion: 'Rotación sobre eje', icono: '🔄' },
+  { id: 'blur', nombre: 'Desenfoque', descripcion: 'Disolución blur glow', icono: '💫' },
+]
 
 export interface ImagenLoopHero {
   id: string
@@ -121,6 +144,7 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       efecto_titulo_hero: 'none',
       color_titulo_secundario: '#F59E0B',
       hero_loop_imagenes: IMAGENES_LOOP_DEFAULT,
+      hero_loop_transicion: 'fade',
       fuente_tienda_catalogo: 'bebas',
     }
   }

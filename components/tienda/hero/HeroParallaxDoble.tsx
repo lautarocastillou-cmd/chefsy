@@ -147,6 +147,7 @@ export default function HeroParallaxDoble({
         >
           <MarcoHistoriaInstagram
             imagenesLoop={configuracion?.hero_loop_imagenes}
+            transicion={configuracion?.hero_loop_transicion}
           />
         </div>
 
