@@ -62,12 +62,6 @@ export const categoriasCatalogo: CategoriaCatalogo[] = [
     "nombre": "Bebidas"
   },
   {
-    "id": "promos",
-    "orden": 9,
-    "activa": true,
-    "nombre": "Promos"
-  },
-  {
     "id": "cat-1781574714354",
     "orden": 10,
     "activa": true,
@@ -645,7 +639,7 @@ export const productosCatalogo: ProductoCatalogo[] = [
     "nombre": "BURGER ESPECIAL + COCA 600ml",
     "precio": 8500,
     "esCombo": true,
-    "categoriaId": "promos",
+    "categoriaId": "hamburguesas",
     "modificadoresIds": []
   },
   {

@@ -136,6 +136,7 @@ export default function SelectorCategorias({
                   
                   return categoriasActivas
                     .filter(c => {
+                      if (c.id === 'promos' || c.nombre?.toLowerCase().trim() === 'promos') return false
                       if (burgersExiste && c.id === idPatys) return false
                       return true
                     })

@@ -108,7 +108,7 @@ export default function TiendaMobile() {
   }, [configuracion?.hero_image_url])
   
   const categoriasActivas = useMemo(() => {
-    return categorias.filter(c => c.activa).sort((a, b) => a.orden - b.orden)
+    return categorias.filter(c => c.activa && c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos').sort((a, b) => a.orden - b.orden)
   }, [categorias])
 
   const sugerenciaBusqueda = useSugerenciaBusqueda(busqueda)

@@ -45,9 +45,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
     async function cargarInicial() {
       // 1.a) Primero cargar fallbacks desde caché (con TTL) o estáticos
       let catsActuales = leerCatalogoCache<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
-      if (!catsActuales.some((c: any) => c.id === 'promos')) {
-        catsActuales.push({ id: 'promos', nombre: 'Promos', orden: 9, activa: true })
-      }
+        .filter((c: any) => c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos')
       setCategorias(catsActuales)
       categoriasRef.current = catsActuales
 
@@ -72,7 +70,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
           if (!catalogoGuardado) {
             console.warn('[Supabase] El catálogo remoto está vacío. Usando valores locales por defecto.')
           } else {
-            const cats = catalogoGuardado.categorias || []
+            const cats = (catalogoGuardado.categorias || []).filter((c: any) => c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos')
             const prods = catalogoGuardado.productos || []
             const mods = catalogoGuardado.modificadores || []
 
@@ -104,7 +102,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
     const channel = suscribirACatalogo((catalogoNuevo) => {
       if (esCambioCatalogoLocalRef.current) return
 
-      const cats = catalogoNuevo.categorias || []
+      const cats = (catalogoNuevo.categorias || []).filter((c: any) => c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos')
       const prods = catalogoNuevo.productos || []
       const mods = catalogoNuevo.modificadores || []
 

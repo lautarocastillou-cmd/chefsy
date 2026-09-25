@@ -278,7 +278,9 @@ export default function SidebarTienda({
               </button>
 
               {/* Categorías Dinámicas */}
-              {categorias.map((cat) => {
+              {categorias
+                .filter(cat => cat.id !== 'promos' && cat.nombre.toLowerCase().trim() !== 'promos')
+                .map((cat) => {
                 const seleccionada = categoriaSeleccionada === cat.id
                 return (
                   <button

@@ -142,7 +142,7 @@ export default function TiendaDesktop() {
   }, [])
   
   const categoriasActivas = useMemo(() => {
-    return categorias.filter(c => c.activa).sort((a, b) => {
+    return categorias.filter(c => c.activa && c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos').sort((a, b) => {
       const isABurger = a.nombre.toLowerCase().includes('burger')
       const isBBurger = b.nombre.toLowerCase().includes('burger')
       const isAPatys = a.nombre.toLowerCase().trim() === 'patys'
