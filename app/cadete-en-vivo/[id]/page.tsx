@@ -45,7 +45,15 @@ const BG = 'linear-gradient(150deg, #2A6348 0%, #1a3d2e 100%)'
 const WHATSAPP_NUMERO = '5493834225445'
 
 // ── Badge de estado ─────────────────────────────────────────────────────────
-function EtiquetaEstado({ estado }: { estado: string }) {
+function EtiquetaEstado({ estado, volviendoAlLocal }: { estado: string; volviendoAlLocal?: boolean }) {
+  if (volviendoAlLocal) {
+    return (
+      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span>Volviendo al local</span>
+      </span>
+    )
+  }
   const cfg: Record<string, { label: string; cls: string }> = {
     nuevo:     { label: 'Recibido',  cls: 'bg-blue-100 text-blue-700' },
     en_cocina: { label: 'En cocina', cls: 'bg-amber-100 text-amber-700' },
@@ -171,6 +179,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           estado: data.estado,
           cadete_nombre: data.cadete_nombre ?? null,
           cadete_coordenadas: data.cadete_coordenadas ?? null,
+          cadete_volviendo_al_local: Boolean(data.cadete_volviendo_al_local),
           coordenadas: data.destino_coordenadas ?? null,
           local_coordenadas: data.local_coordenadas ?? null,
           tipoEntrega: data.tipoEntrega ?? 'delivery',
@@ -283,7 +292,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </div>
   )
 
-  const isTerminado     = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
+  const isVolviendoAlLocal = Boolean((pedido as any).cadete_volviendo_al_local)
+  const isTerminado     = (pedido.estado === 'entregado' || pedido.estado === 'cancelado') && !isVolviendoAlLocal
   const isEnPreparacion = ['nuevo', 'en_cocina', 'listo'].includes(pedido.estado)
   const isEnCamino      = pedido.estado === 'en_camino'
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
@@ -309,7 +319,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Overlay: Cadete con entregas previas en la zona */}
-      {paradasPrevias > 0 && !isTerminado ? (
+      {paradasPrevias > 0 && !isTerminado && !isVolviendoAlLocal ? (
         <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
@@ -333,7 +343,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <p className="text-[11px] text-emerald-100">Tu domicilio es el próximo destino en su recorrido.</p>
           </div>
         </div>
-      ) : cadeteOcupadoEnOtroViaje && !isEnCamino ? (
+      ) : cadeteOcupadoEnOtroViaje && !isEnCamino && !isVolviendoAlLocal ? (
         <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
@@ -368,8 +378,25 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Overlay: Pedido Entregado */}
-      {isTerminado && (
+      {/* Overlay: Pedido Entregado / Volviendo al Local */}
+      {isVolviendoAlLocal ? (
+        <div className="absolute inset-x-3 bottom-3 z-[400] bg-gradient-to-r from-[#0e271e] to-[#143529] text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-400/40 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/30">
+            <Bike size={22} className="animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black text-emerald-300">¡Pedido entregado con éxito!</h3>
+              <span className="text-[10px] bg-emerald-500/25 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-400/30">
+                Volviendo al local
+              </span>
+            </div>
+            <p className="text-[11px] text-emerald-100/90 mt-0.5">
+              {cadeteNombre} finalizó sus entregas y está regresando al local de Chefsy. ¡Muchas gracias por tu compra!
+            </p>
+          </div>
+        </div>
+      ) : isTerminado ? (
         <div className="absolute inset-x-3 bottom-3 z-[400] bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
             <CheckCircle2 size={22} />
@@ -379,7 +406,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <p className="text-[11px] text-emerald-100">¡Muchas gracias por elegir Chefsy! Que lo disfrutes.</p>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 
@@ -389,14 +416,17 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
           style={{ background: 'rgba(42,99,72,0.12)' }}>
-          {isTerminado     ? <CheckCircle2 size={24} className="text-emerald-600" />
+          {isVolviendoAlLocal ? <Bike size={24} className="text-emerald-600 animate-pulse" />
+           : isTerminado     ? <CheckCircle2 size={24} className="text-emerald-600" />
            : isEnPreparacion ? <UtensilsCrossed size={24} className="text-amber-600" />
            : <Bike size={24} className="text-emerald-600" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-bold text-gray-900 text-base leading-tight">
-              {isTerminado
+              {isVolviendoAlLocal
+                ? `¡Pedido entregado! • ${cadeteNombre} está volviendo al local`
+                : isTerminado
                 ? '¡Pedido entregado!'
                 : isEnCamino
                 ? (paradasPrevias > 0
@@ -408,7 +438,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                 ? 'Preparando tu pedido'
                 : 'Procesando tu pedido'}
             </h1>
-            <EtiquetaEstado estado={pedido.estado} />
+            <EtiquetaEstado estado={pedido.estado} volviendoAlLocal={isVolviendoAlLocal} />
           </div>
           <p className="text-sm font-semibold truncate" style={{ color: '#2A6348' }}>
             Para {pedido.cliente.split(' ')[0]}
@@ -423,6 +453,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs">
             <Bike className="w-3.5 h-3.5" />
             <span>{pedido.cadete_nombre}</span>
+            {isVolviendoAlLocal && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-md">Regresando</span>}
           </span>
         </div>
       )}

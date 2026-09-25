@@ -69,6 +69,7 @@ export interface Pedido {
   en_camino_at?: string | null
   entregado_at?: string | null
   cadete_coordenadas?: Coordenadas | null
+  cadete_volviendo_al_local?: boolean
   pago_confirmado?: boolean
   cadete_id?: string | null
   cadete_nombre?: string | null

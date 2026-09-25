@@ -97,6 +97,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const esProximaEntrega = (pedido as any).es_proxima_entrega !== undefined 
     ? Boolean((pedido as any).es_proxima_entrega) 
     : (paradasPrevias === 0)
+  const esVolviendoAlLocal = Boolean(
+    (pedido as any).cadete_volviendo_al_local ||
+    (pedido.estado === 'entregado' && Boolean(pedido.cadete_coordenadas))
+  )
 
   useEffect(() => {
     modoCamaraRef.current = modoCamara
@@ -104,29 +108,52 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
   // ── 1. Calcular distancia en tiempo real (sin ETA de minutos para no generar ansiedad) ──
   useEffect(() => {
-    if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
+    if (esVolviendoAlLocal && pedido.cadete_coordenadas) {
+      const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, UBICACION_LOCAL)
+      const distRuta = distDirecta * 1.3
+      setDistanciaRestanteKm(distRuta)
+    } else if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
       const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
       const distRuta = distDirecta * 1.3 // Factor de aproximación de calles
       setDistanciaRestanteKm(distRuta)
     } else {
       setDistanciaRestanteKm(null)
     }
-  }, [pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.estado])
+  }, [
+    pedido.cadete_coordenadas?.latitud, 
+    pedido.cadete_coordenadas?.longitud, 
+    pedido.coordenadas?.latitud, 
+    pedido.coordenadas?.longitud, 
+    pedido.estado,
+    esVolviendoAlLocal
+  ])
 
   // ── 1.1. Obtener Geometría Real por Calles con OSRM ───────────────────────
   useEffect(() => {
-    if (!pedido.coordenadas) return
-
     let cancelado = false
     const abortCtrl = new AbortController()
 
     const cargarRuta = async () => {
-      // Origen de la ruta: posición actual del cadete si existe, sino el local
-      const origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
-        ? pedido.cadete_coordenadas
-        : UBICACION_LOCAL
+      let origen = UBICACION_LOCAL
+      let destino = pedido.coordenadas
 
-      const ruta = await obtenerRutaConduccion(origen, pedido.coordenadas!, abortCtrl.signal)
+      if (esVolviendoAlLocal) {
+        // En regreso al local: origen es el repartidor (o cliente como fallback), destino es UBICACION_LOCAL
+        origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+          ? pedido.cadete_coordenadas
+          : (pedido.coordenadas || UBICACION_LOCAL)
+        destino = UBICACION_LOCAL
+      } else {
+        if (!pedido.coordenadas) return
+        origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+          ? pedido.cadete_coordenadas
+          : UBICACION_LOCAL
+        destino = pedido.coordenadas
+      }
+
+      if (!destino) return
+
+      const ruta = await obtenerRutaConduccion(origen, destino, abortCtrl.signal)
       if (cancelado || !ruta) return
 
       rutaGeometriaRef.current = ruta.puntos
@@ -137,7 +164,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }
 
       // Si el mapa ya está listo y los polylines existen, actualizar de inmediato
-      if (mapaListo && leafletMapRef.current && esProximaEntrega) {
+      if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
         const posCadete: [number, number] = posicionAnimadaRef.current
           ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
           : [origen.latitud, origen.longitud]
@@ -172,7 +199,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
     pedido.coordenadas?.latitud,
     pedido.coordenadas?.longitud,
     pedido.cadete_coordenadas ? 'cadete-activo' : 'local',
-    esProximaEntrega
+    esProximaEntrega,
+    esVolviendoAlLocal
   ])
 
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
@@ -274,33 +302,38 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     const L = require('leaflet')
     const { latitud, longitud } = pedido.coordenadas
+    const esEntregado = pedido.estado === 'entregado' || esVolviendoAlLocal
+
+    const clienteIcon = L.divIcon({
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+          <div style="background:${esEntregado ? '#059669' : '#2563EB'};color:#fff;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 4px 10px ${esEntregado ? 'rgba(5,150,105,0.45)' : 'rgba(37,99,235,0.4)'};">
+            ${esEntregado
+              ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+              : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+            }
+          </div>
+          <div style="margin-top:2px;background:${esEntregado ? '#065F46' : '#1e40af'};color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
+            ${pedido.cliente || 'Tu Domicilio'} ${esEntregado ? '(Entregado ✓)' : ''}
+          </div>
+        </div>
+      `,
+      className: 'custom-cliente-tracking-icon',
+      iconSize: [140, 68],
+      iconAnchor: [70, 19],
+      popupAnchor: [0, -22],
+    })
 
     if (markersRef.current.cliente) {
       markersRef.current.cliente.setLatLng([latitud, longitud])
+      markersRef.current.cliente.setIcon(clienteIcon)
     } else {
-      const clienteIcon = L.divIcon({
-        html: `
-          <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="background:#2563EB;color:#fff;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
-              ${pedido.cliente || 'Tu Domicilio'}
-            </div>
-          </div>
-        `,
-        className: 'custom-cliente-tracking-icon',
-        iconSize: [120, 68],
-        iconAnchor: [60, 19],
-        popupAnchor: [0, -22],
-      })
-
       markersRef.current.cliente = L.marker([latitud, longitud], {
         icon: clienteIcon,
         zIndexOffset: 200,
-      }).addTo(leafletMapRef.current).bindPopup(`Destino de entrega: ${pedido.cliente}`)
+      }).addTo(leafletMapRef.current).bindPopup(`Destino de entrega: ${pedido.cliente}${esEntregado ? ' (Entregado)' : ''}`)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente, pedido.estado, esVolviendoAlLocal])
 
   // ── 4. MOTOR DE INTERPOLACIÓN CONTINUO A 60 FPS (GLIDING ENGINE) ─────────────
   useEffect(() => {
@@ -448,7 +481,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
       aplicarRotacionAlElemento(rumboActual)
 
       // 3. Acortar y desvanecer la polilínea de la ruta en vivo milisegundo a milisegundo
-      if (pedido.coordenadas && esProximaEntrega) {
+      const destinoPuntos = esVolviendoAlLocal ? UBICACION_LOCAL : pedido.coordenadas
+
+      if (destinoPuntos && (esProximaEntrega || esVolviendoAlLocal)) {
         const rutaCompleta = rutaGeometriaRef.current
         const posCadete: [number, number] = [latActual, lngActual]
 
@@ -463,7 +498,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
             posCadete
           ]
 
-          // Tramo restante: desde el cadete hasta la casa del cliente (Neón & Flow activo)
+          // Tramo restante: desde el cadete hasta el destino (local o cliente) (Neón & Flow activo)
           const puntosRestantes: [number, number][] = [
             posCadete,
             ...rutaCompleta.slice(idx + 1)
@@ -477,14 +512,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
           // Fallback directo si la geometría OSRM aún no cargó
           const rutaDirecta: [number, number][] = [
             posCadete,
-            [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+            [destinoPuntos.latitud, destinoPuntos.longitud]
           ]
           polylineRef.current.recorrida?.setLatLngs([])
           polylineRef.current.glow?.setLatLngs(rutaDirecta)
           polylineRef.current.core?.setLatLngs(rutaDirecta)
           polylineRef.current.dash?.setLatLngs(rutaDirecta)
         }
-      } else if (!esProximaEntrega) {
+      } else if (!esProximaEntrega && !esVolviendoAlLocal) {
         polylineRef.current.recorrida?.setLatLngs([])
         polylineRef.current.glow?.setLatLngs([])
         polylineRef.current.core?.setLatLngs([])
@@ -503,7 +538,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
 
     animFrameRef.current = requestAnimationFrame(pasoGliding)
-  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega])
+  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal])
 
   // ── 5. Inicialización de Polilíneas de Ruta (Neón & Flow + Tramo Recorrido) ──
   useEffect(() => {
@@ -511,24 +546,25 @@ export default function MapaSeguimiento({ pedido }: Props) {
     const L = require('leaflet')
 
     let puntosRuta: [number, number][] = []
+    const destinoCoords = esVolviendoAlLocal ? UBICACION_LOCAL : pedido.coordenadas
 
-    if (esProximaEntrega) {
+    if (esProximaEntrega || esVolviendoAlLocal) {
       if (rutaGeometriaRef.current.length >= 2) {
         puntosRuta = rutaGeometriaRef.current
-      } else if (posicionAnimadaRef.current && pedido.coordenadas) {
+      } else if (posicionAnimadaRef.current && destinoCoords) {
         puntosRuta = [
           [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
-          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+          [destinoCoords.latitud, destinoCoords.longitud]
         ]
-      } else if (pedido.cadete_coordenadas && pedido.coordenadas) {
+      } else if (pedido.cadete_coordenadas && destinoCoords) {
         puntosRuta = [
           [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
-          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+          [destinoCoords.latitud, destinoCoords.longitud]
         ]
-      } else if (pedido.coordenadas) {
+      } else if (destinoCoords) {
         puntosRuta = [
           [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
-          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+          [destinoCoords.latitud, destinoCoords.longitud]
         ]
       }
     }
@@ -577,7 +613,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       polylineRef.current.core?.setLatLngs(puntosRuta)
       polylineRef.current.dash?.setLatLngs(puntosRuta)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {
@@ -595,7 +631,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       bounds.extend(rutaGeometriaRef.current)
     }
     leafletMapRef.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: true })
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cadete_coordenadas?.latitud])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cadete_coordenadas?.latitud, esVolviendoAlLocal])
 
   // ── Acciones de Cámara HUD ──────────────────────────────────────────────────
   const enfocarCadete = () => {
@@ -707,7 +743,16 @@ export default function MapaSeguimiento({ pedido }: Props) {
       <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
 
       {/* HUD Superior con Estado Claro (Sin ETA numérico que genere ansiedad) */}
-      {enLaPuerta ? (
+      {esVolviendoAlLocal ? (
+        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
+          <div className="bg-gradient-to-r from-[#0e271e] to-[#143529] text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-white/90 tracking-wide">
+              {pedido.cadete_nombre ? `¡Pedido entregado! • ${pedido.cadete_nombre} está volviendo al local` : '¡Pedido entregado! • Repartidor volviendo al local'}
+            </span>
+          </div>
+        </div>
+      ) : enLaPuerta ? (
         <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#0e271e] to-[#143529] text-white px-4 py-2.5 rounded-2xl shadow-[0_12px_32px_-4px_rgba(0,0,0,0.5)] flex items-center gap-3 border border-emerald-400/40 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
             <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shrink-0">
