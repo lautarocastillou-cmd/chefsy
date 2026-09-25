@@ -42,6 +42,11 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
+  // Si es el editor visual de la tienda, renderizamos a pantalla completa para evitar colisiones móviles y navegación superpuesta
+  if (pathname === '/configuracion/editor') {
+    return <>{children}</>
+  }
+
   const tienePermiso = !esCadete || pathname === '/cadeteria'
 
   return (

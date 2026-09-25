@@ -88,6 +88,7 @@ export default function EditorTienda() {
   const [modalTexturasAbierto, setModalTexturasAbierto] = useState(false)
   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false)
   const [modalLoopAbierto, setModalLoopAbierto] = useState(false)
+  const [vistaMobile, setVistaMobile] = useState<'editor' | 'preview'>('editor')
 
   // Almacenamiento temporal de palabras animadas
   const [palabrasText, setPalabrasText] = useState('')
@@ -316,29 +317,42 @@ export default function EditorTienda() {
     <div className="flex h-screen w-full bg-slate-950 overflow-hidden font-sans select-none">
       
       {/* ── PANEL LATERAL DE EDICIÓN PROFESIONAL ─────────────────────── */}
-      <div className="w-88 sm:w-96 bg-zinc-950 border-r border-slate-800/80 flex flex-col z-50 shadow-2xl relative shrink-0">
+      <div className={cn(
+        "bg-zinc-950 border-r border-slate-800/80 flex flex-col z-50 shadow-2xl relative min-w-0 max-w-full",
+        vistaMobile === 'editor' ? 'w-full md:w-96 md:shrink-0 flex' : 'hidden md:flex md:w-96 md:shrink-0'
+      )}>
         
         {/* Cabecera Superior del Panel */}
-        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900">
+        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-zinc-900 w-full min-w-0">
           <Link
             href="/configuracion"
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all active:scale-95 shadow-sm"
+            className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all active:scale-95 shadow-sm shrink-0"
             title="Volver a Configuración"
           >
             <ArrowLeft size={16} />
           </Link>
 
-          <div className="text-center">
-            <h2 className="font-black text-white text-xs tracking-wider uppercase flex items-center gap-1.5 justify-center">
-              <Sparkles size={13} className="text-emerald-400" />
+          <div className="text-center min-w-0 px-1">
+            <h2 className="font-black text-white text-xs tracking-wider uppercase flex items-center gap-1.5 justify-center truncate">
+              <Sparkles size={13} className="text-emerald-400 shrink-0" />
               <span>Studio Pro</span>
             </h2>
-            <span className="text-[10px] text-slate-400 block font-mono">
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
               v2.5 • Chefsy
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Botón Preview en Mobile */}
+            <button
+              type="button"
+              onClick={() => setVistaMobile(vistaMobile === 'editor' ? 'preview' : 'editor')}
+              className="md:hidden p-2 bg-emerald-950/80 border border-emerald-700/80 text-emerald-400 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+              title={vistaMobile === 'editor' ? 'Ver Tienda' : 'Volver a Editar'}
+            >
+              <Eye size={15} />
+            </button>
+
             <button
               type="button"
               onClick={() => setModalHistorialAbierto(true)}
@@ -359,88 +373,88 @@ export default function EditorTienda() {
         </div>
 
         {/* Pestañas Ergonómicas de Navegación */}
-        <div className="grid grid-cols-6 border-b border-slate-800/80 bg-zinc-900/40 p-1 gap-1 text-center shrink-0">
+        <div className="grid grid-cols-6 border-b border-slate-800/80 bg-zinc-900/40 p-1 gap-1 text-center shrink-0 w-full min-w-0">
           <button
             type="button"
             onClick={() => setActiveTab('hero')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'hero' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Portada y Hero"
           >
-            <Layout size={14} />
-            <span>Hero</span>
+            <Layout size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Hero</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('tarjetas')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'tarjetas' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Estilos de Tarjetas"
           >
-            <CreditCard size={14} />
-            <span>Cards</span>
+            <CreditCard size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Cards</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('colores')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'colores' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Colores y Marca"
           >
-            <Palette size={14} />
-            <span>Color</span>
+            <Palette size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Color</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('tipografia')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'tipografia' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Tipografías y Efectos"
           >
-            <Type size={14} />
-            <span>Fonts</span>
+            <Type size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Fonts</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('recursos')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'recursos' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Texturas HD y Fondos"
           >
-            <ImageIcon size={14} />
-            <span>Fondo</span>
+            <ImageIcon size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Fondo</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('redes')}
             className={cn(
-              'py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 cursor-pointer',
+              'py-1.5 px-0.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase transition-all flex flex-col items-center gap-0.5 cursor-pointer min-w-0',
               activeTab === 'redes' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50' : 'text-slate-400 hover:text-slate-200'
             )}
             title="Redes Sociales y WhatsApp"
           >
-            <Share2 size={14} />
-            <span>Redes</span>
+            <Share2 size={13} className="shrink-0" />
+            <span className="truncate w-full text-center">Redes</span>
           </button>
         </div>
 
         {/* Controles de la Pestaña Activa */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-none">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-none w-full min-w-0">
           
           {/* ══════════════ TAB 1: HERO & PORTADAS ════════════════════ */}
           {activeTab === 'hero' && (
@@ -616,10 +630,10 @@ export default function EditorTienda() {
               )}
 
               {heroLayoutActual === 'parallax_doble' && (
-                <div className="space-y-3 pt-2 border-t border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-slate-200 block">
+                <div className="space-y-3 pt-2 border-t border-slate-800 w-full min-w-0">
+                  <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-bold text-slate-200 block truncate">
                         Fotos en Loop (Marco 9:16)
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
@@ -630,7 +644,7 @@ export default function EditorTienda() {
                     <button
                       type="button"
                       onClick={() => setModalLoopAbierto(true)}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer shrink-0"
                     >
                       <Settings2 size={13} />
                       <span>Configurar Loop</span>
@@ -638,12 +652,12 @@ export default function EditorTienda() {
                   </div>
 
                   {/* Grid interactivo de miniaturas con badge de duración */}
-                  <div className="grid grid-cols-4 gap-2 pt-1">
+                  <div className="grid grid-cols-4 gap-2 pt-1 w-full min-w-0">
                     {(configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT).map((item, idx) => (
                       <div
                         key={item.id || idx}
                         onClick={() => setModalLoopAbierto(true)}
-                        className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black border border-white/10 hover:border-emerald-500 transition-all cursor-pointer group shadow-md"
+                        className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black border border-white/10 hover:border-emerald-500 transition-all cursor-pointer group shadow-md min-w-0 w-full"
                         title={`Click para editar foto #${idx + 1}`}
                       >
                         <NextImage
@@ -651,7 +665,7 @@ export default function EditorTienda() {
                           alt={`Foto ${idx + 1}`}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform"
-                          sizes="80px"
+                          sizes="(max-width: 640px) 25vw, 80px"
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-1 flex justify-between items-center text-[9px] font-mono font-bold text-emerald-400">
                           <span>#{idx + 1}</span>
@@ -662,18 +676,18 @@ export default function EditorTienda() {
                   </div>
 
                   {/* Selector rápido de animación de transición */}
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-1.5 pt-1 w-full min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                        <Sparkles size={12} className="text-emerald-400" />
+                        <Sparkles size={12} className="text-emerald-400 shrink-0" />
                         <span>Efecto de Transición</span>
                       </span>
-                      <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60 shrink-0">
                         {OPCIONES_TRANSICION_LOOP.find(o => o.id === (configLive.hero_loop_transicion || 'fade'))?.nombre || 'Fundido'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-3 gap-1.5 w-full min-w-0">
                       {OPCIONES_TRANSICION_LOOP.map((opc) => {
                         const esActiva = (configLive.hero_loop_transicion || 'fade') === opc.id
                         return (
@@ -681,7 +695,7 @@ export default function EditorTienda() {
                             key={opc.id}
                             type="button"
                             onClick={() => handleChange('hero_loop_transicion', opc.id)}
-                            className={`p-1.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            className={`p-1.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all cursor-pointer min-w-0 w-full ${
                               esActiva
                                 ? 'bg-emerald-950/80 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/50'
                                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
@@ -689,7 +703,7 @@ export default function EditorTienda() {
                             title={opc.descripcion}
                           >
                             <span className="text-sm">{opc.icono}</span>
-                            <span className="text-[10px] font-bold leading-tight">{opc.nombre}</span>
+                            <span className="text-[10px] font-bold leading-tight truncate w-full">{opc.nombre}</span>
                           </button>
                         )
                       })}
@@ -699,10 +713,10 @@ export default function EditorTienda() {
                   <button
                     type="button"
                     onClick={() => setModalLoopAbierto(true)}
-                    className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800/80 border border-slate-800 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800/80 border border-slate-800 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
                   >
-                    <Settings2 size={14} />
-                    <span>Abrir Gestor de Imágenes y Duración</span>
+                    <Settings2 size={14} className="shrink-0" />
+                    <span className="truncate">Abrir Gestor de Imágenes y Duración</span>
                   </button>
                 </div>
               )}
@@ -1116,13 +1130,27 @@ export default function EditorTienda() {
       </div>
 
       {/* ── ÁREA CENTRAL DE PREVISUALIZACIÓN STUDIO (CANVAS PRO) ─────── */}
-      <div className="flex-1 relative overflow-hidden flex flex-col bg-[#07090E]">
+      <div className={cn(
+        "flex-1 relative overflow-hidden flex flex-col bg-[#07090E] min-w-0 h-full",
+        vistaMobile === 'preview' ? 'flex w-full h-full' : 'hidden md:flex'
+      )}>
         
         {/* BARRA SUPERIOR STUDIO: EMULADORES, ZOOM, UNDO/REDO */}
-        <div className="h-14 border-b border-slate-800/80 bg-zinc-950 px-6 flex items-center justify-between shrink-0 z-40">
+        <div className="h-14 border-b border-slate-800/80 bg-zinc-950 px-3 md:px-6 flex items-center justify-between shrink-0 z-40 gap-2 overflow-x-auto no-scrollbar">
           
-          {/* Deshacer / Rehacer */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Botón Volver al Editor en Mobile */}
+            <button
+              type="button"
+              onClick={() => setVistaMobile('editor')}
+              className="md:hidden flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/90 border border-emerald-700/80 text-emerald-400 hover:text-white rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+              title="Volver a los Controles"
+            >
+              <Sliders size={14} />
+              <span>Controles</span>
+            </button>
+
+            {/* Deshacer / Rehacer */}
             <button
               type="button"
               onClick={undo}
@@ -1144,12 +1172,12 @@ export default function EditorTienda() {
           </div>
 
           {/* Emuladores Multi-Dispositivo */}
-          <div className="flex items-center gap-1 bg-zinc-900 border border-slate-800 p-1 rounded-2xl shadow-inner">
+          <div className="flex items-center gap-1 bg-zinc-900 border border-slate-800 p-1 rounded-2xl shadow-inner shrink-0">
             <button
               type="button"
               onClick={() => setDispositivo('desktop')}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
                 dispositivo === 'desktop' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               )}
             >
@@ -1161,41 +1189,41 @@ export default function EditorTienda() {
               type="button"
               onClick={() => setDispositivo('ios')}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
                 dispositivo === 'ios' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               )}
             >
               <Smartphone size={14} />
-              <span>iPhone 16 Pro</span>
+              <span>iPhone</span>
             </button>
 
             <button
               type="button"
               onClick={() => setDispositivo('android')}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
                 dispositivo === 'android' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               )}
             >
               <Smartphone size={14} />
-              <span>Android Galaxy</span>
+              <span>Galaxy</span>
             </button>
 
             <button
               type="button"
               onClick={() => setDispositivo('tablet')}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
                 dispositivo === 'tablet' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               )}
             >
               <Tablet size={14} />
-              <span className="hidden sm:inline">iPad Tablet</span>
+              <span className="hidden sm:inline">iPad</span>
             </button>
           </div>
 
           {/* Zoom del Canvas */}
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setZoomCanvas((prev) => Math.max(50, prev - 15))}
@@ -1227,7 +1255,7 @@ export default function EditorTienda() {
         )}
 
         {/* CONTENEDOR DEL CANVAS CON ZOOM Y MARCOS REALISTAS */}
-        <div className="flex-1 overflow-auto flex items-center justify-center p-6 md:p-10 relative">
+        <div className="flex-1 overflow-auto flex items-center justify-center p-3 sm:p-6 md:p-10 relative">
           
           <ConfiguracionContext.Provider
             value={{
@@ -1301,12 +1329,26 @@ export default function EditorTienda() {
         </div>
 
         {/* Badge Flotante "Live Canvas" */}
-        <div className="absolute bottom-5 right-6 flex items-center gap-2 pointer-events-none z-30">
+        <div className="hidden sm:flex absolute bottom-5 right-6 items-center gap-2 pointer-events-none z-30">
           <div className="bg-zinc-900 border border-white/10 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Chefsy Engine Activo</span>
           </div>
         </div>
+
+        {/* Botón flotante móvil para volver a los controles cuando está en vista preview */}
+        {vistaMobile === 'preview' && (
+          <div className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <button
+              type="button"
+              onClick={() => setVistaMobile('editor')}
+              className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-full text-xs font-black flex items-center gap-2 shadow-2xl border border-white/20 active:scale-95 cursor-pointer backdrop-blur-md"
+            >
+              <Sliders size={15} />
+              <span>Volver a Controles</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MODAL: BANCO DE TEXTURAS HD */}
