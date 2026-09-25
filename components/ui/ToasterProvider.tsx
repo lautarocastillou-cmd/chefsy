@@ -17,7 +17,7 @@ export default function ToasterProvider() {
       position="bottom-center"
       gutter={10}
       containerStyle={{
-        bottom: 36,
+        bottom: 84,
         zIndex: 9999999,
       }}
       toastOptions={{
