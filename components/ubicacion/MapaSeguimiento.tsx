@@ -139,17 +139,72 @@ export default function MapaSeguimiento({ pedido }: Props) {
     esVolviendoAlLocal
   ])
 
-  // ── 1.1. Función de carga de ruta (usada en inicial y en recálculos por desvío) ─
-  const cargarRutaRef = useRef<((destino?: { latitud: number; longitud: number }) => Promise<void>) | null>(null)
+  // ── 1.1. Ref siempre actualizado con el último pedido (sin stale closures) ──────
+  // Esto es clave: cuando el recálculo se dispara desde el loop de animación,
+  // necesita leer la posición ACTUAL del cadete, no la del último useEffect.
+  const pedidoRef = useRef(pedido)
+  useEffect(() => { pedidoRef.current = pedido })
 
+  // Función de recálculo estable (no recrea en cada render, lee todo desde refs)
+  const recalcularRutaRef = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    recalcularRutaRef.current = async () => {
+      const p = pedidoRef.current
+      const posActual = posicionAnimadaRef.current
+
+      // Origen: posición animada actual del cadete (o GPS si no hay animación)
+      let origen: { latitud: number; longitud: number } = posActual
+        ? { latitud: posActual.latitud, longitud: posActual.longitud }
+        : (p.cadete_coordenadas?.latitud ? p.cadete_coordenadas : UBICACION_LOCAL)
+
+      const esVolviendo = Boolean(
+        (p as any).cadete_volviendo_al_local ||
+        (p.estado === 'entregado' && Boolean(p.cadete_coordenadas))
+      )
+
+      const destino: { latitud: number; longitud: number } = esVolviendo
+        ? UBICACION_LOCAL
+        : (p.coordenadas || UBICACION_LOCAL)
+
+      try {
+        const ruta = await obtenerRutaConduccion(origen, destino)
+        if (!ruta || ruta.puntos.length < 2) return
+
+        // Swap atómico: la ruta vieja sigue visible hasta que llega la nueva
+        rutaGeometriaRef.current = ruta.puntos
+
+        const posCadete: [number, number] = [origen.latitud, origen.longitud]
+        const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
+        indiceRutaRef.current = idx
+
+        if (typeof ruta.distanciaKm === 'number') {
+          setDistanciaRestanteKm(ruta.distanciaKm)
+        }
+
+        // Actualizar polilíneas inmediatamente con la ruta recalculada
+        if (leafletMapRef.current) {
+          const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
+          const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
+          polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
+          polylineRef.current.glow?.setLatLngs(puntosRestantes)
+          polylineRef.current.core?.setLatLngs(puntosRestantes)
+          polylineRef.current.dash?.setLatLngs(puntosRestantes)
+        }
+      } catch (_) {
+        // Sin crash: si falla, la ruta vieja sigue en pantalla
+      }
+    }
+  }, []) // [] → se crea una sola vez; lee TODO desde refs, nunca stale
+
+  // ── 1.2. Carga inicial de ruta (solo cuando cambia destino/estado) ─────────────
   useEffect(() => {
     let cancelado = false
     const abortCtrl = new AbortController()
 
-    const cargarRuta = async (destinoOverride?: { latitud: number; longitud: number }) => {
+    const cargarRutaInicial = async () => {
       try {
-        let origen = UBICACION_LOCAL
-        let destino: { latitud: number; longitud: number } | null | undefined = destinoOverride || pedido.coordenadas
+        let origen: { latitud: number; longitud: number } = UBICACION_LOCAL
+        let destino: { latitud: number; longitud: number } | null | undefined = pedido.coordenadas
 
         if (esVolviendoAlLocal) {
           origen = pedido.cadete_coordenadas?.latitud
@@ -168,10 +223,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
         const ruta = await obtenerRutaConduccion(origen, destino, abortCtrl.signal)
         if (cancelado || !ruta) return
 
-        // NUNCA limpiar la ruta vieja antes de tener la nueva: swap atómico
+        // Swap atómico
         rutaGeometriaRef.current = ruta.puntos
 
-        // Reposicionar el índice en el punto más cercano a donde está el cadete ahora
         const posCadete: [number, number] = posicionAnimadaRef.current
           ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
           : [origen.latitud, origen.longitud]
@@ -183,29 +237,23 @@ export default function MapaSeguimiento({ pedido }: Props) {
           setDistanciaRestanteKm(ruta.distanciaKm)
         }
 
-        // Actualizar las polilíneas inmediatamente con la nueva ruta
         if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
           const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
           const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
-
           polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
           polylineRef.current.glow?.setLatLngs(puntosRestantes)
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
         }
       } catch (_) {
-        // Ignorar cancelaciones intencionales de peticiones
+        // Ignorar cancelaciones
       }
     }
 
-    // Exponer la función vía ref para que el detector de desvíos pueda usarla
-    cargarRutaRef.current = cargarRuta
-
-    cargarRuta().catch(() => {})
+    cargarRutaInicial().catch(() => {})
 
     return () => {
       cancelado = true
-      cargarRutaRef.current = null
       abortCtrl.abort()
     }
   }, [
@@ -515,18 +563,18 @@ export default function MapaSeguimiento({ pedido }: Props) {
           const distanciaDesvioM = Math.sqrt(dLat * dLat + dLng * dLng)
 
           const THRESHOLD_DESVIO_M = 70
-          const COOLDOWN_MS = 30_000
+          const COOLDOWN_MS = 20_000  // 20s entre recálculos
 
           if (
             distanciaDesvioM > THRESHOLD_DESVIO_M &&
             !recalculandoRef.current &&
             Date.now() - ultimoRecalculoRef.current > COOLDOWN_MS &&
-            cargarRutaRef.current
+            recalcularRutaRef.current
           ) {
             recalculandoRef.current = true
             ultimoRecalculoRef.current = Date.now()
-            // Recalcular sin bloquear el frame actual — sin override: la función usa el destino del closure
-            Promise.resolve(cargarRutaRef.current())
+            // Disparo async sin bloquear el frame de animación actual
+            recalcularRutaRef.current()
               .catch(() => {})
               .finally(() => { recalculandoRef.current = false })
           }
