@@ -1,38 +1,30 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import { scrollHaciaCategoria } from '@/lib/tienda-helpers'
 
 export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { categoriasActivas: any[], productosFiltrados: any[] }) {
-  const [categoriaVisible, setCategoriaVisible] = useState<string>('')
+  const [categoriaPresionada, setCategoriaPresionada] = useState<string | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    const observador = new IntersectionObserver(
-      (entradas) => {
-        entradas.forEach((entrada) => {
-          if (entrada.isIntersecting) {
-            setCategoriaVisible(entrada.target.id)
-          }
-        })
-      },
-      { rootMargin: '-20% 0px -70% 0px' }
-    )
-
-    const secciones = document.querySelectorAll('.categoria-seccion[id], section[id]')
-    secciones.forEach((seccion) => observador.observe(seccion))
-
-    return () => observador.disconnect()
-  }, [productosFiltrados])
+  const handlePress = (id: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setCategoriaPresionada(id)
+    scrollHaciaCategoria(id)
+    timerRef.current = setTimeout(() => {
+      setCategoriaPresionada(null)
+    }, 320)
+  }
 
   return (
     <div className="relative z-30 bg-[#0d0d0d] mb-8">
       {/* Indicador de scroll */}
       <div className="flex justify-end px-4 pt-2 pb-1">
-        <span className="text-[10px] font-black text-slate-500/70 uppercase tracking-widest flex items-center gap-1">
+        <span className="text-[10px] font-black text-slate-500/70 uppercase tracking-widest flex items-center gap-1 select-none pointer-events-none">
           &lt; DESLIZA PARA LA IZQUIERDA
         </span>
       </div>
-      <div className="py-2 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 px-2">
+      <div className="py-2 border-b border-white/5 overflow-x-auto no-scrollbar flex gap-2 px-2 overscroll-x-contain">
       {(() => {
         const idPatys = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
         const idBurgers = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger'))?.id
@@ -49,15 +41,17 @@ export function ScrollSpyNavBar({ categoriasActivas, productosFiltrados }: { cat
             
             const esNavBurgers = (burgersExiste && cat.id === idBurgers) || (!burgersExiste && cat.id === idPatys)
             const nombreMostrar = esNavBurgers ? 'Burgers / Patys' : cat.nombre
+            const estaPresionado = categoriaPresionada === cat.id || (esNavBurgers && categoriaPresionada === idPatys)
             
             return (
               <button
                 key={cat.id}
-                onClick={() => {
-                  scrollHaciaCategoria(cat.id)
-                }}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm transition-all ${
-                  categoriaVisible === cat.id || (esNavBurgers && categoriaVisible === idPatys) ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                type="button"
+                onClick={() => handlePress(cat.id)}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full font-bold text-sm outline-none select-none transition-all duration-300 ease-out cursor-pointer active:scale-95 ${
+                  estaPresionado
+                    ? 'bg-chefsy text-white shadow-lg shadow-chefsy/30 scale-95 ring-2 ring-chefsy/50'
+                    : 'bg-white/5 text-slate-400 active:bg-chefsy active:text-white [@media(hover:hover)]:hover:bg-white/10 [@media(hover:hover)]:hover:text-white'
                 }`}
               >
                 {nombreMostrar}
