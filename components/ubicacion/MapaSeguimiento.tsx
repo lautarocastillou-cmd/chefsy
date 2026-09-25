@@ -2,12 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Pedido } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, obtenerRutaConduccion } from '@/lib/ubicacion'
-import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
+import { 
+  UBICACION_LOCAL, 
+  calcularDistanciaKm, 
+  CARTO_VOYAGER_URL, 
+  CARTO_ATTRIBUTION, 
+  CARTO_SUBDOMAINS,
+  CARTO_DARK_URL,
+  CARTO_DARK_ATTRIBUTION,
+  CARTO_DARK_SUBDOMAINS,
+  obtenerRutaConduccion 
+} from '@/lib/ubicacion'
+import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing, Sun, Moon } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
   pedido: Pedido
+  temaInicial?: 'oscuro' | 'claro'
 }
 
 type ModoCamara = 'cadete' | 'todo' | 'cliente' | 'manual'
@@ -63,9 +74,11 @@ function encontrarIndiceMasCercano(
   return mejorIndice
 }
 
-export default function MapaSeguimiento({ pedido }: Props) {
+export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
+  const tileLayerRef = useRef<any>(null)
+  const [temaMapa, setTemaMapa] = useState<'oscuro' | 'claro'>(temaInicial)
   const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any }>({})
   const polylineRef = useRef<{
     recorrida?: any
@@ -134,61 +147,65 @@ export default function MapaSeguimiento({ pedido }: Props) {
     const abortCtrl = new AbortController()
 
     const cargarRuta = async () => {
-      let origen = UBICACION_LOCAL
-      let destino = pedido.coordenadas
+      try {
+        let origen = UBICACION_LOCAL
+        let destino = pedido.coordenadas
 
-      if (esVolviendoAlLocal) {
-        // En regreso al local: origen es el repartidor (o cliente como fallback), destino es UBICACION_LOCAL
-        origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
-          ? pedido.cadete_coordenadas
-          : (pedido.coordenadas || UBICACION_LOCAL)
-        destino = UBICACION_LOCAL
-      } else {
-        if (!pedido.coordenadas) return
-        origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
-          ? pedido.cadete_coordenadas
-          : UBICACION_LOCAL
-        destino = pedido.coordenadas
-      }
-
-      if (!destino) return
-
-      const ruta = await obtenerRutaConduccion(origen, destino, abortCtrl.signal)
-      if (cancelado || !ruta) return
-
-      rutaGeometriaRef.current = ruta.puntos
-      indiceRutaRef.current = 0
-
-      if (typeof ruta.distanciaKm === 'number') {
-        setDistanciaRestanteKm(ruta.distanciaKm)
-      }
-
-      // Si el mapa ya está listo y los polylines existen, actualizar de inmediato
-      if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
-        const posCadete: [number, number] = posicionAnimadaRef.current
-          ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
-          : [origen.latitud, origen.longitud]
-
-        const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
-        indiceRutaRef.current = idx
-
-        const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
-        const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
-
-        polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
-        polylineRef.current.glow?.setLatLngs(puntosRestantes)
-        polylineRef.current.core?.setLatLngs(puntosRestantes)
-        polylineRef.current.dash?.setLatLngs(puntosRestantes)
-
-        if (modoCamaraRef.current === 'todo' && leafletMapRef.current) {
-          const L = require('leaflet')
-          const bounds = L.latLngBounds(ruta.puntos)
-          leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
+        if (esVolviendoAlLocal) {
+          // En regreso al local: origen es el repartidor (o cliente como fallback), destino es UBICACION_LOCAL
+          origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+            ? pedido.cadete_coordenadas
+            : (pedido.coordenadas || UBICACION_LOCAL)
+          destino = UBICACION_LOCAL
+        } else {
+          if (!pedido.coordenadas) return
+          origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+            ? pedido.cadete_coordenadas
+            : UBICACION_LOCAL
+          destino = pedido.coordenadas
         }
+
+        if (!destino) return
+
+        const ruta = await obtenerRutaConduccion(origen, destino, abortCtrl.signal)
+        if (cancelado || !ruta) return
+
+        rutaGeometriaRef.current = ruta.puntos
+        indiceRutaRef.current = 0
+
+        if (typeof ruta.distanciaKm === 'number') {
+          setDistanciaRestanteKm(ruta.distanciaKm)
+        }
+
+        // Si el mapa ya está listo y los polylines existen, actualizar de inmediato
+        if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
+          const posCadete: [number, number] = posicionAnimadaRef.current
+            ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
+            : [origen.latitud, origen.longitud]
+
+          const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
+          indiceRutaRef.current = idx
+
+          const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
+          const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
+
+          polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
+          polylineRef.current.glow?.setLatLngs(puntosRestantes)
+          polylineRef.current.core?.setLatLngs(puntosRestantes)
+          polylineRef.current.dash?.setLatLngs(puntosRestantes)
+
+          if (modoCamaraRef.current === 'todo' && leafletMapRef.current) {
+            const L = require('leaflet')
+            const bounds = L.latLngBounds(ruta.puntos)
+            leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
+          }
+        }
+      } catch (_) {
+        // Ignorar cancelaciones intencionales de peticiones
       }
     }
 
-    cargarRuta()
+    cargarRuta().catch(() => {})
 
     return () => {
       cancelado = true
@@ -202,6 +219,26 @@ export default function MapaSeguimiento({ pedido }: Props) {
     esProximaEntrega,
     esVolviendoAlLocal
   ])
+
+  // ── Cambio reactivo de tema (Claro / Oscuro) ────────────────────────────────
+  useEffect(() => {
+    if (!leafletMapRef.current || !mapaListo) return
+    const L = require('leaflet')
+
+    if (tileLayerRef.current) {
+      leafletMapRef.current.removeLayer(tileLayerRef.current)
+    }
+
+    const urlTiles = temaMapa === 'oscuro' ? CARTO_DARK_URL : CARTO_VOYAGER_URL
+    const attrTiles = temaMapa === 'oscuro' ? CARTO_DARK_ATTRIBUTION : CARTO_ATTRIBUTION
+    const subdoms = temaMapa === 'oscuro' ? CARTO_DARK_SUBDOMAINS : CARTO_SUBDOMAINS
+
+    tileLayerRef.current = L.tileLayer(urlTiles, {
+      attribution: attrTiles,
+      subdomains: subdoms,
+      maxZoom: 20,
+    }).addTo(leafletMapRef.current)
+  }, [temaMapa, mapaListo])
 
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
   useEffect(() => {
@@ -219,9 +256,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
         attributionControl: false,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
-      // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
-      L.tileLayer(CARTO_VOYAGER_URL, {
-        attribution: CARTO_ATTRIBUTION,
+      // Capa de Mapa: Modo Nocturno CartoDB Dark Matter por defecto o Google Maps HD
+      const urlTiles = temaMapa === 'oscuro' ? CARTO_DARK_URL : CARTO_VOYAGER_URL
+      const attrTiles = temaMapa === 'oscuro' ? CARTO_DARK_ATTRIBUTION : CARTO_ATTRIBUTION
+      const subdoms = temaMapa === 'oscuro' ? CARTO_DARK_SUBDOMAINS : CARTO_SUBDOMAINS
+
+      tileLayerRef.current = L.tileLayer(urlTiles, {
+        attribution: attrTiles,
+        subdomains: subdoms,
         maxZoom: 20,
       }).addTo(mapa)
 
@@ -236,17 +278,17 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const localIcon = L.divIcon({
         html: `
           <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #2A6348; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A6348" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+            <div style="background: #0f172a; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #10B981; box-shadow: 0 4px 14px rgba(16,185,129,0.5);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
             </div>
-            <div style="margin-top:2px;background:#2A6348;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #ffffff;">
+            <div style="margin-top:2px;background:#064e3b;color:#34d399;font-size:10px;font-weight:900;padding:1px 7px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.5);white-space:nowrap;border:1px solid #10B981;">
               Chefsy Local
             </div>
           </div>
         `,
         className: 'custom-local-tracking-icon',
         iconSize: [80, 56],
-        iconAnchor: [40, 18],
+        iconAnchor: [40, 19],
       })
 
       markersRef.current.local = L.marker([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], {
@@ -730,11 +772,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
         }
         .animated-polyline-dash {
           animation: polyline-dash 1.4s linear infinite;
-        }
         .leaflet-container {
           width: 100% !important;
           height: 100% !important;
-          background-color: #e2e8f0;
+          background-color: #0b0f19 !important;
         }
       `,
       }} />
@@ -742,20 +783,20 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* Contenedor del Mapa Leaflet (100% absoluto) */}
       <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
 
-      {/* HUD Superior con Estado Claro (Sin ETA numérico que genere ansiedad) */}
+      {/* HUD Superior con Estado Claro (debajo del header flotante) */}
       {esVolviendoAlLocal ? (
-        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#0e271e] to-[#143529] text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="text-xs font-bold text-white/90 tracking-wide">
+        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+          <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-white/95 tracking-wide">
               {pedido.cadete_nombre ? `¡Pedido entregado! • ${pedido.cadete_nombre} está volviendo al local` : '¡Pedido entregado! • Repartidor volviendo al local'}
             </span>
           </div>
         </div>
       ) : enLaPuerta ? (
-        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#0e271e] to-[#143529] text-white px-4 py-2.5 rounded-2xl shadow-[0_12px_32px_-4px_rgba(0,0,0,0.5)] flex items-center gap-3 border border-emerald-400/40 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shrink-0">
+        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+          <div className="bg-gradient-to-r from-[#064e3b]/95 to-[#022c22]/95 backdrop-blur-xl text-white px-4 py-2 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 border border-emerald-400/50 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shrink-0">
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
@@ -773,27 +814,39 @@ export default function MapaSeguimiento({ pedido }: Props) {
           </div>
         </div>
       ) : paradasPrevias > 0 && !esperandoGps ? (
-        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#1c2214] to-[#242b19] text-white px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40">
+        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+          <div className="bg-gradient-to-r from-[#1c1917]/90 to-[#292524]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-            <span className="text-xs font-bold text-white/90 tracking-wide">
+            <span className="text-xs font-bold text-amber-200 tracking-wide">
               Entrega previa en curso • Tu turno: Parada {paradaActual} de {totalParadas}
             </span>
           </div>
         </div>
       ) : esProximaEntrega && pedido.cadete_coordenadas && ['listo', 'en_camino'].includes(pedido.estado) && !esperandoGps ? (
-        <div className="absolute top-3.5 left-0 right-0 z-[400] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#0e271e] to-[#143529] text-white px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40">
+        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+          <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="text-xs font-bold text-white/90 tracking-wide">
+            <span className="text-xs font-bold text-emerald-200 tracking-wide">
               {pedido.cadete_nombre ? `${pedido.cadete_nombre} va directo a tu domicilio` : 'Repartidor en camino directo a tu domicilio'}
             </span>
           </div>
         </div>
       ) : null}
 
-      {/* HUD de Botones de Cámara Inteligente */}
-      <div className="absolute top-3.5 right-3.5 z-[400] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+      {/* HUD de Botones de Cámara Inteligente y Tema */}
+      <div className="absolute top-28 sm:top-24 right-3.5 z-[350] flex flex-col gap-1.5 bg-slate-950/85 backdrop-blur-xl p-1 rounded-2xl shadow-2xl border border-white/10 text-white">
+        {/* Toggle Modo Nocturno / Claro */}
+        <button
+          type="button"
+          onClick={() => setTemaMapa(t => t === 'oscuro' ? 'claro' : 'oscuro')}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer text-slate-300 hover:bg-white/10 hover:text-white"
+          title={temaMapa === 'oscuro' ? 'Cambiar a mapa claro' : 'Cambiar a mapa nocturno'}
+        >
+          {temaMapa === 'oscuro' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-400" />}
+        </button>
+
+        <div className="w-full h-px bg-white/10 my-0.5" />
+
         {/* Seguir al Cadete */}
         <button
           type="button"
@@ -802,7 +855,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'cadete'
               ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
+              : 'text-slate-300 hover:bg-white/10 hover:text-white disabled:opacity-30'
           }`}
           title="Seguir al repartidor en vivo"
         >
@@ -816,7 +869,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'todo'
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-slate-300 hover:bg-white/10 hover:text-white'
           }`}
           title="Ver ruta completa (Local, Repartidor y Casa)"
         >
@@ -831,7 +884,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'cliente'
               ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
+              : 'text-slate-300 hover:bg-white/10 hover:text-white disabled:opacity-30'
           }`}
           title="Centrar en mi domicilio"
         >

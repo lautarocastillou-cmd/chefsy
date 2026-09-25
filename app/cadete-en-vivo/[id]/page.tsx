@@ -31,38 +31,37 @@ const MapaSeguimiento = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-slate-100 animate-pulse">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2A6348', borderTopColor: 'transparent' }} />
-          <span className="text-xs text-slate-400 font-medium">Cargando mapa en vivo...</span>
+      <div className="w-full h-full flex items-center justify-center bg-slate-950 animate-pulse">
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="w-9 h-9 border-3 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
+          <span className="text-xs text-emerald-400/90 font-semibold tracking-wide">Iniciando vista satelital en vivo...</span>
         </div>
       </div>
     )
   }
 )
 
-const BG = 'linear-gradient(150deg, #2A6348 0%, #1a3d2e 100%)'
 const WHATSAPP_NUMERO = '5493834225445'
 
 // ── Badge de estado ─────────────────────────────────────────────────────────
 function EtiquetaEstado({ estado, volviendoAlLocal }: { estado: string; volviendoAlLocal?: boolean }) {
   if (volviendoAlLocal) {
     return (
-      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         <span>Volviendo al local</span>
       </span>
     )
   }
   const cfg: Record<string, { label: string; cls: string }> = {
-    nuevo:     { label: 'Recibido',  cls: 'bg-blue-100 text-blue-700' },
-    en_cocina: { label: 'En cocina', cls: 'bg-amber-100 text-amber-700' },
-    listo:     { label: 'Listo',     cls: 'bg-emerald-100 text-emerald-700' },
-    en_camino: { label: 'En camino', cls: 'bg-green-100 text-green-700' },
-    entregado: { label: 'Entregado', cls: 'bg-gray-100 text-gray-500' },
-    cancelado: { label: 'Cancelado', cls: 'bg-red-100 text-red-600' },
+    nuevo:     { label: 'Recibido',  cls: 'bg-blue-950/80 text-blue-300 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.25)]' },
+    en_cocina: { label: 'En cocina', cls: 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]' },
+    listo:     { label: 'Listo',     cls: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]' },
+    en_camino: { label: 'En camino', cls: 'bg-green-950/80 text-green-300 border border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)]' },
+    entregado: { label: 'Entregado', cls: 'bg-slate-800/80 text-slate-300 border border-slate-600/40' },
+    cancelado: { label: 'Cancelado', cls: 'bg-rose-950/80 text-rose-300 border border-rose-500/40' },
   }
-  const c = cfg[estado] ?? { label: estado, cls: 'bg-gray-100 text-gray-600' }
+  const c = cfg[estado] ?? { label: estado, cls: 'bg-slate-800 text-slate-300 border border-slate-600' }
   return (
     <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${c.cls}`}>
       {c.label}
@@ -74,15 +73,15 @@ function EtiquetaEstado({ estado, volviendoAlLocal }: { estado: string; volviend
 function ResumenProductos({ productos }: { productos: any[] }) {
   if (!productos || productos.length === 0) return null
   return (
-    <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+    <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
       {productos.map((p: any, i: number) => (
         <div key={i} className="flex items-start justify-between gap-2 text-xs">
           <div className="flex items-start gap-2 min-w-0">
-            <span className="font-black shrink-0 mt-0.5" style={{ color: '#2A6348' }}>{p.cantidad}×</span>
-            <span className="text-gray-700 leading-snug truncate">{p.nombre}</span>
+            <span className="font-black shrink-0 mt-0.5 text-emerald-400">{p.cantidad}×</span>
+            <span className="text-slate-200 leading-snug truncate">{p.nombre}</span>
           </div>
           {p.precio ? (
-            <span className="text-gray-500 font-mono text-[11px] shrink-0 font-bold">
+            <span className="text-emerald-400 font-mono text-[11px] shrink-0 font-bold">
               {formatearPrecio(p.precio * p.cantidad)}
             </span>
           ) : null}
@@ -96,13 +95,13 @@ function ResumenProductos({ productos }: { productos: any[] }) {
 interface PedidoExtra { id: string; estado: string; productos: any[] }
 
 function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
-  const translateY = (index + 1) * 12
+  const translateY = (index + 1) * 8
   const scale      = 1 - (index + 1) * 0.04
-  const opacity    = 1 - (index + 1) * 0.18
+  const opacity    = 1 - (index + 1) * 0.25
 
   return (
     <div
-      className="absolute inset-x-0 top-0 bg-white rounded-2xl border border-white/40 p-4 pointer-events-none shadow-md"
+      className="absolute inset-x-0 top-0 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/10 p-3 pointer-events-none shadow-2xl text-white"
       style={{
         transform: `translateY(${translateY}px) scale(${scale})`,
         transformOrigin: 'top center',
@@ -112,8 +111,8 @@ function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Package size={14} className="text-gray-400 shrink-0" />
-          <span className="text-xs font-bold text-gray-500">Pedido adicional</span>
+          <Package size={14} className="text-emerald-400 shrink-0" />
+          <span className="text-xs font-bold text-slate-300">Pedido adicional</span>
         </div>
         <EtiquetaEstado estado={data.estado} />
       </div>
@@ -273,19 +272,19 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
   if (cargando) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: BG }}>
-      <div className="w-12 h-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+    <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-950 text-white z-50">
+      <div className="w-12 h-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
       <p className="text-white/70 text-sm font-medium animate-pulse">Buscando tu pedido...</p>
     </div>
   )
 
   if (error || !pedido) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: BG }}>
-      <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
+    <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white z-50">
+      <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
         <AlertCircle size={44} className="text-amber-500" />
-        <h1 className="text-lg font-bold text-gray-800">Ups...</h1>
-        <p className="text-gray-500 text-sm">{error || 'No se encontró el pedido.'}</p>
-        <a href="https://chefsy.xyz/" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-[#2A6348] hover:underline">
+        <h1 className="text-lg font-bold text-white">Ups...</h1>
+        <p className="text-slate-400 text-sm">{error || 'No se encontró el pedido.'}</p>
+        <a href="https://chefsy.xyz/" className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300">
           <ArrowLeft size={14} /><span>Volver a la tienda</span>
         </a>
       </div>
@@ -310,9 +309,9 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Señal GPS pausada */}
       {gpsApagado && (
-        <div className="absolute inset-x-3 top-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-xl border border-red-200 dark:border-red-900/50 flex items-center gap-2.5 animate-in slide-in-from-top-4">
-          <WifiOff size={18} className="text-red-500 shrink-0" />
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+        <div className="absolute inset-x-3 top-24 sm:top-28 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3 shadow-2xl border border-red-500/30 flex items-center gap-2.5 animate-in slide-in-from-top-4">
+          <WifiOff size={18} className="text-red-400 shrink-0" />
+          <span className="text-xs font-bold text-slate-200">
             {cadeteNombre} está en camino (señal GPS momentáneamente pausada).
           </span>
         </div>
@@ -320,39 +319,39 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Cadete con entregas previas en la zona */}
       {paradasPrevias > 0 && !isTerminado && !isVolviendoAlLocal ? (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black text-amber-900 dark:text-amber-200">
+            <h3 className="text-xs font-black text-amber-200">
               ¡{cadeteNombre} está realizando {paradasPrevias === 1 ? '1 entrega previa' : `${paradasPrevias} entregas previas`} en tu zona!
             </h3>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+            <p className="text-[11px] text-amber-300/80">
               Tu pedido es la <strong>Parada #{paradaActual} de {totalParadas}</strong>. Podés seguir la ubicación del cadete en vivo en el mapa. Apenas se dirija a tu casa, te avisaremos.
             </p>
           </div>
         </div>
       ) : esProximaEntrega && isEnCamino && !gpsApagado ? (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-emerald-950/90 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <Bike size={22} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black">¡{cadeteNombre} va directo a tu casa!</h3>
-            <p className="text-[11px] text-emerald-100">Tu domicilio es el próximo destino en su recorrido.</p>
+            <h3 className="text-xs font-black text-emerald-300">¡{cadeteNombre} va directo a tu casa!</h3>
+            <p className="text-[11px] text-emerald-200/90">Tu domicilio es el próximo destino en su recorrido.</p>
           </div>
         </div>
       ) : cadeteOcupadoEnOtroViaje && !isEnCamino && !isVolviendoAlLocal ? (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black text-amber-900 dark:text-amber-200">
+            <h3 className="text-xs font-black text-amber-200">
               ¡{cadeteNombre} está completando una entrega cercana!
             </h3>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+            <p className="text-[11px] text-amber-300/80">
               Tu pedido ya está listo. Apenas termine ese reparto, sale directo hacia tu casa.
             </p>
           </div>
@@ -361,15 +360,15 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Cocina / Preparación */}
       {isEnPreparacion && !cadeteOcupadoEnOtroViaje && paradasPrevias === 0 && (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-white/10 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Flame size={22} className="animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">
+            <h3 className="text-xs font-black text-white">
               {pedido.estado === 'listo' ? '¡Tu pedido ya está listo!' : 'Preparando tu pedido en cocina'}
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-slate-300">
               {pedido.estado === 'listo' 
                 ? (pedido.cadete_nombre ? `${pedido.cadete_nombre} lo retirará en breve para el reparto.` : 'Esperando asignación de cadete para el despacho.')
                 : 'Te avisaremos en vivo cuando el repartidor salga hacia tu domicilio.'}
@@ -380,7 +379,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Pedido Entregado / Volviendo al Local */}
       {isVolviendoAlLocal ? (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-gradient-to-r from-[#0e271e] to-[#143529] text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-400/40 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/40 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/30">
             <Bike size={22} className="animate-pulse" />
           </div>
@@ -391,19 +390,19 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                 Volviendo al local
               </span>
             </div>
-            <p className="text-[11px] text-emerald-100/90 mt-0.5">
+            <p className="text-[11px] text-slate-300 mt-0.5">
               {cadeteNombre} finalizó sus entregas y está regresando al local de Chefsy. ¡Muchas gracias por tu compra!
             </p>
           </div>
         </div>
       ) : isTerminado ? (
-        <div className="absolute inset-x-3 bottom-3 z-[400] bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-emerald-950/90 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <CheckCircle2 size={22} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black">¡Pedido entregado con éxito!</h3>
-            <p className="text-[11px] text-emerald-100">¡Muchas gracias por elegir Chefsy! Que lo disfrutes.</p>
+            <h3 className="text-xs font-black text-emerald-300">¡Pedido entregado con éxito!</h3>
+            <p className="text-[11px] text-emerald-200/90">¡Muchas gracias por elegir Chefsy! Que lo disfrutes.</p>
           </div>
         </div>
       ) : null}
@@ -414,33 +413,32 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const headerPrincipal = (
     <>
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: 'rgba(42,99,72,0.12)' }}>
-          {isVolviendoAlLocal ? <Bike size={24} className="text-emerald-600 animate-pulse" />
-           : isTerminado     ? <CheckCircle2 size={24} className="text-emerald-600" />
-           : isEnPreparacion ? <UtensilsCrossed size={24} className="text-amber-600" />
-           : <Bike size={24} className="text-emerald-600" />}
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/20 border border-emerald-500/30">
+          {isVolviendoAlLocal ? <Bike size={22} className="text-emerald-400 animate-pulse" />
+           : isTerminado     ? <CheckCircle2 size={22} className="text-emerald-400" />
+           : isEnPreparacion ? <UtensilsCrossed size={22} className="text-amber-400" />
+           : <Bike size={22} className="text-emerald-400" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-bold text-gray-900 text-base leading-tight">
+            <h1 className="font-bold text-white text-sm sm:text-base leading-tight">
               {isVolviendoAlLocal
-                ? `¡Pedido entregado! • ${cadeteNombre} está volviendo al local`
+                ? `¡Entregado! • ${cadeteNombre} vuelve al local`
                 : isTerminado
                 ? '¡Pedido entregado!'
                 : isEnCamino
                 ? (paradasPrevias > 0
-                    ? `¡${cadeteNombre} está en viaje con paradas previas!`
-                    : `¡${cadeteNombre} está en camino a tu dirección!`)
+                    ? `¡${cadeteNombre} en viaje con paradas!`
+                    : `¡${cadeteNombre} en camino!`)
                 : cadeteOcupadoEnOtroViaje
-                ? `¡${cadeteNombre} está completando otra entrega!`
+                ? `¡${cadeteNombre} en otra entrega!`
                 : isEnPreparacion
-                ? 'Preparando tu pedido'
-                : 'Procesando tu pedido'}
+                ? 'Preparando pedido'
+                : 'Procesando pedido'}
             </h1>
             <EtiquetaEstado estado={pedido.estado} volviendoAlLocal={isVolviendoAlLocal} />
           </div>
-          <p className="text-sm font-semibold truncate" style={{ color: '#2A6348' }}>
+          <p className="text-xs font-semibold truncate text-emerald-400">
             Para {pedido.cliente.split(' ')[0]}
           </p>
         </div>
@@ -448,30 +446,30 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Cadete asignado y estado del recorrido */}
       {pedido.cadete_nombre && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-gray-500">Cadete asignado:</span>
-          <span className="text-xs font-bold text-[#2A6348] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs">
+        <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap text-xs">
+          <span className="font-medium text-slate-400">Cadete asignado:</span>
+          <span className="font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex items-center gap-1.5 shadow-xs">
             <Bike className="w-3.5 h-3.5" />
             <span>{pedido.cadete_nombre}</span>
-            {isVolviendoAlLocal && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-md">Regresando</span>}
+            {isVolviendoAlLocal && <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">Regresando</span>}
           </span>
         </div>
       )}
 
       {/* Indicador de Parada / Entrega Conjunta */}
       {totalParadas > 1 && !isTerminado && (
-        <div className="mt-2.5 pt-2.5 border-t border-dashed border-gray-200 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-gray-500">Recorrido del cadete:</span>
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-xs border ${
+        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap text-xs">
+          <span className="font-medium text-slate-400">Recorrido:</span>
+          <span className={`font-bold px-2 py-0.5 rounded-lg flex items-center gap-1.5 shadow-xs border text-[11px] ${
             esProximaEntrega
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-amber-50 text-amber-800 border-amber-200'
+              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+              : 'bg-amber-950/60 text-amber-300 border-amber-500/40'
           }`}>
             <MapPin className="w-3.5 h-3.5" />
             <span>
               {esProximaEntrega
                 ? 'Próxima parada (destino actual)'
-                : `Parada ${paradaActual} de ${totalParadas} (${paradasPrevias} ${paradasPrevias === 1 ? 'entrega antes' : 'entregas antes'})`}
+                : `Parada ${paradaActual} de ${totalParadas} (${paradasPrevias} antes)`}
             </span>
           </span>
         </div>
@@ -480,7 +478,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   )
 
   // ── Stack de tarjetas (principal + adicionales) ─────────────────────────────
-  const stackMarginBottom = pedidosExtra.length * 12
+  const stackMarginBottom = pedidosExtra.length * 10
 
   const headerConStack = (
     <div className="relative" style={{ marginBottom: stackMarginBottom }}>
@@ -492,8 +490,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           index={pedidosExtra.length - 1 - i}
         />
       ))}
-      {/* Tarjeta principal encima */}
-      <div className="relative bg-white rounded-2xl shadow-xl border border-white/20 p-4" style={{ zIndex: 20 }}>
+      {/* Tarjeta principal cápsula glassmorphism */}
+      <div className="relative bg-slate-950/85 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 sm:p-4 text-white" style={{ zIndex: 20 }}>
         {headerPrincipal}
       </div>
     </div>
@@ -501,22 +499,27 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   // ── BottomSheet Desplegable de Detalles ──────────────────────────────────────
   const bottomSheet = (
-    <div className="w-full bg-white rounded-2xl shadow-2xl border border-white/30 overflow-hidden transition-all duration-300">
+    <div className="w-full bg-slate-950/90 backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-white/10 overflow-hidden transition-all duration-300 text-white">
+      {/* Barra de arrastre visual móvil */}
+      <div className="w-full flex justify-center pt-2 pb-0.5 sm:hidden cursor-pointer" onClick={() => setBottomSheetAbierto(!bottomSheetAbierto)}>
+        <div className="w-10 h-1 bg-white/20 rounded-full" />
+      </div>
+
       {/* Barra superior de despliegue / Toque táctil */}
       <button
         type="button"
         onClick={() => setBottomSheetAbierto(!bottomSheetAbierto)}
-        className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100/80 flex items-center justify-between gap-3 border-b border-slate-100 cursor-pointer transition-colors"
+        className="w-full px-4 py-2.5 sm:py-3 hover:bg-white/5 flex items-center justify-between gap-3 border-b border-white/10 cursor-pointer transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-[#2A6348] flex items-center justify-center font-bold">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold border border-emerald-500/30">
             <ShoppingBag size={16} />
           </div>
           <div className="text-left">
-            <span className="text-xs font-black text-slate-800 block">
+            <span className="text-xs font-bold text-white block">
               {bottomSheetAbierto ? 'Ocultar detalle' : 'Ver detalle del pedido'}
             </span>
-            <span className="text-[11px] font-bold text-[#2A6348]">
+            <span className="text-[11px] font-bold text-emerald-400">
               {productos.length} {productos.length === 1 ? 'producto' : 'productos'} • {formatearPrecio(pedido.total || 0)}
             </span>
           </div>
@@ -526,7 +529,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
             {bottomSheetAbierto ? 'Cerrar' : 'Desplegar'}
           </span>
-          <div className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs">
+          <div className="w-7 h-7 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 shadow-xs">
             {bottomSheetAbierto ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           </div>
         </div>
@@ -534,37 +537,37 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Contenido expandible */}
       {bottomSheetAbierto && (
-        <div className="p-4 space-y-4 animate-in slide-in-from-bottom-2 duration-200 max-h-[350px] overflow-y-auto">
+        <div className="p-4 space-y-3.5 animate-in slide-in-from-bottom-2 duration-200 max-h-[50vh] overflow-y-auto">
           {/* Dirección y Pago */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             {pedido.direccion && (
-              <div className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                <MapPin size={15} className="text-[#2A6348] shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 bg-white/5 p-2.5 rounded-xl border border-white/10">
+                <MapPin size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Entrega en</span>
-                  <span className="font-semibold text-slate-700 leading-tight block truncate" title={direccionLegible || pedido.direccion}>
+                  <span className="font-semibold text-slate-200 leading-tight block truncate" title={direccionLegible || pedido.direccion}>
                     {direccionLegible || (esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : pedido.direccion)}
                   </span>
                 </div>
               </div>
             )}
 
-            <div className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-              <CreditCard size={15} className="text-[#2A6348] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 bg-white/5 p-2.5 rounded-xl border border-white/10">
+              <CreditCard size={15} className="text-emerald-400 shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Método de pago</span>
-                <span className="font-semibold text-slate-700 capitalize block">{pedido.metodoPago || 'Efectivo'}</span>
+                <span className="font-semibold text-slate-200 capitalize block">{pedido.metodoPago || 'Efectivo'}</span>
               </div>
             </div>
           </div>
 
           {/* Observaciones / Aclaraciones de cocina */}
           {pedido.observaciones && (
-            <div className="bg-amber-50/80 border border-amber-200/80 p-2.5 rounded-xl text-xs flex items-start gap-2">
-              <FileText size={15} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-xl text-xs flex items-start gap-2">
+              <FileText size={15} className="text-amber-400 shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Aclaración</span>
-                <span className="text-amber-900 font-medium leading-tight">{pedido.observaciones}</span>
+                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">Aclaración</span>
+                <span className="text-amber-200/90 font-medium leading-tight">{pedido.observaciones}</span>
               </div>
             </div>
           )}
@@ -576,73 +579,75 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Desglose de totales */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-500">Total a pagar:</span>
-            <span className="text-base font-black font-mono text-[#2A6348]">{formatearPrecio(pedido.total || 0)}</span>
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-bold">
+            <span className="text-slate-400">Total a pagar:</span>
+            <span className="text-base font-black font-mono text-emerald-400">{formatearPrecio(pedido.total || 0)}</span>
           </div>
 
-          {/* Botón WhatsApp de ayuda */}
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
-          >
-            <MessageCircle size={16} />
-            <span>¿Dudas con tu pedido? Escribinos por WhatsApp</span>
-          </a>
+          {/* Acciones: WhatsApp y Volver */}
+          <div className="flex flex-col gap-2 pt-1">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
+            >
+              <MessageCircle size={16} />
+              <span>¿Dudas con tu pedido? Escribinos por WhatsApp</span>
+            </a>
+
+            <div className="flex items-center justify-between pt-1">
+              <a
+                href="https://chefsy.xyz/"
+                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-medium transition-colors"
+              >
+                <ArrowLeft size={13} /><span>Volver a la tienda</span>
+              </a>
+              <span className="text-slate-500 text-[10px]">Powered by Chefsy</span>
+            </div>
+          </div>
         </div>
       )}
-    </div>
-  )
-
-  const footerBloque = (
-    <div className="flex flex-col items-center gap-2.5 pt-2 pb-2">
-      {/* Botón Flotante de WhatsApp Rápido si el bottomsheet está cerrado */}
-      {!bottomSheetAbierto && (
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-full text-xs font-black shadow-xl border border-emerald-400/30 transition-all active:scale-95 cursor-pointer"
-        >
-          <MessageCircle size={15} />
-          <span>¿Dudas con el pedido? Hablar por WhatsApp</span>
-        </a>
-      )}
-
-      <a
-        href="https://chefsy.xyz/"
-        className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full border border-white/20 transition-all shadow-md active:scale-95 cursor-pointer"
-      >
-        <ArrowLeft size={13} /><span>Volver a la tienda</span>
-      </a>
-      <p className="text-center text-white/30 text-[10px] font-semibold tracking-wider">Powered by Chefsy</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 md:py-6" style={{ background: BG }}>
-      <div className="w-full max-w-xl flex flex-col gap-3 sm:gap-3.5 flex-1 h-full justify-between">
-        {/* Tarjetas de información y estado */}
-        <div className="z-20 w-full pt-1 sm:pt-0 shrink-0">
-          {headerConStack}
-        </div>
+    <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 select-none">
+      {/* 1. Capa 0: Mapa interactivo Fullscreen 100% de la pantalla */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        {bloqueContenido}
+      </div>
 
-        {/* Contenedor adaptativo del Mapa interactivo (100% de alto y ancho) */}
-        <div className="w-full flex-1 relative min-h-[320px] sm:min-h-[420px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-100 dark:bg-slate-900">
-          {bloqueContenido}
-        </div>
+      {/* 2. Capa Superior: Cápsula flotante del Header / Estado */}
+      <div className="fixed top-3 sm:top-4 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[480px] z-30 pointer-events-auto">
+        {headerConStack}
+      </div>
 
-        {/* Mini Ficha / BottomSheet Desplegable */}
-        <div className="z-20 w-full shrink-0">
-          {bottomSheet}
-        </div>
+      {/* 3. Botones Flotantes Rápidos (cuando el bottomSheet está cerrado) */}
+      {!bottomSheetAbierto && (
+        <div className="fixed bottom-16 sm:bottom-20 right-3.5 z-20 flex flex-col items-end gap-2 pointer-events-auto">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-white bg-emerald-600/90 hover:bg-emerald-500 backdrop-blur-md px-3.5 py-2 rounded-full text-xs font-bold shadow-xl border border-emerald-400/30 transition-all active:scale-95 cursor-pointer"
+          >
+            <MessageCircle size={15} />
+            <span className="hidden xs:inline">WhatsApp</span>
+          </a>
 
-        {/* Footer */}
-        <div className="shrink-0">
-          {footerBloque}
+          <a
+            href="https://chefsy.xyz/"
+            className="inline-flex items-center gap-1.5 text-white/80 hover:text-white bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] font-semibold border border-white/10 shadow-lg transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={12} /><span>Tienda</span>
+          </a>
         </div>
+      )}
+
+      {/* 4. Capa Inferior: BottomSheet Desplegable estilo Drawer */}
+      <div className="fixed bottom-0 sm:bottom-4 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[480px] z-30 pointer-events-auto">
+        {bottomSheet}
       </div>
     </div>
   )

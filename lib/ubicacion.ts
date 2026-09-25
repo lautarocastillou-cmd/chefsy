@@ -24,6 +24,11 @@ export const CARTO_VOYAGER_URL = MAPA_TILES_URL
 export const CARTO_ATTRIBUTION = MAPA_ATTRIBUTION
 export const CARTO_SUBDOMAINS = MAPA_SUBDOMAINS
 
+// Capa Nocturna / Cine: CartoDB Dark Matter (alto contraste nocturno, resplandor neón perfecto)
+export const CARTO_DARK_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
+export const CARTO_DARK_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO'
+export const CARTO_DARK_SUBDOMAINS = ['a', 'b', 'c', 'd']
+
 export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): number {
   const R = 6371 // Radio de la Tierra en km
   const dLat = (coord2.latitud - coord1.latitud) * (Math.PI / 180)
@@ -56,7 +61,9 @@ export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Co
       }
     }
   } catch (err: any) {
-    if (err?.name === 'AbortError' && signal) throw err // Dejar pasar para que el hook lo maneje
+    if (err?.name === 'AbortError') {
+      return calcularDistanciaKm(coord1, coord2) * 1.25
+    }
     console.warn("Proxy OSRM falló. Usando fallback matemático.")
   }
   
@@ -104,7 +111,9 @@ export async function obtenerRutaConduccion(
       }
     }
   } catch (err: any) {
-    if (err?.name === 'AbortError' && signal) throw err
+    if (err?.name === 'AbortError') {
+      return null // Cancelación intencional y normal
+    }
   }
   return null
 }

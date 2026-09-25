@@ -116,8 +116,23 @@ export function limpiarLogsSistema(): void {
 
 // Capturar excepciones no controladas en el navegador del cliente
 if (typeof window !== 'undefined') {
+  const esAbortError = (msg: string, errObj?: any) => {
+    const texto = (msg || '').toLowerCase()
+    const nombre = (errObj?.name || '').toLowerCase()
+    return (
+      nombre === 'aborterror' ||
+      texto.includes('abort') ||
+      texto.includes('aborted without reason') ||
+      texto.includes('the user aborted a request') ||
+      texto.includes('the operation was aborted')
+    )
+  }
+
   window.addEventListener('error', (e) => {
     if (e.message) {
+      if (esAbortError(e.message, e.error)) {
+        return
+      }
       // Ignorar fallos de in-app browsers de terceros (ej: Instagram/Facebook WebView cerrándose)
       if (e.message.includes('Java object is gone') || e.message.includes('iabjs://') || e.filename?.includes('iabjs://')) {
         return
@@ -128,6 +143,9 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('unhandledrejection', (e) => {
     const razon = e.reason instanceof Error ? e.reason.message : String(e.reason || 'Promesa asíncrona rechazada')
+    if (esAbortError(razon, e.reason)) {
+      return
+    }
     if (razon.includes('Java object is gone') || razon.includes('iabjs://')) {
       return
     }
