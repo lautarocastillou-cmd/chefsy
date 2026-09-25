@@ -5,20 +5,16 @@ import { Pedido } from '@/tipos'
 import { 
   UBICACION_LOCAL, 
   calcularDistanciaKm, 
-  CARTO_VOYAGER_URL, 
-  CARTO_ATTRIBUTION, 
-  CARTO_SUBDOMAINS,
-  CARTO_DARK_URL,
-  CARTO_DARK_ATTRIBUTION,
-  CARTO_DARK_SUBDOMAINS,
+  MAPA_TILES_URL, 
+  MAPA_ATTRIBUTION, 
+  MAPA_SUBDOMAINS,
   obtenerRutaConduccion 
 } from '@/lib/ubicacion'
-import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing, Sun, Moon } from 'lucide-react'
+import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
   pedido: Pedido
-  temaInicial?: 'oscuro' | 'claro'
 }
 
 type ModoCamara = 'cadete' | 'todo' | 'cliente' | 'manual'
@@ -74,11 +70,9 @@ function encontrarIndiceMasCercano(
   return mejorIndice
 }
 
-export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Props) {
+export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
-  const tileLayerRef = useRef<any>(null)
-  const [temaMapa, setTemaMapa] = useState<'oscuro' | 'claro'>(temaInicial)
   const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any }>({})
   const polylineRef = useRef<{
     recorrida?: any
@@ -220,26 +214,6 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
     esVolviendoAlLocal
   ])
 
-  // ── Cambio reactivo de tema (Claro / Oscuro) ────────────────────────────────
-  useEffect(() => {
-    if (!leafletMapRef.current || !mapaListo) return
-    const L = require('leaflet')
-
-    if (tileLayerRef.current) {
-      leafletMapRef.current.removeLayer(tileLayerRef.current)
-    }
-
-    const urlTiles = temaMapa === 'oscuro' ? CARTO_DARK_URL : CARTO_VOYAGER_URL
-    const attrTiles = temaMapa === 'oscuro' ? CARTO_DARK_ATTRIBUTION : CARTO_ATTRIBUTION
-    const subdoms = temaMapa === 'oscuro' ? CARTO_DARK_SUBDOMAINS : CARTO_SUBDOMAINS
-
-    tileLayerRef.current = L.tileLayer(urlTiles, {
-      attribution: attrTiles,
-      subdomains: subdoms,
-      maxZoom: 20,
-    }).addTo(leafletMapRef.current)
-  }, [temaMapa, mapaListo])
-
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
   useEffect(() => {
     if (typeof window === 'undefined' || !mapRef.current) return
@@ -256,14 +230,10 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
         attributionControl: false,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
-      // Capa de Mapa: Modo Nocturno CartoDB Dark Matter por defecto o Google Maps HD
-      const urlTiles = temaMapa === 'oscuro' ? CARTO_DARK_URL : CARTO_VOYAGER_URL
-      const attrTiles = temaMapa === 'oscuro' ? CARTO_DARK_ATTRIBUTION : CARTO_ATTRIBUTION
-      const subdoms = temaMapa === 'oscuro' ? CARTO_DARK_SUBDOMAINS : CARTO_SUBDOMAINS
-
-      tileLayerRef.current = L.tileLayer(urlTiles, {
-        attribution: attrTiles,
-        subdomains: subdoms,
+      // Capa HD (Google Maps con máxima compatibilidad y carga inmediata sin API key)
+      L.tileLayer(MAPA_TILES_URL, {
+        attribution: MAPA_ATTRIBUTION,
+        subdomains: MAPA_SUBDOMAINS,
         maxZoom: 20,
       }).addTo(mapa)
 
@@ -278,17 +248,17 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
       const localIcon = L.divIcon({
         html: `
           <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-            <div style="background: #0f172a; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #10B981; box-shadow: 0 4px 14px rgba(16,185,129,0.5);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+            <div style="background: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2.5px solid #2A6348; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A6348" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
             </div>
-            <div style="margin-top:2px;background:#064e3b;color:#34d399;font-size:10px;font-weight:900;padding:1px 7px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.5);white-space:nowrap;border:1px solid #10B981;">
+            <div style="margin-top:2px;background:#2A6348;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #ffffff;">
               Chefsy Local
             </div>
           </div>
         `,
         className: 'custom-local-tracking-icon',
         iconSize: [80, 56],
-        iconAnchor: [40, 19],
+        iconAnchor: [40, 18],
       })
 
       markersRef.current.local = L.marker([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], {
@@ -833,20 +803,8 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
         </div>
       ) : null}
 
-      {/* HUD de Botones de Cámara Inteligente y Tema */}
-      <div className="absolute top-28 sm:top-24 right-3.5 z-[350] flex flex-col gap-1.5 bg-slate-950/85 backdrop-blur-xl p-1 rounded-2xl shadow-2xl border border-white/10 text-white">
-        {/* Toggle Modo Nocturno / Claro */}
-        <button
-          type="button"
-          onClick={() => setTemaMapa(t => t === 'oscuro' ? 'claro' : 'oscuro')}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer text-slate-300 hover:bg-white/10 hover:text-white"
-          title={temaMapa === 'oscuro' ? 'Cambiar a mapa claro' : 'Cambiar a mapa nocturno'}
-        >
-          {temaMapa === 'oscuro' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-400" />}
-        </button>
-
-        <div className="w-full h-px bg-white/10 my-0.5" />
-
+      {/* HUD de Botones de Cámara Inteligente */}
+      <div className="absolute top-28 sm:top-24 right-3.5 z-[350] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
         {/* Seguir al Cadete */}
         <button
           type="button"
@@ -855,7 +813,7 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'cadete'
               ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
-              : 'text-slate-300 hover:bg-white/10 hover:text-white disabled:opacity-30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
           }`}
           title="Seguir al repartidor en vivo"
         >
@@ -869,7 +827,7 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'todo'
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
           title="Ver ruta completa (Local, Repartidor y Casa)"
         >
@@ -884,7 +842,7 @@ export default function MapaSeguimiento({ pedido, temaInicial = 'oscuro' }: Prop
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             modoCamara === 'cliente'
               ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'text-slate-300 hover:bg-white/10 hover:text-white disabled:opacity-30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
           }`}
           title="Centrar en mi domicilio"
         >

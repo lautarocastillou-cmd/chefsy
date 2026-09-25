@@ -15,7 +15,7 @@ export const CENTRO_POR_DEFECTO: Coordenadas = UBICACION_LOCAL
 
 export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3ul8_1_0d6b5b9afb4cfc068d667127'
 
-// Capa activa: Google Maps HD (ultra fluida a 60 FPS, alto contraste y 100% de disponibilidad sin bloqueos)
+// Capa activa: Google Maps HD (ultra fluida a 60 FPS, alto contraste y 100% de disponibilidad sin bloqueos ni API key)
 export const MAPA_TILES_URL = 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}'
 export const MAPA_SUBDOMAINS = ['1']
 export const MAPA_ATTRIBUTION = '&copy; Google Maps'
@@ -23,11 +23,6 @@ export const MAPA_ATTRIBUTION = '&copy; Google Maps'
 export const CARTO_VOYAGER_URL = MAPA_TILES_URL
 export const CARTO_ATTRIBUTION = MAPA_ATTRIBUTION
 export const CARTO_SUBDOMAINS = MAPA_SUBDOMAINS
-
-// Capa Nocturna / Cine: CartoDB Dark Matter (alto contraste nocturno, resplandor neón perfecto)
-export const CARTO_DARK_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
-export const CARTO_DARK_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO'
-export const CARTO_DARK_SUBDOMAINS = ['a', 'b', 'c', 'd']
 
 export function calcularDistanciaKm(coord1: Coordenadas, coord2: Coordenadas): number {
   const R = 6371 // Radio de la Tierra en km
