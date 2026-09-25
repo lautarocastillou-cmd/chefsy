@@ -58,6 +58,8 @@ export default function TiendaMobile() {
   const { configuracion } = usarConfiguracionTienda()
   
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [buscadorIluminado, setBuscadorIluminado] = useState(false)
+  const timerIluminacionRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     cartAbierto,
@@ -208,11 +210,19 @@ export default function TiendaMobile() {
     if (tab === 'cart') {
       setCartAbierto(true)
     } else if (tab === 'search') {
-      setActiveTab('home') // Mantenemos en home pero enfocamos el buscador
+      setActiveTab('home')
+      setBuscadorIluminado(true)
+      if (timerIluminacionRef.current) clearTimeout(timerIluminacionRef.current)
+      timerIluminacionRef.current = setTimeout(() => {
+        if (document.activeElement !== searchInputRef.current) {
+          setBuscadorIluminado(false)
+        }
+      }, 2500)
+
       setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
         searchInputRef.current?.focus()
-        scrollHaciaCategoria(null)
-      }, 100)
+      }, 60)
     } else if (tab === 'profile') {
       if (usuario) {
         setMostrarPerfil(true)
@@ -299,8 +309,16 @@ export default function TiendaMobile() {
           </div>
         </div>
         
-        {/* Barra de búsqueda integrada */}
-        <div className="mt-3 mb-1.5 relative">
+        {/* Barra de búsqueda integrada con resplandor neón */}
+        <div className="mt-3 mb-1.5 relative group">
+          {/* Halo Neón resplandeciente exterior */}
+          <div 
+            className={`absolute -inset-1 rounded-2xl bg-gradient-to-r from-emerald-500 via-chefsy-400 to-emerald-400 blur-md pointer-events-none transition-all duration-500 ${
+              buscadorIluminado 
+                ? 'opacity-85 scale-[1.02] animate-pulse' 
+                : 'opacity-0 scale-95'
+            }`} 
+          />
           <input
             id="busqueda_mobile"
             name="busqueda_mobile"
@@ -308,6 +326,12 @@ export default function TiendaMobile() {
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
+            onFocus={() => {
+              setBuscadorIluminado(true)
+            }}
+            onBlur={() => {
+              setBuscadorIluminado(false)
+            }}
             onChange={(e) => {
               const val = e.target.value
               setBusqueda(val)
@@ -315,9 +339,20 @@ export default function TiendaMobile() {
                 setCategoriaSeleccionada(null)
               }
             }}
-            className="w-full bg-[#222222] border border-white/10 text-white py-2.5 pl-10 pr-4 rounded-xl text-sm outline-none focus:border-chefsy-400 transition-colors relative z-20"
+            className={`w-full bg-[#1e1e1e] text-white py-2.5 pl-10 pr-4 rounded-xl text-sm outline-none transition-all duration-300 relative z-20 ${
+              buscadorIluminado
+                ? 'border-2 border-emerald-400 bg-[#161616] shadow-[0_0_25px_rgba(52,211,153,0.55),0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40'
+                : 'border border-white/10 hover:border-white/25 focus:border-emerald-400/70 focus:shadow-[0_0_15px_rgba(52,211,153,0.3)]'
+            }`}
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-20" size={18} />
+          <Search 
+            className={`absolute left-3 top-1/2 -translate-y-1/2 z-20 transition-all duration-300 ${
+              buscadorIluminado 
+                ? 'text-emerald-400 scale-110 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]' 
+                : 'text-slate-400'
+            }`} 
+            size={18} 
+          />
           
           {/* Sugerencia: ¿Quisiste decir? */}
           {sugerenciaBusqueda && (
