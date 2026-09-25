@@ -167,7 +167,7 @@ export default function SidebarTienda({
                     turnoActivo && !esDomingoCerrado ? 'bg-emerald-400' : 'bg-rose-500'
                   )}
                 />
-                {turnoActivo && !esDomingoCerrado ? 'Cocina Abierta' : 'Local Cerrado'}
+                {turnoActivo && !esDomingoCerrado ? 'Cocina Abierta' : 'Cocina cerrada'}
               </span>
             </div>
           </div>
@@ -188,8 +188,9 @@ export default function SidebarTienda({
           className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10"
         >
           {/* SECCIÓN USUARIO / MI CUENTA */}
-          <div className="p-3 bg-white/[0.04] border border-white/10 rounded-2xl">
-            {usuario ? (
+          {/* SECCIÓN USUARIO / MI CUENTA */}
+          {usuario && (
+            <div className="p-3 bg-white/[0.04] border border-white/10 rounded-2xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
@@ -215,25 +216,8 @@ export default function SidebarTienda({
                   Ver Perfil
                 </button>
               </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-white">¿Tenés cuenta Chefsy?</p>
-                  <p className="text-[10px] text-slate-400">Sumá puntos con tus pedidos</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onCerrar()
-                    onAbrirLogin?.()
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[11px] font-bold text-white transition-colors cursor-pointer shrink-0"
-                >
-                  Ingresar
-                </button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           {/* SECCIÓN 1: Pedidos Activos (si hay alguno en camino) */}
           {pedidosActivos.length > 0 && (
             <div>

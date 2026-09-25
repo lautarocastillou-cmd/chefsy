@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
 import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, Info, Navigation, Lock, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
@@ -111,7 +112,26 @@ export default function CartDrawer() {
     procesandoCompra
   } = usarCarrito()
 
-  const onCerrar = () => setCartAbierto(false)
+  const [estaCerrando, setEstaCerrando] = useState(false)
+  const [esMobile, setEsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => setEsMobile(window.innerWidth < 640)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const onCerrar = () => {
+    if (estaCerrando) return
+    setEstaCerrando(true)
+    setTimeout(() => {
+      setCartAbierto(false)
+      onSetMostrarCheckout(false)
+      setCheckoutStep(1)
+      setEstaCerrando(false)
+    }, 240)
+  }
   const cerradoPorAtrasRef = useRef(false)
 
   const [checkoutStep, setCheckoutStep] = useState(1)
@@ -364,44 +384,87 @@ export default function CartDrawer() {
       onTouchMove={(e) => e.stopPropagation()}
       data-lenis-prevent="true"
     >
-      <div 
-        className="fixed inset-0 bg-black/75 transition-opacity duration-300 ease-out animate-in fade-in" 
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: estaCerrando ? 0 : 1 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm pointer-events-auto" 
         onClick={onCerrar}
       />
       
-      <div 
+      <motion.div 
         role="dialog"
         aria-modal="true"
         aria-label="Carrito de compras"
-        className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-2xl h-[92vh] sm:h-full flex flex-col z-10 rounded-t-[28px] sm:rounded-none border-t sm:border-t-0 sm:border-l border-[#3d3d3d] will-change-transform transform-gpu animate-in slide-in-from-bottom sm:slide-in-from-right duration-350 overscroll-contain"
-        style={{
-          transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-          animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
-        }}
+        initial={
+          esMobile
+            ? { y: 70, scale: 0.93, opacity: 0, filter: 'blur(6px)' }
+            : { x: 80, scale: 0.94, opacity: 0, filter: 'blur(6px)' }
+        }
+        animate={
+          estaCerrando
+            ? (esMobile 
+                ? { y: 90, scale: 0.93, opacity: 0, filter: 'blur(4px)', transition: { duration: 0.22, ease: [0.32, 0, 0.67, 0] } }
+                : { x: 100, scale: 0.94, opacity: 0, filter: 'blur(4px)', transition: { duration: 0.22, ease: [0.32, 0, 0.67, 0] } }
+              )
+            : {
+                y: 0,
+                x: 0,
+                scale: 1,
+                opacity: 1,
+                filter: 'blur(0px)',
+                transition: {
+                  type: 'spring',
+                  damping: 26,
+                  stiffness: 270,
+                  mass: 0.85
+                }
+              }
+        }
+        className="relative w-full sm:max-w-md bg-[#1c1c1c] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(0,0,0,0.5)] h-[92vh] sm:h-full flex flex-col z-10 rounded-t-[28px] sm:rounded-none border-t sm:border-t-0 sm:border-l border-[#3d3d3d] will-change-transform transform-gpu overscroll-contain overflow-hidden"
       >
+        {/* Línea de resplandor flotante sutil de aterrizaje */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-chefsy-500/60 to-transparent pointer-events-none opacity-80 z-20" />
+
         {/* Barra pill handle táctil para mobile (Bottom Sheet nativo iOS/Android) */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0 hover:bg-white/40 transition-colors" />
 
         {/* Cabecera del Drawer */}
         <div className="px-5 py-3.5 sm:py-4 border-b border-[#3d3d3d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="text-chefsy-500" size={20} />
+            <motion.div
+              initial={{ rotate: -18, scale: 0.75 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', damping: 14, stiffness: 220, delay: 0.1 }}
+            >
+              <ShoppingCart className="text-chefsy-500" size={20} />
+            </motion.div>
             <h2 className="font-extrabold text-white text-sm">Tu Carrito</h2>
-            <span className="bg-[#252525] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#3d3d3d]">
+            <motion.span 
+              initial={{ scale: 0.75, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 15, stiffness: 240, delay: 0.15 }}
+              className="bg-[#252525] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#3d3d3d]"
+            >
               {totalProductosCarrito} {totalProductosCarrito === 1 ? 'Producto' : 'Productos'}
-            </span>
+            </motion.span>
           </div>
           <button
             onClick={onCerrar}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] transition-colors focus:outline-none cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#252525] hover:text-white transition-colors focus:outline-none cursor-pointer"
             aria-label="Cerrar carrito"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Contenido Principal */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Contenido Principal con sutil entrada flotante */}
+        <motion.div 
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, delay: 0.08, ease: 'easeOut' }}
+          className="flex-1 overflow-hidden flex flex-col"
+        >
           {carrito.length === 0 ? (
             <div className="text-center py-20 px-5 text-slate-400 text-xs flex flex-col items-center justify-center">
               <ShoppingCart size={32} className="text-slate-600 mb-2 stroke-[1.5]" />
@@ -828,7 +891,7 @@ export default function CartDrawer() {
                         <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center animate-in fade-in space-y-1.5">
                           <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
                             <Lock size={14} className="text-red-400" />
-                            <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}</span>
+                            <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Cocina cerrada'}</span>
                           </p>
                           <p className="text-slate-200 text-xs font-semibold leading-relaxed">
                             {mensajeCierre}
@@ -880,7 +943,7 @@ export default function CartDrawer() {
               </form>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Footer de Drawer */}
         {carrito.length > 0 && (
@@ -910,7 +973,7 @@ export default function CartDrawer() {
               <div className="bg-red-500/15 border border-red-500/40 rounded-2xl p-4 text-center my-2 animate-in fade-in space-y-1.5">
                 <p className="text-red-400 font-black text-sm flex items-center justify-center gap-1.5">
                   <Lock size={14} className="text-red-400" />
-                  <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Local Cerrado'}</span>
+                  <span>{esDomingoCerrado ? 'Cerrado los Domingos' : 'Cocina cerrada'}</span>
                 </p>
                 <p className="text-slate-200 text-xs font-semibold leading-relaxed">
                   {mensajeCierre}
@@ -928,7 +991,7 @@ export default function CartDrawer() {
             ) : null}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Renderizar Modal de Login encima del Drawer */}
       {mostrarLogin && (

@@ -101,19 +101,15 @@ export default function BottomNav({ onNavClick, activeTab }: BottomNavProps) {
         </button>
 
         <button 
-          onClick={() => onNavClick('profile')}
-          onMouseEnter={() => {
-            import('@/components/tienda/ModalPerfilCliente')
-            import('@/components/tienda/ModalHistorialPedidos')
-          }}
-          onTouchStart={() => {
-            import('@/components/tienda/ModalPerfilCliente')
-            import('@/components/tienda/ModalHistorialPedidos')
+          onClick={() => {
+            import('react-hot-toast').then(mod => {
+              mod.toast('Próximamente disponible', { icon: '🚀' })
+            })
           }}
           className={`flex flex-col items-center gap-0.5 transition-all duration-300 cursor-pointer group ${activeTab === 'profile' ? 'text-chefsy-400 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
         >
           <User size={esGrande ? 19 : 17} className="transition-all duration-300 group-active:scale-90" />
-          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Perfil</span>
+          <span className={`text-[9px] font-extrabold tracking-wide transition-all duration-300 ${esGrande ? 'opacity-100 max-h-3 mt-0.5' : 'opacity-0 max-h-0 overflow-hidden mt-0'}`}>Próximamente</span>
         </button>
 
         <button 
