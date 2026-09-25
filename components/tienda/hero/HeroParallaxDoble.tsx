@@ -110,7 +110,9 @@ export default function HeroParallaxDoble({
               : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)'
           }}
         >
-          <MarcoHistoriaInstagram />
+          <MarcoHistoriaInstagram
+            imagenesLoop={configuracion?.hero_loop_imagenes}
+          />
         </div>
 
         {/* 3. Subtítulo y Buscador */}

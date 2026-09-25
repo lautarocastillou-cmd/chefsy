@@ -43,8 +43,22 @@ export interface ConfiguracionTienda {
   mostrar_badge_descuento?: boolean
   efecto_titulo_hero?: 'none' | 'gradient' | 'neon_glow' | 'stroke'
   color_titulo_secundario?: string
+  hero_loop_imagenes?: ImagenLoopHero[]
   fuente_tienda_catalogo?: string
 }
+
+export interface ImagenLoopHero {
+  id: string
+  url: string
+  duracionSegundos: number
+}
+
+export const IMAGENES_LOOP_DEFAULT: ImagenLoopHero[] = [
+  { id: 'loop-1', url: '/historias/historia-1.jpg', duracionSegundos: 4 },
+  { id: 'loop-2', url: '/burger-hero.png', duracionSegundos: 4 },
+  { id: 'loop-3', url: '/historias/historia-2.jpg', duracionSegundos: 4 },
+  { id: 'loop-4', url: '/historias/historia-3.jpg', duracionSegundos: 4 },
+]
 
 export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda> {
   const { data, error } = await supabaseAnon
@@ -106,6 +120,7 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
       mostrar_badge_descuento: true,
       efecto_titulo_hero: 'none',
       color_titulo_secundario: '#F59E0B',
+      hero_loop_imagenes: IMAGENES_LOOP_DEFAULT,
       fuente_tienda_catalogo: 'bebas',
     }
   }

@@ -5,6 +5,8 @@ import { ConfiguracionContext } from '@/contexto/ConfiguracionTiendaContexto'
 import {
   ConfiguracionTienda,
   CarruselSlide,
+  ImagenLoopHero,
+  IMAGENES_LOOP_DEFAULT,
   obtenerConfiguracionTienda,
   actualizarConfiguracionTienda,
 } from '@/servicios/supabase/configuracion'
@@ -39,11 +41,15 @@ import {
   CreditCard,
   Eye,
   Check,
+  Film,
+  Settings2,
 } from 'lucide-react'
+import NextImage from 'next/image'
 import Link from 'next/link'
 import PaginaTienda from '@/app/page'
 import BancoTexturasModal from '@/components/editor/BancoTexturasModal'
 import HistorialVersionesModal from '@/components/editor/HistorialVersionesModal'
+import ModalConfiguracionLoop from '@/components/editor/ModalConfiguracionLoop'
 import { cn } from '@/lib/utils'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 
@@ -79,6 +85,7 @@ export default function EditorTienda() {
   
   const [modalTexturasAbierto, setModalTexturasAbierto] = useState(false)
   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false)
+  const [modalLoopAbierto, setModalLoopAbierto] = useState(false)
 
   // Almacenamiento temporal de palabras animadas
   const [palabrasText, setPalabrasText] = useState('')
@@ -457,9 +464,9 @@ export default function EditorTienda() {
                       : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
                   )}
                 >
-                  <Layers className="text-emerald-400 mb-1" size={20} />
-                  <div className="text-xs font-black text-slate-200">Doble Parallax</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">2 platos flotantes</div>
+                  <Film className="text-emerald-400 mb-1" size={20} />
+                  <div className="text-xs font-black text-slate-200">Marco Loop</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Loop de fotos (9:16)</div>
                 </button>
 
                 <button
@@ -608,72 +615,58 @@ export default function EditorTienda() {
 
               {heroLayoutActual === 'parallax_doble' && (
                 <div className="space-y-3 pt-2 border-t border-slate-800">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300 flex justify-between">
-                      <span>Plato Principal (PNG)</span>
-                      <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
-                        <Upload size={10} className="inline mr-1" /> Subir
-                        <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_url')} />
-                      </label>
-                    </label>
-                    <input
-                      type="text"
-                      value={configLive.hero_image_url?.split('|')[0] || ''}
-                      onChange={(e) => {
-                        const img2 = configLive.hero_image_url?.split('|')[1] || ''
-                        handleChange('hero_image_url', `${e.target.value}${img2 ? '|' + img2 : ''}`)
-                      }}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300 flex justify-between">
-                      <span>Plato Secundario (Acompañamiento)</span>
-                      <label className="cursor-pointer text-emerald-400 text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
-                        <Upload size={10} className="inline mr-1" /> Subir
-                        <input type="file" accept="image/*,.heic,.heif,.hevc,.h265,.HEIC,.HEIF,.HEVC" className="hidden" onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], 'hero_image_secundaria')} />
-                      </label>
-                    </label>
-                    <input
-                      type="text"
-                      value={configLive.hero_image_url?.split('|')[1] || ''}
-                      onChange={(e) => {
-                        const img1 = configLive.hero_image_url?.split('|')[0] || ''
-                        handleChange('hero_image_url', `${img1}|${e.target.value}`)
-                      }}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-                    />
-                  </div>
-
-                  {/* Sliders Canva */}
-                  <div className="space-y-2 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                    <div className="flex justify-between text-[11px] text-slate-300 font-bold">
-                      <span>Posición Horizontal (X)</span>
-                      <span className="font-mono text-emerald-400">{configLive.hero_pos_x ?? 50}%</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-slate-200 block">
+                        Fotos en Loop (Marco 9:16)
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {(configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT).length} de 4 configuradas
+                      </span>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={configLive.hero_pos_x ?? 50}
-                      onChange={(e) => handleChange('hero_pos_x', parseInt(e.target.value))}
-                      className="w-full accent-emerald-500"
-                    />
 
-                    <div className="flex justify-between text-[11px] text-slate-300 font-bold pt-1">
-                      <span>Zoom / Escala</span>
-                      <span className="font-mono text-emerald-400">{configLive.hero_escala ?? 100}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="50"
-                      max="150"
-                      value={configLive.hero_escala ?? 100}
-                      onChange={(e) => handleChange('hero_escala', parseInt(e.target.value))}
-                      className="w-full accent-emerald-500"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setModalLoopAbierto(true)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Settings2 size={13} />
+                      <span>Configurar Loop</span>
+                    </button>
                   </div>
+
+                  {/* Grid interactivo de miniaturas con badge de duración */}
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {(configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT).map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        onClick={() => setModalLoopAbierto(true)}
+                        className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black border border-white/10 hover:border-emerald-500 transition-all cursor-pointer group shadow-md"
+                        title={`Click para editar foto #${idx + 1}`}
+                      >
+                        <NextImage
+                          src={item.url}
+                          alt={`Foto ${idx + 1}`}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          sizes="80px"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-1 flex justify-between items-center text-[9px] font-mono font-bold text-emerald-400">
+                          <span>#{idx + 1}</span>
+                          <span>{item.duracionSegundos || 4}s</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalLoopAbierto(true)}
+                    className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800/80 border border-slate-800 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Settings2 size={14} />
+                    <span>Abrir Gestor de Imágenes y Duración</span>
+                  </button>
                 </div>
               )}
 
@@ -1293,6 +1286,14 @@ export default function EditorTienda() {
         configActual={configLive}
         onCerrar={() => setModalHistorialAbierto(false)}
         onRestaurarVersion={(config) => registrarCambio(config)}
+      />
+
+      {/* MODAL: CONFIGURACIÓN LOOP DE IMÁGENES */}
+      <ModalConfiguracionLoop
+        abierto={modalLoopAbierto}
+        imagenes={configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT}
+        onCerrar={() => setModalLoopAbierto(false)}
+        onGuardar={(nuevas) => handleChange('hero_loop_imagenes', nuevas)}
       />
 
     </div>
