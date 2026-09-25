@@ -70,6 +70,45 @@ function encontrarIndiceMasCercano(
   return mejorIndice
 }
 
+// Helper: Map Matching — distancia mínima en METROS del punto a cualquier SEGMENTO de la polilínea.
+// Usa proyección punto→segmento: si el pie de la perpendicular cae dentro del segmento, devuelve
+// esa distancia perpendicular (exacta). Si cae fuera, devuelve la distancia al vértice más cercano.
+// Esto es lo que usan Uber/Waze para detectar desvíos reales vs. estar en medio de una calle larga.
+function distanciaMinAPolilinea(
+  pos: [number, number],          // [lat, lng] del cadete
+  ruta: [number, number][],       // polilínea descargada de OSRM
+  desdeIndice: number = 0         // solo evaluar tramo restante (no ya recorrido)
+): number {
+  if (!ruta || ruta.length < 2) return Infinity
+  const cosLat = Math.cos(pos[0] * Math.PI / 180)
+  const M = 111320  // metros por grado de latitud
+
+  let minDist = Infinity
+  const inicio = Math.max(0, desdeIndice - 2)  // un poco antes por si el índice está desfasado
+
+  for (let i = inicio; i < ruta.length - 1; i++) {
+    const ax = (ruta[i][0] - pos[0]) * M          // Δlat en metros
+    const ay = (ruta[i][1] - pos[1]) * M * cosLat  // Δlng en metros
+    const bx = (ruta[i+1][0] - ruta[i][0]) * M
+    const by = (ruta[i+1][1] - ruta[i][1]) * M * cosLat
+    const segLenCuad = bx * bx + by * by
+
+    let distSeg: number
+    if (segLenCuad < 1e-10) {
+      // Segmento degenerado (puntos idénticos) — distancia al punto
+      distSeg = Math.sqrt(ax * ax + ay * ay)
+    } else {
+      // Proyección del cadete sobre el segmento, clamped a [0,1]
+      const t = Math.max(0, Math.min(1, -(ax * bx + ay * by) / segLenCuad))
+      const px = ax + t * bx
+      const py = ay + t * by
+      distSeg = Math.sqrt(px * px + py * py)
+    }
+    if (distSeg < minDist) minDist = distSeg
+  }
+  return minDist
+}
+
 export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
@@ -556,14 +595,13 @@ export default function MapaSeguimiento({ pedido }: Props) {
           indiceRutaRef.current = Math.max(indiceRutaRef.current, nuevoIndice)
           const idx = indiceRutaRef.current
 
-          // ── Detección de desvío: distancia mínima al punto más cercano de la ruta ──
-          const ptCercano = rutaCompleta[idx]
-          const dLat = (posCadete[0] - ptCercano[0]) * 111320
-          const dLng = (posCadete[1] - ptCercano[1]) * 111320 * Math.cos(posCadete[0] * Math.PI / 180)
-          const distanciaDesvioM = Math.sqrt(dLat * dLat + dLng * dLng)
+          // ── Map Matching: distancia perpendicular al segmento más cercano ──────────
+          // (idéntico a lo que usan Uber/Waze: si estás en medio de una calle larga,
+          //  la distancia al segmento es ~0 aunque los vértices estén a 80m)
+          const distanciaDesvioM = distanciaMinAPolilinea(posCadete, rutaCompleta, idx)
 
-          const THRESHOLD_DESVIO_M = 70
-          const COOLDOWN_MS = 20_000  // 20s entre recálculos
+          const THRESHOLD_DESVIO_M = 60  // metros fuera de la calle → desvío real
+          const COOLDOWN_MS = 8_000      // 8s mínimo entre recálculos (GPS actualiza c/5s)
 
           if (
             distanciaDesvioM > THRESHOLD_DESVIO_M &&
@@ -573,7 +611,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           ) {
             recalculandoRef.current = true
             ultimoRecalculoRef.current = Date.now()
-            // Disparo async sin bloquear el frame de animación actual
+            // Disparo async: no bloquea el frame de animación actual
             recalcularRutaRef.current()
               .catch(() => {})
               .finally(() => { recalculandoRef.current = false })
