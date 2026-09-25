@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import Image from 'next/image'
 import { Search } from 'lucide-react'
+import MarcoHistoriaInstagram from './MarcoHistoriaInstagram'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
 
@@ -30,10 +30,6 @@ export default function HeroParallaxDoble({
   const [rotateY, setRotateY] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
 
-  // Separar imagen principal y secundaria si vienen con '|'
-  const imagenes = (configuracion?.hero_image_url || '/burger-loca.webp').split('|')
-  const img1 = imagenes[0]?.trim() || '/burger-loca.webp'
-  const img2 = imagenes[1]?.trim() || ''
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || typeof window === 'undefined' || window.innerWidth < 768) return
@@ -85,25 +81,6 @@ export default function HeroParallaxDoble({
       onMouseLeave={handleMouseLeave}
       className="relative w-full flex flex-col px-4 md:px-12 py-6 md:py-10 lg:py-16 overflow-visible select-none min-h-[280px] md:min-h-[360px] lg:min-h-[420px]"
     >
-      {/* Estilos CSS para animaciones flotantes */}
-      <style jsx>{`
-        @keyframes floatSlow1 {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(1deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-        @keyframes floatSlow2 {
-          0% { transform: translateY(-6px) rotate(-1deg); }
-          50% { transform: translateY(4px) rotate(1deg); }
-          100% { transform: translateY(-6px) rotate(-1deg); }
-        }
-        .anim-float-1 {
-          animation: floatSlow1 5s ease-in-out infinite;
-        }
-        .anim-float-2 {
-          animation: floatSlow2 6s ease-in-out infinite;
-        }
-      `}</style>
 
       {/* Contenedor Principal del Hero en Grilla */}
       <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-[1fr_auto] max-w-[1400px] mx-auto w-full gap-x-4 gap-y-6 items-center">
@@ -124,46 +101,19 @@ export default function HeroParallaxDoble({
           </h2>
         </div>
 
-        {/* 2. Imagen de Producto Flotante — tamaño controlado, sin overflow */}
-        <div className="relative flex items-center justify-center lg:justify-end z-20 order-2 lg:row-span-2 lg:pl-4">
-          <div 
-            className="burger-float-wrapper relative w-[180px] h-[180px] sm:w-[240px] sm:h-[240px] md:w-[300px] md:h-[300px] lg:w-[340px] lg:h-[340px] xl:w-[400px] xl:h-[400px] transition-transform duration-200 ease-out"
-            style={{
-              transform: isHovered ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)` : 'none'
-            }}
-          >
-            {/* Sombra de apoyo en el suelo */}
-            <div className="absolute inset-x-0 bottom-2 h-1/5 bg-black/50 rounded-full blur-2xl -z-10 opacity-60"></div>
-            
-            {/* Imagen Principal */}
-            <div className="w-full h-full relative anim-float-1">
-              <Image 
-                src={img1} 
-                alt="Plato Estrella" 
-                fill
-                priority
-                sizes="(max-width: 640px) 180px, (max-width: 768px) 240px, (max-width: 1024px) 300px, 400px"
-                className="object-contain transition-all duration-300"
-                style={{
-                  objectPosition: `${configuracion?.hero_pos_x ?? 50}% ${configuracion?.hero_pos_y ?? 50}%`,
-                  transform: `scale(${(configuracion?.hero_escala ?? 100) / 100})`
-                }}
-              />
-            </div>
-
-            {/* Imagen Secundaria si existe */}
-            {img2 && (
-              <div className="absolute -bottom-2 -left-4 sm:-bottom-4 sm:-left-8 w-2/3 h-2/3 anim-float-2 z-10">
-                <Image 
-                  src={img2} 
-                  alt="Acompañamiento" 
-                  fill
-                  sizes="(max-width: 768px) 120px, 280px"
-                  className="object-contain"
-                />
-              </div>
-            )}
-          </div>
+        {/* 2. Marco de Historias de Instagram (Modo PC / Desarrollo) */}
+        <div 
+          className="relative hidden md:flex items-center justify-center lg:justify-end z-20 order-2 lg:row-span-2 lg:pl-6 transition-transform duration-200 ease-out"
+          style={{
+            transform: isHovered 
+              ? `perspective(1000px) rotateX(${rotateX * 0.5}deg) rotateY(${rotateY * 0.5}deg) scale(1.02)` 
+              : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)'
+          }}
+        >
+          <MarcoHistoriaInstagram
+            logoUrl={configuracion?.logo_url || '/logo.jpg'}
+            usuarioInstagram="chefsy_fastfood_"
+          />
         </div>
 
         {/* 3. Subtítulo y Buscador */}
