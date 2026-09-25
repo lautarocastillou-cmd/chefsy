@@ -75,10 +75,11 @@ export async function GET(request: Request) {
           if (conGeometria && data1.routes[0].geometry?.coordinates) {
             payload.coordinates = data1.routes[0].geometry.coordinates
           }
-          return NextResponse.json(
-            payload,
-            { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
-          )
+          // Rutas con geometría: TTL corto para que los recálculos por desvío sean frescos
+          const cacheHeader = conGeometria
+            ? 'public, s-maxage=300, stale-while-revalidate=60'
+            : 'public, s-maxage=86400, stale-while-revalidate=604800'
+          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader } })
         }
       }
     } catch (err) {}
@@ -93,10 +94,10 @@ export async function GET(request: Request) {
           if (conGeometria && data2.routes[0].geometry?.coordinates) {
             payload.coordinates = data2.routes[0].geometry.coordinates
           }
-          return NextResponse.json(
-            payload,
-            { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
-          )
+          const cacheHeader = conGeometria
+            ? 'public, s-maxage=300, stale-while-revalidate=60'
+            : 'public, s-maxage=86400, stale-while-revalidate=604800'
+          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader } })
         }
       }
     } catch (err) {}

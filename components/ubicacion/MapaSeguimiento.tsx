@@ -82,7 +82,11 @@ export default function MapaSeguimiento({ pedido }: Props) {
   }>({})
   const rutaGeometriaRef = useRef<[number, number][]>([])
   const indiceRutaRef = useRef<number>(0)
-  
+
+  // ── Detección de Desvío y Re-cálculo Adaptativo ────────────────────────────
+  const ultimoRecalculoRef = useRef<number>(0)       // timestamp del último recálculo
+  const recalculandoRef = useRef<boolean>(false)     // evita llamadas paralelas
+
   // ── Referencias del Motor de Interpolación a 60 FPS ─────────────────────────
   const animFrameRef = useRef<number | null>(null)
   const posicionAnimadaRef = useRef<{ latitud: number; longitud: number; rumbo: number } | null>(null)
@@ -135,28 +139,28 @@ export default function MapaSeguimiento({ pedido }: Props) {
     esVolviendoAlLocal
   ])
 
-  // ── 1.1. Obtener Geometría Real por Calles con OSRM ───────────────────────
+  // ── 1.1. Función de carga de ruta (usada en inicial y en recálculos por desvío) ─
+  const cargarRutaRef = useRef<((destino?: { latitud: number; longitud: number }) => Promise<void>) | null>(null)
+
   useEffect(() => {
     let cancelado = false
     const abortCtrl = new AbortController()
 
-    const cargarRuta = async () => {
+    const cargarRuta = async (destinoOverride?: { latitud: number; longitud: number }) => {
       try {
         let origen = UBICACION_LOCAL
-        let destino = pedido.coordenadas
+        let destino: { latitud: number; longitud: number } | null | undefined = destinoOverride || pedido.coordenadas
 
         if (esVolviendoAlLocal) {
-          // En regreso al local: origen es el repartidor (o cliente como fallback), destino es UBICACION_LOCAL
-          origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+          origen = pedido.cadete_coordenadas?.latitud
             ? pedido.cadete_coordenadas
             : (pedido.coordenadas || UBICACION_LOCAL)
           destino = UBICACION_LOCAL
         } else {
-          if (!pedido.coordenadas) return
-          origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+          if (!destino) return
+          origen = pedido.cadete_coordenadas?.latitud
             ? pedido.cadete_coordenadas
             : UBICACION_LOCAL
-          destino = pedido.coordenadas
         }
 
         if (!destino) return
@@ -164,22 +168,23 @@ export default function MapaSeguimiento({ pedido }: Props) {
         const ruta = await obtenerRutaConduccion(origen, destino, abortCtrl.signal)
         if (cancelado || !ruta) return
 
+        // NUNCA limpiar la ruta vieja antes de tener la nueva: swap atómico
         rutaGeometriaRef.current = ruta.puntos
-        indiceRutaRef.current = 0
+
+        // Reposicionar el índice en el punto más cercano a donde está el cadete ahora
+        const posCadete: [number, number] = posicionAnimadaRef.current
+          ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
+          : [origen.latitud, origen.longitud]
+
+        const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
+        indiceRutaRef.current = idx
 
         if (typeof ruta.distanciaKm === 'number') {
           setDistanciaRestanteKm(ruta.distanciaKm)
         }
 
-        // Si el mapa ya está listo y los polylines existen, actualizar de inmediato
+        // Actualizar las polilíneas inmediatamente con la nueva ruta
         if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
-          const posCadete: [number, number] = posicionAnimadaRef.current
-            ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
-            : [origen.latitud, origen.longitud]
-
-          const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
-          indiceRutaRef.current = idx
-
           const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
           const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
 
@@ -187,22 +192,20 @@ export default function MapaSeguimiento({ pedido }: Props) {
           polylineRef.current.glow?.setLatLngs(puntosRestantes)
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
-
-          if (modoCamaraRef.current === 'todo' && leafletMapRef.current) {
-            const L = require('leaflet')
-            const bounds = L.latLngBounds(ruta.puntos)
-            leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
-          }
         }
       } catch (_) {
         // Ignorar cancelaciones intencionales de peticiones
       }
     }
 
+    // Exponer la función vía ref para que el detector de desvíos pueda usarla
+    cargarRutaRef.current = cargarRuta
+
     cargarRuta().catch(() => {})
 
     return () => {
       cancelado = true
+      cargarRutaRef.current = null
       abortCtrl.abort()
     }
   }, [
@@ -362,6 +365,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
     tiempoUltimoUpdateRef.current = ahora
 
+
     // Helper para actualizar la rotación en el DOM sin recrear elementos
     const aplicarRotacionAlElemento = (rumboGrados: number) => {
       const markerInst = markersRef.current.cadete
@@ -504,6 +508,29 @@ export default function MapaSeguimiento({ pedido }: Props) {
           indiceRutaRef.current = Math.max(indiceRutaRef.current, nuevoIndice)
           const idx = indiceRutaRef.current
 
+          // ── Detección de desvío: distancia mínima al punto más cercano de la ruta ──
+          const ptCercano = rutaCompleta[idx]
+          const dLat = (posCadete[0] - ptCercano[0]) * 111320
+          const dLng = (posCadete[1] - ptCercano[1]) * 111320 * Math.cos(posCadete[0] * Math.PI / 180)
+          const distanciaDesvioM = Math.sqrt(dLat * dLat + dLng * dLng)
+
+          const THRESHOLD_DESVIO_M = 70
+          const COOLDOWN_MS = 30_000
+
+          if (
+            distanciaDesvioM > THRESHOLD_DESVIO_M &&
+            !recalculandoRef.current &&
+            Date.now() - ultimoRecalculoRef.current > COOLDOWN_MS &&
+            cargarRutaRef.current
+          ) {
+            recalculandoRef.current = true
+            ultimoRecalculoRef.current = Date.now()
+            // Recalcular sin bloquear el frame actual — sin override: la función usa el destino del closure
+            Promise.resolve(cargarRutaRef.current())
+              .catch(() => {})
+              .finally(() => { recalculandoRef.current = false })
+          }
+
           // Tramo recorrido anterior: desde el inicio hasta la posición actual (desvanecido suave)
           const puntosRecorridos: [number, number][] = [
             ...rutaCompleta.slice(0, idx + 1),
@@ -521,7 +548,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
         } else {
-          // Fallback directo si la geometría OSRM aún no cargó
+          // Fallback directo si la geometría OSRM aún no cargó (NUNCA borrar, siempre dibujar)
           const rutaDirecta: [number, number][] = [
             posCadete,
             [destinoPuntos.latitud, destinoPuntos.longitud]
