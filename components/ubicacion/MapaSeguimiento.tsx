@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Pedido } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, obtenerRutaConduccion } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
@@ -35,11 +35,46 @@ function easeInOutSine(x: number): number {
   return -(Math.cos(Math.PI * x) - 1) / 2
 }
 
+// Helper: Distancia euclidiana al cuadrado (rápida para proyectar el cadete sobre la ruta)
+function distanciaEuclidianaCuad(p1: [number, number], p2: [number, number]): number {
+  const dLat = p1[0] - p2[0]
+  const dLng = p1[1] - p2[1]
+  return dLat * dLat + dLng * dLng
+}
+
+// Helper: Buscar índice más cercano en la ruta sin retroceder
+function encontrarIndiceMasCercano(
+  pos: [number, number],
+  ruta: [number, number][],
+  indiceMinimo: number = 0
+): number {
+  if (!ruta || ruta.length === 0) return 0
+  let mejorIndice = indiceMinimo
+  let menorDistancia = Infinity
+
+  const inicio = Math.max(0, Math.min(indiceMinimo, ruta.length - 1))
+  for (let i = inicio; i < ruta.length; i++) {
+    const d = distanciaEuclidianaCuad(pos, ruta[i])
+    if (d < menorDistancia) {
+      menorDistancia = d
+      mejorIndice = i
+    }
+  }
+  return mejorIndice
+}
+
 export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
   const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any }>({})
-  const polylineRef = useRef<{ base?: any; dash?: any }>({})
+  const polylineRef = useRef<{
+    recorrida?: any
+    glow?: any
+    core?: any
+    dash?: any
+  }>({})
+  const rutaGeometriaRef = useRef<[number, number][]>([])
+  const indiceRutaRef = useRef<number>(0)
   
   // ── Referencias del Motor de Interpolación a 60 FPS ─────────────────────────
   const animFrameRef = useRef<number | null>(null)
@@ -77,6 +112,68 @@ export default function MapaSeguimiento({ pedido }: Props) {
       setDistanciaRestanteKm(null)
     }
   }, [pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.estado])
+
+  // ── 1.1. Obtener Geometría Real por Calles con OSRM ───────────────────────
+  useEffect(() => {
+    if (!pedido.coordenadas) return
+
+    let cancelado = false
+    const abortCtrl = new AbortController()
+
+    const cargarRuta = async () => {
+      // Origen de la ruta: posición actual del cadete si existe, sino el local
+      const origen = pedido.cadete_coordenadas && pedido.cadete_coordenadas.latitud
+        ? pedido.cadete_coordenadas
+        : UBICACION_LOCAL
+
+      const ruta = await obtenerRutaConduccion(origen, pedido.coordenadas!, abortCtrl.signal)
+      if (cancelado || !ruta) return
+
+      rutaGeometriaRef.current = ruta.puntos
+      indiceRutaRef.current = 0
+
+      if (typeof ruta.distanciaKm === 'number') {
+        setDistanciaRestanteKm(ruta.distanciaKm)
+      }
+
+      // Si el mapa ya está listo y los polylines existen, actualizar de inmediato
+      if (mapaListo && leafletMapRef.current && esProximaEntrega) {
+        const posCadete: [number, number] = posicionAnimadaRef.current
+          ? [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud]
+          : [origen.latitud, origen.longitud]
+
+        const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
+        indiceRutaRef.current = idx
+
+        const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
+        const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
+
+        polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
+        polylineRef.current.glow?.setLatLngs(puntosRestantes)
+        polylineRef.current.core?.setLatLngs(puntosRestantes)
+        polylineRef.current.dash?.setLatLngs(puntosRestantes)
+
+        if (modoCamaraRef.current === 'todo' && leafletMapRef.current) {
+          const L = require('leaflet')
+          const bounds = L.latLngBounds(ruta.puntos)
+          leafletMapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
+        }
+      }
+    }
+
+    cargarRuta()
+
+    return () => {
+      cancelado = true
+      abortCtrl.abort()
+    }
+  }, [
+    mapaListo,
+    pedido.coordenadas?.latitud,
+    pedido.coordenadas?.longitud,
+    pedido.cadete_coordenadas ? 'cadete-activo' : 'local',
+    esProximaEntrega
+  ])
 
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
   useEffect(() => {
@@ -350,17 +447,48 @@ export default function MapaSeguimiento({ pedido }: Props) {
       // Actualizar rotación del faro y la moto en CSS
       aplicarRotacionAlElemento(rumboActual)
 
-      // 3. Acortar la polilínea de la ruta en vivo milisegundo a milisegundo (solo si es próxima entrega directa)
-      if (polylineRef.current.base && pedido.coordenadas && esProximaEntrega) {
-        const rutaViva = [
-          [latActual, lngActual],
-          [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
-        ]
-        polylineRef.current.base.setLatLngs(rutaViva)
-        polylineRef.current.dash.setLatLngs(rutaViva)
-      } else if (polylineRef.current.base && !esProximaEntrega) {
-        polylineRef.current.base.setLatLngs([])
-        polylineRef.current.dash.setLatLngs([])
+      // 3. Acortar y desvanecer la polilínea de la ruta en vivo milisegundo a milisegundo
+      if (pedido.coordenadas && esProximaEntrega) {
+        const rutaCompleta = rutaGeometriaRef.current
+        const posCadete: [number, number] = [latActual, lngActual]
+
+        if (rutaCompleta.length >= 2) {
+          const nuevoIndice = encontrarIndiceMasCercano(posCadete, rutaCompleta, indiceRutaRef.current)
+          indiceRutaRef.current = Math.max(indiceRutaRef.current, nuevoIndice)
+          const idx = indiceRutaRef.current
+
+          // Tramo recorrido anterior: desde el inicio hasta la posición actual (desvanecido suave)
+          const puntosRecorridos: [number, number][] = [
+            ...rutaCompleta.slice(0, idx + 1),
+            posCadete
+          ]
+
+          // Tramo restante: desde el cadete hasta la casa del cliente (Neón & Flow activo)
+          const puntosRestantes: [number, number][] = [
+            posCadete,
+            ...rutaCompleta.slice(idx + 1)
+          ]
+
+          polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
+          polylineRef.current.glow?.setLatLngs(puntosRestantes)
+          polylineRef.current.core?.setLatLngs(puntosRestantes)
+          polylineRef.current.dash?.setLatLngs(puntosRestantes)
+        } else {
+          // Fallback directo si la geometría OSRM aún no cargó
+          const rutaDirecta: [number, number][] = [
+            posCadete,
+            [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
+          ]
+          polylineRef.current.recorrida?.setLatLngs([])
+          polylineRef.current.glow?.setLatLngs(rutaDirecta)
+          polylineRef.current.core?.setLatLngs(rutaDirecta)
+          polylineRef.current.dash?.setLatLngs(rutaDirecta)
+        }
+      } else if (!esProximaEntrega) {
+        polylineRef.current.recorrida?.setLatLngs([])
+        polylineRef.current.glow?.setLatLngs([])
+        polylineRef.current.core?.setLatLngs([])
+        polylineRef.current.dash?.setLatLngs([])
       }
 
       // 4. Si la cámara está fijada en el cadete, acompañar suavemente a 60 FPS
@@ -377,7 +505,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     animFrameRef.current = requestAnimationFrame(pasoGliding)
   }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega])
 
-  // ── 5. Inicialización de Polilínea de Ruta ───────────────────────────────────
+  // ── 5. Inicialización de Polilíneas de Ruta (Neón & Flow + Tramo Recorrido) ──
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current) return
     const L = require('leaflet')
@@ -385,7 +513,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     let puntosRuta: [number, number][] = []
 
     if (esProximaEntrega) {
-      if (posicionAnimadaRef.current && pedido.coordenadas) {
+      if (rutaGeometriaRef.current.length >= 2) {
+        puntosRuta = rutaGeometriaRef.current
+      } else if (posicionAnimadaRef.current && pedido.coordenadas) {
         puntosRuta = [
           [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
           [pedido.coordenadas.latitud, pedido.coordenadas.longitud]
@@ -403,29 +533,51 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }
     }
 
-    if (puntosRuta.length >= 2) {
-      if (!polylineRef.current.base) {
-        // Línea base con resplandor
-        polylineRef.current.base = L.polyline(puntosRuta, {
-          color: '#059669',
-          weight: 6,
-          opacity: 0.5,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(leafletMapRef.current)
+    if (!polylineRef.current.glow && leafletMapRef.current) {
+      // 1. Tramo recorrido anterior (desvanecido suavemente)
+      polylineRef.current.recorrida = L.polyline([], {
+        color: '#065F46',
+        weight: 3,
+        opacity: 0.22,
+        dashArray: '4, 8',
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
 
-        // Línea superior con animación de pulso y trazo punteado
-        polylineRef.current.dash = L.polyline(puntosRuta, {
-          color: '#34D399',
-          weight: 3.5,
-          dashArray: '8, 14',
-          className: 'animated-polyline-dash',
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(leafletMapRef.current)
-      }
+      // 2. Resplandor Neón exterior translúcido
+      polylineRef.current.glow = L.polyline(puntosRuta, {
+        color: '#059669',
+        weight: 9,
+        opacity: 0.35,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'neon-glow-polyline'
+      }).addTo(leafletMapRef.current)
+
+      // 3. Núcleo esmeralda vibrante
+      polylineRef.current.core = L.polyline(puntosRuta, {
+        color: '#10B981',
+        weight: 4.5,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
+
+      // 4. Estela animada de flujo hacia el destino
+      polylineRef.current.dash = L.polyline(puntosRuta, {
+        color: '#A7F3D0',
+        weight: 3,
+        dashArray: '10, 16',
+        className: 'animated-polyline-dash',
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
+    } else if (polylineRef.current.glow && puntosRuta.length >= 2) {
+      polylineRef.current.glow.setLatLngs(puntosRuta)
+      polylineRef.current.core?.setLatLngs(puntosRuta)
+      polylineRef.current.dash?.setLatLngs(puntosRuta)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {
@@ -438,6 +590,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
     if (pedido.cadete_coordenadas) {
       bounds.extend([pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud])
+    }
+    if (rutaGeometriaRef.current.length > 0) {
+      bounds.extend(rutaGeometriaRef.current)
     }
     leafletMapRef.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: true })
   }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cadete_coordenadas?.latitud])
@@ -465,6 +620,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     const pos = posicionAnimadaRef.current || pedido.cadete_coordenadas
     if (pos) {
       bounds.extend([pos.latitud, pos.longitud])
+    }
+    if (rutaGeometriaRef.current.length > 0) {
+      bounds.extend(rutaGeometriaRef.current)
     }
     leafletMapRef.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: true, duration: 0.8 })
   }
@@ -528,11 +686,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
           0% { transform: scale(0.7); opacity: 0.9; }
           80%, 100% { transform: scale(1.6); opacity: 0; }
         }
+        .neon-glow-polyline {
+          filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.65));
+        }
         @keyframes polyline-dash {
-          to { stroke-dashoffset: -44; }
+          to { stroke-dashoffset: -52; }
         }
         .animated-polyline-dash {
-          animation: polyline-dash 1.8s linear infinite;
+          animation: polyline-dash 1.4s linear infinite;
         }
         .leaflet-container {
           width: 100% !important;

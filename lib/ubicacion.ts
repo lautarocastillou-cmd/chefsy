@@ -65,6 +65,50 @@ export async function obtenerDistanciaConduccion(coord1: Coordenadas, coord2: Co
   return calcularDistanciaKm(coord1, coord2) * 1.25
 }
 
+export interface RutaConGeometria {
+  distanciaKm: number
+  puntos: [number, number][] // [latitud, longitud] listos para Leaflet
+}
+
+/**
+ * Obtiene el trazado real por calles mediante el proxy OSRM (/api/resolve-maps)
+ * Convierte automáticamente GeoJSON [lon, lat] al formato [lat, lon] de Leaflet.
+ */
+export async function obtenerRutaConduccion(
+  coord1: Coordenadas,
+  coord2: Coordenadas,
+  signal?: AbortSignal
+): Promise<RutaConGeometria | null> {
+  try {
+    const params = new URLSearchParams({
+      origenLon: coord1.longitud.toString(),
+      origenLat: coord1.latitud.toString(),
+      destinoLon: coord2.longitud.toString(),
+      destinoLat: coord2.latitud.toString(),
+      geometria: 'true'
+    })
+
+    const fetchSignal = signal || AbortSignal.timeout(5000)
+    const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
+    if (res.ok) {
+      const data = await res.json()
+      if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+        // En GeoJSON es [lon, lat] -> En Leaflet se usa [lat, lon]
+        const puntos: [number, number][] = data.coordinates.map(
+          ([lon, lat]: [number, number]) => [lat, lon]
+        )
+        return {
+          distanciaKm: typeof data.distance === 'number' ? data.distance : calcularDistanciaKm(coord1, coord2),
+          puntos
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err?.name === 'AbortError' && signal) throw err
+  }
+  return null
+}
+
 export function calcularCostoEnvio(distanciaKm: number): number {
   if (distanciaKm <= 1) return 1500
   if (distanciaKm <= 2) return 2000
