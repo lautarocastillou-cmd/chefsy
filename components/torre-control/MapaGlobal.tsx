@@ -29,7 +29,18 @@ export interface CadeteData {
     coordenadas?: { latitud: number; longitud: number } | null
     estado: string
     total?: number | null
+    parada_num?: number
   } | null
+  pedidosActivos?: Array<{
+    id: string
+    cliente: string
+    direccion?: string | null
+    coordenadas?: { latitud: number; longitud: number } | null
+    estado: string
+    total?: number | null
+    parada_num?: number
+    orden_entrega?: number | null
+  }>
 }
 
 interface MapaGlobalProps {
@@ -278,17 +289,23 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         // Rotar faro y moto
         aplicarRotacionCadete(id, rumbo)
 
-        // 3. Acortar polilínea de entrega en tiempo real si tiene pedido activo (con throttle para no saturar el DOM)
+        // 3. Acortar polilínea de entrega en tiempo real si tiene pedidos activos (con throttle para no saturar el DOM)
         if (timestamp - ultimoRenderRutasRef.current > 200) {
           ultimoRenderRutasRef.current = timestamp
           const cadeteInfo = cadetesList.find((c) => c.id === id)
-          const coordsCliente = cadeteInfo?.pedidoActivo?.coordenadas
+          const listaPedidos = (cadeteInfo?.pedidosActivos && cadeteInfo.pedidosActivos.length > 0)
+            ? cadeteInfo.pedidosActivos
+            : (cadeteInfo?.pedidoActivo ? [cadeteInfo.pedidoActivo] : [])
+
+          const paradasValidas = listaPedidos.filter(
+            (p) => p.coordenadas && p.coordenadas.latitud != null && p.coordenadas.longitud != null
+          )
           const rutaKey = `ruta_${id}`
 
-          if (coordsCliente && coordsCliente.latitud != null && coordsCliente.longitud != null) {
-            const puntosRuta = [
+          if (paradasValidas.length > 0) {
+            const puntosRuta: [number, number][] = [
               [lat, lng],
-              [coordsCliente.latitud, coordsCliente.longitud]
+              ...paradasValidas.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
             ]
             if (markersRef.current.rutasBase[rutaKey]) {
               markersRef.current.rutasBase[rutaKey].setLatLngs(puntosRuta)
@@ -357,7 +374,10 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
 
       const targetLat = cadete.lat
       const targetLng = cadete.lng
-      const esEnViaje = !!cadete.pedidoActivo
+      const listaPedidos = (cadete.pedidosActivos && cadete.pedidosActivos.length > 0)
+        ? cadete.pedidosActivos
+        : (cadete.pedidoActivo ? [cadete.pedidoActivo] : [])
+      const esEnViaje = listaPedidos.length > 0
 
       const colorBg = esEnViaje ? '#E11D48' : '#10B981'
       const sombraColor = esEnViaje ? 'rgba(225,29,72,0.5)' : 'rgba(16,185,129,0.5)'
@@ -501,10 +521,15 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           </div>
           <div style="font-size:12px;margin-bottom:6px;">
             ${
-              cadete.pedidoActivo
-                ? `<span style="color:#e11d48;font-weight:bold;">EN REPARTO</span>
-                   <div style="color:#334155;font-size:12px;margin-top:2px;">Cliente: <b>${cadete.pedidoActivo.cliente}</b></div>
-                   ${cadete.pedidoActivo.direccion ? `<div style="color:#64748b;font-size:11px;margin-top:1px;">${cadete.pedidoActivo.direccion}</div>` : ''}`
+              listaPedidos.length > 0
+                ? `<span style="color:#e11d48;font-weight:bold;">EN REPARTO (${listaPedidos.length} ${listaPedidos.length === 1 ? 'pedido' : 'pedidos'})</span>
+                   ${listaPedidos.map((p, idx) => `
+                     <div style="color:#334155;font-size:11.5px;margin-top:4px;border-left:2px solid #e11d48;padding-left:5px;">
+                       <b>#${p.parada_num || idx + 1}: ${p.cliente}</b>
+                       ${p.direccion ? `<div style="color:#64748b;font-size:10.5px;">${esEnlaceOCoordenadas(p.direccion) ? 'Ubicación en mapa' : p.direccion}</div>` : ''}
+                       ${p.total ? `<div style="color:#0f172a;font-weight:bold;font-size:10.5px;">${formatearPrecio(p.total)}</div>` : ''}
+                     </div>
+                   `).join('')}`
                 : `<span style="color:#16a34a;font-weight:bold;">DISPONIBLE</span>
                    <div style="color:#64748b;font-size:11px;margin-top:2px;">En espera / Libre</div>`
             }
@@ -535,24 +560,33 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         markersRef.current.cadetes[cadete.id] = newMarker
       }
 
-      // B) Marcador del Cliente de Entrega
-      const coords = cadete.pedidoActivo?.coordenadas
-      if (cadete.pedidoActivo && coords && coords.latitud != null && coords.longitud != null) {
-        const pedido = cadete.pedidoActivo
+      // B) Marcadores de Clientes de Entrega (Multi-Parada)
+      const pedidosConCoords = listaPedidos.filter(
+        (p) => p.coordenadas && p.coordenadas.latitud != null && p.coordenadas.longitud != null
+      )
+
+      pedidosConCoords.forEach((pedido, idx) => {
         const clientKey = `cliente_${pedido.id}`
         activeClientOrderIds.add(clientKey)
 
-        const clientLat = coords.latitud
-        const clientLng = coords.longitud
+        const clientLat = pedido.coordenadas!.latitud
+        const clientLng = pedido.coordenadas!.longitud
+        const numParada = pedido.parada_num || idx + 1
+        const totalParadas = pedidosConCoords.length
+
+        const paradaBadge = totalParadas > 1
+          ? `<span style="background:#f59e0b;color:#ffffff;font-size:9px;font-weight:900;padding:0px 4px;border-radius:4px;margin-right:3px;">#${numParada}</span>`
+          : ''
 
         const clienteIcon = L.divIcon({
           html: `
             <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
-              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:#2563EB;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:${totalParadas > 1 && numParada === 1 ? '#059669' : '#2563EB'};border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                ${totalParadas > 1 ? `<div style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);">${numParada}</div>` : ''}
               </div>
-              <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;">
-                ${pedido.cliente}
+              <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;display:flex;align-items:center;">
+                ${paradaBadge}${pedido.cliente}
               </div>
             </div>
           `,
@@ -566,6 +600,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           <div style="min-width:180px;padding:4px;font-family:sans-serif;">
             <div style="border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:6px;">
               <b style="font-size:13px;color:#1e40af;">Entrega: ${pedido.cliente}</b>
+              ${totalParadas > 1 ? `<span style="margin-left:6px;font-size:10px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:6px;font-weight:bold;">Parada ${numParada} de ${totalParadas}</span>` : ''}
             </div>
             ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">${esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : pedido.direccion}</div>` : ''}
             <div style="font-size:11px;color:#64748b;">Cadete asignado: <b>${cadete.nombre}</b></div>
@@ -584,12 +619,16 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             .addTo(map)
             .bindPopup(clientPopup)
         }
+      })
 
-        // C) Polilínea Dinámica Dual (Base resplandor + Trazo punteado animado)
-        const rutaKey = `ruta_${cadete.id}`
+      // C) Polilínea Dinámica Dual (Multi-Parada)
+      const rutaKey = `ruta_${cadete.id}`
+      if (pedidosConCoords.length > 0) {
         const startPoint: [number, number] = [estadoActual?.latActual || targetLat, estadoActual?.lngActual || targetLng]
-        const endPoint: [number, number] = [clientLat, clientLng]
-        const rutaCoords: [number, number][] = [startPoint, endPoint]
+        const rutaCoords: [number, number][] = [
+          startPoint,
+          ...pedidosConCoords.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
+        ]
 
         if (!markersRef.current.rutasBase[rutaKey]) {
           markersRef.current.rutasBase[rutaKey] = L.polyline(rutaCoords, {
@@ -610,6 +649,18 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             lineJoin: 'round',
             smoothFactor: 1.5,
           }).addTo(map)
+        } else {
+          markersRef.current.rutasBase[rutaKey].setLatLngs(rutaCoords)
+          markersRef.current.rutasDash[rutaKey].setLatLngs(rutaCoords)
+        }
+      } else {
+        if (markersRef.current.rutasBase[rutaKey]) {
+          markersRef.current.rutasBase[rutaKey].remove()
+          delete markersRef.current.rutasBase[rutaKey]
+        }
+        if (markersRef.current.rutasDash[rutaKey]) {
+          markersRef.current.rutasDash[rutaKey].remove()
+          delete markersRef.current.rutasDash[rutaKey]
         }
       }
     })
@@ -655,9 +706,14 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       if (c.lat != null && c.lng != null && c.gps_activo) {
         bounds.extend([c.lat, c.lng])
       }
-      if (c.pedidoActivo?.coordenadas?.latitud && c.pedidoActivo?.coordenadas?.longitud) {
-        bounds.extend([c.pedidoActivo.coordenadas.latitud, c.pedidoActivo.coordenadas.longitud])
-      }
+      const lista = (c.pedidosActivos && c.pedidosActivos.length > 0)
+        ? c.pedidosActivos
+        : (c.pedidoActivo ? [c.pedidoActivo] : [])
+      lista.forEach((p) => {
+        if (p.coordenadas?.latitud && p.coordenadas?.longitud) {
+          bounds.extend([p.coordenadas.latitud, p.coordenadas.longitud])
+        }
+      })
     })
 
     mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true, duration: 0.8 })

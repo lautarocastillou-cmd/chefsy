@@ -34,7 +34,7 @@ export async function GET() {
     // 3. Obtener pedidos activos para saber en qué andan y ubicar a los clientes en el mapa
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
-      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, ruta_historial, en_camino_at, created_at, entregado_at, productos, tipoEntrega, telefono, metodoPago, hora, fecha')
+      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, ruta_historial, en_camino_at, created_at, entregado_at, productos, tipoEntrega, telefono, metodoPago, hora, fecha, orden_entrega')
       .in('estado', ['listo', 'en_camino'])
       .eq('archivado', false)
 
@@ -71,20 +71,37 @@ export async function GET() {
       const cadete = entry.cadeteDb
       const idLower = String(entry.id || '').toLowerCase()
       
-      // Buscar pedido activo
-      const pedidoActivo = (pedidosData || []).find((p: any) => 
+      // Buscar todos los pedidos activos asignados al cadete
+      const pedidosCadete = (pedidosData || []).filter((p: any) => 
         String(p.cadete_id || '').toLowerCase() === idLower
       )
 
-      let coordsCliente: { latitud: number; longitud: number } | null = null
-      if (pedidoActivo?.coordenadas) {
-        if (typeof pedidoActivo.coordenadas === 'object' && pedidoActivo.coordenadas.latitud && pedidoActivo.coordenadas.longitud) {
-          coordsCliente = {
-            latitud: Number(pedidoActivo.coordenadas.latitud),
-            longitud: Number(pedidoActivo.coordenadas.longitud),
+      // Ordenar por orden_entrega manual o por fecha de creación
+      pedidosCadete.sort((a: any, b: any) => {
+        const ordA = a.orden_entrega != null ? Number(a.orden_entrega) : null
+        const ordB = b.orden_entrega != null ? Number(b.orden_entrega) : null
+        if (ordA !== null && ordB !== null) return ordA - ordB
+        if (ordA !== null) return -1
+        if (ordB !== null) return 1
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      })
+
+      const pedidosActivos = pedidosCadete.map((p: any, idx: number) => {
+        let coords: { latitud: number; longitud: number } | null = null
+        if (p.coordenadas && typeof p.coordenadas === 'object' && p.coordenadas.latitud && p.coordenadas.longitud) {
+          coords = {
+            latitud: Number(p.coordenadas.latitud),
+            longitud: Number(p.coordenadas.longitud),
           }
         }
-      }
+        return {
+          ...p,
+          parada_num: idx + 1,
+          coordenadas: coords,
+        }
+      })
+
+      const pedidoActivo = pedidosActivos[0] || null
 
       const updatedAt = cadete?.updated_at ? new Date(cadete.updated_at).getTime() : 0
       const haceSegundos = updatedAt ? (ahora - updatedAt) / 1000 : 999999
@@ -103,10 +120,8 @@ export async function GET() {
         bateria: cadete?.bateria ?? null,
         updated_at: cadete?.updated_at ?? null,
         segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
-        pedidoActivo: pedidoActivo ? {
-          ...pedidoActivo,
-          coordenadas: coordsCliente,
-        } : null
+        pedidoActivo: pedidoActivo,
+        pedidosActivos: pedidosActivos,
       }
     })
 

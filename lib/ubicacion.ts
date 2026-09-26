@@ -206,6 +206,81 @@ export async function obtenerRutaConduccion(
   return null
 }
 
+/**
+ * Obtiene el trazado real por calles conectando múltiples paradas en secuencia
+ * [origen, parada1, parada2, ... paradaN] mediante OSRM en una sola petición HTTP.
+ */
+export async function obtenerRutaMultiParada(
+  waypoints: Coordenadas[],
+  signal?: AbortSignal
+): Promise<RutaConGeometria | null> {
+  const filtrados = waypoints.filter(
+    (w) =>
+      w &&
+      typeof w.latitud === 'number' &&
+      typeof w.longitud === 'number' &&
+      !isNaN(w.latitud) &&
+      !isNaN(w.longitud)
+  )
+
+  if (filtrados.length < 2) return null
+  if (filtrados.length === 2) {
+    return obtenerRutaConduccion(filtrados[0], filtrados[1], signal)
+  }
+
+  const cacheKey = filtrados
+    .map((w) => `${w.latitud.toFixed(4)},${w.longitud.toFixed(4)}`)
+    .join('->')
+
+  if (cacheRutasOSRM.has(cacheKey)) {
+    return cacheRutasOSRM.get(cacheKey)!
+  }
+
+  try {
+    const cadenaPuntos = filtrados
+      .map((w) => `${w.longitud},${w.latitud}`)
+      .join(';')
+
+    const params = new URLSearchParams({
+      puntos: cadenaPuntos,
+      geometria: 'true'
+    })
+
+    const fetchSignal = signal || AbortSignal.timeout(6000)
+    const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
+    if (res.ok) {
+      const data = await res.json()
+      if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+        const puntosCrudos: [number, number][] = data.coordinates.map(
+          ([lon, lat]: [number, number]) => [lat, lon]
+        )
+        const puntos = simplificarPolilinea(puntosCrudos, 4.5)
+
+        let distanciaFallback = 0
+        for (let i = 0; i < filtrados.length - 1; i++) {
+          distanciaFallback += calcularDistanciaKm(filtrados[i], filtrados[i + 1])
+        }
+
+        const resultado: RutaConGeometria = {
+          distanciaKm: typeof data.distance === 'number' ? data.distance : distanciaFallback,
+          puntos
+        }
+
+        if (cacheRutasOSRM.size > 50) {
+          const firstKey = cacheRutasOSRM.keys().next().value
+          if (firstKey) cacheRutasOSRM.delete(firstKey)
+        }
+        cacheRutasOSRM.set(cacheKey, resultado)
+
+        return resultado
+      }
+    }
+  } catch (err: any) {
+    if (err?.name === 'AbortError') return null
+  }
+  return null
+}
+
 export function calcularCostoEnvio(distanciaKm: number): number {
   if (distanciaKm <= 1) return 1500
   if (distanciaKm <= 2) return 2000

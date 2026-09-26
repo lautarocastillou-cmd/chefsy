@@ -48,22 +48,109 @@ function extraerCoordenadasDeUrl(rawUrl: string) {
   return null
 }
 
+// Cache en memoria en el servidor para evitar llamadas repetidas a OSRM (0ms de latencia)
+interface ServerCacheEntry {
+  distance: number
+  coordinates?: [number, number][]
+  timestamp: number
+}
+const serverRouteCache = new Map<string, ServerCacheEntry>()
+
+// Simplificación de coordenadas GeoJSON [lon, lat] antes de enviar por red
+function simplificarGeoJSON(coordinates: [number, number][], toleranciaMetros = 4.0): [number, number][] {
+  if (!coordinates || coordinates.length <= 2) return coordinates
+
+  const M = 111320
+  const cosLat = Math.cos((coordinates[0][1] * Math.PI) / 180)
+
+  const distPerp = (p: [number, number], a: [number, number], b: [number, number]) => {
+    const ax = (b[1] - a[1]) * M // latitud delta
+    const ay = (b[0] - a[0]) * M * cosLat // longitud delta
+    const lenSq = ax * ax + ay * ay
+    if (lenSq === 0) {
+      const dx = (p[1] - a[1]) * M
+      const dy = (p[0] - a[0]) * M * cosLat
+      return Math.sqrt(dx * dx + dy * dy)
+    }
+    const px = (p[1] - a[1]) * M
+    const py = (p[0] - a[0]) * M * cosLat
+    const t = Math.max(0, Math.min(1, (px * ax + py * ay) / lenSq))
+    const projX = t * ax
+    const projY = t * ay
+    const dx = px - projX
+    const dy = py - projY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const rdp = (pts: [number, number][]): [number, number][] => {
+    if (pts.length <= 2) return pts
+    let maxDist = 0
+    let indexMax = 0
+    const start = pts[0]
+    const end = pts[pts.length - 1]
+    for (let i = 1; i < pts.length - 1; i++) {
+      const dist = distPerp(pts[i], start, end)
+      if (dist > maxDist) {
+        maxDist = dist
+        indexMax = i
+      }
+    }
+    if (maxDist > toleranciaMetros) {
+      const izq = rdp(pts.slice(0, indexMax + 1))
+      const der = rdp(pts.slice(indexMax))
+      return izq.slice(0, -1).concat(der)
+    }
+    return [start, end]
+  }
+
+  return rdp(coordinates)
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const urlParam = searchParams.get('url')
 
-  // -- PROXY OSRM (Público para cálculo exacto de envío en la web y panel) --
+  // -- PROXY OSRM (Soporta origen/destino individual y multi-paradas con puntos) --
+  const waypointsParam = searchParams.get('puntos') || searchParams.get('waypoints')
   const origenLon = searchParams.get('origenLon')
   const origenLat = searchParams.get('origenLat')
   const destinoLon = searchParams.get('destinoLon')
   const destinoLat = searchParams.get('destinoLat')
 
-  if (origenLon && origenLat && destinoLon && destinoLat) {
+  let coordsCadena: string | null = null
+  if (waypointsParam) {
+    const partes = waypointsParam.split(';').map(p => p.trim()).filter(Boolean)
+    if (partes.length >= 2) {
+      const esValido = partes.every(p => {
+        const [lon, lat] = p.split(',').map(Number)
+        return !isNaN(lon) && !isNaN(lat) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+      })
+      if (esValido) {
+        coordsCadena = partes.join(';')
+      }
+    }
+  } else if (origenLon && origenLat && destinoLon && destinoLat) {
+    coordsCadena = `${origenLon},${origenLat};${destinoLon},${destinoLat}`
+  }
+
+  if (coordsCadena) {
     const conGeometria = searchParams.get('geometria') === 'true' || searchParams.get('overview') === 'full'
+    const cacheKey = `${coordsCadena}?geom=${conGeometria}`
+    const ttlMs = conGeometria ? 300_000 : 86_400_000 // 5 min para geometría, 24h para distancias
+
+    // 1. Revisar caché server-side
+    const enCache = serverRouteCache.get(cacheKey)
+    if (enCache && Date.now() - enCache.timestamp < ttlMs) {
+      return NextResponse.json(
+        { distance: enCache.distance, ...(conGeometria && enCache.coordinates ? { coordinates: enCache.coordinates } : {}) },
+        { headers: { 'Cache-Control': conGeometria ? 'public, s-maxage=300' : 'public, s-maxage=86400', 'X-Chefsy-Cache': 'HIT' } }
+      )
+    }
+
     const queryParams = conGeometria ? 'overview=full&geometries=geojson' : 'overview=false'
 
     try {
-      const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?${queryParams}`
+      const url1 = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsCadena}?${queryParams}`
       const res1 = await fetch(url1, { 
         headers: { 'User-Agent': 'ChefsyApp/1.0' },
         signal: AbortSignal.timeout(5000)
@@ -71,33 +158,58 @@ export async function GET(request: Request) {
       if (res1.ok) {
         const data1 = await res1.json()
         if (data1?.routes?.[0]?.distance !== undefined) {
-          const payload: any = { distance: data1.routes[0].distance / 1000 }
+          const distance = data1.routes[0].distance / 1000
+          let coordinates: [number, number][] | undefined
+
           if (conGeometria && data1.routes[0].geometry?.coordinates) {
-            payload.coordinates = data1.routes[0].geometry.coordinates
+            // Simplificación RDP directa en el servidor: reduce 85% el payload móvil
+            coordinates = simplificarGeoJSON(data1.routes[0].geometry.coordinates, 4.0)
           }
-          // Rutas con geometría: TTL corto para que los recálculos por desvío sean frescos
+
+          // Guardar en caché server-side
+          if (serverRouteCache.size > 200) {
+            const primerClave = serverRouteCache.keys().next().value
+            if (primerClave) serverRouteCache.delete(primerClave)
+          }
+          serverRouteCache.set(cacheKey, { distance, coordinates, timestamp: Date.now() })
+
+          const payload: any = { distance }
+          if (coordinates) payload.coordinates = coordinates
+
           const cacheHeader = conGeometria
             ? 'public, s-maxage=300, stale-while-revalidate=60'
             : 'public, s-maxage=86400, stale-while-revalidate=604800'
-          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader } })
+          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader, 'X-Chefsy-Cache': 'MISS' } })
         }
       }
     } catch (err) {}
 
     try {
-      const url2 = `https://router.project-osrm.org/route/v1/driving/${origenLon},${origenLat};${destinoLon},${destinoLat}?${queryParams}`
+      const url2 = `https://router.project-osrm.org/route/v1/driving/${coordsCadena}?${queryParams}`
       const res2 = await fetch(url2, { signal: AbortSignal.timeout(5000) })
       if (res2.ok) {
         const data2 = await res2.json()
         if (data2?.routes?.[0]?.distance !== undefined) {
-          const payload: any = { distance: data2.routes[0].distance / 1000 }
+          const distance = data2.routes[0].distance / 1000
+          let coordinates: [number, number][] | undefined
+
           if (conGeometria && data2.routes[0].geometry?.coordinates) {
-            payload.coordinates = data2.routes[0].geometry.coordinates
+            coordinates = simplificarGeoJSON(data2.routes[0].geometry.coordinates, 4.0)
           }
+
+          if (serverRouteCache.size > 200) {
+            const primerClave = serverRouteCache.keys().next().value
+            if (primerClave) serverRouteCache.delete(primerClave)
+          }
+          serverRouteCache.set(cacheKey, { distance, coordinates, timestamp: Date.now() })
+
+          const payload: any = { distance }
+          if (coordinates) payload.coordinates = coordinates
+
           const cacheHeader = conGeometria
             ? 'public, s-maxage=300, stale-while-revalidate=60'
             : 'public, s-maxage=86400, stale-while-revalidate=604800'
-          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader } })
+          return NextResponse.json(payload, { headers: { 'Cache-Control': cacheHeader, 'X-Chefsy-Cache': 'MISS' } })
         }
       }
     } catch (err) {}

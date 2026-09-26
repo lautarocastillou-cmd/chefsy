@@ -255,7 +255,56 @@ export default function TorreControlPage() {
                       </div>
 
                       <div className="text-xs">
-                        {cadete.pedidoActivo ? (
+                        {(cadete.pedidosActivos && cadete.pedidosActivos.length > 0) ? (
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-2">
+                            <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
+                              <span>EN VIAJE ({cadete.pedidosActivos.length} {cadete.pedidosActivos.length === 1 ? 'PEDIDO' : 'PEDIDOS'})</span>
+                              <span className="text-gray-900 font-black">
+                                {formatearPrecio(cadete.pedidosActivos.reduce((acc, p) => acc + (p.total || 0), 0))}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 divide-y divide-orange-100">
+                              {cadete.pedidosActivos.map((p, idx) => (
+                                <div key={p.id} className={idx > 0 ? 'pt-1.5' : ''}>
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-gray-800 font-medium text-xs">
+                                      <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded-md mr-1">
+                                        #{p.parada_num || idx + 1}
+                                      </span>
+                                      <span className="font-bold">{p.cliente}</span>
+                                    </p>
+                                    <span className="text-[10px] font-black uppercase text-orange-600">
+                                      {p.estado}
+                                    </span>
+                                  </div>
+                                  {p.direccion ? (
+                                    <p className="text-gray-600 text-[11px] flex items-start gap-1 mt-0.5">
+                                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                                      <span className="line-clamp-1">{p.direccion}</span>
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPedidoParaBreadcrumb({
+                                  ...cadete.pedidosActivos![0],
+                                  cadete_nombre: cadete.nombre,
+                                  cadete_id: cadete.id,
+                                })
+                              }}
+                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            >
+                              <Bike className="h-3.5 w-3.5 text-purple-700" />
+                              <span>Ver Trayectoria (Breadcrumb)</span>
+                            </button>
+                          </div>
+                        ) : cadete.pedidoActivo ? (
                           <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-1">
                             <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
                               <span>EN VIAJE ({cadete.pedidoActivo.estado.toUpperCase()})</span>

@@ -8,7 +8,8 @@ import {
   MAPA_TILES_URL, 
   MAPA_ATTRIBUTION, 
   MAPA_SUBDOMAINS,
-  obtenerRutaConduccion 
+  obtenerRutaConduccion,
+  obtenerRutaMultiParada
 } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -112,14 +113,16 @@ function distanciaMinAPolilinea(
 export default function MapaSeguimiento({ pedido }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<any>(null)
-  const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any }>({})
+  const markersRef = useRef<{ local?: any; cliente?: any; cadete?: any; paradas?: any[] }>({ paradas: [] })
   const polylineRef = useRef<{
     recorrida?: any
     glow?: any
     core?: any
     dash?: any
+    siguientesParadas?: any
   }>({})
   const rutaGeometriaRef = useRef<[number, number][]>([])
+  const estaVisibleRef = useRef<boolean>(true)
   const indiceRutaRef = useRef<number>(0)
   const ultimoRenderPolilineaRef = useRef<number>(0)
   const ultimoIndiceRutaDibujadoRef = useRef<number>(-1)
@@ -203,9 +206,16 @@ export default function MapaSeguimiento({ pedido }: Props) {
         (p.estado === 'entregado' && Boolean(p.cadete_coordenadas))
       )
 
-      const destino: { latitud: number; longitud: number } = esVolviendo
-        ? UBICACION_LOCAL
-        : (p.coordenadas || UBICACION_LOCAL)
+      const itinerario: any[] = (p as any).itinerario_paradas || []
+      let destino: { latitud: number; longitud: number } = UBICACION_LOCAL
+
+      if (esVolviendo) {
+        destino = UBICACION_LOCAL
+      } else if (itinerario.length > 0 && itinerario[0]?.coordenadas) {
+        destino = itinerario[0].coordenadas
+      } else {
+        destino = p.coordenadas || UBICACION_LOCAL
+      }
 
       try {
         const ruta = await obtenerRutaConduccion(origen, destino)
@@ -231,21 +241,33 @@ export default function MapaSeguimiento({ pedido }: Props) {
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
         }
+
+        // Actualizar tramo siguiente de paradas múltiples si existen
+        if (!esVolviendo && itinerario.length > 1) {
+          const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
+          const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes)
+          if (leafletMapRef.current && rutaSiguientes) {
+            polylineRef.current.siguientesParadas?.setLatLngs(rutaSiguientes.puntos)
+          }
+        } else if (leafletMapRef.current) {
+          polylineRef.current.siguientesParadas?.setLatLngs([])
+        }
       } catch (_) {
         // Sin crash: si falla, la ruta vieja sigue en pantalla
       }
     }
   }, []) // [] → se crea una sola vez; lee TODO desde refs, nunca stale
 
-  // ── 1.2. Carga inicial de ruta (solo cuando cambia destino/estado) ─────────────
+  // ── 1.2. Carga inicial de ruta (cuando cambia destino/estado/itinerario) ───────
   useEffect(() => {
     let cancelado = false
     const abortCtrl = new AbortController()
 
     const cargarRutaInicial = async () => {
       try {
+        const itinerario: any[] = (pedido as any).itinerario_paradas || []
         let origen: { latitud: number; longitud: number } = UBICACION_LOCAL
-        let destino: { latitud: number; longitud: number } | null | undefined = pedido.coordenadas
+        let destino: { latitud: number; longitud: number } | null | undefined = null
 
         if (esVolviendoAlLocal) {
           origen = pedido.cadete_coordenadas?.latitud
@@ -253,10 +275,15 @@ export default function MapaSeguimiento({ pedido }: Props) {
             : (pedido.coordenadas || UBICACION_LOCAL)
           destino = UBICACION_LOCAL
         } else {
-          if (!destino) return
           origen = pedido.cadete_coordenadas?.latitud
             ? pedido.cadete_coordenadas
             : UBICACION_LOCAL
+
+          if (itinerario.length > 0 && itinerario[0]?.coordenadas) {
+            destino = itinerario[0].coordenadas
+          } else {
+            destino = pedido.coordenadas || UBICACION_LOCAL
+          }
         }
 
         if (!destino) return
@@ -278,13 +305,24 @@ export default function MapaSeguimiento({ pedido }: Props) {
           setDistanciaRestanteKm(ruta.distanciaKm)
         }
 
-        if (mapaListo && leafletMapRef.current && (esProximaEntrega || esVolviendoAlLocal)) {
+        if (mapaListo && leafletMapRef.current) {
           const puntosRecorridos = [...ruta.puntos.slice(0, idx + 1), posCadete]
           const puntosRestantes = [posCadete, ...ruta.puntos.slice(idx + 1)]
           polylineRef.current.recorrida?.setLatLngs(puntosRecorridos)
           polylineRef.current.glow?.setLatLngs(puntosRestantes)
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
+        }
+
+        // Cargar trazado secundario para los siguientes destinos en el itinerario
+        if (!esVolviendoAlLocal && itinerario.length > 1) {
+          const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
+          const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes, abortCtrl.signal)
+          if (!cancelado && leafletMapRef.current && rutaSiguientes) {
+            polylineRef.current.siguientesParadas?.setLatLngs(rutaSiguientes.puntos)
+          }
+        } else if (leafletMapRef.current) {
+          polylineRef.current.siguientesParadas?.setLatLngs([])
         }
       } catch (_) {
         // Ignorar cancelaciones
@@ -303,7 +341,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
     pedido.coordenadas?.longitud,
     pedido.cadete_coordenadas ? 'cadete-activo' : 'local',
     esProximaEntrega,
-    esVolviendoAlLocal
+    esVolviendoAlLocal,
+    (pedido as any).itinerario_paradas?.length
   ])
 
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
@@ -388,9 +427,10 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }
       if (resizeObserver) resizeObserver.disconnect()
       if (leafletMapRef.current) {
-        leafletMapRef.current.remove()
-        leafletMapRef.current = null
-        markersRef.current = {}
+        if (markersRef.current.paradas) {
+          markersRef.current.paradas.forEach((m: any) => m.remove())
+        }
+        markersRef.current = { paradas: [] }
         polylineRef.current = {}
         setMapaListo(false)
       }
@@ -418,7 +458,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
             }
           </div>
           <div style="margin-top:2px;background:${esEntregado ? '#065F46' : '#1e40af'};color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
-            ${pedido.cliente || 'Tu Domicilio'} ${esEntregado ? '(Entregado ✓)' : ''}
+            ${pedido.cliente || 'Tu Domicilio'} ${totalParadas > 1 && !esEntregado ? `(Parada ${paradaActual})` : ''} ${esEntregado ? '(Entregado ✓)' : ''}
           </div>
         </div>
       `,
@@ -437,7 +477,73 @@ export default function MapaSeguimiento({ pedido }: Props) {
         zIndexOffset: 200,
       }).addTo(leafletMapRef.current).bindPopup(`Destino de entrega: ${pedido.cliente}${esEntregado ? ' (Entregado)' : ''}`)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente, pedido.estado, esVolviendoAlLocal])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente, pedido.estado, esVolviendoAlLocal, totalParadas, paradaActual])
+
+  // ── 3.1. Marcadores de Paradas Múltiples / Itinerario ───────────────────────
+  useEffect(() => {
+    if (!mapaListo || !leafletMapRef.current) return
+    const L = require('leaflet')
+    const itinerario: any[] = (pedido as any).itinerario_paradas || []
+
+    // Limpiar paradas previas
+    if (markersRef.current.paradas) {
+      markersRef.current.paradas.forEach((m: any) => m.remove())
+      markersRef.current.paradas = []
+    }
+
+    if (esVolviendoAlLocal) return
+
+    itinerario.forEach((parada: any) => {
+      if (!parada.es_mi_pedido && parada.coordenadas?.latitud && parada.coordenadas?.longitud) {
+        const paradaIcon = L.divIcon({
+          html: `
+            <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+              <div style="background:#047857;color:#fff;width:28px;height:28px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 3px 8px rgba(0,0,0,0.35);">
+                ${parada.orden}
+              </div>
+              <div style="margin-top:2px;background:#065f46;color:#a7f3d0;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #10b981;">
+                Parada ${parada.orden}
+              </div>
+            </div>
+          `,
+          className: 'custom-parada-icon',
+          iconSize: [80, 50],
+          iconAnchor: [40, 14],
+        })
+
+        const m = L.marker([parada.coordenadas.latitud, parada.coordenadas.longitud], {
+          icon: paradaIcon,
+          zIndexOffset: 150,
+        }).addTo(leafletMapRef.current).bindPopup(`<b>Parada ${parada.orden}</b><br/>Entrega previa en curso`)
+
+        markersRef.current.paradas?.push(m)
+      }
+    })
+  }, [mapaListo, (pedido as any).itinerario_paradas, esVolviendoAlLocal])
+
+  // ── 3.2. Suspensión de recursos al pasar a segundo plano (Battery/CPU Saver) ─
+  useEffect(() => {
+    const handleVisibilidad = () => {
+      const visible = !document.hidden
+      estaVisibleRef.current = visible
+      if (!visible) {
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current)
+          animFrameRef.current = null
+        }
+      } else {
+        if (markersRef.current.cadete && posicionDestinoRef.current) {
+          markersRef.current.cadete.setLatLng([
+            posicionDestinoRef.current.latitud,
+            posicionDestinoRef.current.longitud
+          ])
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilidad)
+    return () => document.removeEventListener('visibilitychange', handleVisibilidad)
+  }, [])
 
   // ── 4. MOTOR DE INTERPOLACIÓN CONTINUO A 60 FPS (GLIDING ENGINE) ─────────────
   useEffect(() => {
@@ -579,6 +685,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     // Bucle continuo a 60 fotogramas por segundo (RequestAnimationFrame)
     const pasoGliding = (timestamp: number) => {
+      if (!estaVisibleRef.current) return
+
       const inicio = posicionInicioRef.current
       const destino = posicionDestinoRef.current
       const cadeteMarker = markersRef.current.cadete
@@ -611,9 +719,13 @@ export default function MapaSeguimiento({ pedido }: Props) {
       aplicarRotacionAlElemento(rumboActual)
 
       // 3. Acortar y desvanecer la polilínea de la ruta de forma desacoplada y eficiente
-      const destinoPuntos = esVolviendoAlLocal ? UBICACION_LOCAL : pedido.coordenadas
+      const itinerario = (pedidoRef.current as any)?.itinerario_paradas || []
+      const proximaCoords = itinerario.length > 0 && itinerario[0]?.coordenadas
+        ? itinerario[0].coordenadas
+        : pedido.coordenadas
+      const destinoPuntos = esVolviendoAlLocal ? UBICACION_LOCAL : proximaCoords
 
-      if (destinoPuntos && (esProximaEntrega || esVolviendoAlLocal)) {
+      if (destinoPuntos) {
         const rutaCompleta = rutaGeometriaRef.current
         const posCadete: [number, number] = [latActual, lngActual]
 
@@ -623,7 +735,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           const idx = indiceRutaRef.current
 
           // Rendimiento crítico:
-          // El marcador viaja a 60 FPS fluidos por GPU. Las 4 polilíneas SVG solo se recalculan
+          // El marcador viaja a 60 FPS fluidos por GPU. Las polilíneas SVG solo se recalculan
           // si el cadete avanzó al siguiente nodo de la ruta o cada ~300ms para conectar la punta.
           // Esto recorta el 95% de mutaciones DOM/SVG por segundo evitando caídas de FPS.
           const debeActualizarRuta =
@@ -664,14 +776,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
             polylineRef.current.dash?.setLatLngs(rutaDirecta)
           }
         }
-      } else if (!esProximaEntrega && !esVolviendoAlLocal) {
-        if (ultimoIndiceRutaDibujadoRef.current !== -999) {
-          ultimoIndiceRutaDibujadoRef.current = -999
-          polylineRef.current.recorrida?.setLatLngs([])
-          polylineRef.current.glow?.setLatLngs([])
-          polylineRef.current.core?.setLatLngs([])
-          polylineRef.current.dash?.setLatLngs([])
-        }
       }
 
       // 4. Si la cámara está fijada en el cadete, acompañar suavemente a 60 FPS
@@ -688,33 +792,34 @@ export default function MapaSeguimiento({ pedido }: Props) {
     animFrameRef.current = requestAnimationFrame(pasoGliding)
   }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal])
 
-  // ── 5. Inicialización de Polilíneas de Ruta (Neón & Flow + Tramo Recorrido) ──
+  // ── 5. Inicialización de Polilíneas de Ruta (Neón & Flow + Tramo Recorrido + Multi-Paradas) ──
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current) return
     const L = require('leaflet')
 
     let puntosRuta: [number, number][] = []
-    const destinoCoords = esVolviendoAlLocal ? UBICACION_LOCAL : pedido.coordenadas
+    const itinerario = (pedido as any)?.itinerario_paradas || []
+    const destinoCoords = esVolviendoAlLocal
+      ? UBICACION_LOCAL
+      : (itinerario.length > 0 && itinerario[0]?.coordenadas ? itinerario[0].coordenadas : pedido.coordenadas)
 
-    if (esProximaEntrega || esVolviendoAlLocal) {
-      if (rutaGeometriaRef.current.length >= 2) {
-        puntosRuta = rutaGeometriaRef.current
-      } else if (posicionAnimadaRef.current && destinoCoords) {
-        puntosRuta = [
-          [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
-          [destinoCoords.latitud, destinoCoords.longitud]
-        ]
-      } else if (pedido.cadete_coordenadas && destinoCoords) {
-        puntosRuta = [
-          [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
-          [destinoCoords.latitud, destinoCoords.longitud]
-        ]
-      } else if (destinoCoords) {
-        puntosRuta = [
-          [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
-          [destinoCoords.latitud, destinoCoords.longitud]
-        ]
-      }
+    if (rutaGeometriaRef.current.length >= 2) {
+      puntosRuta = rutaGeometriaRef.current
+    } else if (posicionAnimadaRef.current && destinoCoords) {
+      puntosRuta = [
+        [posicionAnimadaRef.current.latitud, posicionAnimadaRef.current.longitud],
+        [destinoCoords.latitud, destinoCoords.longitud]
+      ]
+    } else if (pedido.cadete_coordenadas && destinoCoords) {
+      puntosRuta = [
+        [pedido.cadete_coordenadas.latitud, pedido.cadete_coordenadas.longitud],
+        [destinoCoords.latitud, destinoCoords.longitud]
+      ]
+    } else if (destinoCoords) {
+      puntosRuta = [
+        [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud],
+        [destinoCoords.latitud, destinoCoords.longitud]
+      ]
     }
 
     if (!polylineRef.current.glow && leafletMapRef.current) {
@@ -760,12 +865,23 @@ export default function MapaSeguimiento({ pedido }: Props) {
         lineCap: 'round',
         lineJoin: 'round',
       }).addTo(leafletMapRef.current)
+
+      // 5. Tramo proyectado hacia siguientes paradas (multi-entrega)
+      polylineRef.current.siguientesParadas = L.polyline([], {
+        color: '#059669',
+        weight: 3.5,
+        opacity: 0.7,
+        dashArray: '6, 10',
+        smoothFactor: 1.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
     } else if (polylineRef.current.glow && puntosRuta.length >= 2) {
       polylineRef.current.glow.setLatLngs(puntosRuta)
       polylineRef.current.core?.setLatLngs(puntosRuta)
       polylineRef.current.dash?.setLatLngs(puntosRuta)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal, (pedido as any).itinerario_paradas?.length])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {

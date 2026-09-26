@@ -118,16 +118,26 @@ export async function GET(request: Request) {
     let cadeteOcupadoEnOtroViaje = false
     let esProximaEntrega = true
 
+    let itinerarioParadas: Array<{
+      id: string
+      orden: number
+      es_mi_pedido: boolean
+      cliente: string
+      coordenadas: { latitud: number; longitud: number }
+      estado: string
+      es_proxima_entrega: boolean
+    }> = []
+
     if (data.cadete_id && data.estado !== 'entregado' && data.estado !== 'cancelado') {
       const { data: pedidosActivosCadete } = await supabase
         .from('pedidos')
-        .select('id, estado, hora, created_at, coordenadas, orden_entrega')
+        .select('id, estado, hora, created_at, coordenadas, orden_entrega, cliente')
         .ilike('cadete_id', data.cadete_id)
         .in('estado', ['en_cocina', 'listo', 'en_camino'])
         .eq('archivado', false)
         .eq('tipoEntrega', 'delivery')
 
-      if (pedidosActivosCadete && pedidosActivosCadete.length > 1) {
+      if (pedidosActivosCadete && pedidosActivosCadete.length > 0) {
         totalParadas = pedidosActivosCadete.length
 
         // Ordenar la cola de entregas:
@@ -159,6 +169,22 @@ export async function GET(request: Request) {
 
         const colaOrdenada = ordenarCola(pedidosActivosCadete)
         const enCamino = colaOrdenada.filter(p => p.estado === 'en_camino')
+        const listaActiva = enCamino.length > 0 ? enCamino : colaOrdenada
+
+        itinerarioParadas = listaActiva
+          .filter(p => p.coordenadas && typeof p.coordenadas.latitud === 'number' && typeof p.coordenadas.longitud === 'number')
+          .map((p, idx) => ({
+            id: p.id,
+            orden: idx + 1,
+            es_mi_pedido: p.id === pedidoId,
+            cliente: p.id === pedidoId ? (data.cliente || 'Tu Domicilio') : `Parada ${idx + 1}`,
+            coordenadas: {
+              latitud: Number(p.coordenadas.latitud),
+              longitud: Number(p.coordenadas.longitud)
+            },
+            estado: p.estado,
+            es_proxima_entrega: idx === 0
+          }))
 
         if (data.estado === 'en_camino') {
           if (enCamino.length > 1) {
@@ -233,6 +259,7 @@ export async function GET(request: Request) {
       total_paradas: totalParadas,
       parada_actual: paradaActual,
       es_proxima_entrega: esProximaEntrega,
+      itinerario_paradas: itinerarioParadas,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },
       productos: data.productos ?? [],
       tipoEntrega: data.tipoEntrega ?? 'delivery',

@@ -193,6 +193,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           total_paradas: data.total_paradas ?? 1,
           parada_actual: data.parada_actual ?? 1,
           es_proxima_entrega: data.es_proxima_entrega ?? true,
+          itinerario_paradas: data.itinerario_paradas ?? [],
         } as unknown as Pedido)
         setProductos(data.productos || [])
         setCadeteOcupadoEnOtroViaje(Boolean(data.cadete_ocupado_en_otro_viaje))
