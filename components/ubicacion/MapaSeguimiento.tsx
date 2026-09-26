@@ -8,8 +8,7 @@ import {
   MAPA_TILES_URL, 
   MAPA_ATTRIBUTION, 
   MAPA_SUBDOMAINS,
-  obtenerRutaConduccion,
-  obtenerRutaMultiParada
+  obtenerRutaConduccion
 } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -119,9 +118,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
     glow?: any
     core?: any
     dash?: any
-    siguientesParadasCasing?: any
-    siguientesParadasCore?: any
-    siguientesParadasDash?: any
   }>({})
   const rutaGeometriaRef = useRef<[number, number][]>([])
   const estaVisibleRef = useRef<boolean>(true)
@@ -240,21 +236,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
         }
-
-        // Actualizar tramo siguiente de paradas múltiples si existen
-        if (itinerario.length > 1) {
-          const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
-          const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes)
-          if (leafletMapRef.current && rutaSiguientes) {
-            polylineRef.current.siguientesParadasCasing?.setLatLngs(rutaSiguientes.puntos)
-            polylineRef.current.siguientesParadasCore?.setLatLngs(rutaSiguientes.puntos)
-            polylineRef.current.siguientesParadasDash?.setLatLngs(rutaSiguientes.puntos)
-          }
-        } else if (leafletMapRef.current) {
-          polylineRef.current.siguientesParadasCasing?.setLatLngs([])
-          polylineRef.current.siguientesParadasCore?.setLatLngs([])
-          polylineRef.current.siguientesParadasDash?.setLatLngs([])
-        }
       } catch (_) {
         // Sin crash: si falla, la ruta vieja sigue en pantalla
       }
@@ -276,9 +257,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
             polylineRef.current.glow?.setLatLngs([])
             polylineRef.current.core?.setLatLngs([])
             polylineRef.current.dash?.setLatLngs([])
-            polylineRef.current.siguientesParadasCasing?.setLatLngs([])
-            polylineRef.current.siguientesParadasCore?.setLatLngs([])
-            polylineRef.current.siguientesParadasDash?.setLatLngs([])
           }
           return
         }
@@ -310,7 +288,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         const idx = encontrarIndiceMasCercano(posCadete, ruta.puntos, 0)
         indiceRutaRef.current = idx
 
-        if (typeof ruta.distanciaKm === 'number') {
+        if (typeof ruta.distanciaKm === 'number' && esProximaEntrega) {
           setDistanciaRestanteKm(ruta.distanciaKm)
         }
 
@@ -321,21 +299,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
           polylineRef.current.glow?.setLatLngs(puntosRestantes)
           polylineRef.current.core?.setLatLngs(puntosRestantes)
           polylineRef.current.dash?.setLatLngs(puntosRestantes)
-        }
-
-        // Cargar trazado secundario para los siguientes destinos en el itinerario
-        if (itinerario.length > 1) {
-          const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
-          const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes, abortCtrl.signal)
-          if (!cancelado && leafletMapRef.current && rutaSiguientes) {
-            polylineRef.current.siguientesParadasCasing?.setLatLngs(rutaSiguientes.puntos)
-            polylineRef.current.siguientesParadasCore?.setLatLngs(rutaSiguientes.puntos)
-            polylineRef.current.siguientesParadasDash?.setLatLngs(rutaSiguientes.puntos)
-          }
-        } else if (leafletMapRef.current) {
-          polylineRef.current.siguientesParadasCasing?.setLatLngs([])
-          polylineRef.current.siguientesParadasCore?.setLatLngs([])
-          polylineRef.current.siguientesParadasDash?.setLatLngs([])
         }
       } catch (_) {
         // Ignorar cancelaciones
@@ -830,9 +793,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
       polylineRef.current.glow?.setLatLngs([])
       polylineRef.current.core?.setLatLngs([])
       polylineRef.current.dash?.setLatLngs([])
-      polylineRef.current.siguientesParadasCasing?.setLatLngs([])
-      polylineRef.current.siguientesParadasCore?.setLatLngs([])
-      polylineRef.current.siguientesParadasDash?.setLatLngs([])
       return
     }
 
@@ -899,38 +859,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
         dashArray: '10, 16',
         smoothFactor: 1.5,
         className: 'animated-polyline-dash',
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(leafletMapRef.current)
-
-      // 5. Tramo proyectado hacia siguientes paradas (multi-entrega)
-      // Capa A: Borde de contraste alto (evita que se pierda en el asfalto o zonas verdes)
-      polylineRef.current.siguientesParadasCasing = L.polyline([], {
-        color: '#0f172a',
-        weight: 7.5,
-        opacity: 0.8,
-        smoothFactor: 1.5,
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(leafletMapRef.current)
-
-      // Capa B: Núcleo azul eléctrico ultra vibrante
-      polylineRef.current.siguientesParadasCore = L.polyline([], {
-        color: '#2563eb',
-        weight: 4.5,
-        opacity: 0.95,
-        smoothFactor: 1.5,
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(leafletMapRef.current)
-
-      // Capa C: Estela punteada animada luminosa (Cyan / Sky)
-      polylineRef.current.siguientesParadasDash = L.polyline([], {
-        color: '#93c5fd',
-        weight: 2.5,
-        dashArray: '8, 12',
-        smoothFactor: 1.5,
-        className: 'animated-polyline-secondary-dash',
         lineCap: 'round',
         lineJoin: 'round',
       }).addTo(leafletMapRef.current)
@@ -1007,7 +935,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
   }
 
   const esperandoGps = !pedido.cadete_coordenadas
-  const enLaPuerta = distanciaRestanteKm !== null && distanciaRestanteKm < 0.09 && ['listo', 'en_camino'].includes(pedido.estado)
+  const enLaPuerta = esProximaEntrega && distanciaRestanteKm !== null && distanciaRestanteKm < 0.09 && ['listo', 'en_camino'].includes(pedido.estado)
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden z-0 bg-slate-100">
@@ -1063,12 +991,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
         }
         .animated-polyline-dash {
           animation: polyline-dash 1.4s linear infinite;
-        }
-        @keyframes polyline-secondary-dash {
-          to { stroke-dashoffset: -40; }
-        }
-        .animated-polyline-secondary-dash {
-          animation: polyline-secondary-dash 1.8s linear infinite;
         }
         .leaflet-container {
           width: 100% !important;
