@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
+import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION, simplificarPolilinea } from '@/lib/ubicacion'
 import { calcularTelemetriaRuta } from '@/lib/telemetriaCadetes'
 import { obtenerRutaHistorialPedido } from '@/servicios/supabase/pedidos'
 import {
@@ -78,6 +78,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
   const seguirCamaraRef = useRef<boolean>(true)
   const animFrameRef = useRef<number | null>(null)
   const lastTimestampRef = useRef<number>(0)
+  const ultimoRenderTrazaRef = useRef<number>(0)
+  const ultimoSegIdxDibujadoRef = useRef<number>(-1)
 
   useEffect(() => {
     progresoDecimalRef.current = progresoDecimal
@@ -173,13 +175,17 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
           const tFin = new Date(fechaFin).getTime()
           const deltaT = Math.max(60000, tFin - tInicio)
 
-          const puntosOSRM: PuntoRutaBreadcrumb[] = coordsGeojson.map(([lon, lat], index) => {
-            const frac = index / (coordsGeojson!.length - 1)
+          // Simplificar coordenadas para rendimiento óptimo
+          const ptsLatLon = coordsGeojson.map(([lon, lat]: [number, number]) => [lat, lon] as [number, number])
+          const ptsSimplificados = simplificarPolilinea(ptsLatLon, 4.0)
+
+          const puntosOSRM: PuntoRutaBreadcrumb[] = ptsSimplificados.map(([lat, lon], index) => {
+            const frac = index / (ptsSimplificados.length - 1)
             return {
               lat,
               lng: lon,
               t: new Date(tInicio + deltaT * frac).toISOString(),
-              speed: index === 0 || index === coordsGeojson!.length - 1 ? 0 : 26 + (index % 3) * 3
+              speed: index === 0 || index === ptsSimplificados.length - 1 ? 0 : 26 + (index % 3) * 3
             }
           })
 
@@ -269,8 +275,14 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       }
     }
 
-    // Actualizar polilínea recorrida (viva / iluminada)
-    if (polylineRecorridaRef.current) {
+    // Actualizar polilínea recorrida (desacoplada con throttle para rendimiento óptimo)
+    const ahora = performance.now()
+    if (
+      polylineRecorridaRef.current &&
+      (segIdx !== ultimoSegIdxDibujadoRef.current || ahora - ultimoRenderTrazaRef.current > 120)
+    ) {
+      ultimoRenderTrazaRef.current = ahora
+      ultimoSegIdxDibujadoRef.current = segIdx
       const traza = [
         ...puntos.slice(0, segIdx + 1).map(p => [p.lat, p.lng]),
         [lat, lng]
@@ -369,7 +381,8 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       opacity: 0.5,
       lineCap: 'round',
       lineJoin: 'round',
-      dashArray: '6, 8'
+      dashArray: '6, 8',
+      smoothFactor: 1.5,
     }).addTo(map)
 
     // 4. Polilínea Viva Recorrida (Verde Esmeralda Brillante)
@@ -379,6 +392,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
       opacity: 0.95,
       lineCap: 'round',
       lineJoin: 'round',
+      smoothFactor: 1.5,
     }).addTo(map)
 
     // 5. Marcador de la Moto con Faro Delantero y Radar

@@ -91,6 +91,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   const animStatesRef = useRef<Record<string, CadeteAnimState>>({})
   const ultimosUpdatesRef = useRef<Record<string, number>>({})
   const animFrameRef = useRef<number | null>(null)
+  const ultimoRenderRutasRef = useRef<number>(0)
   const cadetesDataRef = useRef<CadeteData[]>([])
   const focusedIdRef = useRef<string | null | undefined>(focusedId)
   const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
@@ -277,21 +278,24 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         // Rotar faro y moto
         aplicarRotacionCadete(id, rumbo)
 
-        // 3. Acortar polilínea de entrega en tiempo real si tiene pedido activo
-        const cadeteInfo = cadetesList.find((c) => c.id === id)
-        const coordsCliente = cadeteInfo?.pedidoActivo?.coordenadas
-        const rutaKey = `ruta_${id}`
+        // 3. Acortar polilínea de entrega en tiempo real si tiene pedido activo (con throttle para no saturar el DOM)
+        if (timestamp - ultimoRenderRutasRef.current > 200) {
+          ultimoRenderRutasRef.current = timestamp
+          const cadeteInfo = cadetesList.find((c) => c.id === id)
+          const coordsCliente = cadeteInfo?.pedidoActivo?.coordenadas
+          const rutaKey = `ruta_${id}`
 
-        if (coordsCliente && coordsCliente.latitud != null && coordsCliente.longitud != null) {
-          const puntosRuta = [
-            [lat, lng],
-            [coordsCliente.latitud, coordsCliente.longitud]
-          ]
-          if (markersRef.current.rutasBase[rutaKey]) {
-            markersRef.current.rutasBase[rutaKey].setLatLngs(puntosRuta)
-          }
-          if (markersRef.current.rutasDash[rutaKey]) {
-            markersRef.current.rutasDash[rutaKey].setLatLngs(puntosRuta)
+          if (coordsCliente && coordsCliente.latitud != null && coordsCliente.longitud != null) {
+            const puntosRuta = [
+              [lat, lng],
+              [coordsCliente.latitud, coordsCliente.longitud]
+            ]
+            if (markersRef.current.rutasBase[rutaKey]) {
+              markersRef.current.rutasBase[rutaKey].setLatLngs(puntosRuta)
+            }
+            if (markersRef.current.rutasDash[rutaKey]) {
+              markersRef.current.rutasDash[rutaKey].setLatLngs(puntosRuta)
+            }
           }
         }
 
@@ -594,6 +598,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             opacity: 0.45,
             lineCap: 'round',
             lineJoin: 'round',
+            smoothFactor: 1.5,
           }).addTo(map)
 
           markersRef.current.rutasDash[rutaKey] = L.polyline(rutaCoords, {
@@ -603,6 +608,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             className: 'animated-polyline-dash',
             lineCap: 'round',
             lineJoin: 'round',
+            smoothFactor: 1.5,
           }).addTo(map)
         }
       }
