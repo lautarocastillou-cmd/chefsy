@@ -40,7 +40,9 @@ export async function GET(request: Request) {
     let cadeteCoordsFallback: { latitud: number; longitud: number } | null = null
     let cadeteNombreFallback: string | null = null
 
-    if (data.cadete_id) {
+    const esPedidoFinalizado = data.estado === 'entregado' || data.estado === 'cancelado'
+
+    if (data.cadete_id && !esPedidoFinalizado) {
       const { data: cadeteData } = await supabase
         .from('cadetes')
         .select('gps_activo, lat, lng, nombre')
@@ -58,36 +60,20 @@ export async function GET(request: Request) {
           cadeteNombreFallback = cadeteData.nombre
         }
       }
-    }
-
-    let cadeteVolviendoAlLocal = false
-
-    if (data.cadete_id && data.estado === 'entregado') {
-      try {
-        let query = supabase
-          .from('pedidos')
-          .select('id')
-          .in('estado', ['en_cocina', 'listo', 'en_camino'])
-          .eq('archivado', false)
-          .eq('tipoEntrega', 'delivery')
-
-        if (data.cadete_nombre) {
-          query = query.or(`cadete_id.ilike.${data.cadete_id},cadete_nombre.ilike.${data.cadete_nombre}`)
-        } else {
-          query = query.ilike('cadete_id', data.cadete_id)
-        }
-
-        const { data: pedidosActivosCadete } = await query
-
-        // Si no tiene más entregas pendientes, está en viaje de regreso al local
-        if (!pedidosActivosCadete || pedidosActivosCadete.length === 0) {
-          cadeteVolviendoAlLocal = true
-        }
-      } catch (_) {}
+    } else if (data.cadete_id && esPedidoFinalizado && !data.cadete_nombre) {
+      // Si el pedido ya finalizó y no tiene guardado el nombre del cadete, solo traemos el nombre sin coordenadas
+      const { data: cadeteData } = await supabase
+        .from('cadetes')
+        .select('nombre')
+        .or(`id.ilike.${data.cadete_id},nombre.ilike.${data.cadete_id}`)
+        .maybeSingle()
+      if (cadeteData?.nombre) {
+        cadeteNombreFallback = cadeteData.nombre
+      }
     }
 
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
-    const mostrarCadete = estadosActivos.includes(data.estado) || cadeteVolviendoAlLocal
+    const mostrarCadete = !esPedidoFinalizado && estadosActivos.includes(data.estado)
     const coordsFinalesCadete = mostrarCadete
       ? (cadeteCoordsFallback ?? data.cadete_coordenadas ?? null)
       : null
@@ -242,7 +228,7 @@ export async function GET(request: Request) {
       estado: data.estado,
       cadete_nombre: data.cadete_nombre ?? cadeteNombreFallback ?? null,
       cadete_coordenadas: coordsFinalesCadete,
-      cadete_volviendo_al_local: cadeteVolviendoAlLocal,
+      cadete_volviendo_al_local: false,
       destino_coordenadas: data.coordenadas ?? null,
       cadete_gps_activo: gpsActivo,
       cadete_ocupado_en_otro_viaje: cadeteOcupadoEnOtroViaje,

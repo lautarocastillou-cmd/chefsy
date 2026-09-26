@@ -154,10 +154,6 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const esProximaEntrega = (pedido as any).es_proxima_entrega !== undefined 
     ? Boolean((pedido as any).es_proxima_entrega) 
     : (paradasPrevias === 0)
-  const esVolviendoAlLocal = Boolean(
-    (pedido as any).cadete_volviendo_al_local ||
-    (pedido.estado === 'entregado' && Boolean(pedido.cadete_coordenadas))
-  )
 
   const itinerario: any[] = useMemo(() => {
     return (pedido as any)?.itinerario_paradas || []
@@ -176,11 +172,12 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
   // ── 1. Calcular distancia en tiempo real (sin ETA de minutos para no generar ansiedad) ──
   useEffect(() => {
-    if (esVolviendoAlLocal && pedido.cadete_coordenadas) {
-      const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, UBICACION_LOCAL)
-      const distRuta = distDirecta * 1.3
-      setDistanciaRestanteKm(distRuta)
-    } else if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
+    if (['entregado', 'cancelado'].includes(pedido.estado)) {
+      setDistanciaRestanteKm(null)
+      return
+    }
+
+    if (pedido.cadete_coordenadas && pedido.coordenadas && ['listo', 'en_camino'].includes(pedido.estado)) {
       const distDirecta = calcularDistanciaKm(pedido.cadete_coordenadas, pedido.coordenadas)
       const distRuta = distDirecta * 1.3 // Factor de aproximación de calles
       setDistanciaRestanteKm(distRuta)
@@ -192,8 +189,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     pedido.cadete_coordenadas?.longitud, 
     pedido.coordenadas?.latitud, 
     pedido.coordenadas?.longitud, 
-    pedido.estado,
-    esVolviendoAlLocal
+    pedido.estado
   ])
 
   // ── 1.1. Ref siempre actualizado con el último pedido (sin stale closures) ──────
@@ -203,32 +199,22 @@ export default function MapaSeguimiento({ pedido }: Props) {
   useEffect(() => { pedidoRef.current = pedido })
 
   // Función de recálculo estable (no recrea en cada render, lee todo desde refs)
+  // Función de recálculo estable (no recrea en cada render, lee todo desde refs)
   const recalcularRutaRef = useRef<(() => Promise<void>) | null>(null)
   useEffect(() => {
     recalcularRutaRef.current = async () => {
       const p = pedidoRef.current
+      if (['entregado', 'cancelado'].includes(p.estado) || !p.cadete_coordenadas) return
+
       const posActual = posicionAnimadaRef.current
-
-      // Origen: posición animada actual del cadete (o GPS si no hay animación)
-      let origen: { latitud: number; longitud: number } = posActual
+      const origen: { latitud: number; longitud: number } = posActual
         ? { latitud: posActual.latitud, longitud: posActual.longitud }
-        : (p.cadete_coordenadas?.latitud ? p.cadete_coordenadas : UBICACION_LOCAL)
-
-      const esVolviendo = Boolean(
-        (p as any).cadete_volviendo_al_local ||
-        (p.estado === 'entregado' && Boolean(p.cadete_coordenadas))
-      )
+        : p.cadete_coordenadas
 
       const itinerario: any[] = (p as any).itinerario_paradas || []
-      let destino: { latitud: number; longitud: number } = UBICACION_LOCAL
-
-      if (esVolviendo) {
-        destino = UBICACION_LOCAL
-      } else if (itinerario.length > 0 && itinerario[0]?.coordenadas) {
-        destino = itinerario[0].coordenadas
-      } else {
-        destino = p.coordenadas || UBICACION_LOCAL
-      }
+      const destino: { latitud: number; longitud: number } = (itinerario.length > 0 && itinerario[0]?.coordenadas)
+        ? itinerario[0].coordenadas
+        : (p.coordenadas || UBICACION_LOCAL)
 
       try {
         const ruta = await obtenerRutaConduccion(origen, destino)
@@ -256,7 +242,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         }
 
         // Actualizar tramo siguiente de paradas múltiples si existen
-        if (!esVolviendo && itinerario.length > 1) {
+        if (itinerario.length > 1) {
           const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
           const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes)
           if (leafletMapRef.current && rutaSiguientes) {
@@ -282,25 +268,31 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     const cargarRutaInicial = async () => {
       try {
-        const itinerario: any[] = (pedido as any).itinerario_paradas || []
-        let origen: { latitud: number; longitud: number } = UBICACION_LOCAL
-        let destino: { latitud: number; longitud: number } | null | undefined = null
-
-        if (esVolviendoAlLocal) {
-          origen = pedido.cadete_coordenadas?.latitud
-            ? pedido.cadete_coordenadas
-            : (pedido.coordenadas || UBICACION_LOCAL)
-          destino = UBICACION_LOCAL
-        } else {
-          origen = pedido.cadete_coordenadas?.latitud
-            ? pedido.cadete_coordenadas
-            : UBICACION_LOCAL
-
-          if (itinerario.length > 0 && itinerario[0]?.coordenadas) {
-            destino = itinerario[0].coordenadas
-          } else {
-            destino = pedido.coordenadas || UBICACION_LOCAL
+        if (['entregado', 'cancelado'].includes(pedido.estado)) {
+          rutaGeometriaRef.current = []
+          setDistanciaRestanteKm(null)
+          if (leafletMapRef.current) {
+            polylineRef.current.recorrida?.setLatLngs([])
+            polylineRef.current.glow?.setLatLngs([])
+            polylineRef.current.core?.setLatLngs([])
+            polylineRef.current.dash?.setLatLngs([])
+            polylineRef.current.siguientesParadasCasing?.setLatLngs([])
+            polylineRef.current.siguientesParadasCore?.setLatLngs([])
+            polylineRef.current.siguientesParadasDash?.setLatLngs([])
           }
+          return
+        }
+
+        const itinerario: any[] = (pedido as any).itinerario_paradas || []
+        const origen: { latitud: number; longitud: number } = pedido.cadete_coordenadas?.latitud
+          ? pedido.cadete_coordenadas
+          : UBICACION_LOCAL
+
+        let destino: { latitud: number; longitud: number } | null | undefined = null
+        if (itinerario.length > 0 && itinerario[0]?.coordenadas) {
+          destino = itinerario[0].coordenadas
+        } else {
+          destino = pedido.coordenadas || UBICACION_LOCAL
         }
 
         if (!destino) return
@@ -332,7 +324,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         }
 
         // Cargar trazado secundario para los siguientes destinos en el itinerario
-        if (!esVolviendoAlLocal && itinerario.length > 1) {
+        if (itinerario.length > 1) {
           const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
           const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes, abortCtrl.signal)
           if (!cancelado && leafletMapRef.current && rutaSiguientes) {
@@ -361,8 +353,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
     pedido.coordenadas?.latitud,
     pedido.coordenadas?.longitud,
     pedido.cadete_coordenadas ? 'cadete-activo' : 'local',
+    pedido.estado,
     esProximaEntrega,
-    esVolviendoAlLocal,
     paradasSignature
   ])
 
@@ -467,7 +459,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     const L = require('leaflet')
     const { latitud, longitud } = pedido.coordenadas
-    const esEntregado = pedido.estado === 'entregado' || esVolviendoAlLocal
+    const esEntregado = pedido.estado === 'entregado'
 
     const clienteIcon = L.divIcon({
       html: `
@@ -498,7 +490,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         zIndexOffset: 200,
       }).addTo(leafletMapRef.current).bindPopup(`Destino de entrega: ${pedido.cliente}${esEntregado ? ' (Entregado)' : ''}`)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente, pedido.estado, esVolviendoAlLocal, totalParadas, paradaActual])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cliente, pedido.estado, totalParadas, paradaActual])
 
   // ── 3.1. Marcadores de Paradas Múltiples / Itinerario ───────────────────────
   useEffect(() => {
@@ -512,7 +504,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       markersRef.current.paradas = []
     }
 
-    if (esVolviendoAlLocal) return
+    if (pedido.estado === 'entregado' || pedido.estado === 'cancelado') return
 
     itinerario.forEach((parada: any) => {
       if (!parada.es_mi_pedido && parada.coordenadas?.latitud && parada.coordenadas?.longitud) {
@@ -540,7 +532,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         markersRef.current.paradas?.push(m)
       }
     })
-  }, [mapaListo, paradasSignature, esVolviendoAlLocal])
+  }, [mapaListo, paradasSignature, pedido.estado])
 
   // ── 3.2. Suspensión de recursos al pasar a segundo plano (Battery/CPU Saver) ─
   useEffect(() => {
@@ -568,7 +560,22 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
   // ── 4. MOTOR DE INTERPOLACIÓN CONTINUO A 60 FPS (GLIDING ENGINE) ─────────────
   useEffect(() => {
-    if (!mapaListo || !leafletMapRef.current || !pedido.cadete_coordenadas) return
+    if (!mapaListo || !leafletMapRef.current) return
+
+    if (['entregado', 'cancelado'].includes(pedido.estado) || !pedido.cadete_coordenadas) {
+      if (markersRef.current.cadete) {
+        markersRef.current.cadete.remove()
+        markersRef.current.cadete = null
+      }
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+      posicionAnimadaRef.current = null
+      posicionInicioRef.current = null
+      posicionDestinoRef.current = null
+      return
+    }
 
     const L = require('leaflet')
     const { latitud: targetLat, longitud: targetLng } = pedido.cadete_coordenadas
@@ -744,7 +751,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const proximaCoords = itinerario.length > 0 && itinerario[0]?.coordenadas
         ? itinerario[0].coordenadas
         : pedido.coordenadas
-      const destinoPuntos = esVolviendoAlLocal ? UBICACION_LOCAL : proximaCoords
+      const destinoPuntos = proximaCoords
 
       if (destinoPuntos) {
         const rutaCompleta = rutaGeometriaRef.current
@@ -811,18 +818,27 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
 
     animFrameRef.current = requestAnimationFrame(pasoGliding)
-  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal])
+  }, [mapaListo, pedido.cadete_coordenadas?.latitud, pedido.cadete_coordenadas?.longitud, pedido.estado, esProximaEntrega])
 
   // ── 5. Inicialización de Polilíneas de Ruta (Neón & Flow + Tramo Recorrido + Multi-Paradas) ──
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current) return
     const L = require('leaflet')
 
+    if (['entregado', 'cancelado'].includes(pedido.estado)) {
+      polylineRef.current.recorrida?.setLatLngs([])
+      polylineRef.current.glow?.setLatLngs([])
+      polylineRef.current.core?.setLatLngs([])
+      polylineRef.current.dash?.setLatLngs([])
+      polylineRef.current.siguientesParadasCasing?.setLatLngs([])
+      polylineRef.current.siguientesParadasCore?.setLatLngs([])
+      polylineRef.current.siguientesParadasDash?.setLatLngs([])
+      return
+    }
+
     let puntosRuta: [number, number][] = []
     const itinerario = (pedido as any)?.itinerario_paradas || []
-    const destinoCoords = esVolviendoAlLocal
-      ? UBICACION_LOCAL
-      : (itinerario.length > 0 && itinerario[0]?.coordenadas ? itinerario[0].coordenadas : pedido.coordenadas)
+    const destinoCoords = (itinerario.length > 0 && itinerario[0]?.coordenadas ? itinerario[0].coordenadas : pedido.coordenadas)
 
     if (rutaGeometriaRef.current.length >= 2) {
       puntosRuta = rutaGeometriaRef.current
@@ -923,12 +939,19 @@ export default function MapaSeguimiento({ pedido }: Props) {
       polylineRef.current.core?.setLatLngs(puntosRuta)
       polylineRef.current.dash?.setLatLngs(puntosRuta)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal, paradasSignature])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.estado, esProximaEntrega, paradasSignature])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {
     if (!mapaListo || !leafletMapRef.current || modoCamara !== 'todo') return
     const L = require('leaflet')
+
+    if (['entregado', 'cancelado'].includes(pedido.estado)) {
+      if (pedido.coordenadas) {
+        leafletMapRef.current.setView([pedido.coordenadas.latitud, pedido.coordenadas.longitud], 16, { animate: true })
+      }
+      return
+    }
 
     const bounds = L.latLngBounds([[UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud]])
     if (pedido.coordenadas) {
@@ -941,7 +964,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       bounds.extend(rutaGeometriaRef.current)
     }
     leafletMapRef.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: true })
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cadete_coordenadas?.latitud, esVolviendoAlLocal])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, pedido.cadete_coordenadas?.latitud, pedido.estado])
 
   // ── Acciones de Cámara HUD ──────────────────────────────────────────────────
   const enfocarCadete = () => {
@@ -1059,12 +1082,12 @@ export default function MapaSeguimiento({ pedido }: Props) {
       <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
 
       {/* HUD Superior con Estado Claro (debajo del header flotante) */}
-      {esVolviendoAlLocal ? (
+      {pedido.estado === 'entregado' ? (
         <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
             <span className="text-xs font-bold text-white/95 tracking-wide">
-              {pedido.cadete_nombre ? `¡Pedido entregado! • ${pedido.cadete_nombre} está volviendo al local` : '¡Pedido entregado! • Repartidor volviendo al local'}
+              ¡Pedido entregado con éxito! Que lo disfrutes.
             </span>
           </div>
         </div>
@@ -1111,19 +1134,21 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* HUD de Botones de Cámara Inteligente */}
       <div className="absolute top-28 sm:top-24 right-3.5 z-[350] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
         {/* Seguir al Cadete */}
-        <button
-          type="button"
-          onClick={enfocarCadete}
-          disabled={!pedido.cadete_coordenadas}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            modoCamara === 'cadete'
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
-          }`}
-          title="Seguir al repartidor en vivo"
-        >
-          <Bike size={18} />
-        </button>
+        {!['entregado', 'cancelado'].includes(pedido.estado) && (
+          <button
+            type="button"
+            onClick={enfocarCadete}
+            disabled={!pedido.cadete_coordenadas}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              modoCamara === 'cadete'
+                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40'
+            }`}
+            title="Seguir al repartidor en vivo"
+          >
+            <Bike size={18} />
+          </button>
+        )}
 
         {/* Ver Ruta Completa */}
         <button

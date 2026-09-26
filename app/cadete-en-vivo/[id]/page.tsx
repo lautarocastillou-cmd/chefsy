@@ -44,22 +44,14 @@ const MapaSeguimiento = dynamic(
 const WHATSAPP_NUMERO = '5493834225445'
 
 // ── Badge de estado ─────────────────────────────────────────────────────────
-function EtiquetaEstado({ estado, volviendoAlLocal }: { estado: string; volviendoAlLocal?: boolean }) {
-  if (volviendoAlLocal) {
-    return (
-      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span>Volviendo al local</span>
-      </span>
-    )
-  }
+function EtiquetaEstado({ estado }: { estado: string }) {
   const cfg: Record<string, { label: string; cls: string }> = {
-    nuevo:     { label: 'Recibido',  cls: 'bg-blue-950/80 text-blue-300 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.25)]' },
-    en_cocina: { label: 'En cocina', cls: 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]' },
-    listo:     { label: 'Listo',     cls: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]' },
-    en_camino: { label: 'En camino', cls: 'bg-green-950/80 text-green-300 border border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)]' },
-    entregado: { label: 'Entregado', cls: 'bg-slate-800/80 text-slate-300 border border-slate-600/40' },
-    cancelado: { label: 'Cancelado', cls: 'bg-rose-950/80 text-rose-300 border border-rose-500/40' },
+    nuevo:     { label: 'Recibido',     cls: 'bg-blue-950/80 text-blue-300 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.25)]' },
+    en_cocina: { label: 'En cocina',    cls: 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]' },
+    listo:     { label: 'Listo',        cls: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]' },
+    en_camino: { label: 'En camino',    cls: 'bg-green-950/80 text-green-300 border border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)]' },
+    entregado: { label: 'Entregado ✓',  cls: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]' },
+    cancelado: { label: 'Cancelado',    cls: 'bg-rose-950/80 text-rose-300 border border-rose-500/40' },
   }
   const c = cfg[estado] ?? { label: estado, cls: 'bg-slate-800 text-slate-300 border border-slate-600' }
   return (
@@ -137,6 +129,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
   const [direccionLegible, setDireccionLegible] = useState<string>('')
   const fetchPrincipalRef = useRef<(() => void) | null>(null)
+  const intervaloRef = useRef<NodeJS.Timeout | null>(null)
 
   // ── Resolver dirección legible humana si es un enlace o coordenadas ─────────
   useEffect(() => {
@@ -178,8 +171,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           telefono: data.telefono ?? '',
           estado: data.estado,
           cadete_nombre: data.cadete_nombre ?? null,
-          cadete_coordenadas: data.cadete_coordenadas ?? null,
-          cadete_volviendo_al_local: Boolean(data.cadete_volviendo_al_local),
+          cadete_coordenadas: (data.estado === 'entregado' || data.estado === 'cancelado') ? null : (data.cadete_coordenadas ?? null),
+          cadete_volviendo_al_local: false,
           coordenadas: data.destino_coordenadas ?? null,
           local_coordenadas: data.local_coordenadas ?? null,
           tipoEntrega: data.tipoEntrega ?? 'delivery',
@@ -190,11 +183,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           observaciones: data.observaciones ?? '',
           costoEnvio: data.costoEnvio ?? 0,
           hora: data.hora ?? '',
-          paradas_previas: data.paradas_previas ?? 0,
-          total_paradas: data.total_paradas ?? 1,
+          paradas_previas: (data.estado === 'entregado' || data.estado === 'cancelado') ? 0 : (data.paradas_previas ?? 0),
+          total_paradas: (data.estado === 'entregado' || data.estado === 'cancelado') ? 1 : (data.total_paradas ?? 1),
           parada_actual: data.parada_actual ?? 1,
-          es_proxima_entrega: data.es_proxima_entrega ?? true,
-          itinerario_paradas: data.itinerario_paradas ?? [],
+          es_proxima_entrega: (data.estado === 'entregado' || data.estado === 'cancelado') ? true : (data.es_proxima_entrega ?? true),
+          itinerario_paradas: (data.estado === 'entregado' || data.estado === 'cancelado') ? [] : (data.itinerario_paradas ?? []),
         } as unknown as Pedido)
         setProductos(data.productos || [])
         setCadeteOcupadoEnOtroViaje(Boolean(data.cadete_ocupado_en_otro_viaje))
@@ -203,9 +196,13 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         setParadaActual(Number(data.parada_actual ?? 1))
         setEsProximaEntrega(Boolean(data.es_proxima_entrega ?? true))
 
-        // Sincronizar localStorage
+        // Sincronizar localStorage y suspender polling si el pedido finalizó
         if (data.estado === 'entregado' || data.estado === 'cancelado') {
           limpiarPedidoActivo(pedidoId)
+          if (intervaloRef.current) {
+            clearInterval(intervaloRef.current)
+            intervaloRef.current = null
+          }
         } else {
           guardarPedidoActivo({
             id: data.id,
@@ -231,12 +228,17 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
     // Polling inteligente cada 4 segundos
     const intervalo = setInterval(fetchPrincipal, 4000)
+    intervaloRef.current = intervalo
 
     const onReconectar = () => fetchPrincipal()
     window.addEventListener('online', onReconectar)
     window.addEventListener('focus', onReconectar)
 
     return () => {
+      if (intervaloRef.current) {
+        clearInterval(intervaloRef.current)
+        intervaloRef.current = null
+      }
       clearInterval(intervalo)
       window.removeEventListener('online', onReconectar)
       window.removeEventListener('focus', onReconectar)
@@ -247,7 +249,9 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   // ── Suscripción en tiempo real al lote de pedidos del cadete ─────────────────
   // Si en /cadeteria se reordenan las posiciones (orden_entrega), este listener
   // detecta la actualización al instante y recalcula la ruta en el mapa en vivo.
-  const nombreCadeteAsignado = pedido?.cadete_nombre
+  const nombreCadeteAsignado = (pedido?.estado === 'entregado' || pedido?.estado === 'cancelado')
+    ? null
+    : pedido?.cadete_nombre
   useEffect(() => {
     if (!nombreCadeteAsignado) return
 
@@ -322,8 +326,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     </div>
   )
 
-  const isVolviendoAlLocal = Boolean((pedido as any).cadete_volviendo_al_local)
-  const isTerminado     = (pedido.estado === 'entregado' || pedido.estado === 'cancelado') && !isVolviendoAlLocal
+  const isTerminado     = pedido.estado === 'entregado' || pedido.estado === 'cancelado'
   const isEnPreparacion = ['nuevo', 'en_cocina', 'listo'].includes(pedido.estado)
   const isEnCamino      = pedido.estado === 'en_camino'
   const gpsApagado      = (pedido as any).cadete_gps_activo === false && isEnCamino
@@ -349,7 +352,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Overlay: Cadete con entregas previas en la zona */}
-      {paradasPrevias > 0 && !isTerminado && !isVolviendoAlLocal ? (
+      {paradasPrevias > 0 && !isTerminado ? (
         <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
@@ -373,7 +376,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <p className="text-[11px] text-emerald-200/90">Tu domicilio es el próximo destino en su recorrido.</p>
           </div>
         </div>
-      ) : cadeteOcupadoEnOtroViaje && !isEnCamino && !isVolviendoAlLocal ? (
+      ) : cadeteOcupadoEnOtroViaje && !isEnCamino && !isTerminado ? (
         <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
@@ -408,25 +411,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Overlay: Pedido Entregado / Volviendo al Local */}
-      {isVolviendoAlLocal ? (
-        <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/40 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/30">
-            <Bike size={22} className="animate-pulse" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-black text-emerald-300">¡Pedido entregado con éxito!</h3>
-              <span className="text-[10px] bg-emerald-500/25 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-400/30">
-                Volviendo al local
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
-              {cadeteNombre} finalizó sus entregas y está regresando al local de Chefsy. ¡Muchas gracias por tu compra!
-            </p>
-          </div>
-        </div>
-      ) : isTerminado ? (
+      {/* Overlay: Pedido Entregado */}
+      {isTerminado && (
         <div className="absolute inset-x-3 bottom-20 sm:bottom-24 z-[400] max-w-md mx-auto bg-emerald-950/90 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <CheckCircle2 size={22} />
@@ -436,7 +422,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <p className="text-[11px] text-emerald-200/90">¡Muchas gracias por elegir Chefsy! Que lo disfrutes.</p>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   )
 
@@ -445,18 +431,15 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     <>
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/20 border border-emerald-500/30">
-          {isVolviendoAlLocal ? <Bike size={22} className="text-emerald-400 animate-pulse" />
-           : isTerminado     ? <CheckCircle2 size={22} className="text-emerald-400" />
+          {isTerminado     ? <CheckCircle2 size={22} className="text-emerald-400" />
            : isEnPreparacion ? <UtensilsCrossed size={22} className="text-amber-400" />
            : <Bike size={22} className="text-emerald-400" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-bold text-white text-sm sm:text-base leading-tight">
-              {isVolviendoAlLocal
-                ? `¡Entregado! • ${cadeteNombre} vuelve al local`
-                : isTerminado
-                ? '¡Pedido entregado!'
+              {isTerminado
+                ? '¡Pedido entregado con éxito!'
                 : isEnCamino
                 ? (paradasPrevias > 0
                     ? `¡${cadeteNombre} en viaje con paradas!`
@@ -467,7 +450,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                 ? 'Preparando pedido'
                 : 'Procesando pedido'}
             </h1>
-            <EtiquetaEstado estado={pedido.estado} volviendoAlLocal={isVolviendoAlLocal} />
+            <EtiquetaEstado estado={pedido.estado} />
           </div>
           <p className="text-xs font-semibold truncate text-emerald-400">
             Para {pedido.cliente.split(' ')[0]}
@@ -475,14 +458,13 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Cadete asignado y estado del recorrido */}
-      {pedido.cadete_nombre && (
+      {/* Cadete asignado */}
+      {pedido.cadete_nombre && !isTerminado && (
         <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap text-xs">
           <span className="font-medium text-slate-400">Cadete asignado:</span>
           <span className="font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex items-center gap-1.5 shadow-xs">
             <Bike className="w-3.5 h-3.5" />
             <span>{pedido.cadete_nombre}</span>
-            {isVolviendoAlLocal && <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">Regresando</span>}
           </span>
         </div>
       )}
