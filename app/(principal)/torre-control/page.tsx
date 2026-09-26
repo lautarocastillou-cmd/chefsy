@@ -68,11 +68,44 @@ export default function TorreControlPage() {
     }
   }
 
-  // Polling cada 6 segundos para actualización fluida
+  // Polling cada 6 segundos con suspensión inteligente en segundo plano
   useEffect(() => {
-    fetchTorreData()
-    const intervalId = setInterval(fetchTorreData, 6000)
-    return () => clearInterval(intervalId)
+    let intervalId: NodeJS.Timeout | null = null
+
+    const iniciarPolling = () => {
+      if (intervalId) clearInterval(intervalId)
+      fetchTorreData()
+      intervalId = setInterval(fetchTorreData, 6000)
+    }
+
+    const detenerPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+
+    const handleVisibilidad = () => {
+      if (document.hidden) {
+        detenerPolling()
+      } else {
+        iniciarPolling()
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      if (!document.hidden) {
+        iniciarPolling()
+      }
+      document.addEventListener('visibilitychange', handleVisibilidad)
+    }
+
+    return () => {
+      detenerPolling()
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilidad)
+      }
+    }
   }, [])
 
   const handleApagarGps = async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {

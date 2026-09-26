@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Coordenadas } from '@/tipos'
+export type { Coordenadas }
 
 export const UBICACION_LOCAL: Coordenadas = {
   latitud: -28.462809031658047,
@@ -279,6 +280,28 @@ export async function obtenerRutaMultiParada(
     if (err?.name === 'AbortError') return null
   }
   return null
+}
+
+export function encontrarIndiceMasCercano(
+  pos: [number, number],
+  ruta: [number, number][],
+  indiceMinimo: number = 0
+): number {
+  if (!ruta || ruta.length === 0) return 0
+  let mejorIndice = indiceMinimo
+  let menorDistancia = Infinity
+
+  const inicio = Math.max(0, Math.min(indiceMinimo, ruta.length - 1))
+  for (let i = inicio; i < ruta.length; i++) {
+    const dLat = pos[0] - ruta[i][0]
+    const dLng = pos[1] - ruta[i][1]
+    const d = dLat * dLat + dLng * dLng
+    if (d < menorDistancia) {
+      menorDistancia = d
+      mejorIndice = i
+    }
+  }
+  return mejorIndice
 }
 
 export function calcularCostoEnvio(distanciaKm: number): number {

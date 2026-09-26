@@ -1,7 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { UBICACION_LOCAL, calcularDistanciaKm, esEnlaceOCoordenadas, CARTO_VOYAGER_URL, CARTO_ATTRIBUTION } from '@/lib/ubicacion'
+import { 
+  UBICACION_LOCAL, 
+  calcularDistanciaKm, 
+  esEnlaceOCoordenadas, 
+  CARTO_VOYAGER_URL, 
+  CARTO_ATTRIBUTION,
+  obtenerRutaMultiParada,
+  obtenerRutaConduccion,
+  encontrarIndiceMasCercano,
+  Coordenadas
+} from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
@@ -102,7 +112,12 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   const animStatesRef = useRef<Record<string, CadeteAnimState>>({})
   const ultimosUpdatesRef = useRef<Record<string, number>>({})
   const animFrameRef = useRef<number | null>(null)
-  const ultimoRenderRutasRef = useRef<number>(0)
+  const ultimoRenderCadetesRef = useRef<Record<string, number>>({})
+  const rutasGeometriaRef = useRef<Record<string, [number, number][]>>({})
+  const rutasFirmaRef = useRef<Record<string, string>>({})
+  const indicesRutaRef = useRef<Record<string, number>>({})
+  const abortControllersRef = useRef<Record<string, AbortController>>({})
+  const estaVisibleRef = useRef<boolean>(true)
   const cadetesDataRef = useRef<CadeteData[]>([])
   const focusedIdRef = useRef<string | null | undefined>(focusedId)
   const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
@@ -238,13 +253,24 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
       if (resizeObserver) resizeObserver.disconnect()
+      Object.values(abortControllersRef.current).forEach((ctrl) => ctrl.abort())
+      abortControllersRef.current = {}
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
-        markersRef.current = { cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} }
       }
+      markersRef.current = { cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} }
+      rutasGeometriaRef.current = {}
+      rutasFirmaRef.current = {}
+      indicesRutaRef.current = {}
+      animStatesRef.current = {}
+      ultimosUpdatesRef.current = {}
+      ultimoRenderCadetesRef.current = {}
     }
   }, [])
 
@@ -252,6 +278,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   // ── 2. Bucle Global de Animación a 60 FPS (Gliding Multi-Cadete Optimizado) ──
   useEffect(() => {
     const loopAnimacion = (timestamp: number) => {
+      if (!estaVisibleRef.current) return
+
       const states = animStatesRef.current
       const cadetesList = cadetesDataRef.current
       const focused = focusedIdRef.current
@@ -289,9 +317,10 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         // Rotar faro y moto
         aplicarRotacionCadete(id, rumbo)
 
-        // 3. Acortar polilínea de entrega en tiempo real si tiene pedidos activos (con throttle para no saturar el DOM)
-        if (timestamp - ultimoRenderRutasRef.current > 200) {
-          ultimoRenderRutasRef.current = timestamp
+        // 3. Acortar polilínea de entrega en tiempo real si tiene pedidos activos (con throttle por cadete)
+        const ultimoRender = ultimoRenderCadetesRef.current[id] || 0
+        if (timestamp - ultimoRender > 100) {
+          ultimoRenderCadetesRef.current[id] = timestamp
           const cadeteInfo = cadetesList.find((c) => c.id === id)
           const listaPedidos = (cadeteInfo?.pedidosActivos && cadeteInfo.pedidosActivos.length > 0)
             ? cadeteInfo.pedidosActivos
@@ -303,10 +332,24 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           const rutaKey = `ruta_${id}`
 
           if (paradasValidas.length > 0) {
-            const puntosRuta: [number, number][] = [
-              [lat, lng],
-              ...paradasValidas.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
-            ]
+            const geom = rutasGeometriaRef.current[id]
+            let puntosRuta: [number, number][]
+
+            if (geom && geom.length > 1) {
+              const ultimoIdx = indicesRutaRef.current[id] || 0
+              const nuevoIdx = encontrarIndiceMasCercano([lat, lng], geom, ultimoIdx)
+              indicesRutaRef.current[id] = nuevoIdx
+              const resto = geom.slice(nuevoIdx + 1)
+              puntosRuta = resto.length > 0
+                ? [[lat, lng], ...resto]
+                : [[lat, lng], geom[geom.length - 1]]
+            } else {
+              puntosRuta = [
+                [lat, lng],
+                ...paradasValidas.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
+              ]
+            }
+
             if (markersRef.current.rutasBase[rutaKey]) {
               markersRef.current.rutasBase[rutaKey].setLatLngs(puntosRuta)
             }
@@ -326,13 +369,46 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         }
       }
 
+      if (estaVisibleRef.current) {
+        animFrameRef.current = requestAnimationFrame(loopAnimacion)
+      }
+    }
+
+    const handleVisibilidad = () => {
+      const visible = !document.hidden
+      estaVisibleRef.current = visible
+      if (!visible) {
+        // Pausar animación y cancelar requests OSRM en vuelo para liberar 100% de CPU y red
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current)
+          animFrameRef.current = null
+        }
+        Object.values(abortControllersRef.current).forEach((ctrl) => ctrl.abort())
+        abortControllersRef.current = {}
+      } else {
+        // Reanudar timestamps para evitar saltos temporales bruscos
+        const ahora = performance.now()
+        Object.values(animStatesRef.current).forEach((s) => {
+          s.startTime = ahora
+        })
+        if (!animFrameRef.current) {
+          animFrameRef.current = requestAnimationFrame(loopAnimacion)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilidad)
+
+    if (estaVisibleRef.current) {
       animFrameRef.current = requestAnimationFrame(loopAnimacion)
     }
 
-    animFrameRef.current = requestAnimationFrame(loopAnimacion)
-
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      document.removeEventListener('visibilitychange', handleVisibilidad)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
     }
   }, [aplicarRotacionCadete])
 
@@ -353,6 +429,15 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         delete markersRef.current.cadetes[id]
         delete animStatesRef.current[id]
         delete ultimosUpdatesRef.current[id]
+        delete ultimoRenderCadetesRef.current[id]
+
+        if (abortControllersRef.current[id]) {
+          abortControllersRef.current[id].abort()
+          delete abortControllersRef.current[id]
+        }
+        delete rutasGeometriaRef.current[id]
+        delete rutasFirmaRef.current[id]
+        delete indicesRutaRef.current[id]
 
         const rutaKey = `ruta_${id}`
         if (markersRef.current.rutasBase[rutaKey]) {
@@ -621,14 +706,102 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         }
       })
 
-      // C) Polilínea Dinámica Dual (Multi-Parada)
+      // C) Polilínea Dinámica Dual (Multi-Parada con trazado real por calles OSRM)
       const rutaKey = `ruta_${cadete.id}`
       if (pedidosConCoords.length > 0) {
         const startPoint: [number, number] = [estadoActual?.latActual || targetLat, estadoActual?.lngActual || targetLng]
-        const rutaCoords: [number, number][] = [
-          startPoint,
-          ...pedidosConCoords.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
-        ]
+
+        // Firma única del itinerario de paradas para detectar altas, bajas o reordenamiento
+        const paradasSig = pedidosConCoords
+          .map((p, idx) => `${p.id || idx}_${p.coordenadas!.latitud.toFixed(4)}_${p.coordenadas!.longitud.toFixed(4)}`)
+          .join('|')
+        const firmaNueva = `${cadete.id}:${paradasSig}`
+
+        // Si la firma cambió (nuevas paradas, entrega completada, reorden o inicio), calculamos OSRM
+        if (rutasFirmaRef.current[cadete.id] !== firmaNueva) {
+          rutasFirmaRef.current[cadete.id] = firmaNueva
+
+          // Cancelar cálculo en vuelo previo para este cadete
+          if (abortControllersRef.current[cadete.id]) {
+            abortControllersRef.current[cadete.id].abort()
+          }
+
+          const abortCtrl = new AbortController()
+          abortControllersRef.current[cadete.id] = abortCtrl
+
+          const cadeteCoord: Coordenadas = {
+            latitud: estadoActual?.latActual || targetLat,
+            longitud: estadoActual?.lngActual || targetLng,
+          }
+          const paradasCoords: Coordenadas[] = pedidosConCoords.map((p) => ({
+            latitud: p.coordenadas!.latitud,
+            longitud: p.coordenadas!.longitud,
+          }))
+
+          const cadeteId = cadete.id
+          const ejecutarCalculoOSRM = async () => {
+            try {
+              let resultado: { puntos: [number, number][]; distanciaKm?: number } | null = null
+
+              if (paradasCoords.length === 1) {
+                resultado = await obtenerRutaConduccion(cadeteCoord, paradasCoords[0], abortCtrl.signal)
+              } else {
+                resultado = await obtenerRutaMultiParada([cadeteCoord, ...paradasCoords], abortCtrl.signal)
+              }
+
+              if (abortCtrl.signal.aborted) return
+
+              if (resultado && resultado.puntos && resultado.puntos.length > 1) {
+                rutasGeometriaRef.current[cadeteId] = resultado.puntos
+                indicesRutaRef.current[cadeteId] = 0
+
+                const rKey = `ruta_${cadeteId}`
+                if (markersRef.current.rutasBase[rKey]) {
+                  markersRef.current.rutasBase[rKey].setLatLngs(resultado.puntos)
+                }
+                if (markersRef.current.rutasDash[rKey]) {
+                  markersRef.current.rutasDash[rKey].setLatLngs(resultado.puntos)
+                }
+              }
+            } catch (err: any) {
+              if (err?.name !== 'AbortError') {
+                console.warn(`[TorreControl] Error al obtener ruta OSRM para ${cadete.nombre}:`, err)
+              }
+            }
+          }
+
+          ejecutarCalculoOSRM()
+        }
+
+        // Trazado visible en Leaflet (geometría OSRM si ya la tenemos, o línea recta de contingencia)
+        let rutaCoords: [number, number][]
+        const geometriaGuardada = rutasGeometriaRef.current[cadete.id]
+        if (geometriaGuardada && geometriaGuardada.length > 1) {
+          const ultimoIdx = indicesRutaRef.current[cadete.id] || 0
+          const nuevoIdx = encontrarIndiceMasCercano(startPoint, geometriaGuardada, ultimoIdx)
+          indicesRutaRef.current[cadete.id] = nuevoIdx
+
+          // Verificar si el cadete se desvió demasiado de la ruta calculada (> 350m)
+          const puntoGeom = geometriaGuardada[nuevoIdx]
+          if (puntoGeom) {
+            const desviacionKm = calcularDistanciaKm(
+              { latitud: startPoint[0], longitud: startPoint[1] },
+              { latitud: puntoGeom[0], longitud: puntoGeom[1] }
+            )
+            if (desviacionKm > 0.35) {
+              // Desvío detectado: invalidar firma para que el próximo pulso recalcule la ruta OSRM
+              rutasFirmaRef.current[cadete.id] = ''
+            }
+          }
+
+          const resto = geometriaGuardada.slice(nuevoIdx + 1)
+          rutaCoords = resto.length > 0 ? [startPoint, ...resto] : [startPoint, geometriaGuardada[geometriaGuardada.length - 1]]
+        } else {
+          rutaCoords = [
+            startPoint,
+            ...pedidosConCoords.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
+          ]
+        }
 
         if (!markersRef.current.rutasBase[rutaKey]) {
           markersRef.current.rutasBase[rutaKey] = L.polyline(rutaCoords, {
@@ -654,6 +827,15 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           markersRef.current.rutasDash[rutaKey].setLatLngs(rutaCoords)
         }
       } else {
+        // Cadete sin pedidos activos: limpiar polilíneas y geometrías en memoria
+        if (abortControllersRef.current[cadete.id]) {
+          abortControllersRef.current[cadete.id].abort()
+          delete abortControllersRef.current[cadete.id]
+        }
+        delete rutasGeometriaRef.current[cadete.id]
+        delete rutasFirmaRef.current[cadete.id]
+        delete indicesRutaRef.current[cadete.id]
+
         if (markersRef.current.rutasBase[rutaKey]) {
           markersRef.current.rutasBase[rutaKey].remove()
           delete markersRef.current.rutasBase[rutaKey]
