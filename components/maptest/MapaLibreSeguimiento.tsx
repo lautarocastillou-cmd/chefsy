@@ -115,7 +115,7 @@ const ESTILO_GOOGLE_HIBRIDO: maplibregl.StyleSpecification = {
 
 // URLs y especificaciones de estilos
 const ESTILOS_VECTOR: Record<EstiloMapa, string | maplibregl.StyleSpecification> = {
-  'cyber-dark': ESTILO_CYBER_DARK,
+  'cyber-dark': 'https://tiles.openfreemap.org/styles/dark',
   'vector-liberty': 'https://tiles.openfreemap.org/styles/liberty',
   'vector-positron': 'https://tiles.openfreemap.org/styles/positron',
   'google-calles': ESTILO_GOOGLE_CALLES,
@@ -206,7 +206,7 @@ export default function MapaLibreSeguimiento({
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: (ESTILOS_VECTOR[estilo] || ESTILO_CYBER_DARK) as any,
+      style: (ESTILOS_VECTOR[estilo] || ESTILOS_VECTOR['vector-liberty']) as any,
       center: initialCenter,
       zoom: 16,
       pitch: pitchPersonalizado || 55,
@@ -257,7 +257,7 @@ export default function MapaLibreSeguimiento({
     const map = mapRef.current
     if (!map || !mapaCargado) return
 
-    const nuevoEstilo = ESTILOS_VECTOR[estilo] || ESTILO_CYBER_DARK
+    const nuevoEstilo = ESTILOS_VECTOR[estilo] || ESTILOS_VECTOR['vector-liberty']
     map.setStyle(nuevoEstilo as any)
 
     map.once('styledata', () => {
