@@ -105,19 +105,19 @@ export default function MarcoHistoriaInstagram({
   return (
     <div className={`relative select-none ${className}`}>
       {/* Marco simple proporción 9:16 adaptado para celular, iPad y PC */}
-      <div className="relative w-[200px] xs:w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] xl:w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-2xl shadow-black/80 [perspective:1000px]">
+      <div className="relative w-[210px] xs:w-[230px] sm:w-[270px] md:w-[310px] lg:w-[350px] xl:w-[390px] 2xl:w-[420px] aspect-[9/16] rounded-3xl overflow-hidden bg-black/60 border border-white/15 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] ring-1 ring-white/10 [perspective:1000px]">
         {/* Barras de progreso estilo Historias */}
         {lista.length > 1 && (
-          <div className="absolute top-2.5 inset-x-2.5 z-30 flex gap-1 pointer-events-none">
+          <div className="absolute top-3 inset-x-3 z-30 flex gap-1.5 pointer-events-none">
             {lista.map((_, i) => (
               <div 
                 key={i} 
-                className="h-0.5 rounded-full flex-1 overflow-hidden bg-white/20 backdrop-blur-sm"
+                className="h-1 rounded-full flex-1 overflow-hidden bg-white/25 backdrop-blur-md"
               >
                 <div 
                   className={`h-full transition-all duration-300 ${
                     i === indiceActual 
-                      ? 'w-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]' 
+                      ? 'w-full bg-white shadow-[0_0_8px_rgba(255,255,255,1)]' 
                       : i < indiceActual 
                         ? 'w-full bg-white/70' 
                         : 'w-0'
@@ -140,7 +140,7 @@ export default function MarcoHistoriaInstagram({
                 fill
                 priority={idx === 0}
                 className="object-cover"
-                sizes="(max-width: 640px) 220px, (max-width: 1024px) 280px, 320px"
+                sizes="(max-width: 640px) 240px, (max-width: 1024px) 310px, 420px"
               />
             </div>
           )

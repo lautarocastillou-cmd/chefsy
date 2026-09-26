@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import MarcoHistoriaInstagram from './MarcoHistoriaInstagram'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
@@ -30,7 +30,6 @@ export default function HeroParallaxDoble({
   const [rotateY, setRotateY] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
 
-
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || typeof window === 'undefined' || window.innerWidth < 768) return
     const rect = containerRef.current.getBoundingClientRect()
@@ -38,8 +37,8 @@ export default function HeroParallaxDoble({
     const centerY = rect.top + rect.height / 2
     const percentX = (e.clientX - centerX) / (rect.width / 2)
     const percentY = (e.clientY - centerY) / (rect.height / 2)
-    setRotateX(-percentY * 10)
-    setRotateY(percentX * 10)
+    setRotateX(-percentY * 8)
+    setRotateY(percentX * 8)
     setIsHovered(true)
   }
 
@@ -54,6 +53,7 @@ export default function HeroParallaxDoble({
 
   let efectoEstiloLinea2: React.CSSProperties = {
     color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
+    textShadow: '0 0 35px rgba(34, 197, 94, 0.25)',
   }
 
   if (efectoTitulo === 'gradient') {
@@ -65,7 +65,7 @@ export default function HeroParallaxDoble({
   } else if (efectoTitulo === 'neon_glow') {
     efectoEstiloLinea2 = {
       color: 'var(--chefsy-text-hero-2, var(--chefsy-main))',
-      filter: 'drop-shadow(0 0 20px var(--chefsy-main))',
+      filter: 'drop-shadow(0 0 20px var(--chefsy-text-hero-2, var(--chefsy-main)))',
     }
   } else if (efectoTitulo === 'stroke') {
     efectoEstiloLinea2 = {
@@ -79,76 +79,101 @@ export default function HeroParallaxDoble({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full flex flex-col px-4 md:px-12 pt-1 pb-4 md:py-10 lg:py-16 overflow-visible select-none min-h-0 md:min-h-[360px] lg:min-h-[420px]"
+      className="relative w-full flex flex-col px-4 md:px-12 pt-2 pb-6 md:py-10 lg:py-14 overflow-visible select-none min-h-0 md:min-h-[380px] lg:min-h-[460px]"
     >
 
-      {/* Contenedor Principal del Hero en Grilla */}
-      <div className="relative z-40 flex-1 grid grid-cols-1 lg:grid-cols-[1fr_auto] max-w-[1400px] mx-auto w-full gap-x-6 gap-y-4 md:gap-y-6 items-center">
+      {/* Contenedor Principal del Hero: Flex Unificado (Desktop: Lado a Lado | Mobile/iPad: Centrado y Apilado) */}
+      <div className="relative z-40 flex-1 flex flex-col lg:flex-row items-center justify-between max-w-[1440px] mx-auto w-full gap-8 lg:gap-12 xl:gap-16">
         
-        {/* 1. Tipografía Gigante (Hero) Adaptada a Móvil y Desktop */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left z-30 pointer-events-none order-1 lg:col-start-1 lg:row-start-1">
-          <h1 
-            className={`hero-title-1 ${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.88] uppercase drop-shadow-xl break-words`}
-            style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
-          >
-            {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
-          </h1>
-          <h2 
-            className={`hero-title-2 ${fuenteHeroClase} text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.88] uppercase drop-shadow-xl mt-1 break-words`}
-            style={efectoEstiloLinea2}
-          >
-            {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
-          </h2>
-        </div>
+        {/* COLUMNA IZQUIERDA (o SUPERIOR en Tablet/Mobile): Textos + Subtítulo + Buscador UNIFICADOS */}
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left z-30 w-full max-w-2xl xl:max-w-3xl">
+          
+          {/* Títulos Principales del Hero */}
+          <div className="space-y-1 sm:space-y-2 pointer-events-none w-full">
+            <h1 
+              className={`hero-title-1 ${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[104px] tracking-tight leading-[0.88] uppercase drop-shadow-2xl break-words`}
+              style={{ color: 'var(--chefsy-text-hero-1, #ffffff)' }}
+            >
+              {configuracion?.hero_linea_1 || 'POCAS PALABRAS.'}
+            </h1>
+            <h2 
+              className={`hero-title-2 ${fuenteHeroClase} text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[104px] tracking-tight leading-[0.88] uppercase drop-shadow-2xl mt-1 break-words`}
+              style={efectoEstiloLinea2}
+            >
+              {configuracion?.hero_linea_2 || 'MUCHO CHEDDAR.'}
+            </h2>
+          </div>
 
-        {/* 2. Subtítulo y Buscador (Centrado en iPad / Mobile y arriba del carrusel; a la izquierda en PC) */}
-        <div className="hidden md:flex flex-col items-center lg:items-start text-center lg:text-left gap-4 w-full max-w-md mx-auto lg:mx-0 relative z-40 order-2 lg:order-3 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-2">
-          <p 
-            className="font-bebas text-4xl md:text-5xl lg:text-6xl tracking-wide leading-none uppercase text-center lg:text-left"
-            style={{ color: 'var(--chefsy-text-menu, #ffffff)' }}
-          >
-            {configuracion?.titulo_principal || '¿QUÉ PINTA HOY?'}
-          </p>
+          {/* Subtítulo / Frase Integrada */}
+          {configuracion?.titulo_principal && (
+            <div className="mt-3 sm:mt-4 md:mt-5">
+              <p 
+                className={`${fuenteHeroClase} text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-wide uppercase font-bold drop-shadow-lg`}
+                style={{ color: 'var(--chefsy-text-menu, #e2e8f0)' }}
+              >
+                {configuracion.titulo_principal}
+              </p>
+            </div>
+          )}
 
-          <div className="relative w-full">
-            <input
-              id="busqueda_hero"
-              type="text"
-              placeholder="Ej. Cheddar, Papas, Mila especial..."
-              value={busqueda}
-              onChange={(e) => onBusquedaChange(e.target.value)}
-              className="w-full bg-black/40 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-sm"
-            />
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-
-            {sugerenciaBusqueda && (
-              <div className="absolute -bottom-8 left-0 right-0 lg:right-auto flex justify-center lg:justify-start animate-in fade-in duration-300">
+          {/* Buscador Prominente (Grande y organizado) - Visible en Tablet y Desktop */}
+          <div className="hidden md:flex flex-col items-center lg:items-start w-full max-w-xl xl:max-w-2xl mt-6 lg:mt-8 relative z-40">
+            <div className="relative w-full group">
+              <input
+                id="busqueda_hero"
+                type="text"
+                placeholder="Buscar hamburguesas, papas, bebidas, promos..."
+                value={busqueda}
+                onChange={(e) => onBusquedaChange(e.target.value)}
+                className="w-full bg-zinc-950/80 backdrop-blur-xl border-2 border-white/15 hover:border-emerald-500/50 focus:border-emerald-400 text-white py-4 sm:py-5 pl-14 sm:pl-16 pr-12 rounded-2xl sm:rounded-3xl outline-none transition-all shadow-[0_10px_35px_rgba(0,0,0,0.6)] focus:shadow-[0_0_35px_rgba(52,211,153,0.3)] placeholder:text-slate-400 font-medium text-base sm:text-lg focus:ring-4 focus:ring-emerald-500/20"
+              />
+              <Search className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 text-emerald-400 group-hover:scale-110 transition-transform duration-200" size={22} />
+              
+              {busqueda && (
                 <button
-                  onClick={() => onBusquedaChange(sugerenciaBusqueda)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-chefsy-500/20 hover:bg-chefsy-500/30 border border-chefsy-500/40 rounded-full text-xs font-medium text-white transition-all shadow-lg"
+                  type="button"
+                  onClick={() => onBusquedaChange('')}
+                  className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+                  title="Limpiar búsqueda"
                 >
-                  <span className="text-slate-300">¿Quisiste decir</span>
-                  <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
-                  <span className="text-slate-300">?</span>
+                  <X size={16} />
                 </button>
-              </div>
-            )}
+              )}
+
+              {sugerenciaBusqueda && (
+                <div className="absolute -bottom-9 left-0 right-0 lg:right-auto flex justify-center lg:justify-start animate-in fade-in duration-300">
+                  <button
+                    onClick={() => onBusquedaChange(sugerenciaBusqueda)}
+                    className="flex items-center gap-1.5 px-3.5 py-1 bg-emerald-950/80 hover:bg-emerald-900/90 border border-emerald-500/40 rounded-full text-xs font-semibold text-emerald-300 transition-all shadow-lg"
+                  >
+                    <span className="text-slate-400">¿Quisiste decir</span>
+                    <span className="text-emerald-400 font-bold">{sugerenciaBusqueda}</span>
+                    <span className="text-slate-400">?</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* 3. Marco de Historias de Instagram (Carrusel de Promociones / Imágenes) */}
+        {/* COLUMNA DERECHA (o INFERIOR en Tablet/Mobile): Marco de Historias en Grande */}
         <div 
-          className="relative flex items-center justify-center lg:justify-end z-20 order-3 lg:order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:pl-6 transition-transform duration-200 ease-out w-full"
+          className="relative flex items-center justify-center lg:justify-end z-20 shrink-0 transition-transform duration-200 ease-out"
           style={{
             transform: isHovered 
               ? `perspective(1000px) rotateX(${rotateX * 0.5}deg) rotateY(${rotateY * 0.5}deg) scale(1.02)` 
               : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)'
           }}
         >
-          <MarcoHistoriaInstagram
-            imagenesLoop={configuracion?.hero_loop_imagenes}
-            transicion={configuracion?.hero_loop_transicion}
-          />
+          <div className="relative">
+            {/* Resplandor ambiental de fondo */}
+            <div className="absolute -inset-6 bg-emerald-500/15 rounded-[44px] blur-3xl -z-10 pointer-events-none" />
+            
+            <MarcoHistoriaInstagram
+              imagenesLoop={configuracion?.hero_loop_imagenes}
+              transicion={configuracion?.hero_loop_transicion}
+            />
+          </div>
         </div>
 
       </div>
