@@ -57,7 +57,7 @@ function MapTestContent() {
   const [inputManualId, setInputManualId] = useState(initialPedidoId)
 
   // Controles de MapLibre GL
-  const [estilo, setEstilo] = useState<EstiloMapa>('cyber-dark')
+  const [estilo, setEstilo] = useState<EstiloMapa>('vector-liberty')
   const [modoCamara, setModoCamara] = useState<ModoCamara>('piloto')
   const [pitch, setPitch] = useState<number>(55)
   const [edificios3D, setEdificios3D] = useState<boolean>(true)
@@ -398,20 +398,36 @@ function MapTestContent() {
           {/* Selector de Estilo */}
           <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/10">
             <button
-              onClick={() => setEstilo('cyber-dark')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'cyber-dark' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🌌 Cyber Dark
-            </button>
-            <button
               onClick={() => setEstilo('vector-liberty')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 estilo === 'vector-liberty' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🏙️ 3D Liberty
+              🏙️ 3D Vector
+            </button>
+            <button
+              onClick={() => setEstilo('cyber-dark')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                estilo === 'cyber-dark' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🌌 Dark
+            </button>
+            <button
+              onClick={() => setEstilo('google-calles')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                estilo === 'google-calles' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🗺️ Google HD
+            </button>
+            <button
+              onClick={() => setEstilo('google-hibrido')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                estilo === 'google-hibrido' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🛰️ Satélite
             </button>
             <button
               onClick={() => setEstilo('vector-positron')}

@@ -6,7 +6,13 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { UBICACION_LOCAL, calcularDistanciaKm, obtenerRutaConduccion } from '@/lib/ubicacion'
 import { Bike, Navigation, Compass, Layers, ShieldCheck, Eye, Sparkles } from 'lucide-react'
 
-export type EstiloMapa = 'cyber-dark' | 'vector-liberty' | 'vector-positron'
+// Configuración obligatoria del Web Worker autohospedado en /public/lib/maplibre
+// Esto resuelve el error "Worker failed to load" en Next.js Turbopack
+if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl === 'function') {
+  (maplibregl as any).setWorkerUrl('/lib/maplibre/maplibre-gl-worker.mjs')
+}
+
+export type EstiloMapa = 'cyber-dark' | 'vector-liberty' | 'vector-positron' | 'google-calles' | 'google-hibrido'
 export type ModoCamara = 'piloto' | 'dron' | 'cenital' | 'todo' | 'libre'
 
 interface Props {
@@ -34,9 +40,9 @@ const ESTILO_CYBER_DARK: maplibregl.StyleSpecification = {
     'carto-dark': {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
+        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
       ],
       tileSize: 256,
       attribution: '&copy; OpenStreetMap &copy; CARTO',
@@ -53,11 +59,67 @@ const ESTILO_CYBER_DARK: maplibregl.StyleSpecification = {
   ],
 }
 
-// URLs de estilos vectoriales
-const ESTILOS_VECTOR: Record<string, string | maplibregl.StyleSpecification> = {
+// Estilo Google Maps Calles HD (el mismo de la app estándar)
+const ESTILO_GOOGLE_CALLES: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'google-calles': {
+      type: 'raster',
+      tiles: [
+        'https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Google Maps',
+    },
+  },
+  layers: [
+    {
+      id: 'google-calles-layer',
+      type: 'raster',
+      source: 'google-calles',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+}
+
+// Estilo Google Maps Satélite Híbrido HD
+const ESTILO_GOOGLE_HIBRIDO: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'google-hybrid': {
+      type: 'raster',
+      tiles: [
+        'https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        'https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        'https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Google Maps',
+    },
+  },
+  layers: [
+    {
+      id: 'google-hybrid-layer',
+      type: 'raster',
+      source: 'google-hybrid',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+}
+
+// URLs y especificaciones de estilos
+const ESTILOS_VECTOR: Record<EstiloMapa, string | maplibregl.StyleSpecification> = {
   'cyber-dark': ESTILO_CYBER_DARK,
   'vector-liberty': 'https://tiles.openfreemap.org/styles/liberty',
   'vector-positron': 'https://tiles.openfreemap.org/styles/positron',
+  'google-calles': ESTILO_GOOGLE_CALLES,
+  'google-hibrido': ESTILO_GOOGLE_HIBRIDO,
 }
 
 // Helper: Calcular ángulo de rumbo geográfico (0° a 360°)
@@ -133,13 +195,18 @@ export default function MapaLibreSeguimiento({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
 
+    // Asegurar Worker URL antes de crear instancia
+    if (typeof (maplibregl as any).setWorkerUrl === 'function') {
+      (maplibregl as any).setWorkerUrl('/lib/maplibre/maplibre-gl-worker.mjs')
+    }
+
     const initialCenter: [number, number] = cadeteCoords
       ? [cadeteCoords.longitud, cadeteCoords.latitud]
       : [UBICACION_LOCAL.longitud, UBICACION_LOCAL.latitud]
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: ESTILOS_VECTOR[estilo] as any,
+      style: (ESTILOS_VECTOR[estilo] || ESTILO_CYBER_DARK) as any,
       center: initialCenter,
       zoom: 16,
       pitch: pitchPersonalizado || 55,
@@ -150,15 +217,34 @@ export default function MapaLibreSeguimiento({
     // Controles de navegación MapLibre
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
 
+    map.on('error', (e) => {
+      console.warn('[MapLibre Warning/Error]:', e)
+    })
+
     map.on('load', () => {
       setMapaCargado(true)
+      map.resize()
       agregarCapasRuta(map)
       actualizarCapaEdificios3D(map, mostrarEdificios3D)
     })
 
+    // Observer de tamaño para asegurar que el canvas WebGL siempre se dimensione
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize()
+    })
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current)
+    }
+
+    const timerResize = setTimeout(() => {
+      map.resize()
+    }, 150)
+
     mapRef.current = map
 
     return () => {
+      clearTimeout(timerResize)
+      resizeObserver.disconnect()
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
       map.remove()
       mapRef.current = null
@@ -171,10 +257,11 @@ export default function MapaLibreSeguimiento({
     const map = mapRef.current
     if (!map || !mapaCargado) return
 
-    const nuevoEstilo = ESTILOS_VECTOR[estilo]
+    const nuevoEstilo = ESTILOS_VECTOR[estilo] || ESTILO_CYBER_DARK
     map.setStyle(nuevoEstilo as any)
 
     map.once('styledata', () => {
+      map.resize()
       agregarCapasRuta(map)
       actualizarCapaEdificios3D(map, mostrarEdificios3D)
       actualizarGeoJsonRuta(map)
@@ -273,6 +360,12 @@ export default function MapaLibreSeguimiento({
 
   // ── Helper: Configurar Capa de Edificios 3D ──────────────────────────────────
   const actualizarCapaEdificios3D = (map: maplibregl.Map, activo: boolean) => {
+    // 1. Si el estilo vectorial ya tiene capa nativa de edificios 3D (ej. OpenFreeMap Liberty)
+    if (map.getLayer('building-3d')) {
+      map.setLayoutProperty('building-3d', 'visibility', activo ? 'visible' : 'none')
+      return
+    }
+
     const layerId = '3d-buildings-extrusion'
     const source = map.getSource('openmaptiles')
 
@@ -295,41 +388,45 @@ export default function MapaLibreSeguimiento({
       }
     }
 
-    map.addLayer(
-      {
-        id: layerId,
-        source: 'openmaptiles',
-        'source-layer': 'building',
-        type: 'fill-extrusion',
-        minzoom: 14.5,
-        paint: {
-          'fill-extrusion-color': [
-            'interpolate',
-            ['linear'],
-            ['get', 'render_height'],
-            0, '#1e293b',
-            20, '#0f172a',
-            50, '#020617',
-          ],
-          'fill-extrusion-height': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            14.5, 0,
-            15, ['coalesce', ['get', 'render_height'], ['get', 'height'], 8],
-          ],
-          'fill-extrusion-base': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            14.5, 0,
-            15, ['coalesce', ['get', 'render_min_height'], 0],
-          ],
-          'fill-extrusion-opacity': 0.88,
+    try {
+      map.addLayer(
+        {
+          id: layerId,
+          source: 'openmaptiles',
+          'source-layer': 'building',
+          type: 'fill-extrusion',
+          minzoom: 14,
+          paint: {
+            'fill-extrusion-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'render_height'],
+              0, '#1e293b',
+              20, '#0f172a',
+              50, '#020617',
+            ],
+            'fill-extrusion-height': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              14, 0,
+              15, ['coalesce', ['get', 'render_height'], ['get', 'height'], 8],
+            ],
+            'fill-extrusion-base': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              14, 0,
+              15, ['coalesce', ['get', 'render_min_height'], 0],
+            ],
+            'fill-extrusion-opacity': 0.88,
+          },
         },
-      },
-      labelLayerId
-    )
+        labelLayerId
+      )
+    } catch (e) {
+      console.warn('No se pudo añadir capa 3D personalizada:', e)
+    }
   }
 
   // ── 5. Cargar Geometría OSRM de Calles ────────────────────────────────────────
