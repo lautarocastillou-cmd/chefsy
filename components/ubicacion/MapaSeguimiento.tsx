@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { Pedido } from '@/tipos'
 import { 
   UBICACION_LOCAL, 
@@ -119,7 +119,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
     glow?: any
     core?: any
     dash?: any
-    siguientesParadas?: any
+    siguientesParadasCasing?: any
+    siguientesParadasCore?: any
+    siguientesParadasDash?: any
   }>({})
   const rutaGeometriaRef = useRef<[number, number][]>([])
   const estaVisibleRef = useRef<boolean>(true)
@@ -156,6 +158,17 @@ export default function MapaSeguimiento({ pedido }: Props) {
     (pedido as any).cadete_volviendo_al_local ||
     (pedido.estado === 'entregado' && Boolean(pedido.cadete_coordenadas))
   )
+
+  const itinerario: any[] = useMemo(() => {
+    return (pedido as any)?.itinerario_paradas || []
+  }, [(pedido as any)?.itinerario_paradas])
+
+  // Firma única de la secuencia de paradas: reacciona inmediatamente al reordenar pedidos en cadetería
+  const paradasSignature = useMemo(() => {
+    return itinerario
+      .map((p: any) => `${p.id}:${p.orden}:${p.coordenadas?.latitud},${p.coordenadas?.longitud}`)
+      .join('|')
+  }, [itinerario])
 
   useEffect(() => {
     modoCamaraRef.current = modoCamara
@@ -247,10 +260,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
           const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
           const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes)
           if (leafletMapRef.current && rutaSiguientes) {
-            polylineRef.current.siguientesParadas?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasCasing?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasCore?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasDash?.setLatLngs(rutaSiguientes.puntos)
           }
         } else if (leafletMapRef.current) {
-          polylineRef.current.siguientesParadas?.setLatLngs([])
+          polylineRef.current.siguientesParadasCasing?.setLatLngs([])
+          polylineRef.current.siguientesParadasCore?.setLatLngs([])
+          polylineRef.current.siguientesParadasDash?.setLatLngs([])
         }
       } catch (_) {
         // Sin crash: si falla, la ruta vieja sigue en pantalla
@@ -319,10 +336,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
           const coordsRestantes = itinerario.map((it: any) => it.coordenadas)
           const rutaSiguientes = await obtenerRutaMultiParada(coordsRestantes, abortCtrl.signal)
           if (!cancelado && leafletMapRef.current && rutaSiguientes) {
-            polylineRef.current.siguientesParadas?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasCasing?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasCore?.setLatLngs(rutaSiguientes.puntos)
+            polylineRef.current.siguientesParadasDash?.setLatLngs(rutaSiguientes.puntos)
           }
         } else if (leafletMapRef.current) {
-          polylineRef.current.siguientesParadas?.setLatLngs([])
+          polylineRef.current.siguientesParadasCasing?.setLatLngs([])
+          polylineRef.current.siguientesParadasCore?.setLatLngs([])
+          polylineRef.current.siguientesParadasDash?.setLatLngs([])
         }
       } catch (_) {
         // Ignorar cancelaciones
@@ -342,7 +363,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     pedido.cadete_coordenadas ? 'cadete-activo' : 'local',
     esProximaEntrega,
     esVolviendoAlLocal,
-    (pedido as any).itinerario_paradas?.length
+    paradasSignature
   ])
 
   // ── 2. Inicializar el mapa Leaflet SOLO UNA VEZ al montar ───────────────────
@@ -498,28 +519,28 @@ export default function MapaSeguimiento({ pedido }: Props) {
         const paradaIcon = L.divIcon({
           html: `
             <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
-              <div style="background:#047857;color:#fff;width:28px;height:28px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 3px 8px rgba(0,0,0,0.35);">
+              <div style="background:#f59e0b;color:#ffffff;width:30px;height:30px;border-radius:50%;border:2.5px solid #ffffff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 4px 10px rgba(245,158,11,0.5);">
                 ${parada.orden}
               </div>
-              <div style="margin-top:2px;background:#065f46;color:#a7f3d0;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #10b981;">
-                Parada ${parada.orden}
+              <div style="margin-top:2px;background:#b45309;color:#fef3c7;font-size:9.5px;font-weight:900;padding:1.5px 7px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.3);white-space:nowrap;border:1px solid #fde68a;letter-spacing:0.2px;">
+                Entrega previa #${parada.orden}
               </div>
             </div>
           `,
           className: 'custom-parada-icon',
-          iconSize: [80, 50],
-          iconAnchor: [40, 14],
+          iconSize: [110, 54],
+          iconAnchor: [55, 15],
         })
 
         const m = L.marker([parada.coordenadas.latitud, parada.coordenadas.longitud], {
           icon: paradaIcon,
           zIndexOffset: 150,
-        }).addTo(leafletMapRef.current).bindPopup(`<b>Parada ${parada.orden}</b><br/>Entrega previa en curso`)
+        }).addTo(leafletMapRef.current).bindPopup(`<b>Parada ${parada.orden}</b><br/>Entrega previa en camino antes de tu domicilio`)
 
         markersRef.current.paradas?.push(m)
       }
     })
-  }, [mapaListo, (pedido as any).itinerario_paradas, esVolviendoAlLocal])
+  }, [mapaListo, paradasSignature, esVolviendoAlLocal])
 
   // ── 3.2. Suspensión de recursos al pasar a segundo plano (Battery/CPU Saver) ─
   useEffect(() => {
@@ -867,12 +888,33 @@ export default function MapaSeguimiento({ pedido }: Props) {
       }).addTo(leafletMapRef.current)
 
       // 5. Tramo proyectado hacia siguientes paradas (multi-entrega)
-      polylineRef.current.siguientesParadas = L.polyline([], {
-        color: '#059669',
-        weight: 3.5,
-        opacity: 0.7,
-        dashArray: '6, 10',
+      // Capa A: Borde de contraste alto (evita que se pierda en el asfalto o zonas verdes)
+      polylineRef.current.siguientesParadasCasing = L.polyline([], {
+        color: '#0f172a',
+        weight: 7.5,
+        opacity: 0.8,
         smoothFactor: 1.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
+
+      // Capa B: Núcleo azul eléctrico ultra vibrante
+      polylineRef.current.siguientesParadasCore = L.polyline([], {
+        color: '#2563eb',
+        weight: 4.5,
+        opacity: 0.95,
+        smoothFactor: 1.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
+
+      // Capa C: Estela punteada animada luminosa (Cyan / Sky)
+      polylineRef.current.siguientesParadasDash = L.polyline([], {
+        color: '#93c5fd',
+        weight: 2.5,
+        dashArray: '8, 12',
+        smoothFactor: 1.5,
+        className: 'animated-polyline-secondary-dash',
         lineCap: 'round',
         lineJoin: 'round',
       }).addTo(leafletMapRef.current)
@@ -881,7 +923,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       polylineRef.current.core?.setLatLngs(puntosRuta)
       polylineRef.current.dash?.setLatLngs(puntosRuta)
     }
-  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal, (pedido as any).itinerario_paradas?.length])
+  }, [mapaListo, pedido.coordenadas?.latitud, pedido.coordenadas?.longitud, esProximaEntrega, esVolviendoAlLocal, paradasSignature])
 
   // ── 6. Auto-encuadre inicial cuando cambia pedido ────────────────────────────
   useEffect(() => {
@@ -998,6 +1040,12 @@ export default function MapaSeguimiento({ pedido }: Props) {
         }
         .animated-polyline-dash {
           animation: polyline-dash 1.4s linear infinite;
+        }
+        @keyframes polyline-secondary-dash {
+          to { stroke-dashoffset: -40; }
+        }
+        .animated-polyline-secondary-dash {
+          animation: polyline-secondary-dash 1.8s linear infinite;
         }
         .leaflet-container {
           width: 100% !important;

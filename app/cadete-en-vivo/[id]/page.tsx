@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { supabaseAnon } from '@/lib/supabase'
@@ -136,6 +136,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [esProximaEntrega, setEsProximaEntrega] = useState(true)
   const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
   const [direccionLegible, setDireccionLegible] = useState<string>('')
+  const fetchPrincipalRef = useRef<(() => void) | null>(null)
 
   // ── Resolver dirección legible humana si es un enlace o coordenadas ─────────
   useEffect(() => {
@@ -220,6 +221,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       }
     }
 
+    fetchPrincipalRef.current = fetchPrincipal
     fetchPrincipal()
 
     const canal = supabaseAnon
@@ -227,8 +229,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, fetchPrincipal)
       .subscribe()
 
-    // Polling inteligente cada 5 segundos
-    const intervalo = setInterval(fetchPrincipal, 5000)
+    // Polling inteligente cada 4 segundos
+    const intervalo = setInterval(fetchPrincipal, 4000)
 
     const onReconectar = () => fetchPrincipal()
     window.addEventListener('online', onReconectar)
@@ -241,6 +243,34 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       supabaseAnon.removeChannel(canal)
     }
   }, [pedidoId])
+
+  // ── Suscripción en tiempo real al lote de pedidos del cadete ─────────────────
+  // Si en /cadeteria se reordenan las posiciones (orden_entrega), este listener
+  // detecta la actualización al instante y recalcula la ruta en el mapa en vivo.
+  const nombreCadeteAsignado = pedido?.cadete_nombre
+  useEffect(() => {
+    if (!nombreCadeteAsignado) return
+
+    const canalCadete = supabaseAnon
+      .channel(`cadete-recorrido-${nombreCadeteAsignado}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+          filter: `cadete_nombre=eq.${nombreCadeteAsignado}`,
+        },
+        () => {
+          fetchPrincipalRef.current?.()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabaseAnon.removeChannel(canalCadete)
+    }
+  }, [nombreCadeteAsignado])
 
   // ── Fetch de los pedidos adicionales (desde localStorage) ───────────────────
   useEffect(() => {

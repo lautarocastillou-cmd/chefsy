@@ -168,61 +168,52 @@ export async function GET(request: Request) {
         }
 
         const colaOrdenada = ordenarCola(pedidosActivosCadete)
-        const enCamino = colaOrdenada.filter(p => p.estado === 'en_camino')
-        const listaActiva = enCamino.length > 0 ? enCamino : colaOrdenada
 
-        itinerarioParadas = listaActiva
-          .filter(p => p.coordenadas && typeof p.coordenadas.latitud === 'number' && typeof p.coordenadas.longitud === 'number')
-          .map((p, idx) => ({
-            id: p.id,
-            orden: idx + 1,
-            es_mi_pedido: p.id === pedidoId,
-            cliente: p.id === pedidoId ? (data.cliente || 'Tu Domicilio') : `Parada ${idx + 1}`,
-            coordenadas: {
-              latitud: Number(p.coordenadas.latitud),
-              longitud: Number(p.coordenadas.longitud)
-            },
-            estado: p.estado,
-            es_proxima_entrega: idx === 0
-          }))
+        // Localizar la posición de ESTE pedido en la cola de entregas del cadete
+        const indiceMiPedido = colaOrdenada.findIndex((p) => p.id === pedidoId)
 
-        if (data.estado === 'en_camino') {
-          if (enCamino.length > 1) {
-            // Múltiples pedidos en camino simultáneamente
-            const indice = enCamino.findIndex(p => p.id === pedidoId)
-            if (indice > 0) {
-              paradaActual = indice + 1
-              paradasPrevias = indice
-              esProximaEntrega = false
-              cadeteOcupadoEnOtroViaje = true
-            } else {
-              paradaActual = 1
-              paradasPrevias = 0
-              esProximaEntrega = true
-              cadeteOcupadoEnOtroViaje = false
-            }
-          } else {
-            // Este pedido es el único en camino
-            paradaActual = 1
-            paradasPrevias = 0
-            esProximaEntrega = true
-            cadeteOcupadoEnOtroViaje = false
-          }
+        if (indiceMiPedido >= 0) {
+          paradaActual = indiceMiPedido + 1
+          paradasPrevias = indiceMiPedido
+          esProximaEntrega = indiceMiPedido === 0
+          cadeteOcupadoEnOtroViaje = indiceMiPedido > 0
         } else {
-          // El pedido está en 'listo' o 'en_cocina'
-          const indice = colaOrdenada.findIndex(p => p.id === pedidoId)
-          if (enCamino.length > 0) {
-            paradaActual = indice >= 0 ? indice + 1 : totalParadas
-            paradasPrevias = Math.max(1, enCamino.length)
-            esProximaEntrega = false
-            cadeteOcupadoEnOtroViaje = true
-          } else {
-            paradaActual = indice >= 0 ? indice + 1 : 1
-            paradasPrevias = indice > 0 ? indice : 0
-            esProximaEntrega = indice === 0
-            cadeteOcupadoEnOtroViaje = indice > 0
-          }
+          paradaActual = 1
+          paradasPrevias = 0
+          esProximaEntrega = true
+          cadeteOcupadoEnOtroViaje = false
         }
+
+        // PRIVACIDAD ESTRICTA:
+        // El cliente 1 NUNCA debe ver la ruta ni el destino del cliente 2.
+        // El cliente 2 solo ve hasta su propio pedido (sabe que hay una parada previa pero no ve paradas posteriores).
+        // Por lo tanto, cortamos la lista exactamente en SU pedido (slice(0, indiceMiPedido + 1)).
+        const paradasPermitidas = indiceMiPedido >= 0
+          ? colaOrdenada.slice(0, indiceMiPedido + 1)
+          : [data]
+
+        itinerarioParadas = paradasPermitidas
+          .filter(
+            (p) =>
+              p.coordenadas &&
+              typeof p.coordenadas.latitud === 'number' &&
+              typeof p.coordenadas.longitud === 'number'
+          )
+          .map((p, idx) => {
+            const esMiPedido = p.id === pedidoId
+            return {
+              id: p.id,
+              orden: idx + 1,
+              es_mi_pedido: esMiPedido,
+              cliente: esMiPedido ? (data.cliente || 'Tu Domicilio') : `Parada ${idx + 1} (Entrega previa)`,
+              coordenadas: {
+                latitud: Number(p.coordenadas.latitud),
+                longitud: Number(p.coordenadas.longitud),
+              },
+              estado: p.estado,
+              es_proxima_entrega: idx === 0,
+            }
+          })
       }
     }
 
