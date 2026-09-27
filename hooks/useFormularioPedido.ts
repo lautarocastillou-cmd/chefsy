@@ -10,6 +10,27 @@ import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from 
 import { generarId, generarIdProducto } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 
+export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
+
+export interface BorradorPedido {
+  cliente: string
+  telefono: string
+  tipoEntrega: TipoEntrega
+  direccion: string
+  coordenadas: Coordenadas | null
+  metodoPago: MetodoPago
+  observaciones: string
+  montoEfectivo: string
+  montoTransferencia: string
+  montoTarjeta: string
+  filasProductos: FilaProductoPedido[]
+  costoEnvio: number
+  distanciaKm: number
+  envioManual: boolean
+  costoEnvioManualInput: string
+  guardadoEn: number
+}
+
 interface PropsUseFormularioPedido {
   pedidoInicial?: Pedido
   onClose?: () => void
@@ -35,6 +56,10 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   ])
   const [error, setRawError] = useState('')
   const errorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // ── Gestión de borrador temporal ───────────────────────────────────────────
+  const [borradorGuardado, setBorradorGuardado] = useState<BorradorPedido | null>(null)
+  const [borradorActivoCargado, setBorradorActivoCargado] = useState(false)
 
   const setError = (msg: string) => {
     setRawError(msg)
@@ -110,6 +135,23 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
         coccion: (p.coccion === 'fritas' || p.coccion === 'al_horno') ? p.coccion : undefined,
       }))
       setFilasProductos(filas.length > 0 ? filas : [crearFilaProductoVacia()])
+    }
+  }, [pedidoInicial])
+
+  // 1b. Cargar borrador guardado temporalmente (si no estamos editando un pedido existente)
+  useEffect(() => {
+    if (!pedidoInicial && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_BORRADOR_PEDIDO)
+        if (raw) {
+          const parsed = JSON.parse(raw) as BorradorPedido
+          if (parsed && typeof parsed === 'object') {
+            setBorradorGuardado(parsed)
+          }
+        }
+      } catch (e) {
+        console.error('Error al leer borrador de pedido', e)
+      }
     }
   }, [pedidoInicial])
 
@@ -387,9 +429,118 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       editarPedido(nuevoPedido)
     } else {
       agregarPedido(nuevoPedido)
+      // Si se crea el pedido con éxito, se elimina la data guardada temporalmente
+      try {
+        localStorage.removeItem(STORAGE_KEY_BORRADOR_PEDIDO)
+      } catch {}
+      setBorradorGuardado(null)
+      setBorradorActivoCargado(false)
     }
     
     cancelar()
+  }
+
+  // ── Acciones de Borrador Temporal ──────────────────────────────────────────
+  const guardarBorrador = () => {
+    if (pedidoInicial) return
+
+    const tieneAlgo = 
+      cliente.trim() !== '' || 
+      telefono.trim() !== '' || 
+      direccion.trim() !== '' || 
+      observaciones.trim() !== '' || 
+      filasProductos.some(f => Boolean(f.idProductoCatalogo))
+
+    if (!tieneAlgo) {
+      setError('No hay datos cargados para guardar temporalmente.')
+      return
+    }
+
+    const borrador: BorradorPedido = {
+      cliente: cliente.trim(),
+      telefono: telefono.trim(),
+      tipoEntrega,
+      direccion: direccion.trim(),
+      coordenadas,
+      metodoPago,
+      observaciones: observaciones.trim(),
+      montoEfectivo,
+      montoTransferencia,
+      montoTarjeta,
+      filasProductos,
+      costoEnvio,
+      distanciaKm,
+      envioManual,
+      costoEnvioManualInput,
+      guardadoEn: Date.now()
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY_BORRADOR_PEDIDO, JSON.stringify(borrador))
+      setBorradorGuardado(borrador)
+    } catch (e) {
+      console.error('Error al guardar borrador en localStorage', e)
+    }
+
+    // Si está en modal, cerrar para permitir atender al otro cliente de inmediato
+    if (onClose) {
+      onClose()
+    } else {
+      // En la página /nuevo-pedido, limpiar el formulario para comenzar otro pedido
+      setCliente('')
+      setTelefono('')
+      setDireccion('')
+      setCoordenadas(null)
+      setObservaciones('')
+      setMetodoPago('sin_especificar')
+      setMontoEfectivo('')
+      setMontoTransferencia('')
+      setMontoTarjeta('')
+      setFilasProductos([crearFilaProductoVacia()])
+      setEnvioManualState(false)
+      setCostoEnvioManualInput('')
+      setBorradorActivoCargado(false)
+    }
+  }
+
+  const restaurarBorrador = () => {
+    if (!borradorGuardado) return
+
+    setCliente(borradorGuardado.cliente || '')
+    setTelefono(borradorGuardado.telefono || '')
+    setTipoEntrega(borradorGuardado.tipoEntrega || 'delivery')
+    setDireccion(borradorGuardado.direccion || '')
+    setCoordenadas(borradorGuardado.coordenadas || null)
+    setMetodoPago(borradorGuardado.metodoPago || 'sin_especificar')
+    setObservaciones(borradorGuardado.observaciones || '')
+    setMontoEfectivo(borradorGuardado.montoEfectivo || '')
+    setMontoTransferencia(borradorGuardado.montoTransferencia || '')
+    setMontoTarjeta(borradorGuardado.montoTarjeta || '')
+    
+    if (borradorGuardado.filasProductos && borradorGuardado.filasProductos.length > 0) {
+      setFilasProductos(borradorGuardado.filasProductos)
+    }
+
+    if (borradorGuardado.envioManual !== undefined) {
+      setEnvioManualState(borradorGuardado.envioManual)
+      setCostoEnvioManualInput(borradorGuardado.costoEnvioManualInput || '')
+    }
+    if (borradorGuardado.costoEnvio !== undefined) {
+      setCostoEnvio(borradorGuardado.costoEnvio)
+    }
+    if (borradorGuardado.distanciaKm !== undefined) {
+      setDistanciaKm(borradorGuardado.distanciaKm)
+    }
+
+    setBorradorActivoCargado(true)
+  }
+
+  const descartarBorrador = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY_BORRADOR_PEDIDO)
+    } catch {}
+    setBorradorGuardado(null)
+    setBorradorActivoCargado(false)
   }
 
   return {
@@ -397,7 +548,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas,
       metodoPago, observaciones, filasProductos, error, costoEnvio, distanciaKm,
       cargandoEnvio, envioManual, costoEnvioManualInput,
-      montoEfectivo, montoTransferencia, montoTarjeta
+      montoEfectivo, montoTransferencia, montoTarjeta,
+      borradorGuardado, borradorActivoCargado
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
@@ -408,7 +560,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       subtotal, pideDireccion, costoEnvioFinal, total
     },
     acciones: {
-      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar
+      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      guardarBorrador, restaurarBorrador, descartarBorrador
     }
   }
 }

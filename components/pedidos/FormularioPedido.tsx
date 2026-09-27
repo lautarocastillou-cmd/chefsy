@@ -7,8 +7,19 @@ import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Settings, AlertCircle, Sparkles, Check, ArrowRight } from 'lucide-react'
+import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, BookmarkCheck, RotateCcw, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+
+function formatearTiempoRelativo(timestamp: number): string {
+  const diffMs = Date.now() - timestamp
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Guardado recién'
+  if (diffMin === 1) return 'Guardado hace 1 min'
+  if (diffMin < 60) return `Guardado hace ${diffMin} min`
+  const diffHoras = Math.floor(diffMin / 60)
+  if (diffHoras === 1) return 'Guardado hace 1 hora'
+  return `Guardado hace ${diffHoras} horas`
+}
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -31,7 +42,8 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
       clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas, 
       metodoPago, observaciones, filasProductos, error, cargandoEnvio, 
       envioManual, costoEnvioManualInput, distanciaKm,
-      montoEfectivo, montoTransferencia, montoTarjeta
+      montoEfectivo, montoTransferencia, montoTarjeta,
+      borradorGuardado, borradorActivoCargado
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
@@ -42,12 +54,113 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
       subtotal, pideDireccion, costoEnvioFinal, total 
     },
     acciones: { 
-      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar 
+      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      guardarBorrador, restaurarBorrador, descartarBorrador
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
 
   return (
     <div data-formulario-pedido="true" className="w-full max-w-6xl mx-auto space-y-6">
+
+      {/* ── Barra Superior del Formulario con Botón Rápido de Pausa/Guardado ──── */}
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800/60 flex-wrap gap-2">
+        <div>
+          <h2 className="text-base sm:text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+            <span>{pedidoInicial ? 'Modificar Pedido' : 'Nuevo Pedido'}</span>
+          </h2>
+          <p className="text-xs text-slate-400">
+            {pedidoInicial ? 'Actualizá los datos o productos' : 'Cargá los datos del cliente y los productos solicitados'}
+          </p>
+        </div>
+
+        {!pedidoInicial && (
+          <button
+            type="button"
+            onClick={guardarBorrador}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title="Guardar temporalmente los datos cargados para atender a otro cliente"
+          >
+            <PauseCircle size={15} />
+            <span>Guardar temporalmente</span>
+          </button>
+        )}
+      </div>
+
+      {/* ── Banner de Pedido Guardado Temporalmente (Borrador) ─────── */}
+      {borradorGuardado && !pedidoInicial && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white animate-in slide-in-from-top-2 duration-200 shadow-md">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+              <BookmarkCheck size={22} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-950/70 px-2 py-0.5 rounded-md border border-amber-500/40">
+                  Pedido guardado temporalmente
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {formatearTiempoRelativo(borradorGuardado.guardadoEn)}
+                </span>
+              </div>
+              <p className="text-sm font-bold text-slate-200 truncate mt-1">
+                {borradorGuardado.cliente ? (
+                  <span>Cliente: <strong className="text-white">{borradorGuardado.cliente}</strong></span>
+                ) : (
+                  <span className="italic text-slate-400">Sin nombre asignado</span>
+                )}
+                {borradorGuardado.filasProductos?.some(f => f.idProductoCatalogo) && (
+                  <span className="text-xs text-amber-300/90 font-normal ml-2">
+                    • {borradorGuardado.filasProductos.filter(f => f.idProductoCatalogo).reduce((sum, f) => sum + (f.cantidad || 1), 0)} ítems
+                  </span>
+                )}
+                {borradorGuardado.tipoEntrega && (
+                  <span className="text-[10px] text-slate-300 uppercase font-black ml-2 px-1.5 py-0.5 bg-slate-800 rounded">
+                    {borradorGuardado.tipoEntrega}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={restaurarBorrador}
+              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Cargar los datos de este pedido en el formulario"
+            >
+              <RotateCcw size={14} />
+              <span>Restaurar pedido</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={descartarBorrador}
+              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+              title="Descartar y borrar este borrador"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notificación si el borrador está actualmente activo en el formulario */}
+      {borradorActivoCargado && !pedidoInicial && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2.5 text-xs font-semibold text-emerald-400 flex items-center justify-between gap-2 animate-in fade-in duration-200">
+          <span className="flex items-center gap-2">
+            <Check size={16} className="text-emerald-400 shrink-0" />
+            <span>Estás editando el pedido guardado temporalmente. Al crearlo, se limpiará automáticamente.</span>
+          </span>
+          <button
+            type="button"
+            onClick={descartarBorrador}
+            className="text-[11px] text-slate-400 hover:text-slate-200 underline cursor-pointer shrink-0"
+          >
+            Descartar
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
@@ -321,7 +434,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
             </div>
 
             {/* Botones de Acción */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-wrap sm:flex-nowrap gap-3 pt-4">
               <button
                 type="button"
                 onClick={manejarEnvio}
@@ -330,6 +443,19 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
                 <Check className="w-5 h-5" />
                 <span>{pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}</span>
               </button>
+
+              {!pedidoInicial && (
+                <button
+                  type="button"
+                  onClick={guardarBorrador}
+                  className="bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 px-5 py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                  title="Guardar temporalmente los datos cargados para atender a otro cliente"
+                >
+                  <PauseCircle className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />
+                  <span>Guardar temporalmente</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={cancelar}
@@ -369,7 +495,18 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
 
       {/* ── Barra de Confirmación Inferior Fija para Móvil ──────── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950 border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
-        <div className="flex items-center gap-3 max-w-md mx-auto">
+        <div className="flex items-center gap-2 max-w-md mx-auto">
+          {!pedidoInicial && (
+            <button
+              type="button"
+              onClick={guardarBorrador}
+              className="bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-400 border border-amber-500/30 p-3 rounded-2xl flex items-center justify-center shrink-0 cursor-pointer"
+              title="Guardar temporalmente"
+            >
+              <PauseCircle className="w-5 h-5 text-amber-400" />
+            </button>
+          )}
+
           <div className="min-w-0 flex-1">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               Total ({filasProductos.reduce((acc: number, f) => acc + (f.idProductoCatalogo ? (f.cantidad || 1) : 0), 0)} ítems)
