@@ -394,10 +394,10 @@ export async function POST(request: Request) {
 
           const turnoTipo = snapshot?.turno_tipo || 'noche'
 
-          // Consultar TODOS los pedidos de hoy en la base de datos para consolidar
+          // Consultar pedidos de hoy en la base de datos para consolidar (solo columnas de cálculo financiero)
           const { data: pedidosDelDia } = await supabaseAdmin
             .from('pedidos')
-            .select('*')
+            .select('id, estado, total, costoEnvio, metodoPago, tipoEntrega')
             .eq('fecha', fechaStr)
 
           if (pedidosDelDia && pedidosDelDia.length > 0) {

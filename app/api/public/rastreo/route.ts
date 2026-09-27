@@ -221,6 +221,12 @@ export async function GET(request: Request) {
       } catch (_) {}
     }
 
+    const headers: Record<string, string> = {
+      'Cache-Control': esPedidoFinalizado
+        ? 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400'
+        : 'no-cache, no-store, must-revalidate',
+    }
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
@@ -247,7 +253,7 @@ export async function GET(request: Request) {
       costoEnvio: data.costoEnvio ?? 0,
       hora: data.hora ?? '',
       pedidos_relacionados: pedidosRelacionados,
-    })
+    }, { headers })
   } catch (error) {
     console.error('[API Pública Rastreo GET] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

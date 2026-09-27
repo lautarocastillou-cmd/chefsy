@@ -59,9 +59,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ pedidos: [] }, { status: 200 })
     }
 
+    // Columnas esenciales para historial de cliente (excluye ruta_historial, push_subscription, etc.)
+    const COLUMNAS_HISTORIAL_CLIENTE = 'id, created_at, fecha, hora, total, costoEnvio, tipoEntrega, direccion, productos, puntos_ganados, estado'
+
     const { data: pedidos, error } = await supabase
       .from('pedidos')
-      .select('*')
+      .select(COLUMNAS_HISTORIAL_CLIENTE)
       .or(filtros.join(','))
       .order('created_at', { ascending: false })
       .limit(50)

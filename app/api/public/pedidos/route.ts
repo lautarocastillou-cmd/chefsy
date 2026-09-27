@@ -181,7 +181,7 @@ export async function POST(request: Request) {
       .from('pedidos')
       .update(updatePayload)
       .eq('id', id)
-      .select('*')
+      .select(COLUMNAS_PEDIDOS_CADETE)
 
     if (error) throw error
 

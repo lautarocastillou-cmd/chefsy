@@ -56,9 +56,9 @@ function mapModificador(row: any): ModificadorCatalogo {
  */
 export async function obtenerCatalogoPrincipal(): Promise<CatalogoGuardado | null> {
   const [catRes, prodRes, modRes] = await Promise.all([
-    supabaseAnon.from('categorias').select('*').order('orden'),
-    supabaseAnon.from('productos').select('*'),
-    supabaseAnon.from('modificadores').select('*'),
+    supabaseAnon.from('categorias').select('id, nombre, orden, activa').order('orden'),
+    supabaseAnon.from('productos').select('id, categoria_id, nombre, precio, precio_puntos, activo, stock, es_combo, modificadores_ids'),
+    supabaseAnon.from('modificadores').select('id, nombre, precio_extra'),
   ])
 
   if (catRes.error || prodRes.error || modRes.error) {
