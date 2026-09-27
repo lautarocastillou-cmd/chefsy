@@ -315,30 +315,10 @@ export default function PaginaDashboard() {
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
           >
-            {/* Header del Modal */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-6 pb-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <PlusCircle size={22} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
-                    Nuevo Pedido
-                  </h2>
-                  <p className="text-xs text-slate-400 font-medium">Registrar una orden manual desde el panel</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setModalNuevoPedidoAbierto(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            {/* Contenido del Modal */}
-            <div className="px-6 pb-6">
-              <FormularioPedido onClose={() => setModalNuevoPedidoAbierto(false)} />
-            </div>
+            <FormularioPedido 
+              conHeaderModal={true}
+              onClose={() => setModalNuevoPedidoAbierto(false)} 
+            />
           </div>
         </div>
       )}

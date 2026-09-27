@@ -7,7 +7,7 @@ import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2 } from 'lucide-react'
+import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const claseInput =
@@ -16,9 +16,14 @@ const claseInput =
 interface PropsFormularioPedido {
   pedidoInicial?: Pedido
   onClose?: () => void
+  conHeaderModal?: boolean
 }
 
-export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormularioPedido = {}) {
+export default function FormularioPedido({ 
+  pedidoInicial, 
+  onClose, 
+  conHeaderModal = false 
+}: PropsFormularioPedido = {}) {
   const router = useRouter()
   
   useEscapeKey(() => {
@@ -49,53 +54,121 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
   } = useFormularioPedido({ pedidoInicial, onClose })
 
   return (
-    <div data-formulario-pedido="true" className="w-full max-w-6xl mx-auto space-y-6">
+    <div data-formulario-pedido="true" className="w-full max-w-6xl mx-auto flex flex-col flex-1">
 
-      {/* ── Botón Superior: Guardar temporalmente (Pegado al lado derecho, sin ocupar espacio innecesario) ──── */}
-      {!pedidoInicial && (
-        <div className="flex items-center justify-end w-full gap-2 -mb-2">
-          {borradorGuardado && !borradorActivoCargado && (
-            <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
+      {/* ── Header Sticky del Modal con Botones Integrados ──── */}
+      {conHeaderModal ? (
+        <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+              {pedidoInicial ? 'Editar Pedido' : 'Nuevo Pedido'}
+            </h2>
+            <p className="text-[11px] text-gray-400 dark:text-slate-400 truncate">
+              {pedidoInicial ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {!pedidoInicial && (
+              <>
+                {borradorGuardado && !borradorActivoCargado && (
+                  <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
+                    <button
+                      type="button"
+                      onClick={restaurarBorrador}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                      title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
+                    >
+                      <RotateCcw size={13} className="shrink-0" />
+                      <span className="hidden sm:inline">Restaurar guardado</span>
+                      <span className="sm:hidden">Restaurar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={descartarBorrador}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Descartar borrador guardado"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={guardarBorrador}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  title="Guardar temporalmente los datos cargados"
+                >
+                  <PauseCircle size={14} className="shrink-0" />
+                  <span className="hidden sm:inline">Guardar temporalmente</span>
+                  <span className="sm:hidden">Guardar</span>
+                </button>
+              </>
+            )}
+
+            {onClose && (
               <button
                 type="button"
-                onClick={restaurarBorrador}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
-                title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
+                onClick={onClose}
+                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90 ml-1"
+                title="Cerrar ventana"
               >
-                <RotateCcw size={13} className="shrink-0" />
-                <span>Restaurar guardado</span>
+                <X size={20} />
               </button>
-              <button
-                type="button"
-                onClick={descartarBorrador}
-                className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                title="Descartar borrador guardado"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={guardarBorrador}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-            title="Guardar temporalmente los datos cargados"
-          >
-            <PauseCircle size={14} className="shrink-0" />
-            <span>Guardar temporalmente</span>
-          </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            <span>{error}</span>
+            )}
           </div>
         </div>
+      ) : (
+        /* Si se renderiza en página estándar sin conHeaderModal (ej: /nuevo-pedido) */
+        !pedidoInicial && (
+          <div className="flex items-center justify-end w-full gap-2 mb-2">
+            {borradorGuardado && !borradorActivoCargado && (
+              <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
+                <button
+                  type="button"
+                  onClick={restaurarBorrador}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                  title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
+                >
+                  <RotateCcw size={13} className="shrink-0" />
+                  <span>Restaurar guardado</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={descartarBorrador}
+                  className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                  title="Descartar borrador guardado"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={guardarBorrador}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              title="Guardar temporalmente los datos cargados"
+            >
+              <PauseCircle size={14} className="shrink-0" />
+              <span>Guardar temporalmente</span>
+            </button>
+          </div>
+        )
       )}
+
+      {/* ── Contenido del Formulario ──── */}
+      <div className={conHeaderModal ? "p-3 md:p-6 pb-28 md:pb-6 space-y-6 flex-1" : "space-y-6"}>
+
+        {error && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+            <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
 
       {/* DISEÑO DE 2 COLUMNAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
@@ -430,6 +503,7 @@ export default function FormularioPedido({ pedidoInicial, onClose }: PropsFormul
         </div>
       </div>
 
+      </div>
     </div>
   )
 }

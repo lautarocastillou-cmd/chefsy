@@ -358,41 +358,19 @@ export default function PaginaPedidos() {
       {(modalNuevoPedidoAbierto || pedidoAEditar) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
           <div 
-            className="bg-white dark:bg-slate-900 border-0 md:border border-slate-200/50 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative will-change-transform flex flex-col" 
+            className="bg-white dark:bg-slate-900 border-0 md:border border-slate-200/50 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative flex flex-col" 
             data-lenis-prevent="true"
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
           >
-            {/* Header del Modal */}
-            <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
-              <div>
-                <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                  {pedidoAEditar ? 'Editar Pedido' : 'Nuevo Pedido'}
-                </h2>
-                <p className="text-[11px] text-gray-400 dark:text-slate-400">
-                  {pedidoAEditar ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setModalNuevoPedidoAbierto(false)
-                  setPedidoAEditar(null)
-                }}
-                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            {/* Contenido del Modal */}
-            <div className="p-3 md:p-6 pb-28 md:pb-6 flex-1 overflow-y-auto">
-              <FormularioPedido 
-                pedidoInicial={pedidoAEditar || undefined}
-                onClose={() => {
-                  setModalNuevoPedidoAbierto(false)
-                  setPedidoAEditar(null)
-                }} 
-              />
-            </div>
+            <FormularioPedido 
+              pedidoInicial={pedidoAEditar || undefined}
+              conHeaderModal={true}
+              onClose={() => {
+                setModalNuevoPedidoAbierto(false)
+                setPedidoAEditar(null)
+              }} 
+            />
           </div>
         </div>
       )}
