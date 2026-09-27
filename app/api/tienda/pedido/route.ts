@@ -22,16 +22,39 @@ function obtenerIP(req: Request): string {
   )
 }
 
-// ── Validación básica de estructura del payload ───────────────────────────────
+// ── Validación estricta de estructura del payload ───────────────────────────────
 function validarEstructuraPedido(body: any): string | null {
   if (!body || typeof body !== 'object') return 'Payload inválido'
-  if (!body.id || typeof body.id !== 'string') return 'ID de pedido requerido'
-  if (!body.cliente || typeof body.cliente !== 'string' || !body.cliente.trim()) return 'Nombre de cliente requerido'
-  if (!body.telefono || typeof body.telefono !== 'string' || !body.telefono.trim()) return 'Teléfono requerido'
-  if (!Array.isArray(body.productos) || body.productos.length === 0) return 'El pedido debe contener al menos un producto'
+  if (!body.id || typeof body.id !== 'string' || !body.id.trim() || body.id.length > 64) {
+    return 'ID de pedido requerido e inválido (máx 64 caracteres)'
+  }
+  if (!body.cliente || typeof body.cliente !== 'string' || !body.cliente.trim() || body.cliente.length > 120) {
+    return 'Nombre de cliente requerido (máx 120 caracteres)'
+  }
+  if (!body.telefono || typeof body.telefono !== 'string' || !body.telefono.trim() || body.telefono.length > 40) {
+    return 'Teléfono requerido (máx 40 caracteres)'
+  }
+  if (body.direccion !== undefined && body.direccion !== null) {
+    if (typeof body.direccion !== 'string' || body.direccion.length > 300) {
+      return 'Dirección inválida (máx 300 caracteres)'
+    }
+  }
+  if (body.observaciones !== undefined && body.observaciones !== null) {
+    if (typeof body.observaciones !== 'string' || body.observaciones.length > 500) {
+      return 'Observaciones demasiado largas (máx 500 caracteres)'
+    }
+  }
+  if (!Array.isArray(body.productos) || body.productos.length === 0) {
+    return 'El pedido debe contener al menos un producto'
+  }
+  if (body.productos.length > 50) {
+    return 'El pedido no puede superar 50 ítems de producto'
+  }
   if (!['delivery', 'retiro'].includes(body.tipoEntrega)) return 'Tipo de entrega inválido'
   if (!['efectivo', 'tarjeta', 'transferencia', 'sin_especificar'].includes(body.metodoPago)) return 'Método de pago inválido'
-  if (typeof body.total !== 'number' || body.total < 0) return 'Total inválido'
+  if (typeof body.total !== 'number' || !Number.isFinite(body.total) || body.total < 0 || body.total > 10000000) {
+    return 'Total inválido (debe ser un número finito entre 0 y 10.000.000)'
+  }
   return null
 }
 

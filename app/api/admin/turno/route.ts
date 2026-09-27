@@ -60,10 +60,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { activo, cajaInicial, fechaInicio, tipoTurno } = body
+    const { activo, cajaInicial, fechaInicio } = body
 
-    if (activo === undefined) {
-      return NextResponse.json({ error: 'Datos incompletos.' }, { status: 400 })
+    if (typeof activo !== 'boolean') {
+      return NextResponse.json({ error: 'Campo "activo" requerido y debe ser booleano.' }, { status: 400 })
+    }
+
+    let cajaInicialNum = 0
+    if (cajaInicial !== undefined && cajaInicial !== null) {
+      cajaInicialNum = Number(cajaInicial)
+      if (isNaN(cajaInicialNum) || !Number.isFinite(cajaInicialNum) || cajaInicialNum < 0 || cajaInicialNum > 10000000) {
+        return NextResponse.json({ error: 'Caja inicial inválida (debe ser un número finito entre 0 y 10.000.000).' }, { status: 400 })
+      }
     }
 
     const supabase = obtenerSupabaseAdmin()
@@ -72,8 +80,8 @@ export async function POST(request: Request) {
     const payloadConTipo: any = { 
       id: 1, 
       activo, 
-      caja_inicial: cajaInicial, 
-      fecha_inicio: fechaInicio,
+      caja_inicial: cajaInicialNum, 
+      fecha_inicio: typeof fechaInicio === 'string' && fechaInicio.trim() ? fechaInicio.trim() : null,
       tipo_turno: 'noche'
     }
 

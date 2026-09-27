@@ -10,6 +10,71 @@ import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { enviarNotificacionCadete } from '@/lib/webpush'
 import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
 
+const TIPOS_ENTREGA_VALIDOS = ['delivery', 'retiro', 'mostrador', 'consumo_local']
+const METODOS_PAGO_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'sin_especificar', 'puntos']
+
+function validarPedidoParaCrear(pedido: any): string | null {
+  if (!pedido || typeof pedido !== 'object') return 'El pedido es requerido y debe ser un objeto.'
+  if (!pedido.id || typeof pedido.id !== 'string' || !pedido.id.trim() || pedido.id.length > 64) {
+    return 'ID de pedido inválido (máx 64 caracteres).'
+  }
+  if (!pedido.cliente || typeof pedido.cliente !== 'string' || !pedido.cliente.trim() || pedido.cliente.length > 120) {
+    return 'Nombre del cliente requerido (máx 120 caracteres).'
+  }
+  if (pedido.telefono !== undefined && pedido.telefono !== null) {
+    if (typeof pedido.telefono !== 'string' || pedido.telefono.length > 40) {
+      return 'Teléfono inválido (máx 40 caracteres).'
+    }
+  }
+  if (pedido.direccion !== undefined && pedido.direccion !== null) {
+    if (typeof pedido.direccion !== 'string' || pedido.direccion.length > 300) {
+      return 'Dirección inválida (máx 300 caracteres).'
+    }
+  }
+  if (pedido.tipoEntrega && !TIPOS_ENTREGA_VALIDOS.includes(pedido.tipoEntrega)) {
+    return `Tipo de entrega inválido. Permitidos: ${TIPOS_ENTREGA_VALIDOS.join(', ')}`
+  }
+  if (pedido.metodoPago && !METODOS_PAGO_VALIDOS.includes(pedido.metodoPago)) {
+    return `Método de pago inválido. Permitidos: ${METODOS_PAGO_VALIDOS.join(', ')}`
+  }
+  const total = Number(pedido.total)
+  if (isNaN(total) || !Number.isFinite(total) || total < 0 || total > 10000000) {
+    return 'Total inválido (debe ser un número finito entre 0 y 10.000.000).'
+  }
+  if (pedido.costoEnvio !== undefined && pedido.costoEnvio !== null) {
+    const envio = Number(pedido.costoEnvio)
+    if (isNaN(envio) || !Number.isFinite(envio) || envio < 0 || envio > 500000) {
+      return 'Costo de envío inválido (debe ser un número finito entre 0 y 500.000).'
+    }
+  }
+  if (!Array.isArray(pedido.productos) || pedido.productos.length === 0) {
+    return 'El pedido debe incluir al menos un producto.'
+  }
+  if (pedido.productos.length > 100) {
+    return 'El pedido no puede exceder los 100 productos.'
+  }
+  for (let i = 0; i < pedido.productos.length; i++) {
+    const p = pedido.productos[i]
+    if (!p || typeof p !== 'object') return `Producto en posición ${i} inválido.`
+    const cant = Number(p.cantidad)
+    if (!Number.isInteger(cant) || cant < 1 || cant > 100) {
+      return `Cantidad inválida para "${p.nombre || 'producto'}" (debe ser un entero entre 1 y 100).`
+    }
+    const precio = Number(p.precioUnitario ?? p.precio)
+    if (isNaN(precio) || !Number.isFinite(precio) || precio < 0 || precio > 1000000) {
+      return `Precio inválido para "${p.nombre || 'producto'}".`
+    }
+  }
+  return null
+}
+
+function validarCoordenadas(coords: any): boolean {
+  if (!coords || typeof coords !== 'object') return false
+  const lat = Number(coords.latitud ?? coords.lat)
+  const lng = Number(coords.longitud ?? coords.lng)
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+}
+
 export async function POST(request: Request) {
   // 1. Validar sesión en el servidor
   const sesion = await obtenerSesion()
@@ -45,8 +110,9 @@ export async function POST(request: Request) {
         }
 
         const { pedido } = body
-        if (!pedido || !pedido.id) {
-          return NextResponse.json({ error: 'Datos incompletos para crear.' }, { status: 400 })
+        const errorVal = validarPedidoParaCrear(pedido)
+        if (errorVal) {
+          return NextResponse.json({ error: errorVal }, { status: 400 })
         }
 
         const payload = { ...pedido, archivado: false }
@@ -92,8 +158,27 @@ export async function POST(request: Request) {
         }
 
         const { id, pedido } = body
-        if (!id || !pedido) {
+        if (!id || typeof id !== 'string' || !id.trim() || id.length > 64 || !pedido || typeof pedido !== 'object') {
           return NextResponse.json({ error: 'Datos incompletos para editar.' }, { status: 400 })
+        }
+
+        if (pedido.total !== undefined) {
+          const t = Number(pedido.total)
+          if (isNaN(t) || !Number.isFinite(t) || t < 0 || t > 10000000) {
+            return NextResponse.json({ error: 'Total inválido.' }, { status: 400 })
+          }
+        }
+        if (pedido.costoEnvio !== undefined && pedido.costoEnvio !== null) {
+          const e = Number(pedido.costoEnvio)
+          if (isNaN(e) || !Number.isFinite(e) || e < 0 || e > 500000) {
+            return NextResponse.json({ error: 'Costo de envío inválido.' }, { status: 400 })
+          }
+        }
+        if (pedido.tipoEntrega && !TIPOS_ENTREGA_VALIDOS.includes(pedido.tipoEntrega)) {
+          return NextResponse.json({ error: 'Tipo de entrega inválido.' }, { status: 400 })
+        }
+        if (pedido.metodoPago && !METODOS_PAGO_VALIDOS.includes(pedido.metodoPago)) {
+          return NextResponse.json({ error: 'Método de pago inválido.' }, { status: 400 })
         }
 
         const payload = { ...pedido }
@@ -381,8 +466,8 @@ export async function POST(request: Request) {
       case 'actualizar_gps': {
         // Permitido para cadetes y administradores
         const { ids, cadete_coordenadas } = body
-        if (!ids || !Array.isArray(ids) || !cadete_coordenadas) {
-          return NextResponse.json({ error: 'Datos incompletos para actualizar_gps.' }, { status: 400 })
+        if (!ids || !Array.isArray(ids) || ids.length === 0 || ids.length > 50 || !validarCoordenadas(cadete_coordenadas)) {
+          return NextResponse.json({ error: 'Datos de coordenadas o lista de IDs inválida.' }, { status: 400 })
         }
 
         let query = supabaseAdmin
@@ -407,8 +492,14 @@ export async function POST(request: Request) {
         }
 
         const { id, cadete_id, cadete_nombre } = body
-        if (!id) {
-          return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
+        if (!id || typeof id !== 'string' || !id.trim() || id.length > 64) {
+          return NextResponse.json({ error: 'ID de pedido no provisto o inválido.' }, { status: 400 })
+        }
+        if (cadete_id && (typeof cadete_id !== 'string' || cadete_id.length > 64)) {
+          return NextResponse.json({ error: 'ID de cadete inválido.' }, { status: 400 })
+        }
+        if (cadete_nombre && (typeof cadete_nombre !== 'string' || cadete_nombre.length > 100)) {
+          return NextResponse.json({ error: 'Nombre de cadete inválido.' }, { status: 400 })
         }
 
         const { data: updateData, error } = await supabaseAdmin
@@ -438,8 +529,11 @@ export async function POST(request: Request) {
         }
 
         const { id, metodoPago } = body
-        if (!id || !metodoPago) {
-          return NextResponse.json({ error: 'Datos incompletos para cambiar_metodo_pago.' }, { status: 400 })
+        if (!id || typeof id !== 'string' || !id.trim() || id.length > 64) {
+          return NextResponse.json({ error: 'ID de pedido inválido.' }, { status: 400 })
+        }
+        if (!metodoPago || !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+          return NextResponse.json({ error: `Método de pago inválido. Permitidos: ${METODOS_PAGO_VALIDOS.join(', ')}` }, { status: 400 })
         }
 
         const { error } = await supabaseAdmin
