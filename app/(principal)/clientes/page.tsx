@@ -87,6 +87,9 @@ export default function PaginaAgendaClientes() {
     clientesFiltrados,
     metricas,
     gruposDuplicados,
+    totalOmitidos,
+    omitirGrupo,
+    restablecerOmitidos,
     refrescar
   } = useAgendaClientes()
 
@@ -719,6 +722,9 @@ export default function PaginaAgendaClientes() {
         onFusionCompletada={() => {
           refrescar()
         }}
+        onOmitir={omitirGrupo}
+        totalOmitidos={totalOmitidos}
+        onRestablecerOmitidos={restablecerOmitidos}
       />
     </div>
   )

@@ -5,7 +5,11 @@ import {
   normalizarTelefonoArgentino,
   limpiarNombre,
   detectarGruposDuplicados,
-  GrupoDuplicado
+  GrupoDuplicado,
+  obtenerFirmaGrupo,
+  obtenerFirmasOmitidas,
+  guardarFirmaOmitida,
+  restablecerFirmasOmitidas
 } from '@/lib/motor-clientes'
 
 export type { GrupoDuplicado } from '@/lib/motor-clientes'
@@ -249,10 +253,31 @@ export function useAgendaClientes() {
     return resultado
   }, [clientesAgrupados, busqueda, segmentoActivo, criterioOrden])
 
-  // Detección automática de duplicados por motor de semejanzas
+  // Control de casos duplicados omitidos/ignorados
+  const [firmasOmitidas, setFirmasOmitidas] = useState<string[]>([])
+
+  useEffect(() => {
+    setFirmasOmitidas(obtenerFirmasOmitidas())
+  }, [])
+
+  const omitirGrupo = useCallback((grupo: GrupoDuplicado) => {
+    const firma = obtenerFirmaGrupo(grupo)
+    if (!firma) return
+    const actualizadas = guardarFirmaOmitida(firma)
+    setFirmasOmitidas(actualizadas)
+  }, [])
+
+  const restablecerOmitidos = useCallback(() => {
+    restablecerFirmasOmitidas()
+    setFirmasOmitidas([])
+  }, [])
+
+  // Detección automática de duplicados por motor de semejanzas (excluyendo omitidos)
   const gruposDuplicados = useMemo(() => {
-    return detectarGruposDuplicados(clientesAgrupados)
-  }, [clientesAgrupados])
+    const todos = detectarGruposDuplicados(clientesAgrupados)
+    const setOmitidas = new Set(firmasOmitidas)
+    return todos.filter(g => !setOmitidas.has(obtenerFirmaGrupo(g)))
+  }, [clientesAgrupados, firmasOmitidas])
 
   return {
     cargando,
@@ -268,6 +293,9 @@ export function useAgendaClientes() {
     clientesFiltrados,
     metricas,
     gruposDuplicados,
+    totalOmitidos: firmasOmitidas.length,
+    omitirGrupo,
+    restablecerOmitidos,
     refrescar: cargarPedidos
   }
 }

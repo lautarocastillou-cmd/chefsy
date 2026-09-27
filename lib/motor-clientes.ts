@@ -277,13 +277,28 @@ export function detectarGruposDuplicados(
       const telNormA = normalizarTelefonoArgentino(cA.telefono)
       const telNormB = normalizarTelefonoArgentino(cB.telefono)
 
+      // Comprobar direcciones
+      const dirA = limpiarNombre(cA.direccionMasReciente)
+      const dirB = limpiarNombre(cB.direccionMasReciente)
+      const mismaDir = Boolean(dirA && dirB && dirA.length > 5 && dirA === dirB)
+
+      // Regla de descarte inteligente:
+      // Si ambos tienen celulares válidos y son DISTINTOS:
+      if (telNormA && telNormB && telNormA !== telNormB) {
+        const tokensA = limpiarNombre(cA.nombre).split(' ').filter(w => w.length > 1)
+        const tokensB = limpiarNombre(cB.nombre).split(' ').filter(w => w.length > 1)
+        // Nombres de una sola palabra (ej: "Lucas", "Agustin") con números distintos son personas distintas
+        if (tokensA.length <= 1 || tokensB.length <= 1) {
+          continue
+        }
+        // Si no comparten dirección ni tienen nombre casi idéntico (>0.94), descartar
+        if (!mismaDir && simNombre < 0.94) {
+          continue
+        }
+      }
+
       // Si tienen nombres muy semejantes (ej: Lautaro Castillo vs Lautaro Castillou)
       if (simNombre >= 0.82) {
-        // Si además tienen misma dirección o GPS similar, es prácticamente certeza
-        const dirA = limpiarNombre(cA.direccionMasReciente)
-        const dirB = limpiarNombre(cB.direccionMasReciente)
-        const mismaDir = dirA && dirB && dirA.length > 5 && dirA === dirB
-
         const confianza = mismaDir 
           ? 92 
           : (telNormA && telNormB && telNormA === telNormB ? 95 : Math.round(simNombre * 90))
@@ -315,4 +330,62 @@ export function detectarGruposDuplicados(
   }
 
   return grupos
+}
+
+// ── PERSISTENCIA DE CASOS OMITIDOS / DESCARTADOS ─────────────────────────────
+export const STORAGE_KEY_DUPLICADOS_OMITIDOS = 'chefsy_duplicados_omitidos'
+
+/**
+ * Genera una firma única para un grupo de duplicados basada en sus clientes y teléfonos.
+ */
+export function obtenerFirmaGrupo(grupo: GrupoDuplicado): string {
+  if (!grupo || !Array.isArray(grupo.clientes)) return ''
+  const items = grupo.clientes.map(c => {
+    const nom = limpiarNombre(c.nombre)
+    const tel = normalizarTelefonoArgentino(c.telefono) || 'sin_tel'
+    return `${nom}:${tel}`
+  })
+  items.sort()
+  return items.join('|')
+}
+
+/**
+ * Obtiene la lista de firmas de grupos omitidos desde localStorage.
+ */
+export function obtenerFirmasOmitidas(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DUPLICADOS_OMITIDOS)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Guarda una firma de grupo omitido en localStorage.
+ */
+export function guardarFirmaOmitida(firma: string): string[] {
+  if (typeof window === 'undefined' || !firma) return []
+  try {
+    const existentes = new Set(obtenerFirmasOmitidas())
+    existentes.add(firma)
+    const lista = Array.from(existentes)
+    localStorage.setItem(STORAGE_KEY_DUPLICADOS_OMITIDOS, JSON.stringify(lista))
+    return lista
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Restablece todas las firmas omitidas para volver a analizar todos los casos.
+ */
+export function restablecerFirmasOmitidas(): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(STORAGE_KEY_DUPLICADOS_OMITIDOS)
+  } catch {}
 }
