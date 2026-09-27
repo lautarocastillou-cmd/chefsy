@@ -13,13 +13,20 @@ export async function GET(request: Request) {
     }
 
     const query = rawId.trim().toLowerCase()
+
+    // Sanitización estricta anti-inyección PostgREST: solo alfanuméricos, guiones, puntos y espacios (1 a 60 caracteres)
+    if (!/^[a-z0-9_\-\.\s]{1,60}$/.test(query)) {
+      return NextResponse.json({ error: 'Identificador con formato inválido' }, { status: 400 })
+    }
+
+    const querySanitizado = query.replace(/\s+/g, ' ')
     const supabase = obtenerSupabaseAdmin()
 
     // 1. Buscar en la tabla cadetes por ID o por Nombre (insensible a mayúsculas)
     const { data: cadetesEncontrados, error: cadeteError } = await supabase
       .from('cadetes')
       .select('id, nombre, lat, lng, speed, heading, accuracy, bateria, gps_activo, updated_at, activo')
-      .or(`id.ilike.${query},nombre.ilike.${query}`)
+      .or(`id.ilike.${querySanitizado},nombre.ilike.${querySanitizado}`)
       .limit(1)
 
     if (cadeteError) {

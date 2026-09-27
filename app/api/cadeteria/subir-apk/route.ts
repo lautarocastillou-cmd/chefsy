@@ -8,7 +8,12 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization')
-    const tokenSecreto = process.env.FLUTTER_SECRET_TOKEN || 'chefsy-flutter-secret-2026'
+    const tokenSecreto = process.env.FLUTTER_SECRET_TOKEN
+
+    if (!tokenSecreto) {
+      console.error('[API Subir APK] Error de seguridad: FLUTTER_SECRET_TOKEN no está definido en las variables de entorno.')
+      return NextResponse.json({ error: 'Servicio no configurado para recibir archivos' }, { status: 503 })
+    }
 
     if (authHeader !== `Bearer ${tokenSecreto}`) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

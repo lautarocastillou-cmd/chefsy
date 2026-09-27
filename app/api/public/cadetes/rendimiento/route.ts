@@ -31,6 +31,12 @@ export async function GET(request: Request) {
     }
 
     const cadeteIdNorm = cadeteIdParam.trim().toLowerCase()
+
+    // Sanitización estricta anti-inyección PostgREST: solo letras, números, guiones y puntos
+    if (!/^[a-z0-9_\-\.]+$/.test(cadeteIdNorm)) {
+      return NextResponse.json({ error: 'cadeteId con formato inválido' }, { status: 400 })
+    }
+
     const fechaHoy = obtenerFechaNegocio()
 
     // 0. Revisar caché en memoria (TTL de 120 segundos)

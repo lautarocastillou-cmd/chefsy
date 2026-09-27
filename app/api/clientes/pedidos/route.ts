@@ -45,8 +45,15 @@ export async function POST(req: Request) {
     }
 
     let filtros: string[] = []
-    if (clienteId) filtros.push(`cliente_id.eq.${clienteId}`)
-    if (telefono && telefono.trim() !== '') filtros.push(`telefono.eq.${telefono.trim()}`)
+    if (clienteId && /^[0-9a-fA-F\-]{36}$/.test(clienteId)) {
+      filtros.push(`cliente_id.eq.${clienteId}`)
+    }
+    if (telefono && typeof telefono === 'string') {
+      const telLimpio = telefono.replace(/[^\d+]/g, '')
+      if (telLimpio.length >= 6) {
+        filtros.push(`telefono.eq.${telLimpio}`)
+      }
+    }
 
     if (filtros.length === 0) {
       return NextResponse.json({ pedidos: [] }, { status: 200 })
