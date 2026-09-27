@@ -127,13 +127,17 @@ const ESTILO_GOOGLE_HIBRIDO: maplibregl.StyleSpecification = {
   ],
 }
 
+function obtenerBaseEstilo(tipo: EstiloMapa): string {
+  if (tipo === 'cyber-dark' || tipo === 'google-calles') return 'google-base'
+  return tipo
+}
+
 // Generador de especificaciones limpias (sin mutaciones en memoria)
 function obtenerEspecificacionEstilo(tipo: EstiloMapa): string | maplibregl.StyleSpecification {
   switch (tipo) {
     case 'google-calles':
-      return JSON.parse(JSON.stringify(ESTILO_GOOGLE_CALLES))
     case 'cyber-dark':
-      return JSON.parse(JSON.stringify(ESTILO_CYBER_DARK))
+      return JSON.parse(JSON.stringify(ESTILO_GOOGLE_CALLES))
     case 'google-hibrido':
       return JSON.parse(JSON.stringify(ESTILO_GOOGLE_HIBRIDO))
     case 'vector-liberty':
@@ -295,11 +299,17 @@ export default function MapaLibreSeguimiento({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapaCargado) return
-    if (estiloAplicadoRef.current === estilo) return // Evitar recarga redundante
 
+    const baseAnterior = obtenerBaseEstilo(estiloAplicadoRef.current)
+    const baseNueva = obtenerBaseEstilo(estilo)
     estiloAplicadoRef.current = estilo
-    setCargandoEstilo(true)
 
+    // Si la base es idéntica (ej. entre google-calles y cyber-dark), el cambio es instantáneo vía filtro CSS
+    if (baseAnterior === baseNueva) {
+      return
+    }
+
+    setCargandoEstilo(true)
     const nuevoEstilo = obtenerEspecificacionEstilo(estilo)
 
     // Escuchador garantizado que se registra ANTES de setStyle
@@ -835,8 +845,10 @@ export default function MapaLibreSeguimiento({
     })
   }, [modoCamara, cadeteCoords?.latitud, destinoCoords?.latitud, mapaCargado])
 
+  const esModoOscuroCyber = estilo === 'cyber-dark'
+
   return (
-    <div className="relative w-full h-full overflow-hidden bg-slate-950">
+    <div className={`relative w-full h-full overflow-hidden bg-slate-950 ${esModoOscuroCyber ? 'maplibre-dark-cyber' : ''}`}>
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes moto-radar-ping {
@@ -845,6 +857,10 @@ export default function MapaLibreSeguimiento({
         }
         .maplibregl-canvas {
           outline: none;
+          transition: filter 0.35s ease;
+        }
+        .maplibre-dark-cyber .maplibregl-canvas {
+          filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(110%);
         }
       `}} />
 
