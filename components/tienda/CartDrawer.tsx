@@ -15,6 +15,7 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { ItemCarrito as TipoItemCarrito } from '@/tipos/tienda'
 import ModalLoginCliente from '@/components/auth/ModalLoginCliente'
 import { notificarAviso, notificarError } from '@/lib/notificaciones'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 interface PropsItemCarritoFila {
   item: TipoItemCarrito
@@ -378,12 +379,50 @@ export default function CartDrawer() {
   if (!cartAbierto) return null
 
   return (
-    <div 
-      className="fixed inset-0 z-[99999] flex flex-col justify-end sm:flex-row sm:justify-end"
-      onWheel={(e) => e.stopPropagation()}
-      onTouchMove={(e) => e.stopPropagation()}
-      data-lenis-prevent="true"
+    <ErrorBoundary
+      contexto="CartDrawer y Checkout"
+      fallback={({ reset }) => (
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          onClick={onCerrar}
+        >
+          <div 
+            className="max-w-md w-full bg-[#1e1e1e] border border-[#3d3d3d] rounded-3xl p-6 text-center shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Hubo un problema con el carrito</h3>
+            <p className="text-xs text-slate-400">
+              Ocurrió un error inesperado al procesar los datos de tu compra. Podés reintentar o cerrar para continuar navegando.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                type="button"
+                onClick={reset}
+                className="px-4 py-2 bg-[#ff5e00] hover:bg-[#e05300] text-white font-bold text-xs rounded-xl shadow-lg cursor-pointer"
+              >
+                Reintentar
+              </button>
+              <button
+                type="button"
+                onClick={onCerrar}
+                className="px-4 py-2 bg-[#2a2a2a] hover:bg-[#333] text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     >
+      <div 
+        className="fixed inset-0 z-[99999] flex flex-col justify-end sm:flex-row sm:justify-end"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-lenis-prevent="true"
+      >
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: estaCerrando ? 0 : 1 }}
@@ -1025,5 +1064,6 @@ export default function CartDrawer() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   )
 }

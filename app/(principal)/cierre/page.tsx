@@ -33,6 +33,7 @@ import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 import ComparativaTurnoVivo from '@/components/cierre/ComparativaTurnoVivo'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import ModalVerificacionCierre from '@/components/cierre/ModalVerificacionCierre'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 export default function PaginaCierreCaja() {
   const {
@@ -605,7 +606,9 @@ _Generado automáticamente desde Chefsy_`.trim()
       </div>
 
       {tabActual === 'metricas' ? (
-        <MetricasHistoricas />
+        <ErrorBoundary contexto="Cierre Caja - Métricas Históricas">
+          <MetricasHistoricas />
+        </ErrorBoundary>
       ) : (
         <div className={`space-y-6 transition-all duration-300 ${cargando ? 'opacity-40 pointer-events-none' : ''}`}>
 
@@ -893,18 +896,20 @@ _Generado automáticamente desde Chefsy_`.trim()
         )}
 
         {/* Comparativa de Turno en Vivo vs Histórico */}
-        <ComparativaTurnoVivo
-          fecha={fechaSeleccionada}
-          turnoTipo="noche"
-          metricasActuales={{
-            facturacionNeta,
-            totalPedidos,
-            ticketPromedio,
-            efectivoVentas: efectivoTotal,
-            transferenciaTotal,
-            totalDelivery: deliveryTotal,
-          }}
-        />
+        <ErrorBoundary contexto="Cierre Caja - Comparativa Turno">
+          <ComparativaTurnoVivo
+            fecha={fechaSeleccionada}
+            turnoTipo="noche"
+            metricasActuales={{
+              facturacionNeta,
+              totalPedidos,
+              ticketPromedio,
+              efectivoVentas: efectivoTotal,
+              transferenciaTotal,
+              totalDelivery: deliveryTotal,
+            }}
+          />
+        </ErrorBoundary>
         
       </div>
       )}
