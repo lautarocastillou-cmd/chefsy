@@ -1,16 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
  * Hook para ejecutar una función cuando se presiona la tecla Escape.
  * Útil para cerrar modales, menús y cajones de forma accesible.
  */
 export function useEscapeKey(onEscape: () => void, isActive: boolean = true) {
+  const onEscapeRef = useRef(onEscape)
+  onEscapeRef.current = onEscape
+
   useEffect(() => {
     if (!isActive) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onEscape()
+        onEscapeRef.current()
       }
     }
 
@@ -19,5 +22,5 @@ export function useEscapeKey(onEscape: () => void, isActive: boolean = true) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onEscape, isActive])
+  }, [isActive])
 }

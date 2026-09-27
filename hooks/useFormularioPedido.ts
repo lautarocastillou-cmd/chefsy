@@ -57,8 +57,18 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [error, setRawError] = useState('')
   const errorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
-  // ── Gestión de borrador temporal ───────────────────────────────────────────
-  const [borradorGuardado, setBorradorGuardado] = useState<BorradorPedido | null>(null)
+  // ── Gestión de borrador temporal (Lectura directa para 0 lag al abrir modal) ──
+  const [borradorGuardado, setBorradorGuardado] = useState<BorradorPedido | null>(() => {
+    if (pedidoInicial || typeof window === 'undefined') return null
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_BORRADOR_PEDIDO)
+      if (raw) {
+        const parsed = JSON.parse(raw) as BorradorPedido
+        if (parsed && typeof parsed === 'object') return parsed
+      }
+    } catch {}
+    return null
+  })
   const [borradorActivoCargado, setBorradorActivoCargado] = useState(false)
 
   const setError = (msg: string) => {
@@ -138,22 +148,6 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
   }, [pedidoInicial])
 
-  // 1b. Cargar borrador guardado temporalmente (si no estamos editando un pedido existente)
-  useEffect(() => {
-    if (!pedidoInicial && typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_BORRADOR_PEDIDO)
-        if (raw) {
-          const parsed = JSON.parse(raw) as BorradorPedido
-          if (parsed && typeof parsed === 'object') {
-            setBorradorGuardado(parsed)
-          }
-        }
-      } catch (e) {
-        console.error('Error al leer borrador de pedido', e)
-      }
-    }
-  }, [pedidoInicial])
 
   // 2. CRM Express
   useEffect(() => {
