@@ -1,6 +1,14 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Pedido } from '@/tipos'
 import { obtenerPedidosHistoricos } from '@/servicios/supabase/pedidos'
+import {
+  normalizarTelefonoArgentino,
+  limpiarNombre,
+  detectarGruposDuplicados,
+  GrupoDuplicado
+} from '@/lib/motor-clientes'
+
+export type { GrupoDuplicado } from '@/lib/motor-clientes'
 
 export type TipoSegmentoCliente = 'todos' | 'vip' | 'en_riesgo' | 'nuevos' | 'top_ticket'
 export type CriterioOrdenCliente = 'pedidos_desc' | 'gasto_desc' | 'reciente_desc' | 'nombre_asc' | 'ticket_desc'
@@ -31,55 +39,52 @@ export function useAgendaClientes() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteAgrupado | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function cargarPedidos() {
-      try {
-        setError(null)
-        const data = await obtenerPedidosHistoricos()
-        setPedidosHistoricos(data)
-      } catch (err: unknown) {
-        const mensaje = err instanceof Error ? err.message : 'Error al cargar clientes'
-        setError(mensaje)
-        console.error('Error cargando pedidos históricos:', err)
-      } finally {
-        setCargando(false)
-      }
+  const cargarPedidos = useCallback(async () => {
+    try {
+      setError(null)
+      const data = await obtenerPedidosHistoricos()
+      setPedidosHistoricos(data)
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error ? err.message : 'Error al cargar clientes'
+      setError(mensaje)
+      console.error('Error cargando pedidos históricos:', err)
+    } finally {
+      setCargando(false)
     }
-    cargarPedidos()
   }, [])
 
-  // Agrupar pedidos por cliente (teléfono único)
+  useEffect(() => {
+    cargarPedidos()
+  }, [cargarPedidos])
+
+  // Agrupar pedidos por cliente (teléfono normalizado o nombre)
   const clientesAgrupados = useMemo(() => {
     if (!Array.isArray(pedidosHistoricos)) return []
     const grupos: Record<string, Pedido[]> = {}
 
-    // Agrupar pedidos por teléfono
+    // Agrupar pedidos por teléfono normalizado canónico (o nombre limpio si no hay celular)
     pedidosHistoricos.forEach((p) => {
       if (!p) return
-      const tel = (p.telefono || '').toString().trim()
-      const telNormalizado = tel.toLowerCase().replace(/[^a-z0-9]/g, '')
-      
-      // Ignorar teléfonos no válidos o "sin especificar"
-      if (
-        !tel || 
-        telNormalizado === 'sesp' || 
-        telNormalizado === 'sinespecificar' || 
-        telNormalizado === 'undefined' || 
-        telNormalizado === 'null'
-      ) {
-        return
+      const telNorm = normalizarTelefonoArgentino(p.telefono)
+      const nomLimpio = limpiarNombre(p.cliente)
+
+      let clave = telNorm
+      if (!clave && nomLimpio && nomLimpio.length >= 3) {
+        clave = `nom_${nomLimpio}`
       }
 
-      if (!grupos[tel]) {
-        grupos[tel] = []
+      if (!clave) return
+
+      if (!grupos[clave]) {
+        grupos[clave] = []
       }
-      grupos[tel].push(p)
+      grupos[clave].push(p)
     })
 
     const ahoraMs = Date.now()
 
     // Mapear cada grupo a estadísticas acumuladas
-    const listaClientes: ClienteAgrupado[] = Object.entries(grupos).map(([telefono, pedidosCliente]) => {
+    const listaClientes: ClienteAgrupado[] = Object.entries(grupos).map(([clave, pedidosCliente]) => {
       // Ordenar pedidos del más nuevo al más viejo
       const ordenados = [...pedidosCliente].sort((a, b) => {
         const fechaA = new Date(`${a?.fecha || ''}T${a?.hora || '00:00'}`)
@@ -89,6 +94,7 @@ export function useAgendaClientes() {
 
       const ultimoPedido = ordenados[0] || {}
       const nombre = (ultimoPedido.cliente || 'Cliente Anónimo').toString()
+      const telefono = ordenados.find(p => Boolean(p.telefono && normalizarTelefonoArgentino(p.telefono)))?.telefono || ultimoPedido.telefono || 'Sin especificar'
 
       // Buscar la dirección más reciente
       const ultimoDelivery = ordenados.find((p) => p?.tipoEntrega === 'delivery')
@@ -243,6 +249,11 @@ export function useAgendaClientes() {
     return resultado
   }, [clientesAgrupados, busqueda, segmentoActivo, criterioOrden])
 
+  // Detección automática de duplicados por motor de semejanzas
+  const gruposDuplicados = useMemo(() => {
+    return detectarGruposDuplicados(clientesAgrupados)
+  }, [clientesAgrupados])
+
   return {
     cargando,
     error,
@@ -255,6 +266,8 @@ export function useAgendaClientes() {
     clienteSeleccionado,
     setClienteSeleccionado,
     clientesFiltrados,
-    metricas
+    metricas,
+    gruposDuplicados,
+    refrescar: cargarPedidos
   }
 }

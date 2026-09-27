@@ -9,6 +9,12 @@ import { requiereDireccion } from '@/lib/entrega'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
 import { generarId, generarIdProducto } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import useSWR from 'swr'
+import {
+  SugerenciaCliente,
+  crearIndiceBuscadorClientes,
+  normalizarTelefonoArgentino
+} from '@/lib/motor-clientes'
 
 export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
 
@@ -41,6 +47,20 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const router = useRouter()
 
   const [clienteEncontrado, setClienteEncontrado] = useState<Pedido | null>(null)
+  const [sugerenciasActivas, setSugerenciasActivas] = useState<SugerenciaCliente[]>([])
+  const [mostrarDropdownSugerencias, setMostrarDropdownSugerencias] = useState(false)
+
+  // Cargar lista de sugerencias del servidor (cacheada)
+  const { data: sugerenciasDb } = useSWR<SugerenciaCliente[]>(
+    '/api/admin/clientes-sugerencias',
+    async (url: string) => {
+      const res = await fetch(url)
+      if (!res.ok) return []
+      return res.json()
+    },
+    { dedupingInterval: 60000, revalidateOnFocus: false }
+  )
+
   const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>('delivery')
   const [cliente, setCliente] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -202,10 +222,123 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     return () => controller.abort()
   }, [coordenadas, pideDireccion, envioManual])
 
+  // ── Índice Fuse.js en memoria que combina sugerencias del servidor con pedidos activos ──
+  const indiceClientes = React.useMemo(() => {
+    const mapa = new Map<string, SugerenciaCliente>()
+
+    if (Array.isArray(sugerenciasDb)) {
+      sugerenciasDb.forEach(s => {
+        const key = s.telefonoNormalizado || s.nombre.toLowerCase().trim()
+        mapa.set(key, { ...s })
+      })
+    }
+
+    if (Array.isArray(pedidos)) {
+      pedidos.forEach(p => {
+        if (!p.cliente || p.cliente.trim().length < 2) return
+        const telNorm = normalizarTelefonoArgentino(p.telefono)
+        const key = telNorm || p.cliente.toLowerCase().trim()
+        const existente = mapa.get(key)
+        if (existente) {
+          if (!existente.direccion && p.direccion) {
+            existente.direccion = p.direccion
+            existente.coordenadas = p.coordenadas
+          }
+        } else {
+          mapa.set(key, {
+            nombre: p.cliente.trim(),
+            telefono: p.telefono || '',
+            telefonoNormalizado: telNorm,
+            direccion: p.direccion || '',
+            coordenadas: p.coordenadas || null,
+            metodoPago: p.metodoPago || 'efectivo',
+            tipoEntrega: p.tipoEntrega || 'delivery',
+          })
+        }
+      })
+    }
+
+    return crearIndiceBuscadorClientes(Array.from(mapa.values()))
+  }, [sugerenciasDb, pedidos])
+
+  // ── Búsqueda reactiva en tiempo real al escribir Nombre o Celular ──────────
+  useEffect(() => {
+    if (pedidoInicial) return
+
+    const queryNom = (cliente || '').trim()
+    const queryTel = normalizarTelefonoArgentino(telefono) || (telefono || '').trim()
+
+    // Activar sugerencias a partir de 2 letras de nombre o 3 dígitos de celular
+    const terminoBusqueda = queryNom.length >= 2 ? queryNom : (queryTel.length >= 3 ? queryTel : '')
+
+    if (!terminoBusqueda) {
+      setSugerenciasActivas([])
+      setMostrarDropdownSugerencias(false)
+      setClienteEncontrado(null)
+      return
+    }
+
+    const resultados = indiceClientes.search(terminoBusqueda)
+    if (resultados.length > 0) {
+      const top = resultados.slice(0, 4).map(r => r.item)
+      setSugerenciasActivas(top)
+      setMostrarDropdownSugerencias(true)
+
+      const mejor = resultados[0]
+      if (mejor && ((mejor.score !== undefined && mejor.score < 0.3) || (queryTel && mejor.item.telefonoNormalizado === queryTel))) {
+        setClienteEncontrado({
+          id: mejor.item.id || 'crm-match',
+          cliente: mejor.item.nombre,
+          telefono: mejor.item.telefono,
+          direccion: mejor.item.direccion || '',
+          coordenadas: mejor.item.coordenadas || undefined,
+          tipoEntrega: (mejor.item.tipoEntrega as TipoEntrega) || 'delivery',
+          metodoPago: (mejor.item.metodoPago as MetodoPago) || 'efectivo',
+          productos: [],
+          total: 0,
+          estado: 'en_cocina',
+          hora: '',
+          fecha: '',
+        })
+      } else {
+        setClienteEncontrado(null)
+      }
+    } else {
+      setSugerenciasActivas([])
+      setMostrarDropdownSugerencias(false)
+      setClienteEncontrado(null)
+    }
+  }, [cliente, telefono, indiceClientes, pedidoInicial])
+
   // 5. Acciones
+  const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
+    setCliente(sug.nombre)
+    if (sug.telefono && sug.telefono !== 'Sin especificar') {
+      setTelefono(sug.telefono)
+    }
+    if (sug.tipoEntrega && ['delivery', 'retiro', 'consumo_local'].includes(sug.tipoEntrega)) {
+      manejarTipoEntrega(sug.tipoEntrega as TipoEntrega)
+    }
+    if (sug.direccion) {
+      setDireccion(sug.direccion)
+      if (sug.coordenadas) {
+        setCoordenadas(sug.coordenadas)
+      }
+    }
+    if (sug.metodoPago && ['efectivo', 'tarjeta', 'transferencia', 'mixto', 'sin_especificar'].includes(sug.metodoPago)) {
+      setMetodoPago(sug.metodoPago as MetodoPago)
+    }
+    setMostrarDropdownSugerencias(false)
+    setSugerenciasActivas([])
+    setClienteEncontrado(null)
+  }
+
   const aplicarDatosCRM = () => {
     if (clienteEncontrado) {
       setCliente(clienteEncontrado.cliente)
+      if (clienteEncontrado.telefono && clienteEncontrado.telefono !== 'Sin especificar') {
+        setTelefono(clienteEncontrado.telefono)
+      }
       manejarTipoEntrega(clienteEncontrado.tipoEntrega)
       if (clienteEncontrado.tipoEntrega === 'delivery') {
         if (clienteEncontrado.direccion) setDireccion(clienteEncontrado.direccion)
@@ -213,6 +346,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       }
       setMetodoPago(clienteEncontrado.metodoPago)
       setClienteEncontrado(null)
+      setMostrarDropdownSugerencias(false)
+      setSugerenciasActivas([])
     }
   }
 
@@ -543,18 +678,20 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       metodoPago, observaciones, filasProductos, error, costoEnvio, distanciaKm,
       cargandoEnvio, envioManual, costoEnvioManualInput,
       montoEfectivo, montoTransferencia, montoTarjeta,
-      borradorGuardado, borradorActivoCargado
+      borradorGuardado, borradorActivoCargado,
+      sugerenciasActivas, mostrarDropdownSugerencias
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
       setObservaciones, setFilasProductos, setEnvioManual: manejarSetEnvioManual, setCostoEnvioManualInput,
-      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta
+      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta,
+      setMostrarDropdownSugerencias
     },
     derivados: {
       subtotal, pideDireccion, costoEnvioFinal, total
     },
     acciones: {
-      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      aplicarDatosCRM, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
       guardarBorrador, restaurarBorrador, descartarBorrador
     }
   }

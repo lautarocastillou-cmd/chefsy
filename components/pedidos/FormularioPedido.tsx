@@ -7,8 +7,9 @@ import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2, X } from 'lucide-react'
+import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2, X, MapPin } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { formatearTelefonoArgentino } from '@/lib/motor-clientes'
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -37,18 +38,20 @@ export default function FormularioPedido({
       metodoPago, observaciones, filasProductos, error, cargandoEnvio, 
       envioManual, costoEnvioManualInput, distanciaKm,
       montoEfectivo, montoTransferencia, montoTarjeta,
-      borradorGuardado, borradorActivoCargado
+      borradorGuardado, borradorActivoCargado,
+      sugerenciasActivas, mostrarDropdownSugerencias
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
       setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput,
-      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta
+      setMontoEfectivo, setMontoTransferencia, setMontoTarjeta,
+      setMostrarDropdownSugerencias
     },
     derivados: { 
       subtotal, pideDireccion, costoEnvioFinal, total 
     },
     acciones: { 
-      aplicarDatosCRM, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      aplicarDatosCRM, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
       guardarBorrador, restaurarBorrador, descartarBorrador
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
@@ -190,7 +193,7 @@ export default function FormularioPedido({
               Datos del cliente
             </h3>
             <div className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
                   Nombre <span className="text-red-400">*</span>
                 </label>
@@ -198,9 +201,64 @@ export default function FormularioPedido({
                   type="text"
                   value={cliente}
                   onChange={(e) => setCliente(e.target.value)}
+                  onFocus={() => {
+                    if (sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
+                  }}
                   placeholder="Ej: Juan García"
                   className={claseInput}
                 />
+
+                {/* Dropdown flotante de sugerencias inteligentes con Fuse.js */}
+                {mostrarDropdownSugerencias && sugerenciasActivas.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-chefsy-300 dark:border-chefsy-800 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5 text-chefsy-600 dark:text-chefsy-400">
+                        <Sparkles size={12} /> Clientes sugeridos
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarDropdownSugerencias(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] cursor-pointer"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                    {sugerenciasActivas.map((sug, idx) => (
+                      <button
+                        key={`${sug.nombre}-${sug.telefono}-${idx}`}
+                        type="button"
+                        onClick={() => seleccionarSugerenciaCliente(sug)}
+                        className="w-full px-3.5 py-2.5 flex items-start gap-3 text-left hover:bg-chefsy-50/80 dark:hover:bg-slate-800/80 transition-colors group cursor-pointer"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-chefsy-100 dark:bg-chefsy-950 text-chefsy-700 dark:text-chefsy-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                          {sug.nombre.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-600 dark:group-hover:text-chefsy-400 transition-colors">
+                              {sug.nombre}
+                            </span>
+                            {sug.telefono && (
+                              <span className="text-[11px] font-mono font-medium text-slate-400 dark:text-slate-400 shrink-0">
+                                {formatearTelefonoArgentino(sug.telefono)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {sug.direccion ? (
+                              <span className="truncate flex items-center gap-1">
+                                <MapPin size={11} className="text-slate-400 shrink-0" />
+                                {sug.direccion}
+                              </span>
+                            ) : (
+                              <span className="italic opacity-70">Retiro en local</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

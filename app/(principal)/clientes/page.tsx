@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { formatearPrecio } from '@/lib/utils'
 import AdministradorCuentasClientes from '@/components/clientes/AdministradorCuentasClientes'
+import ModalFusionClientes from '@/components/clientes/ModalFusionClientes'
 import {
   Search,
   MapPin,
@@ -24,7 +25,8 @@ import {
   Send,
   Flame,
   Gift,
-  Clock
+  Clock,
+  GitMerge
 } from 'lucide-react'
 import { useAgendaClientes, ClienteAgrupado, TipoSegmentoCliente, CriterioOrdenCliente } from '@/hooks/useAgendaClientes'
 
@@ -83,10 +85,13 @@ export default function PaginaAgendaClientes() {
     clienteSeleccionado,
     setClienteSeleccionado,
     clientesFiltrados,
-    metricas
+    metricas,
+    gruposDuplicados,
+    refrescar
   } = useAgendaClientes()
 
   const [pestaña, setPestaña] = useState<'agenda' | 'cuentas'>('agenda')
+  const [modalFusionAbierto, setModalFusionAbierto] = useState(false)
 
   // Enviar mensaje de WhatsApp con plantillas estratégicas
   const enviarWhatsAppPlantilla = (cliente: ClienteAgrupado, tipo: 'saludo' | 'vip' | 'rescate' | 'favorito') => {
@@ -138,28 +143,50 @@ export default function PaginaAgendaClientes() {
           </div>
         </div>
 
-        {/* Pestañas de navegación */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl self-start sm:self-center">
-          <button
-            onClick={() => setPestaña('agenda')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              pestaña === 'agenda'
-                ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            Agenda y Métricas
-          </button>
-          <button
-            onClick={() => setPestaña('cuentas')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              pestaña === 'cuentas'
-                ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            Administrar Cuentas
-          </button>
+        {/* Acciones y Pestañas de navegación */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {pestaña === 'agenda' && (
+            <button
+              onClick={() => setModalFusionAbierto(true)}
+              className="relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-xs cursor-pointer"
+              title="Detectar clientes duplicados o nombres semejantes para unificarlos"
+            >
+              <GitMerge size={14} className="text-amber-600 dark:text-amber-400" />
+              <span>Semejanzas / Duplicados</span>
+              {gruposDuplicados.length > 0 ? (
+                <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold animate-pulse">
+                  {gruposDuplicados.length}
+                </span>
+              ) : (
+                <span className="text-[10px] text-amber-600/70 dark:text-amber-400/70 font-mono">
+                  (0)
+                </span>
+              )}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl self-start sm:self-center">
+            <button
+              onClick={() => setPestaña('agenda')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                pestaña === 'agenda'
+                  ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              Agenda y Métricas
+            </button>
+            <button
+              onClick={() => setPestaña('cuentas')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                pestaña === 'cuentas'
+                  ? 'bg-white dark:bg-slate-900 text-chefsy shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              Administrar Cuentas
+            </button>
+          </div>
         </div>
       </div>
 
@@ -683,6 +710,16 @@ export default function PaginaAgendaClientes() {
           )}
         </div>
       )}
+
+      {/* Modal de Fusión de Clientes Inteligente */}
+      <ModalFusionClientes
+        isOpen={modalFusionAbierto}
+        onClose={() => setModalFusionAbierto(false)}
+        grupos={gruposDuplicados}
+        onFusionCompletada={() => {
+          refrescar()
+        }}
+      />
     </div>
   )
 }
