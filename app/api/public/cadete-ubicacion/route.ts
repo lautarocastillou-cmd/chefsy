@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 // GET /api/public/cadete-ubicacion?id=[cadeteIdOIdentificador]
-// Endpoint público para consultar la ubicación en tiempo real de un cadete sin autenticación
+// Endpoint público para consultar la ubicación en tiempo real de un cadete
 export async function GET(request: Request) {
   try {
+    // 1. Rate Limiting por IP (máximo 45 peticiones por minuto por IP)
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`cadete-ubicacion:${ip}`, 45, 60)
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Por favor esperá unos segundos.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const rawId = searchParams.get('id')
 
@@ -14,19 +31,18 @@ export async function GET(request: Request) {
 
     const query = rawId.trim().toLowerCase()
 
-    // Sanitización estricta anti-inyección PostgREST: solo alfanuméricos, guiones, puntos y espacios (1 a 60 caracteres)
-    if (!/^[a-z0-9_\-\.\s]{1,60}$/.test(query)) {
+    // Sanitización estricta anti-inyección PostgREST: solo alfanuméricos, guiones y puntos (1 a 50 caracteres)
+    if (!/^[a-z0-9_\-\.]{1,50}$/.test(query)) {
       return NextResponse.json({ error: 'Identificador con formato inválido' }, { status: 400 })
     }
 
-    const querySanitizado = query.replace(/\s+/g, ' ')
     const supabase = obtenerSupabaseAdmin()
 
-    // 1. Buscar en la tabla cadetes por ID o por Nombre (insensible a mayúsculas)
+    // 2. Buscar en la tabla cadetes por ID o por Nombre exacto
     const { data: cadetesEncontrados, error: cadeteError } = await supabase
       .from('cadetes')
       .select('id, nombre, lat, lng, speed, heading, accuracy, bateria, gps_activo, updated_at, activo')
-      .or(`id.ilike.${querySanitizado},nombre.ilike.${querySanitizado}`)
+      .or(`id.ilike.${query},nombre.ilike.${query}`)
       .limit(1)
 
     if (cadeteError) {
@@ -36,11 +52,18 @@ export async function GET(request: Request) {
 
     const cadete = cadetesEncontrados?.[0]
 
-    if (!cadete) {
-      return NextResponse.json({ error: 'Cadete no encontrado' }, { status: 404 })
+    if (!cadete || cadete.activo === false) {
+      return NextResponse.json({ error: 'Cadete no disponible o inactivo' }, { status: 404 })
     }
 
-    // 2. Verificar si está en medio de un reparto activo (opcional informativo)
+    // 3. Protección de privacidad: Solo exponer coordenadas si el GPS está activo y la última actualización es reciente (< 15 minutos)
+    const esReciente = Boolean(
+      cadete.updated_at &&
+      Date.now() - new Date(cadete.updated_at).getTime() < 15 * 60 * 1000
+    )
+    const gpsTransmitiendo = Boolean(cadete.gps_activo && esReciente)
+
+    // 4. Verificar si está en medio de un reparto activo
     let enReparto = false
     let totalPedidosActivos = 0
 
@@ -63,13 +86,14 @@ export async function GET(request: Request) {
       cadete: {
         id: cadete.id,
         nombre: cadete.nombre || cadete.id,
-        lat: cadete.lat,
-        lng: cadete.lng,
-        speed: cadete.speed,
-        heading: cadete.heading,
-        accuracy: cadete.accuracy,
+        // Si no está transmitiendo activamente, nunca filtrar coordenadas históricas/privadas
+        lat: gpsTransmitiendo ? cadete.lat : null,
+        lng: gpsTransmitiendo ? cadete.lng : null,
+        speed: gpsTransmitiendo ? cadete.speed : 0,
+        heading: gpsTransmitiendo ? cadete.heading : 0,
+        accuracy: gpsTransmitiendo ? cadete.accuracy : null,
         bateria: cadete.bateria,
-        gps_activo: cadete.gps_activo,
+        gps_activo: gpsTransmitiendo,
         updated_at: cadete.updated_at,
         activo: cadete.activo ?? true,
       },

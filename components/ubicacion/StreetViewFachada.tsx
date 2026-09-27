@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 interface StreetViewInfo {
   disponible: boolean
   urlImagenProxy?: string
-  urlImagenDirecta?: string
   fecha?: string | null
   copyright?: string
   urlDirectaPano: string

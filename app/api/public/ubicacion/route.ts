@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
-
-const EXPO_SECRET_TOKEN = 'chefsy_expo_secure_track_99XQ'
+import { verificarTokenFlutter } from '@/lib/auth-flutter'
+import { obtenerSesion } from '@/lib/auth-server'
 
 function esCoordenadaValida(lat: any, lng: any): boolean {
   if (lat === null || lat === undefined || lat === '' || typeof lat === 'boolean') return false
@@ -13,9 +13,13 @@ function esCoordenadaValida(lat: any, lng: any): boolean {
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${EXPO_SECRET_TOKEN}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const authFlutter = verificarTokenFlutter(request)
+    if (!authFlutter.autorizado) {
+      // Si no viene con token móvil, verificar si es una sesión de staff (ej: panel o dev tools de admin)
+      const sesion = await obtenerSesion()
+      if (!sesion || (sesion.rol !== 'admin' && sesion.rol !== 'cajero')) {
+        return authFlutter.errorResponse || NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      }
     }
 
     const body = await request.json()

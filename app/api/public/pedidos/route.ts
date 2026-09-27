@@ -3,9 +3,7 @@ import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { registrarVentaKardex } from '@/lib/stock-motor'
 import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
-
-// Token compartido con la app Flutter (vía variable de entorno segura)
-const FLUTTER_SECRET_TOKEN = process.env.FLUTTER_SECRET_TOKEN || 'chefsy_expo_secure_track_99XQ'
+import { verificarTokenFlutter } from '@/lib/auth-flutter'
 
 // Columnas esenciales para el portal de cadete (excluye ruta_historial para ahorrar 90% de egress)
 const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costoEnvio, distanciaKm, metodoPago, pago_confirmado, estado, hora, fecha, productos, observaciones, coordenadas, orden_entrega, en_camino_at, entregado_at, cadete_id, cadete_nombre, tipoEntrega'
@@ -14,9 +12,9 @@ const COLUMNAS_PEDIDOS_CADETE = 'id, cliente, direccion, telefono, total, costoE
 // Devuelve todos los datos del pedido asignado al cadete (en_cocina, listo, en_camino, entregado)
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${FLUTTER_SECRET_TOKEN}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const auth = verificarTokenFlutter(request)
+    if (!auth.autorizado) {
+      return auth.errorResponse!
     }
 
     const { searchParams } = new URL(request.url)
@@ -94,9 +92,9 @@ export async function GET(request: Request) {
 // Permite a la app Flutter cambiar el estado de un pedido (ej. listo o entregado)
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${FLUTTER_SECRET_TOKEN}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const auth = verificarTokenFlutter(request)
+    if (!auth.autorizado) {
+      return auth.errorResponse!
     }
 
     const body = await request.json()

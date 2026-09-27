@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { verificarTokenFlutter } from '@/lib/auth-flutter'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,16 +8,9 @@ export const dynamic = 'force-dynamic'
 // Recibe el archivo APK desde GitHub Actions y lo sube al almacenamiento público de Supabase
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const tokenSecreto = process.env.FLUTTER_SECRET_TOKEN
-
-    if (!tokenSecreto) {
-      console.error('[API Subir APK] Error de seguridad: FLUTTER_SECRET_TOKEN no está definido en las variables de entorno.')
-      return NextResponse.json({ error: 'Servicio no configurado para recibir archivos' }, { status: 503 })
-    }
-
-    if (authHeader !== `Bearer ${tokenSecreto}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const auth = verificarTokenFlutter(request)
+    if (!auth.autorizado) {
+      return auth.errorResponse!
     }
 
     const formData = await request.formData()

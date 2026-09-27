@@ -584,7 +584,6 @@ export default function ModalHerramientasTesteo() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer chefsy_expo_secure_track_99XQ',
           },
           body: JSON.stringify({
             cadeteId: cadeteGpsSeleccionado,
@@ -618,7 +617,6 @@ export default function ModalHerramientasTesteo() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer chefsy_expo_secure_track_99XQ',
         },
         body: JSON.stringify({
           cadeteId: cadeteGpsSeleccionado,

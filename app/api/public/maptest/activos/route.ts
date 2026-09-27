@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { obtenerSesion } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
+    const sesion = await obtenerSesion()
+    if (!sesion || (sesion.rol !== 'admin' && sesion.rol !== 'cajero')) {
+      return NextResponse.json(
+        { error: 'Acceso no autorizado. Se requieren permisos de personal.' },
+        { status: 401 }
+      )
+    }
+
     const supabase = obtenerSupabaseAdmin()
 
     // 1. Obtener pedidos activos de delivery

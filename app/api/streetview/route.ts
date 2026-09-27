@@ -17,8 +17,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const latStr = searchParams.get('lat')
   const lngStr = searchParams.get('lng')
-  const widthStr = searchParams.get('w') || '600'
-  const heightStr = searchParams.get('h') || '350'
+
+  // Validar y limitar estrictamente dimensiones para evitar abuso de cuota y saturación de RAM
+  const rawW = parseInt(searchParams.get('w') || '600', 10)
+  const rawH = parseInt(searchParams.get('h') || '350', 10)
+  const w = isNaN(rawW) ? 600 : Math.min(Math.max(rawW, 100), 800)
+  const h = isNaN(rawH) ? 350 : Math.min(Math.max(rawH, 100), 600)
+
   const proxyImage = searchParams.get('image') === 'true'
 
   if (!latStr || !lngStr) {
@@ -28,14 +33,12 @@ export async function GET(request: Request) {
   const lat = parseFloat(latStr)
   const lng = parseFloat(lngStr)
 
-  if (isNaN(lat) || isNaN(lng)) {
+  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return NextResponse.json({ error: 'Coordenadas inválidas' }, { status: 400 })
   }
 
-  const apiKey =
-    process.env.GOOGLE_MAPS_API_KEY ||
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-    process.env.MAPS_API_KEY
+  // Clave exclusivamente privada de servidor (nunca NEXT_PUBLIC)
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.MAPS_API_KEY
 
   const directPanoUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`
 
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
     }
 
     const staticParams = new URLSearchParams({
-      size: `${widthStr}x${heightStr}`,
+      size: `${w}x${h}`,
       location: `${lat},${lng}`,
       fov: '85',
       pitch: '0',
@@ -110,7 +113,7 @@ export async function GET(request: Request) {
       const buffer = await imgRes.arrayBuffer()
       return new Response(buffer, {
         headers: {
-          'Content-Type': imgRes.headers.get('content-Type') || 'image/jpeg',
+          'Content-Type': imgRes.headers.get('content-type') || 'image/jpeg',
           'Cache-Control': 'public, max-age=604800, s-maxage=604800, immutable',
         },
       })
@@ -135,8 +138,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       disponible: true,
-      urlImagenProxy: `/api/streetview?lat=${lat}&lng=${lng}&w=${widthStr}&h=${heightStr}&image=true`,
-      urlImagenDirecta: staticImageUrl,
+      urlImagenProxy: `/api/streetview?lat=${lat}&lng=${lng}&w=${w}&h=${h}&image=true`,
       fecha: fechaFormateada,
       panoId: metaData.pano_id,
       copyright: metaData.copyright || '© Google',

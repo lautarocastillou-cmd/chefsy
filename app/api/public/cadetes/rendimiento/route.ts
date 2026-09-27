@@ -3,8 +3,7 @@ import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerFechaNegocio, obtenerRangoSemanaISO } from '@/lib/tiempo'
 import { consolidarMetricasCadetes, MetricasCadeteConsolidadas } from '@/lib/telemetriaCadetes'
 import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
-
-const FLUTTER_SECRET_TOKEN = process.env.FLUTTER_SECRET_TOKEN || 'chefsy_expo_secure_track_99XQ'
+import { verificarTokenFlutter } from '@/lib/auth-flutter'
 
 interface CadeteItemRanking {
   posicion: number
@@ -19,9 +18,9 @@ interface CadeteItemRanking {
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${FLUTTER_SECRET_TOKEN}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const auth = verificarTokenFlutter(request)
+    if (!auth.autorizado) {
+      return auth.errorResponse!
     }
 
     const { searchParams } = new URL(request.url)
