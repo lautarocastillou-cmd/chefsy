@@ -1,6 +1,6 @@
 // app/api/clientes/login/route.ts
 // Login de clientes con teléfono y contraseña.
-// Seguridad: bcrypt compare, rate limiting por IP, delay progresivo.
+// Seguridad: bcrypt compare, rate limiting por IP no bloqueante.
 
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
@@ -10,26 +10,28 @@ import {
   firmarTokenCliente,
   configurarCookieCliente,
 } from '@/lib/auth-cliente-server'
+import { obtenerIpCliente, verificarRateLimit, resetearRateLimit } from '@/lib/rate-limit'
 
-// Rate limiting en memoria (reinicia con cada deploy — suficiente para producción serverless)
-const intentosFallidos = new Map<string, { cantidad: number; ultimoIntento: number }>()
-const MAX_INTENTOS      = 5
-const BLOQUEO_MS        = 15 * 60 * 1000 // 15 minutos
+const MAX_INTENTOS = 5
+const VENTANA_BLOQUEO_SEG = 15 * 60 // 15 minutos
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'ip-desconocida'
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`login-cliente:${ip}`, MAX_INTENTOS, VENTANA_BLOQUEO_SEG)
 
-    // ── Rate Limiting ───────────────────────────────────────────────────────
-    const intento = intentosFallidos.get(ip) || { cantidad: 0, ultimoIntento: Date.now() }
-    if (intento.cantidad >= MAX_INTENTOS) {
-      if (Date.now() - intento.ultimoIntento < BLOQUEO_MS) {
-        return NextResponse.json(
-          { error: 'Demasiados intentos fallidos. IP bloqueada por 15 minutos.' },
-          { status: 429 }
-        )
-      }
-      intentosFallidos.delete(ip)
+    // ── Rate Limiting (No bloqueante, sin worker starvation) ─────────────────
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { error: 'Demasiados intentos fallidos. Tu IP fue bloqueada por 15 minutos por seguridad.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
     }
 
     const body = await request.json()
@@ -49,21 +51,9 @@ export async function POST(request: Request) {
       .eq('telefono', telLimpio)
       .maybeSingle()
 
-    // ── Helper para registrar fallo ─────────────────────────────────────────
-    const registrarFallo = async () => {
-      const actual = intentosFallidos.get(ip) || { cantidad: 0, ultimoIntento: Date.now() }
-      const nuevaCant = actual.cantidad + 1
-      intentosFallidos.set(ip, { cantidad: nuevaCant, ultimoIntento: Date.now() })
-      // Delay progresivo anti-bruteforce
-      const penalizacion = Math.min(nuevaCant * 400, 3000)
-      await new Promise((r) => setTimeout(r, penalizacion))
-      return nuevaCant
-    }
-
     if (error || !cliente || !cliente.clave_hash) {
-      const cant = await registrarFallo()
       return NextResponse.json(
-        { error: `Teléfono o contraseña incorrectos. (Intento ${cant} de ${MAX_INTENTOS})` },
+        { error: `Teléfono o contraseña incorrectos. (Intentos restantes: ${rateCheck.restante})` },
         { status: 401 }
       )
     }
@@ -71,15 +61,14 @@ export async function POST(request: Request) {
     // ── Comparar contraseña ─────────────────────────────────────────────────
     const coincide = await compararClaveCliente(clave, cliente.clave_hash)
     if (!coincide) {
-      const cant = await registrarFallo()
       return NextResponse.json(
-        { error: `Teléfono o contraseña incorrectos. (Intento ${cant} de ${MAX_INTENTOS})` },
+        { error: `Teléfono o contraseña incorrectos. (Intentos restantes: ${rateCheck.restante})` },
         { status: 401 }
       )
     }
 
-    // ── Éxito: resetear contador, firmar JWT, devolver cookie ───────────────
-    intentosFallidos.delete(ip)
+    // ── Éxito: resetear contador de rate limit, firmar JWT, devolver cookie ──
+    resetearRateLimit(`login-cliente:${ip}`)
 
     const token = await firmarTokenCliente({
       clienteId: cliente.id,

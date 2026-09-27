@@ -11,11 +11,30 @@ import {
   firmarTokenCliente,
   configurarCookieCliente,
 } from '@/lib/auth-cliente-server'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 const MIN_CLAVE = 8
+const MAX_REGISTROS = 5
+const VENTANA_REGISTRO_SEG = 15 * 60 // 15 minutos
 
 export async function POST(request: Request) {
   try {
+    // ── Rate Limiting por IP para evitar spam de cuentas y agotamiento de CPU por bcrypt ──
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`registro-cliente:${ip}`, MAX_REGISTROS, VENTANA_REGISTRO_SEG)
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes de registro desde esta conexión. Esperá unos minutos.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
+    }
+
     const body = await request.json()
     const { nombre, telefono, clave } = body
 

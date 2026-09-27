@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enviarAlertaTelegram } from '@/lib/telegram-alertas'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,16 @@ const ERRORES_IGNORADOS = [
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Rate Limiting por IP: máximo 5 reportes por minuto por IP para evitar saturar el bot de Telegram
+    const ip = obtenerIpCliente(req)
+    const rateCheck = verificarRateLimit(`reportar-error:${ip}`, 5, 60)
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { ok: false, error: 'Demasiados reportes enviados. Intente más tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.segundosParaReset) } }
+      )
+    }
+
     const cuerpo = await req.json()
     const { mensaje, modulo, url, stack, usuario, severidad, contexto } = cuerpo
 
@@ -47,23 +58,22 @@ export async function POST(req: NextRequest) {
     }
 
     const userAgent = req.headers.get('user-agent') || 'Desconocido'
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Desconocida'
 
-    // Despacho asíncrono a Telegram
-    await enviarAlertaTelegram({
+    // Despacho asíncrono no bloqueante a Telegram (no detiene la respuesta al cliente)
+    enviarAlertaTelegram({
       titulo: 'Excepción Capturada en Cliente',
-      mensaje,
-      modulo: modulo || 'Frontend / Tienda',
+      mensaje: mensaje.slice(0, 500),
+      modulo: (typeof modulo === 'string' ? modulo.slice(0, 60) : '') || 'Frontend / Tienda',
       severidad: severidad || 'error',
-      url: url || req.headers.get('referer') || undefined,
-      stack,
-      usuario,
+      url: (typeof url === 'string' ? url.slice(0, 200) : '') || req.headers.get('referer')?.slice(0, 200) || undefined,
+      stack: typeof stack === 'string' ? stack.slice(0, 1000) : undefined,
+      usuario: typeof usuario === 'string' ? usuario.slice(0, 60) : undefined,
       contexto: {
         ...(contexto || {}),
         navegador: userAgent.slice(0, 150),
-        ip_origen: ip.split(',')[0].trim(),
+        ip_origen: ip,
       },
-    })
+    }).catch((err) => console.error('[API reportar-error] Fallo alerta Telegram:', err))
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -1,42 +1,45 @@
 import { NextResponse } from 'next/server'
+import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
+const CACHE_KEY_APK = 'cadeteria_apk_disponible'
+const FALLBACK_GITHUB_URL = 'https://github.com/lautarocastillou-cmd/flutter-chefsy-app/releases/latest/download/app-release.apk'
+
 // GET /api/cadeteria/descargar-apk
-// Redirecciona directamente a la última APK en los servidores públicos de Chefsy (Supabase Storage)
-export async function GET(request: Request) {
-  const fallbackGithubUrl = 'https://github.com/lautarocastillou-cmd/flutter-chefsy-app/releases/latest/download/app-release.apk'
-
+// Redirecciona directamente a la última APK con verificación cacheada en memoria (0 llamadas a Supabase tras primer hit)
+export async function GET() {
   try {
-    const supabase = obtenerSupabaseAdmin()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const apkPublicUrl = supabaseUrl
+      ? `${supabaseUrl}/storage/v1/object/public/cadeteria/app-release.apk`
+      : FALLBACK_GITHUB_URL
 
-    // 1. Verificar/Crear el bucket 'cadeteria' público si no existe
-    const { data: buckets } = await supabase.storage.listBuckets()
-    const existeBucket = buckets?.some(b => b.name === 'cadeteria')
-
-    if (!existeBucket) {
-      await supabase.storage.createBucket('cadeteria', {
-        public: true,
-        fileSizeLimit: 104857600 // 100MB
+    const enCache = obtenerDeCache<boolean>(CACHE_KEY_APK)
+    if (enCache === true) {
+      return NextResponse.redirect(apkPublicUrl, {
+        status: 307,
+        headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' }
       })
     }
 
-    // 2. Verificar si el archivo app-release.apk ya fue subido a Supabase Storage
-    const { data: archivos } = await supabase.storage.from('cadeteria').list()
-    const existeApk = archivos?.some(f => f.name === 'app-release.apk')
+    const supabase = obtenerSupabaseAdmin()
+    const { data: archivos } = await supabase.storage.from('cadeteria').list('', { limit: 1, search: 'app-release.apk' })
+    const existe = Boolean(archivos?.some(f => f.name === 'app-release.apk'))
 
-    if (existeApk) {
-      const { data: urlData } = supabase.storage.from('cadeteria').getPublicUrl('app-release.apk')
-      if (urlData?.publicUrl) {
-        return NextResponse.redirect(urlData.publicUrl, { status: 307 })
-      }
+    guardarEnCache(CACHE_KEY_APK, existe, 600) // 10 minutos de caché en memoria
+
+    if (existe) {
+      return NextResponse.redirect(apkPublicUrl, {
+        status: 307,
+        headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' }
+      })
     }
 
-    // Si aún no se ha subido la APK a Supabase Storage (esperando primer build de GitHub Actions), usar GitHub Release
-    return NextResponse.redirect(fallbackGithubUrl, { status: 307 })
+    return NextResponse.redirect(FALLBACK_GITHUB_URL, { status: 307 })
   } catch (error) {
     console.error('[API Descargar APK] Error:', error)
-    return NextResponse.redirect(fallbackGithubUrl, { status: 307 })
+    return NextResponse.redirect(FALLBACK_GITHUB_URL, { status: 307 })
   }
 }

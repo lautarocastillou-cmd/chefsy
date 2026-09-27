@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { buscarDireccionPorCoordenadas } from '@/lib/ubicacion'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 function extraerCoordenadasDeUrl(rawUrl: string) {
   if (!rawUrl) return null
@@ -107,6 +108,16 @@ function simplificarGeoJSON(coordinates: [number, number][], toleranciaMetros = 
 }
 
 export async function GET(request: Request) {
+  // Rate limiting por IP: máx 60 solicitudes por minuto para proteger OSRM y CPU
+  const ip = obtenerIpCliente(request)
+  const rateCheck = verificarRateLimit(`resolve-maps:${ip}`, 60, 60)
+  if (!rateCheck.permitido) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes de mapa. Esperá unos segundos.' },
+      { status: 429, headers: { 'Retry-After': String(rateCheck.segundosParaReset) } }
+    )
+  }
+
   const { searchParams } = new URL(request.url)
   const urlParam = searchParams.get('url')
 
@@ -120,6 +131,9 @@ export async function GET(request: Request) {
   let coordsCadena: string | null = null
   if (waypointsParam) {
     const partes = waypointsParam.split(';').map(p => p.trim()).filter(Boolean)
+    if (partes.length > 25) {
+      return NextResponse.json({ error: 'Excedido el límite máximo de 25 puntos de ruta.' }, { status: 400 })
+    }
     if (partes.length >= 2) {
       const esValido = partes.every(p => {
         const [lon, lat] = p.split(',').map(Number)

@@ -11,29 +11,28 @@ import {
   firmarToken,
   configurarCookieSesion,
 } from '@/lib/auth-server'
+import { obtenerIpCliente, verificarRateLimit, resetearRateLimit } from '@/lib/rate-limit'
 
-// Diccionario en memoria para rastrear intentos fallidos (Rate Limiting básico)
-const intentosFallidos = new Map<string, { cantidad: number; ultimoIntento: number }>();
-const MAX_INTENTOS = 5;
-const TIEMPO_BLOQUEO_MS = 15 * 60 * 1000; // 15 minutos
+const MAX_INTENTOS = 5
+const VENTANA_BLOQUEO_SEG = 15 * 60 // 15 minutos
 
 export async function POST(request: Request) {
   try {
-    // Obtener IP para el Rate Limiting
-    const ip = request.headers.get('x-forwarded-for') || 'ip-desconocida';
-    const intento = intentosFallidos.get(ip) || { cantidad: 0, ultimoIntento: Date.now() };
+    // Rate Limiting seguro por IP (5 intentos por cada 15 minutos)
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`login-staff:${ip}`, MAX_INTENTOS, VENTANA_BLOQUEO_SEG)
 
-    // Verificar si la IP está bloqueada
-    if (intento.cantidad >= MAX_INTENTOS) {
-      if (Date.now() - intento.ultimoIntento < TIEMPO_BLOQUEO_MS) {
-        return NextResponse.json(
-          { error: 'Demasiados intentos fallidos. Tu IP fue bloqueada por 15 minutos por seguridad.' },
-          { status: 429 }
-        )
-      } else {
-        // Expiró el bloqueo
-        intentosFallidos.delete(ip);
-      }
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { error: 'Demasiados intentos fallidos. Tu IP fue bloqueada por 15 minutos por seguridad.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
     }
 
     const body = await request.json()
@@ -50,24 +49,14 @@ export async function POST(request: Request) {
     const datosUsuario = await validarCredenciales(usuario, clave)
 
     if (!datosUsuario) {
-      // Registrar intento fallido
-      intentosFallidos.set(ip, {
-        cantidad: (intentosFallidos.get(ip)?.cantidad || 0) + 1,
-        ultimoIntento: Date.now()
-      });
-
-      // Delay sintético progresivo
-      const penalizacion = Math.min((intentosFallidos.get(ip)?.cantidad || 1) * 500, 3000);
-      await new Promise((r) => setTimeout(r, penalizacion))
-      
       return NextResponse.json(
-        { error: `Usuario o contraseña incorrectos. (Intento ${(intentosFallidos.get(ip)?.cantidad || 1)} de ${MAX_INTENTOS})` },
+        { error: `Usuario o contraseña incorrectos. (Intentos restantes: ${rateCheck.restante})` },
         { status: 401 }
       )
     }
 
     // Si el login es exitoso, resetear contador de la IP
-    intentosFallidos.delete(ip);
+    resetearRateLimit(`login-staff:${ip}`)
 
     // Firmar el JWT con los datos del usuario
     const token = await firmarToken(datosUsuario)

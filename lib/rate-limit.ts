@@ -86,3 +86,11 @@ export function verificarRateLimit(
     segundosParaReset
   }
 }
+
+/**
+ * Resetea el contador de rate limit para una clave dada (ej: tras login exitoso).
+ */
+export function resetearRateLimit(clave: string): void {
+  rateLimitMap.delete(clave)
+}
+
