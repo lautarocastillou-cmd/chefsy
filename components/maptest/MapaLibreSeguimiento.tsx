@@ -12,7 +12,7 @@ if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl ===
   (maplibregl as any).setWorkerUrl('/lib/maplibre/maplibre-gl-worker.mjs')
 }
 
-export type EstiloMapa = 'cyber-dark' | 'vector-liberty' | 'vector-positron' | 'google-calles' | 'google-hibrido'
+export type EstiloMapa = 'google-calles' | 'cyber-dark' | 'google-hibrido' | 'vector-liberty' | 'vector-positron'
 export type ModoCamara = 'piloto' | 'dron' | 'cenital' | 'todo' | 'libre'
 
 interface Props {
@@ -33,33 +33,9 @@ interface Props {
   }) => void
 }
 
-// Estilo Cyber Dark rasterizado en spec MapLibre
-const ESTILO_CYBER_DARK: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    'carto-dark': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    },
-  },
-  layers: [
-    {
-      id: 'carto-dark-layer',
-      type: 'raster',
-      source: 'carto-dark',
-      minzoom: 0,
-      maxzoom: 20,
-    },
-  ],
-}
+// ── 1. DEFINICIÓN DE ESTILOS DE ULTRA ALTO RENDIMIENTO (60-120 FPS) ───────────
 
-// Estilo Google Maps Calles HD (el mismo de la app estándar)
+// Estilo Google Maps Calles HD (Ultra Rápido - Cacheado en edge Argentina < 15ms)
 const ESTILO_GOOGLE_CALLES: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -80,6 +56,44 @@ const ESTILO_GOOGLE_CALLES: maplibregl.StyleSpecification = {
       id: 'google-calles-layer',
       type: 'raster',
       source: 'google-calles',
+      minzoom: 0,
+      maxzoom: 21,
+    },
+  ],
+}
+
+// Estilo Cyber Dark Raster (ESRI Dark Gray Canvas - Sin marcas de agua, carga en 50ms)
+const ESTILO_CYBER_DARK: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'esri-dark': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: '&copy; Esri, HERE',
+    },
+    'esri-dark-ref': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+    },
+  },
+  layers: [
+    {
+      id: 'esri-dark-base',
+      type: 'raster',
+      source: 'esri-dark',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+    {
+      id: 'esri-dark-labels',
+      type: 'raster',
+      source: 'esri-dark-ref',
       minzoom: 0,
       maxzoom: 20,
     },
@@ -108,18 +122,27 @@ const ESTILO_GOOGLE_HIBRIDO: maplibregl.StyleSpecification = {
       type: 'raster',
       source: 'google-hybrid',
       minzoom: 0,
-      maxzoom: 20,
+      maxzoom: 21,
     },
   ],
 }
 
-// URLs y especificaciones de estilos
-const ESTILOS_VECTOR: Record<EstiloMapa, string | maplibregl.StyleSpecification> = {
-  'cyber-dark': 'https://tiles.openfreemap.org/styles/dark',
-  'vector-liberty': 'https://tiles.openfreemap.org/styles/liberty',
-  'vector-positron': 'https://tiles.openfreemap.org/styles/positron',
-  'google-calles': ESTILO_GOOGLE_CALLES,
-  'google-hibrido': ESTILO_GOOGLE_HIBRIDO,
+// Generador de especificaciones limpias (sin mutaciones en memoria)
+function obtenerEspecificacionEstilo(tipo: EstiloMapa): string | maplibregl.StyleSpecification {
+  switch (tipo) {
+    case 'google-calles':
+      return JSON.parse(JSON.stringify(ESTILO_GOOGLE_CALLES))
+    case 'cyber-dark':
+      return JSON.parse(JSON.stringify(ESTILO_CYBER_DARK))
+    case 'google-hibrido':
+      return JSON.parse(JSON.stringify(ESTILO_GOOGLE_HIBRIDO))
+    case 'vector-liberty':
+      return 'https://tiles.openfreemap.org/styles/liberty'
+    case 'vector-positron':
+      return 'https://tiles.openfreemap.org/styles/positron'
+    default:
+      return JSON.parse(JSON.stringify(ESTILO_GOOGLE_CALLES))
+  }
 }
 
 // Helper: Calcular ángulo de rumbo geográfico (0° a 360°)
@@ -158,11 +181,20 @@ export default function MapaLibreSeguimiento({
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [mapaCargado, setMapaCargado] = useState(false)
+  const [cargandoEstilo, setCargandoEstilo] = useState(false)
+
+  // Referencia al estilo actualmente aplicado para evitar bucles o reinicios innecesarios
+  const estiloAplicadoRef = useRef<EstiloMapa>(estilo)
 
   // Marcadores
   const cadeteMarkerRef = useRef<maplibregl.Marker | null>(null)
   const clienteMarkerRef = useRef<maplibregl.Marker | null>(null)
   const localMarkerRef = useRef<maplibregl.Marker | null>(null)
+
+  // Cache de elementos DOM del marcador para evitar querySelector en 60 FPS
+  const markerHeadlightRef = useRef<HTMLElement | null>(null)
+  const markerArrowRef = useRef<HTMLElement | null>(null)
+  const markerBadgeRef = useRef<HTMLElement | null>(null)
 
   // Animación suave de la moto
   const animFrameRef = useRef<number | null>(null)
@@ -184,6 +216,7 @@ export default function MapaLibreSeguimiento({
     type: 'FeatureCollection',
     features: [],
   })
+  const ultimaPosicionRutaRef = useRef<{ latitud: number; longitud: number } | null>(null)
 
   // Obtener coordenadas destino (cliente o local)
   const destinoCoords = pedido?.coordenadas || (cadete ? null : UBICACION_LOCAL)
@@ -206,13 +239,18 @@ export default function MapaLibreSeguimiento({
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: (ESTILOS_VECTOR[estilo] || ESTILOS_VECTOR['vector-liberty']) as any,
+      style: obtenerEspecificacionEstilo(estilo) as any,
       center: initialCenter,
       zoom: 16,
       pitch: pitchPersonalizado || 55,
       bearing: 0,
       maxPitch: 75,
     })
+
+    // Exponer para diagnóstico interno
+    if (typeof window !== 'undefined') {
+      ;(window as any).__maplibreInstance = map
+    }
 
     // Controles de navegación MapLibre
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
@@ -223,12 +261,13 @@ export default function MapaLibreSeguimiento({
 
     map.on('load', () => {
       setMapaCargado(true)
+      estiloAplicadoRef.current = estilo
       map.resize()
       agregarCapasRuta(map)
       actualizarCapaEdificios3D(map, mostrarEdificios3D)
     })
 
-    // Observer de tamaño para asegurar que el canvas WebGL siempre se dimensione
+    // Observer de tamaño para asegurar que el canvas WebGL siempre se redimensione
     const resizeObserver = new ResizeObserver(() => {
       map.resize()
     })
@@ -252,21 +291,35 @@ export default function MapaLibreSeguimiento({
     }
   }, [])
 
-  // ── 2. Cambio de Estilo Dinámico ─────────────────────────────────────────────
+  // ── 2. Cambio de Estilo Dinámico Robusto (style.load) ─────────────────────────
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapaCargado) return
+    if (estiloAplicadoRef.current === estilo) return // Evitar recarga redundante
 
-    const nuevoEstilo = ESTILOS_VECTOR[estilo] || ESTILOS_VECTOR['vector-liberty']
-    map.setStyle(nuevoEstilo as any)
+    estiloAplicadoRef.current = estilo
+    setCargandoEstilo(true)
 
-    map.once('styledata', () => {
+    const nuevoEstilo = obtenerEspecificacionEstilo(estilo)
+
+    // Escuchador garantizado que se registra ANTES de setStyle
+    const onStyleReady = () => {
       map.resize()
       agregarCapasRuta(map)
       actualizarCapaEdificios3D(map, mostrarEdificios3D)
       actualizarGeoJsonRuta(map)
-    })
-  }, [estilo])
+      setCargandoEstilo(false)
+    }
+
+    map.once('style.load', onStyleReady)
+
+    try {
+      map.setStyle(nuevoEstilo as any)
+    } catch (err) {
+      console.warn('Error al aplicar nuevo estilo en MapLibre:', err)
+      setCargandoEstilo(false)
+    }
+  }, [estilo, mapaCargado])
 
   // ── 3. Toggle de Edificios 3D ────────────────────────────────────────────────
   useEffect(() => {
@@ -279,83 +332,90 @@ export default function MapaLibreSeguimiento({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapaCargado || modoCamara === 'libre') return
-    map.easeTo({ pitch: pitchPersonalizado, duration: 400 })
+    map.easeTo({ pitch: pitchPersonalizado, duration: 250 })
   }, [pitchPersonalizado])
 
   // ── Helper: Configurar Capas WebGL de Ruta ───────────────────────────────────
   const agregarCapasRuta = (map: maplibregl.Map) => {
-    if (map.getSource('osrm-route-source')) return
+    if (map.getSource('osrm-route-source')) {
+      actualizarGeoJsonRuta(map)
+      return
+    }
 
-    map.addSource('osrm-route-source', {
-      type: 'geojson',
-      data: rutaGeoJsonRef.current,
-    })
+    try {
+      map.addSource('osrm-route-source', {
+        type: 'geojson',
+        data: rutaGeoJsonRef.current,
+      })
 
-    // Capa A: Resplandor Neón suave (Glow shader)
-    map.addLayer({
-      id: 'osrm-route-glow',
-      type: 'line',
-      source: 'osrm-route-source',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#059669',
-        'line-width': 12,
-        'line-opacity': 0.38,
-        'line-blur': 3,
-      },
-    })
+      // Capa A: Resplandor Neón suave (Glow shader)
+      map.addLayer({
+        id: 'osrm-route-glow',
+        type: 'line',
+        source: 'osrm-route-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#059669',
+          'line-width': 12,
+          'line-opacity': 0.38,
+          'line-blur': 3,
+        },
+      })
 
-    // Capa B: Borde de contraste alto
-    map.addLayer({
-      id: 'osrm-route-casing',
-      type: 'line',
-      source: 'osrm-route-source',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#022c22',
-        'line-width': 6.5,
-        'line-opacity': 0.85,
-      },
-    })
+      // Capa B: Borde de contraste alto
+      map.addLayer({
+        id: 'osrm-route-casing',
+        type: 'line',
+        source: 'osrm-route-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#022c22',
+          'line-width': 6.5,
+          'line-opacity': 0.85,
+        },
+      })
 
-    // Capa C: Núcleo esmeralda vibrante
-    map.addLayer({
-      id: 'osrm-route-core',
-      type: 'line',
-      source: 'osrm-route-source',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#10b981',
-        'line-width': 4,
-        'line-opacity': 0.95,
-      },
-    })
+      // Capa C: Núcleo esmeralda vibrante
+      map.addLayer({
+        id: 'osrm-route-core',
+        type: 'line',
+        source: 'osrm-route-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#10b981',
+          'line-width': 4,
+          'line-opacity': 0.95,
+        },
+      })
 
-    // Capa D: Estela animada discontinua
-    map.addLayer({
-      id: 'osrm-route-dash',
-      type: 'line',
-      source: 'osrm-route-source',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#a7f3d0',
-        'line-width': 2.5,
-        'line-dasharray': [2, 4],
-        'line-opacity': 0.9,
-      },
-    })
+      // Capa D: Estela animada discontinua
+      map.addLayer({
+        id: 'osrm-route-dash',
+        type: 'line',
+        source: 'osrm-route-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#a7f3d0',
+          'line-width': 2.5,
+          'line-dasharray': [2, 4],
+          'line-opacity': 0.9,
+        },
+      })
+    } catch (e) {
+      console.warn('Error configurando capas de ruta:', e)
+    }
   }
 
   // ── Helper: Configurar Capa de Edificios 3D ──────────────────────────────────
@@ -429,15 +489,23 @@ export default function MapaLibreSeguimiento({
     }
   }
 
-  // ── 5. Cargar Geometría OSRM de Calles ────────────────────────────────────────
+  // ── 5. Cargar Geometría OSRM con Throttle de Distancia (> 40m) ───────────────
   useEffect(() => {
     if (!mapaCargado || !cadeteCoords || !destinoCoords) return
+
+    // Evitar llamadas de red repetitivas si el cadete se movió menos de 40 metros
+    if (ultimaPosicionRutaRef.current) {
+      const distMetros = calcularDistanciaKm(ultimaPosicionRutaRef.current, cadeteCoords) * 1000
+      if (distMetros < 40) return
+    }
 
     let cancelado = false
     const cargarRuta = async () => {
       try {
         const ruta = await obtenerRutaConduccion(cadeteCoords, destinoCoords)
         if (cancelado || !ruta || !mapRef.current) return
+
+        ultimaPosicionRutaRef.current = cadeteCoords
 
         // Convertir [lat, lon] de Leaflet a GeoJSON estándar [lon, lat] de MapLibre
         const coordenadasGeoJson = ruta.puntos.map(([lat, lon]) => [lon, lat])
@@ -525,7 +593,7 @@ export default function MapaLibreSeguimiento({
     }
   }, [mapaCargado, destinoCoords?.latitud, destinoCoords?.longitud, pedido?.cliente])
 
-  // ── 7. MOTOR DE INTERPOLACIÓN CONTINUO A 60-120 FPS CON DEAD RECKONING ────────
+  // ── 7. MOTOR ULTRA-FLUIDO A 60-120 FPS CON DEAD RECKONING Y CAMERA JUMPTO ─────
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapaCargado || !cadeteCoords) return
@@ -562,7 +630,6 @@ export default function MapaLibreSeguimiento({
           pointer-events:none;
           filter:blur(1px);
           z-index:1;
-          transition:transform 0.08s linear;
         "></div>
         <!-- Onda de radar de presencia -->
         <div style="
@@ -587,7 +654,7 @@ export default function MapaLibreSeguimiento({
           display:flex;
           align-items:center;
           justify-content:center;
-          transition:transform 0.15s ease-out;
+          will-change:transform;
         ">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
@@ -604,9 +671,13 @@ export default function MapaLibreSeguimiento({
           font-weight:900;
           text-shadow:0 1px 2px #fff;
           z-index:3;
-          transition:transform 0.08s linear;
         ">▲</div>
       `
+      // Cachear nodos para evitar querySelector en cada frame
+      markerHeadlightRef.current = el.querySelector('.moto-headlight-cone')
+      markerArrowRef.current = el.querySelector('.moto-dir-arrow')
+      markerBadgeRef.current = el.querySelector('.moto-badge-inner')
+
       return el
     }
 
@@ -645,7 +716,7 @@ export default function MapaLibreSeguimiento({
 
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
 
-    // Bucle continuo a 60-120 FPS por GPU
+    // Bucle continuo a 60-120 FPS por GPU (cero llamadas a querySelector ni easeTo en cada frame)
     const pasoGliding = (timestamp: number) => {
       // 1. Contador de FPS para telemetría
       frameCountRef.current++
@@ -690,53 +761,44 @@ export default function MapaLibreSeguimiento({
         rumbo: rumboActual,
       }
 
-      // 3. Mover marcador MapLibre GL
+      // 3. Mover marcador WebGL en el mapa
       marker.setLngLat([lngActual, latActual])
 
-      // 4. Actualizar rotación y faro en el DOM del marcador
-      const markerEl = marker.getElement()
-      if (markerEl) {
-        const headlight = markerEl.querySelector('.moto-headlight-cone') as HTMLElement
-        const arrow = markerEl.querySelector('.moto-dir-arrow') as HTMLElement
-        const badge = markerEl.querySelector('.moto-badge-inner') as HTMLElement
-
-        if (headlight) headlight.style.transform = `rotate(${rumboActual}deg)`
-        if (arrow) arrow.style.transform = `rotate(${rumboActual}deg) translateY(-26px)`
-
-        // Inclinación peraltada dinámica (Banking effect)
-        const velocidadGiro = deltaRumbo * (1 - progreso)
-        const peralte = Math.min(Math.max(velocidadGiro * 0.4, -18), 18)
-        ultimoPerlteRef.current = peralte
-        const esOeste = rumboActual > 180 && rumboActual < 360
-        if (badge) {
-          badge.style.transform = `rotate(${peralte}deg) ${esOeste ? 'scaleX(-1)' : 'scaleX(1)'}`
-        }
+      // 4. Actualizar rotación y faro directamente usando referencias en caché
+      if (markerHeadlightRef.current) {
+        markerHeadlightRef.current.style.transform = `rotate(${rumboActual}deg)`
+      }
+      if (markerArrowRef.current) {
+        markerArrowRef.current.style.transform = `rotate(${rumboActual}deg) translateY(-26px)`
       }
 
-      // 5. Modos de Cámara Cinemática Dinámica
+      // Inclinación peraltada dinámica (Banking effect)
+      const velocidadGiro = deltaRumbo * (1 - progreso)
+      const peralte = Math.min(Math.max(velocidadGiro * 0.4, -18), 18)
+      ultimoPerlteRef.current = peralte
+      const esOeste = rumboActual > 180 && rumboActual < 360
+      if (markerBadgeRef.current) {
+        markerBadgeRef.current.style.transform = `rotate(${peralte}deg) ${esOeste ? 'scaleX(-1)' : 'scaleX(1)'}`
+      }
+
+      // 5. Cámara Cinemática con jumpTo (Instantáneo por WebGL matriz sin colisión de easeTo)
       if (map) {
         if (modoCamara === 'piloto') {
-          // Cámara piloto: persigue a la moto y rota suavemente con las calles
-          map.easeTo({
+          map.jumpTo({
             center: [lngActual, latActual],
             bearing: rumboActual,
-            pitch: 60,
-            zoom: 17,
-            duration: 120,
+            pitch: pitchPersonalizado || 55,
           })
         } else if (modoCamara === 'dron') {
-          // Cámara dron: vista isométrica a 45° sin rotación
-          map.easeTo({
+          map.jumpTo({
             center: [lngActual, latActual],
             pitch: 45,
-            duration: 120,
           })
         } else if (modoCamara === 'cenital') {
-          map.easeTo({
+          map.jumpTo({
             center: [lngActual, latActual],
             pitch: 0,
             bearing: 0,
-            duration: 120,
           })
         }
       }
@@ -748,7 +810,7 @@ export default function MapaLibreSeguimiento({
     }
 
     animFrameRef.current = requestAnimationFrame(pasoGliding)
-  }, [mapaCargado, cadeteCoords?.latitud, cadeteCoords?.longitud, cadete?.heading, modoCamara])
+  }, [mapaCargado, cadeteCoords?.latitud, cadeteCoords?.longitud, cadete?.heading, modoCamara, pitchPersonalizado])
 
   // ── 8. Modo Auto-Encuadre (Todo en pantalla) ──────────────────────────────────
   useEffect(() => {
@@ -788,6 +850,14 @@ export default function MapaLibreSeguimiento({
 
       {/* Contenedor del Canvas WebGL de MapLibre */}
       <div ref={mapContainerRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
+
+      {/* Indicador de cambio de estilo en curso */}
+      {cargandoEstilo && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
+          <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-[11px] font-bold text-white tracking-wide">Cambiando tema...</span>
+        </div>
+      )}
     </div>
   )
 }

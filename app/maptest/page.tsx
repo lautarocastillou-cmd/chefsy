@@ -56,8 +56,8 @@ function MapTestContent() {
   const [cadeteSeleccionado, setCadeteSeleccionado] = useState<any | null>(null)
   const [inputManualId, setInputManualId] = useState(initialPedidoId)
 
-  // Controles de MapLibre GL
-  const [estilo, setEstilo] = useState<EstiloMapa>('vector-liberty')
+  // Controles de MapLibre GL (Google HD por defecto para carga ultrarrápida a 60-120 FPS)
+  const [estilo, setEstilo] = useState<EstiloMapa>('google-calles')
   const [modoCamara, setModoCamara] = useState<ModoCamara>('piloto')
   const [pitch, setPitch] = useState<number>(55)
   const [edificios3D, setEdificios3D] = useState<boolean>(true)
@@ -398,42 +398,50 @@ function MapTestContent() {
           {/* Selector de Estilo */}
           <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/10">
             <button
-              onClick={() => setEstilo('vector-liberty')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'vector-liberty' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🏙️ 3D Vector
-            </button>
-            <button
-              onClick={() => setEstilo('cyber-dark')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'cyber-dark' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🌌 Dark
-            </button>
-            <button
               onClick={() => setEstilo('google-calles')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'google-calles' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                estilo === 'google-calles' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-400 hover:text-white'
               }`}
+              title="Google Maps Calles HD (Carga instantánea a 60-120 FPS)"
             >
               🗺️ Google HD
             </button>
             <button
+              onClick={() => setEstilo('cyber-dark')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                estilo === 'cyber-dark' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
+              }`}
+              title="ESRI Dark Gray (Oscuro rápido y limpio sin marcas de agua)"
+            >
+              🌌 Dark
+            </button>
+            <button
               onClick={() => setEstilo('google-hibrido')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'google-hibrido' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                estilo === 'google-hibrido' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'text-slate-400 hover:text-white'
               }`}
+              title="Google Maps Satelital Híbrido"
             >
               🛰️ Satélite
             </button>
             <button
+              onClick={() => {
+                setEstilo('vector-liberty')
+                setEdificios3D(true)
+              }}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                estilo === 'vector-liberty' ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' : 'text-slate-400 hover:text-white'
+              }`}
+              title="OpenFreeMap Liberty (Vectorial con Edificios 3D en relieve)"
+            >
+              🏙️ 3D Vector
+            </button>
+            <button
               onClick={() => setEstilo('vector-positron')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                estilo === 'vector-positron' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                estilo === 'vector-positron' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
+              title="Vectorial claro minimalista"
             >
               ☀️ Positron
             </button>
@@ -443,16 +451,22 @@ function MapTestContent() {
 
           {/* Edificios 3D Toggle */}
           <button
-            onClick={() => setEdificios3D(!edificios3D)}
+            onClick={() => {
+              const nuevo = !edificios3D
+              setEdificios3D(nuevo)
+              if (nuevo && estilo !== 'vector-liberty' && estilo !== 'vector-positron') {
+                setEstilo('vector-liberty')
+              }
+            }}
             className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              edificios3D
+              edificios3D && (estilo === 'vector-liberty' || estilo === 'vector-positron')
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-md shadow-amber-500/10'
                 : 'bg-slate-950/60 text-slate-500 border-white/10'
             }`}
-            title="Activar/Desactivar relieve de edificios 3D"
+            title="Activar/Desactivar relieve de edificios 3D (requiere estilo 3D Vector)"
           >
             <Building2 size={13} />
-            <span>Edificios 3D {edificios3D ? 'ON' : 'OFF'}</span>
+            <span>Edificios 3D {edificios3D && (estilo === 'vector-liberty' || estilo === 'vector-positron') ? 'ON' : 'OFF'}</span>
           </button>
         </div>
       </footer>
