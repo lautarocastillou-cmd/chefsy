@@ -7,40 +7,30 @@ import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(req: Request) {
   try {
-    let clienteId: string | undefined
-    let telefono: string | undefined
-
     const sesion = await obtenerSesionCliente()
-    if (sesion) {
-      clienteId = sesion.clienteId
-      telefono = sesion.telefono
-    } else {
-      try {
-        const body = await req.json()
-        clienteId = body?.clienteId
-        telefono = body?.telefono
-      } catch { /* ignorar cuerpo vacío o inválido */ }
+    if (!sesion || !sesion.clienteId) {
+      return NextResponse.json(
+        { error: 'Iniciá sesión para ver tu historial de pedidos.', pedidos: [] },
+        { status: 401 }
+      )
     }
 
-    if (!clienteId && !telefono) {
-      return NextResponse.json({ error: 'Falta identificación del cliente', pedidos: [] }, { status: 400 })
-    }
+    let clienteId: string = sesion.clienteId
+    let telefono: string | undefined = sesion.telefono
 
     const supabase = obtenerSupabaseAdmin()
 
-    // Si tenemos clienteId, buscar los datos reales del cliente en la BD por seguridad
-    if (clienteId) {
-      const { data: clienteDB } = await supabase
-        .from('clientes')
-        .select('id, telefono')
-        .eq('id', clienteId)
-        .maybeSingle()
+    // Buscar los datos vigentes del cliente en la BD por seguridad
+    const { data: clienteDB } = await supabase
+      .from('clientes')
+      .select('id, telefono')
+      .eq('id', clienteId)
+      .maybeSingle()
 
-      if (clienteDB) {
-        clienteId = clienteDB.id
-        if (clienteDB.telefono) {
-          telefono = clienteDB.telefono
-        }
+    if (clienteDB) {
+      clienteId = clienteDB.id
+      if (clienteDB.telefono) {
+        telefono = clienteDB.telefono
       }
     }
 

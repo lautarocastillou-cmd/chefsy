@@ -98,10 +98,6 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
         const res = await fetch('/api/clientes/pedidos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clienteId: perfil?.id,
-            telefono: perfil?.telefono
-          })
         })
         if (res.ok) {
           const data = await res.json()

@@ -14,7 +14,7 @@ export const UBICACION_LOCAL: Coordenadas = {
 // Para retrocompatibilidad y centrado de mapas
 export const CENTRO_POR_DEFECTO: Coordenadas = UBICACION_LOCAL
 
-export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3ul8_1_0d6b5b9afb4cfc068d667127'
+export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY || ''
 
 // Capa activa: Google Maps HD (ultra fluida a 60 FPS, alto contraste y 100% de disponibilidad sin bloqueos ni API key)
 export const MAPA_TILES_URL = 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}'

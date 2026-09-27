@@ -227,10 +227,16 @@ export async function GET(request: Request) {
         : 'no-cache, no-store, must-revalidate',
     }
 
+    // Enmascarar teléfono del cliente para no exponer PII en enlaces compartidos (ej: "******1234")
+    const telRaw = String(data.telefono || '').trim()
+    const telEnmascarado = telRaw.length > 4
+      ? `${'*'.repeat(Math.max(0, telRaw.length - 4))}${telRaw.slice(-4)}`
+      : (telRaw ? '****' : '')
+
     return NextResponse.json({
       id: data.id,
       cliente: data.cliente,
-      telefono: data.telefono ?? '',
+      telefono: telEnmascarado,
       estado: data.estado,
       cadete_nombre: data.cadete_nombre ?? cadeteNombreFallback ?? null,
       cadete_coordenadas: coordsFinalesCadete,

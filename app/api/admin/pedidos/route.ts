@@ -75,6 +75,47 @@ function validarCoordenadas(coords: any): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
 
+// Whitelist estricta contra Mass Assignment: solo columnas explícitas de la tabla pedidos
+const CAMPOS_PERMITIDOS_PEDIDO = [
+  'id',
+  'cliente',
+  'telefono',
+  'tipoEntrega',
+  'direccion',
+  'coordenadas',
+  'productos',
+  'total',
+  'costoEnvio',
+  'distanciaKm',
+  'estado',
+  'metodoPago',
+  'observaciones',
+  'hora',
+  'fecha',
+  'pago_confirmado',
+  'cadete_id',
+  'cadete_nombre',
+  'cadete_coordenadas',
+  'montoEfectivo',
+  'montoTransferencia',
+  'montoTarjeta',
+  'notificacion_manual',
+  'cliente_id',
+  'puntos_ganados',
+  'puntos_gastados',
+  'orden_entrega'
+] as const
+
+function filtrarCamposPermitidos(origen: Record<string, any>): Record<string, any> {
+  const limpio: Record<string, any> = {}
+  for (const campo of CAMPOS_PERMITIDOS_PEDIDO) {
+    if (campo in origen && origen[campo] !== undefined) {
+      limpio[campo] = origen[campo]
+    }
+  }
+  return limpio
+}
+
 export async function POST(request: Request) {
   // 1. Validar sesión en el servidor
   const sesion = await obtenerSesion()
@@ -115,11 +156,11 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: errorVal }, { status: 400 })
         }
 
-        const payload = { ...pedido, archivado: false }
-        delete payload.created_at
-        delete payload.updated_at
-        delete payload.envioManual
-        delete payload.turno_tipo
+        // Sanitización estricta por whitelist contra Mass Assignment
+        const payload: any = {
+          ...filtrarCamposPermitidos(pedido),
+          archivado: false,
+        }
 
         // 1. Ejecutar transacción de puntos si aplica (con validación de cotas de seguridad)
         if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
@@ -181,14 +222,13 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Método de pago inválido.' }, { status: 400 })
         }
 
-        const payload = { ...pedido }
-        
-        // Quitar campos autogenerados de base de datos y campos no existentes
+        // Sanitización estricta por whitelist contra Mass Assignment
+        const payload = filtrarCamposPermitidos(pedido)
         delete payload.id
-        delete payload.created_at
-        delete payload.updated_at
-        delete payload.envioManual
-        delete payload.turno_tipo
+
+        if (Object.keys(payload).length === 0) {
+          return NextResponse.json({ error: 'No se enviaron campos válidos para actualizar.' }, { status: 400 })
+        }
 
         const { error } = await supabaseAdmin
           .from('pedidos')
