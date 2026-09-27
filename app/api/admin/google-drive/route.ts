@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
-import { createClient } from '@supabase/supabase-js'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { extraerGoogleDriveFileIds, obtenerUrlsDirectasGoogleDrive } from '@/lib/gdrive'
 import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
 
@@ -130,10 +130,7 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseAdmin = obtenerSupabaseAdmin()
 
     const resultados: { fileId: string; urlPublica: string; nombreArchivo: string }[] = []
     const errores: { fileId: string; error: string }[] = []

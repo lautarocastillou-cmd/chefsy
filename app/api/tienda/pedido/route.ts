@@ -8,19 +8,11 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerEstadoHorarioLocal } from '@/lib/tiempo'
 import { calcularCostoEnvio, resolverDireccionHumana, esEnlaceOCoordenadas, calcularDistanciaKm, UBICACION_LOCAL } from '@/lib/ubicacion'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
-// ── Rate limiting en memoria por IP ───────────────────────────────────────────
-const rateLimitIP = new Map<string, { intentos: number; ultimoReset: number }>()
 const MAX_PEDIDOS_POR_SESION = 3 // máximo 3 pedidos activos por teléfono
-const VENTANA_RATE_LIMIT_MS = 10 * 60 * 1000 // ventana de 10 min
-
-function obtenerIP(req: Request): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown'
-  )
-}
+const RATE_LIMIT_CHECKOUT_MAX = 15 // máximo 15 intentos por cada 10 minutos
+const RATE_LIMIT_CHECKOUT_SEG = 10 * 60
 
 // ── Validación estricta de estructura del payload ───────────────────────────────
 function validarEstructuraPedido(body: any): string | null {
@@ -60,23 +52,21 @@ function validarEstructuraPedido(body: any): string | null {
 
 export async function POST(request: Request) {
   try {
-    const ip = obtenerIP(request)
-    const ahora = Date.now()
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`checkout-tienda:${ip}`, RATE_LIMIT_CHECKOUT_MAX, RATE_LIMIT_CHECKOUT_SEG)
 
     // ── 1. Rate limit por IP ──────────────────────────────────────────────────
-    const registro = rateLimitIP.get(ip) || { intentos: 0, ultimoReset: ahora }
-    if (ahora - registro.ultimoReset > VENTANA_RATE_LIMIT_MS) {
-      registro.intentos = 0
-      registro.ultimoReset = ahora
-    }
-    registro.intentos++
-    rateLimitIP.set(ip, registro)
-
-    if (registro.intentos > 15) {
+    if (!rateCheck.permitido) {
       console.warn(`[API Pedido] Rate limit excedido para IP: ${ip}`)
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Intentá de nuevo en unos minutos.' },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
       )
     }
 

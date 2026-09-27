@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { calcularDistanciaKm, resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 // Coordenadas del local Chefsy (San Fernando del Valle de Catamarca)
 const LOCAL_LAT = -28.462809031658047
@@ -9,11 +10,32 @@ const LOCAL_LNG = -65.77850065400358
 // GET /api/public/rastreo?id=[UUID]
 export async function GET(request: Request) {
   try {
+    // 1. Rate Limiting por IP (60 peticiones/minuto para evitar fuerza bruta de IDs)
+    const ip = obtenerIpCliente(request)
+    const rateCheck = verificarRateLimit(`rastreo:${ip}`, 60, 60)
+    if (!rateCheck.permitido) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes de rastreo. Esperá unos segundos.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateCheck.segundosParaReset),
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const pedidoId = searchParams.get('id')
 
-    if (!pedidoId) {
+    if (!pedidoId || typeof pedidoId !== 'string') {
       return NextResponse.json({ error: 'ID de pedido requerido' }, { status: 400 })
+    }
+
+    const pedidoIdLimpio = pedidoId.trim()
+    if (!pedidoIdLimpio || pedidoIdLimpio.length > 64 || !/^[a-zA-Z0-9_\-]+$/.test(pedidoIdLimpio)) {
+      return NextResponse.json({ error: 'Formato de ID de pedido inválido' }, { status: 400 })
     }
 
     const supabase = obtenerSupabaseAdmin()

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { obtenerSesion } from '@/lib/auth-server'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 let vapidConfigured = false
 
@@ -22,13 +22,6 @@ function configurarVapid() {
   )
   vapidConfigured = true
   return true
-}
-
-function obtenerSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Faltan credenciales de Supabase')
-  return createClient(url, key, { auth: { persistSession: false } })
 }
 
 export async function POST(request: Request) {
