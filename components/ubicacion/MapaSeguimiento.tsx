@@ -10,7 +10,7 @@ import {
   MAPA_SUBDOMAINS,
   obtenerRutaConduccion
 } from '@/lib/ubicacion'
-import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing } from 'lucide-react'
+import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing, Plus, Minus } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
@@ -337,6 +337,12 @@ export default function MapaSeguimiento({ pedido }: Props) {
       const mapa = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
+        touchZoom: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        dragging: true,
+        tap: false,
       }).setView([UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud], 14)
 
       // Capa HD (Google Maps con máxima compatibilidad y carga inmediata sin API key)
@@ -346,10 +352,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
         maxZoom: 20,
       }).addTo(mapa)
 
-      L.control.zoom({ position: 'bottomright' }).addTo(mapa)
+      // Asegurar que todos los controladores táctiles y gestos estén activos en celular
+      mapa.touchZoom.enable()
+      mapa.doubleClickZoom.enable()
+      mapa.scrollWheelZoom.enable()
+      mapa.dragging.enable()
 
-      // Listener: Si el usuario mueve el mapa con el dedo/mouse, cambiar a modo manual
-      mapa.on('dragstart', () => {
+      // Listener: Si el usuario mueve o zoomea el mapa con el dedo/mouse, cambiar a modo manual
+      mapa.on('dragstart zoomstart', () => {
         setModoCamara('manual')
       })
 
@@ -998,16 +1008,17 @@ export default function MapaSeguimiento({ pedido }: Props) {
           width: 100% !important;
           height: 100% !important;
           background-color: #0b0f19 !important;
+          touch-action: none !important;
         }
       `,
       }} />
 
-      {/* Contenedor del Mapa Leaflet (100% absoluto) */}
-      <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
+      {/* Contenedor del Mapa Leaflet (100% absoluto con touch-action liberado para zoom táctil) */}
+      <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* HUD Superior con Estado Claro (debajo del header flotante) */}
       {pedido.estado === 'entregado' ? (
-        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+        <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
             <span className="text-xs font-bold text-white/95 tracking-wide">
@@ -1016,7 +1027,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           </div>
         </div>
       ) : enLaPuerta ? (
-        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+        <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#064e3b]/95 to-[#022c22]/95 backdrop-blur-xl text-white px-4 py-2 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 border border-emerald-400/50 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
             <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shrink-0">
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
@@ -1036,7 +1047,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           </div>
         </div>
       ) : paradasPrevias > 0 && !esperandoGps ? (
-        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+        <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#1c1917]/90 to-[#292524]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-amber-200 tracking-wide">
@@ -1047,7 +1058,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
           </div>
         </div>
       ) : esProximaEntrega && pedido.cadete_coordenadas && ['listo', 'en_camino'].includes(pedido.estado) && !esperandoGps ? (
-        <div className="absolute top-[4.8rem] sm:top-20 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
+        <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
           <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-emerald-200 tracking-wide">
@@ -1059,8 +1070,36 @@ export default function MapaSeguimiento({ pedido }: Props) {
         </div>
       ) : null}
 
-      {/* HUD de Botones de Cámara Inteligente */}
-      <div className="absolute top-28 sm:top-24 right-3.5 z-[350] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+      {/* HUD de Botones de Cámara Inteligente y Zoom */}
+      <div className="absolute top-[11.5rem] sm:top-44 right-3.5 z-[350] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+        {/* Acercar Zoom (+) */}
+        <button
+          type="button"
+          onClick={() => {
+            setModoCamara('manual')
+            leafletMapRef.current?.zoomIn()
+          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 shadow-2xs"
+          title="Acercar mapa (+)"
+        >
+          <Plus size={18} />
+        </button>
+
+        {/* Alejar Zoom (-) */}
+        <button
+          type="button"
+          onClick={() => {
+            setModoCamara('manual')
+            leafletMapRef.current?.zoomOut()
+          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 shadow-2xs"
+          title="Alejar mapa (-)"
+        >
+          <Minus size={18} />
+        </button>
+
+        <div className="w-full h-px bg-slate-200 dark:bg-slate-800 my-0.5" />
+
         {/* Seguir al Cadete */}
         {!['entregado', 'cancelado'].includes(pedido.estado) && (
           <button

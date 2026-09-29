@@ -435,15 +435,28 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </p>
         </div>
 
-        {/* Botón directo a la Tienda en la barra superior */}
-        <a
-          href="https://chefsy.xyz/"
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold border border-white/15 transition-all shadow-sm cursor-pointer"
-          title="Ir a la tienda"
-        >
-          <ArrowLeft size={13} className="text-emerald-400" />
-          <span>Tienda</span>
-        </a>
+        {/* Acciones directas en la barra superior: WhatsApp y Tienda */}
+        <div className="shrink-0 flex items-center gap-1.5">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold border border-emerald-400/30 transition-all shadow-sm cursor-pointer"
+            title="Escribir por WhatsApp"
+          >
+            <MessageCircle size={14} className="text-white shrink-0" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
+
+          <a
+            href="https://chefsy.xyz/"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold border border-white/15 transition-all shadow-sm cursor-pointer"
+            title="Ir a la tienda"
+          >
+            <ArrowLeft size={13} className="text-emerald-400 shrink-0" />
+            <span>Tienda</span>
+          </a>
+        </div>
       </div>
 
       {/* Cadete asignado */}
@@ -846,30 +859,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         {headerConStack}
       </div>
 
-      {/* 3. Botones Flotantes Rápidos: Tienda y WhatsApp (Superiores, nunca tapados) */}
-      <div className="fixed top-24 sm:top-28 left-3.5 z-40 flex items-center gap-2 pointer-events-auto">
-        <a
-          href="https://chefsy.xyz/"
-          className="inline-flex items-center gap-1.5 text-white bg-slate-900/90 hover:bg-slate-800 active:scale-95 backdrop-blur-md px-3.5 py-2 rounded-full text-xs font-bold border border-white/15 shadow-xl transition-all cursor-pointer"
-          title="Volver a la tienda"
-        >
-          <ArrowLeft size={13} className="text-emerald-400" />
-          <span>Tienda</span>
-        </a>
-
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-white bg-emerald-600/90 hover:bg-emerald-500 active:scale-95 backdrop-blur-md px-3.5 py-2 rounded-full text-xs font-bold shadow-xl border border-emerald-400/30 transition-all cursor-pointer"
-          title="Contactar por WhatsApp"
-        >
-          <MessageCircle size={14} />
-          <span className="hidden xs:inline">WhatsApp</span>
-        </a>
-      </div>
-
-      {/* 4. Cartel Informativo Flotante (Va directo a tu casa / Entregas previas / Cocina) */}
+      {/* 3. Cartel Informativo Flotante (Va directo a tu casa / Entregas previas / Cocina) */}
       {cartelEstado}
 
       {/* 5. Capa Inferior: BottomSheet Desplegable estilo iOS */}
