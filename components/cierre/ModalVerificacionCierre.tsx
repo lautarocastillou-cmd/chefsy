@@ -31,6 +31,7 @@ export interface ModalVerificacionCierreProps {
   onCerrar: () => void
   pedidos: Pedido[]
   cajaInicial: number
+  consumosPagadosMomento?: number
   onFinalizarTurno: () => Promise<void>
   cambiarMetodoPago: (id: string, metodoPago: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
@@ -43,6 +44,7 @@ export default function ModalVerificacionCierre({
   onCerrar,
   pedidos,
   cajaInicial,
+  consumosPagadosMomento = 0,
   onFinalizarTurno,
   cambiarMetodoPago,
   marcarPagoConfirmado,
@@ -101,7 +103,7 @@ export default function ModalVerificacionCierre({
     }, 0)
   }, [pedidosValidos])
 
-  const efectivoEsperado = cajaInicial + totalEfectivo
+  const efectivoEsperado = cajaInicial + totalEfectivo + (consumosPagadosMomento || 0)
 
   // Lista para el modo Paso a Paso
   const pedidosPasoAPaso = useMemo(() => {
@@ -759,6 +761,15 @@ export default function ModalVerificacionCierre({
                     +{formatearPrecio(totalEfectivo)}
                   </span>
                 </div>
+
+                {consumosPagadosMomento > 0 && (
+                  <div className="bg-white dark:bg-[#222] border border-slate-200 dark:border-[#333] p-3 rounded-2xl">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Consumos en el Acto</span>
+                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 block mt-1">
+                      +{formatearPrecio(consumosPagadosMomento)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="bg-white dark:bg-[#222] border border-slate-200 dark:border-[#333] p-3 rounded-2xl">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Esperado en Caja</span>

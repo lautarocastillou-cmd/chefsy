@@ -9,6 +9,7 @@ import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { enviarNotificacionCadete } from '@/lib/webpush'
 import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
+import { obtenerFechaNegocio } from '@/lib/tiempo'
 
 const TIPOS_ENTREGA_VALIDOS = ['delivery', 'retiro', 'mostrador', 'consumo_local']
 const METODOS_PAGO_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'sin_especificar', 'puntos']
@@ -426,11 +427,8 @@ export async function POST(request: Request) {
 
         // 2. FUSIONAR Y CONSOLIDAR EL CIERRE COMPLETO DEL TURNO EN CIERRES_DIARIOS
         try {
-          // Obtener fecha local de Argentina (YYYY-MM-DD)
-          const now = new Date()
-          const utcOffset = -3 // ARG
-          const argTime = new Date(now.getTime() + utcOffset * 3600000)
-          const fechaStr = argTime.toISOString().split('T')[0]
+          // Obtener fecha de negocio de Argentina (YYYY-MM-DD)
+          const fechaStr = snapshot?.fecha || obtenerFechaNegocio()
 
           const turnoTipo = snapshot?.turno_tipo || 'noche'
 
@@ -445,10 +443,31 @@ export async function POST(request: Request) {
             const pedidosDelTurno = pedidosDelDia
 
             const validos = pedidosDelTurno.filter((p: any) => p.estado !== 'cancelado')
-            const facturacion_neta = validos.reduce((acc: number, p: any) => acc + (p.total - (p.costoEnvio || 0)), 0)
-            const efectivo_ventas = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'efectivo' ? p.total : 0), 0)
+            let facturacion_neta = validos.reduce((acc: number, p: any) => acc + (p.total - (p.costoEnvio || 0)), 0)
+            let efectivo_ventas = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'efectivo' ? p.total : 0), 0)
             const tarjeta_total = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'tarjeta' ? p.total : 0), 0)
             const transferencia_total = validos.reduce((acc: number, p: any) => acc + (p.metodoPago === 'transferencia' ? p.total : 0), 0)
+
+            // Sumar consumos del personal pagados en el acto
+            try {
+              const { data: consumosDb } = await supabaseAdmin
+                .from('consumos_personal')
+                .select('total, precio, cantidad, tipo_pago, fecha')
+                .eq('tipo_pago', 'pagado')
+
+              if (consumosDb && consumosDb.length > 0) {
+                const totalConsumosPagados = consumosDb
+                  .filter((c: any) => {
+                    return obtenerFechaNegocio(new Date(c.fecha)) === fechaStr
+                  })
+                  .reduce((acc: number, c: any) => acc + (c.total || c.precio * c.cantidad || 0), 0)
+
+                facturacion_neta += totalConsumosPagados
+                efectivo_ventas += totalConsumosPagados
+              }
+            } catch (errConsumos) {
+              console.error('[API Cierre Diario] Error sumando consumos:', errConsumos)
+            }
 
             const caja_inicial = snapshot?.caja_inicial || 0
             const efectivo_rendir = caja_inicial + efectivo_ventas

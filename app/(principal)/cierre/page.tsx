@@ -26,9 +26,11 @@ import {
   Moon,
   Clock,
   Zap,
-  Plus
+  Plus,
+  Coffee
 } from 'lucide-react'
 import { Pedido, TipoTurno, CadetePagoExtra } from '@/tipos'
+import { usarConsumosPersonal } from '@/contexto/ConsumosPersonalContexto'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
 import ComparativaTurnoVivo from '@/components/cierre/ComparativaTurnoVivo'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
@@ -47,6 +49,8 @@ export default function PaginaCierreCaja() {
     cambiarMetodoPago,
     marcarPagoConfirmado,
   } = usarPedidos()
+  
+  const { consumos, refrescarConsumos } = usarConsumosPersonal()
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [modoOrigen, setModoOrigen] = useState<'en_vivo' | 'fecha'>('en_vivo')
@@ -135,6 +139,8 @@ export default function PaginaCierreCaja() {
   useEffect(() => {
     let activo = true
 
+    refrescarConsumos()
+
     if (modoOrigen === 'en_vivo') {
       // Usar los pedidos activos en vivo en pantalla sin archivar
       setPedidosDelDia(pedidos.filter(p => !p.archivado))
@@ -156,7 +162,7 @@ export default function PaginaCierreCaja() {
     return () => {
       activo = false
     }
-  }, [modoOrigen, fechaSeleccionada, obtenerPedidosPorFecha, pedidos])
+  }, [modoOrigen, fechaSeleccionada, obtenerPedidosPorFecha, pedidos, refrescarConsumos])
 
   // Filtrar pedidos por tipo de turno seleccionado
   const pedidosFiltradosPorTurno = useMemo(() => {
@@ -172,6 +178,30 @@ export default function PaginaCierreCaja() {
   const pedidosValidos = useMemo(() => {
     return pedidosFiltradosPorTurno.filter((p) => p.estado !== 'cancelado')
   }, [pedidosFiltradosPorTurno])
+
+  // ── Consumos del Personal en el Turno ─────────────────
+  const consumosDelTurno = useMemo(() => {
+    const fechaTarget = modoOrigen === 'en_vivo' ? obtenerFechaNegocio() : fechaSeleccionada
+    return consumos.filter((c) => {
+      return obtenerFechaNegocio(new Date(c.fecha)) === fechaTarget
+    })
+  }, [consumos, modoOrigen, fechaSeleccionada])
+
+  const consumosPagadosActo = useMemo(() => {
+    return consumosDelTurno.filter((c) => c.tipo_pago === 'pagado')
+  }, [consumosDelTurno])
+
+  const totalConsumosPagadosActo = useMemo(() => {
+    return consumosPagadosActo.reduce((acc, c) => acc + (c.total || c.precio * c.cantidad || 0), 0)
+  }, [consumosPagadosActo])
+
+  const consumosAnotadosSueldo = useMemo(() => {
+    return consumosDelTurno.filter((c) => c.tipo_pago === 'anotado')
+  }, [consumosDelTurno])
+
+  const totalConsumosAnotadosSueldo = useMemo(() => {
+    return consumosAnotadosSueldo.reduce((acc, c) => acc + (c.total || c.precio * c.cantidad || 0), 0)
+  }, [consumosAnotadosSueldo])
 
   // ── Desglose y Liquidación por Cadete (con Viajes y Pagos Extras) ───────────────
   const resumenCadetes = useMemo(() => {
@@ -251,11 +281,17 @@ export default function PaginaCierreCaja() {
     return pedidosValidos.reduce((acc, p) => acc + (p.costoEnvio || 0), 0)
   }, [pedidosValidos])
 
-  // Facturación neta del local (lo que realmente queda del alimento)
-  const facturacionNeta = facturacionBruta - totalCostosEnvio
+  // Facturación neta de pedidos de comida (sin costos de envío de cadetería)
+  const facturacionNetaPedidos = facturacionBruta - totalCostosEnvio
+
+  // Total Generado en la Noche (Ventas Cocina + Consumos de Personal Pagados en el Acto)
+  const totalGeneradoNoche = facturacionNetaPedidos + totalConsumosPagadosActo
+
+  // Facturación neta general del local
+  const facturacionNeta = totalGeneradoNoche
 
   const totalPedidos = pedidosValidos.length
-  const ticketPromedio = totalPedidos > 0 ? facturacionNeta / totalPedidos : 0
+  const ticketPromedio = totalPedidos > 0 ? facturacionNetaPedidos / totalPedidos : 0
 
   // ── Desglose por Método de Pago (con soporte mixto) ──
 
@@ -316,8 +352,9 @@ export default function PaginaCierreCaja() {
 
   // Efectivo a rendir: usa la caja inicial histórica del snapshot si se ve un turno pasado,
   // o la caja inicial del turno activo actual si se está en modo En Vivo.
+  // Suma el efectivo de ventas + los consumos de personal pagados en el acto en el turno.
   const cajaInicialEfectiva = cajaInicialHistorica !== null ? cajaInicialHistorica : (estadoTurno?.cajaInicial || 0)
-  const efectivoARendir = cajaInicialEfectiva + efectivoTotal
+  const efectivoARendir = cajaInicialEfectiva + efectivoTotal + totalConsumosPagadosActo
 
   // Copiar reporte al portapapeles
   const copiarReporteAlPortapapeles = () => {
@@ -342,16 +379,32 @@ export default function PaginaCierreCaja() {
         }).join('\n')
       : '- Sin entregas registradas'
 
+    const desgloseConsumosPagadosTexto = consumosPagadosActo.length > 0
+      ? consumosPagadosActo.map(c => {
+          const cant = c.cantidad > 1 ? `${c.cantidad}x ` : ''
+          const subtotal = c.total || (c.precio * c.cantidad)
+          return `- ${c.persona_nombre}: ${cant}${c.producto_nombre} (${formatearPrecio(subtotal)})`
+        }).join('\n')
+      : '- Sin consumos pagados en el acto'
+
+    const desgloseConsumosAnotadosTexto = consumosAnotadosSueldo.length > 0
+      ? consumosAnotadosSueldo.map(c => {
+          const cant = c.cantidad > 1 ? `${c.cantidad}x ` : ''
+          const subtotal = c.total || (c.precio * c.cantidad)
+          return `- ${c.persona_nombre}: ${cant}${c.producto_nombre} (${formatearPrecio(subtotal)})`
+        }).join('\n')
+      : null
+
     const mensaje = `*CIERRE DE CAJA - CHEFSY*
 *Fecha:* ${formattedDate}
 ----------------------------------------
-*Facturación Neta:* ${formatearPrecio(facturacionNeta)}
+*Total Generado en la Noche:* ${formatearPrecio(totalGeneradoNoche)}${totalConsumosPagadosActo > 0 ? `\n  • Ventas Cocina: ${formatearPrecio(facturacionNetaPedidos)}\n  • Consumos Personal (en el acto): +${formatearPrecio(totalConsumosPagadosActo)}` : ''}
 *Pedidos:* ${totalPedidos}
 *Ticket Promedio:* ${formatearPrecio(ticketPromedio)}
 
 *Estado de la Caja:*
 - Caja Inicial: ${formatearPrecio(cajaInicialEfectiva)}
-- Efectivo Ventas: ${formatearPrecio(efectivoTotal)}
+- Efectivo Ventas: ${formatearPrecio(efectivoTotal)}${totalConsumosPagadosActo > 0 ? `\n- Consumos Pagados en el Acto: +${formatearPrecio(totalConsumosPagadosActo)}` : ''}
 - *Físico a Rendir:* ${formatearPrecio(efectivoARendir)}
 
 *Por Método de Pago:*
@@ -366,7 +419,13 @@ export default function PaginaCierreCaja() {
 
 *Pago y Liquidación a Cadetes (Total: ${formatearPrecio(totalPagoCadetesTotal)}):*
 ${desgloseCadetesTexto}
-----------------------------------------
+
+*Consumos del Personal Pagados en el Acto (Total: ${formatearPrecio(totalConsumosPagadosActo)}):*
+${desgloseConsumosPagadosTexto}
+${desgloseConsumosAnotadosTexto ? `
+*Consumos Personal a Cuenta de Sueldo (Total: ${formatearPrecio(totalConsumosAnotadosSueldo)}):*
+${desgloseConsumosAnotadosTexto}
+` : ''}----------------------------------------
 *Pedidos Cancelados:* ${canceladosCount} (${formatearPrecio(canceladosMonto)})
 ----------------------------------------
 _Generado automáticamente desde Chefsy_`.trim()
@@ -618,15 +677,17 @@ _Generado automáticamente desde Chefsy_`.trim()
             <DollarSign size={200} />
           </div>
           <div className="relative z-10 space-y-1">
-            <span className="text-xs text-chefsy-100 uppercase tracking-widest font-bold">Facturación Neta del Local</span>
-            <p className="text-4xl font-black">{formatearPrecio(facturacionNeta)}</p>
+            <span className="text-xs text-chefsy-100 uppercase tracking-widest font-bold">Total Generado en la Noche</span>
+            <p className="text-4xl font-black">{formatearPrecio(totalGeneradoNoche)}</p>
             <p className="text-xs text-chefsy-100 font-medium">
-              {formatearPrecio(facturacionBruta)} bruto − {formatearPrecio(totalCostosEnvio)} envíos cadetes
+              {formatearPrecio(facturacionNetaPedidos)} ventas local
+              {totalConsumosPagadosActo > 0 && ` + ${formatearPrecio(totalConsumosPagadosActo)} consumos personal en el acto`}
+              {' '}({formatearPrecio(facturacionBruta)} bruto − {formatearPrecio(totalCostosEnvio)} envíos)
             </p>
           </div>
           <button
             onClick={copiarReporteAlPortapapeles}
-            disabled={totalPedidos === 0 && canceladosCount === 0}
+            disabled={totalPedidos === 0 && canceladosCount === 0 && consumosDelTurno.length === 0}
             className={`relative z-10 px-5 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               copiado
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
@@ -646,14 +707,19 @@ _Generado automáticamente desde Chefsy_`.trim()
         </div>
 
         {/* Tarjeta Extra: Total Efectivo a Rendir */}
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-emerald-800 dark:text-emerald-500 uppercase tracking-wider mb-1">Efectivo Físico a Rendir</p>
             <p className="text-2xl font-black text-emerald-900 dark:text-emerald-400">{formatearPrecio(efectivoARendir)}</p>
           </div>
-          <div className="text-right text-xs text-emerald-700 dark:text-emerald-600 font-medium">
+          <div className="sm:text-right text-xs text-emerald-700 dark:text-emerald-400 font-medium space-y-0.5">
             <p>Caja Inicial: {formatearPrecio(cajaInicialEfectiva)}</p>
             <p>Efectivo Ventas: {formatearPrecio(efectivoTotal)}</p>
+            {totalConsumosPagadosActo > 0 && (
+              <p className="font-bold text-emerald-800 dark:text-emerald-300">
+                Consumos en el Acto: +{formatearPrecio(totalConsumosPagadosActo)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -881,6 +947,92 @@ _Generado automáticamente desde Chefsy_`.trim()
           )}
         </section>
 
+        {/* Consumos del Personal en el Turno */}
+        <section className="bg-white dark:bg-[#252525] border border-slate-100 dark:border-[#3d3d3d] shadow-sm rounded-2xl p-5 space-y-4">
+          <div className="border-b border-slate-100 dark:border-[#3d3d3d] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Coffee size={18} className="text-amber-500" />
+              <div>
+                <h2 className="text-sm font-bold text-gray-800 dark:text-[#e6e6e6]">
+                  Consumos del Personal en el Turno
+                </h2>
+                <p className="text-[11px] text-gray-400 dark:text-[#777]">
+                  Pedidos del equipo pagados en el acto o anotados para descuento de sueldo
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              {totalConsumosPagadosActo > 0 && (
+                <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-900/30">
+                  Pagado en Caja: +{formatearPrecio(totalConsumosPagadosActo)}
+                </span>
+              )}
+              {totalConsumosAnotadosSueldo > 0 && (
+                <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-900/30">
+                  A Sueldo: {formatearPrecio(totalConsumosAnotadosSueldo)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {consumosDelTurno.length === 0 ? (
+            <p className="text-xs text-gray-400 dark:text-[#686868] text-center py-4">
+              No hay consumos de personal registrados en este turno.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {consumosDelTurno.map((c) => {
+                const esPagado = c.tipo_pago === 'pagado'
+                const totalConsumo = c.total || (c.precio * c.cantidad)
+                return (
+                  <div
+                    key={c.id}
+                    className="bg-slate-50 dark:bg-[#2f2f2f] p-3 rounded-xl border border-slate-100 dark:border-[#3d3d3d] flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={cn(
+                          "p-2 rounded-lg shrink-0",
+                          esPagado
+                            ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
+                            : "bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400"
+                        )}
+                      >
+                        <Coffee size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800 dark:text-[#e6e6e6] truncate">
+                          {c.persona_nombre}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {c.cantidad > 1 ? `${c.cantidad}x ` : ''}{c.producto_nombre}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span
+                        className={cn(
+                          "text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md inline-block mb-0.5",
+                          esPagado
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                        )}
+                      >
+                        {esPagado ? 'Pagado en el acto' : 'Anotado sueldo'}
+                      </span>
+                      <p className="text-sm font-black text-slate-800 dark:text-[#e6e6e6]">
+                        {formatearPrecio(totalConsumo)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
         {/* Pedidos Cancelados */}
         {canceladosCount > 0 && (
           <div className="bg-red-50 border border-red-150 rounded-2xl p-4 flex items-center justify-between gap-4">
@@ -901,10 +1053,10 @@ _Generado automáticamente desde Chefsy_`.trim()
             fecha={fechaSeleccionada}
             turnoTipo="noche"
             metricasActuales={{
-              facturacionNeta,
+              facturacionNeta: totalGeneradoNoche,
               totalPedidos,
               ticketPromedio,
-              efectivoVentas: efectivoTotal,
+              efectivoVentas: efectivoTotal + totalConsumosPagadosActo,
               transferenciaTotal,
               totalDelivery: deliveryTotal,
             }}
@@ -1015,6 +1167,7 @@ _Generado automáticamente desde Chefsy_`.trim()
         onCerrar={() => setModalVerificacionAbierto(false)}
         pedidos={pedidosFiltradosPorTurno}
         cajaInicial={cajaInicialEfectiva}
+        consumosPagadosMomento={totalConsumosPagadosActo}
         onFinalizarTurno={finalizarTurno}
         cambiarMetodoPago={cambiarMetodoPago}
         marcarPagoConfirmado={marcarPagoConfirmado}

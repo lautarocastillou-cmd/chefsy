@@ -9,15 +9,15 @@
  * Esto evita que la caja se cierre en medio de la noche.
  */
 export function obtenerFechaNegocio(fechaReferencia: Date = new Date()): string {
-  const ahora = new Date(fechaReferencia)
+  const arg = obtenerHoraArgentina(fechaReferencia)
   
-  if (ahora.getHours() < 5) {
-    ahora.setDate(ahora.getDate() - 1)
+  if (arg.getHours() < 5) {
+    arg.setDate(arg.getDate() - 1)
   }
   
-  const anio = ahora.getFullYear()
-  const mes = String(ahora.getMonth() + 1).padStart(2, '0')
-  const dia = String(ahora.getDate()).padStart(2, '0')
+  const anio = arg.getFullYear()
+  const mes = String(arg.getMonth() + 1).padStart(2, '0')
+  const dia = String(arg.getDate()).padStart(2, '0')
   
   return `${anio}-${mes}-${dia}`
 }
