@@ -270,7 +270,7 @@ function PestanaParametros() {
       setPortalCadeteriaHabilitado((configuracionOperativa as any).portalCadeteriaHabilitado ?? true)
       setAutocompletadoClientesHabilitado((configuracionOperativa as any).autocompletadoClientesHabilitado ?? true)
 
-      const confAlerta = (configuracionOperativa as any).alertaCriticaFlotante
+      const confAlerta = (configuracionOperativa as any)?.alertaCriticaFlotante || (configuracionOperativa as any)?.prioridades?.alertaCriticaFlotante
       if (confAlerta) {
         setAlertaHabilitada(confAlerta.habilitada !== undefined ? Boolean(confAlerta.habilitada) : true)
         setAlertaCocinaMinutos(Number(confAlerta.tiempoCocinaMinutos ?? 25))
@@ -353,6 +353,82 @@ function PestanaParametros() {
       nuevoValor
         ? 'Autocompletado de clientes en "+ Crear Pedido" activado.'
         : 'Autocompletado de clientes en "+ Crear Pedido" desactivado.'
+    )
+  }
+
+  // Guardar inmediatamente al cambiar el switch del Cartel de Alerta Flotante
+  const manejarCambioSwitchAlerta = async (nuevoValor: boolean) => {
+    setAlertaHabilitada(nuevoValor)
+
+    const nuevaConfig = {
+      limites: {
+        pedidoAtrasadoMinutos: Number(pedidoAtrasadoMinutos),
+        listoDemoradoMinutos: Number(listoDemoradoMinutos),
+        cocinaDemoradoMinutos: Number(cocinaDemoradoMinutos),
+        pedidoOlvidadoMinutos: Number(pedidoOlvidadoMinutos),
+      },
+      prioridades: {
+        pedidoAtrasadoAltaMinutos: Number(pedidoAtrasadoAltaMinutos),
+        listoDemoradoAltaMinutos: Number(listoDemoradoAltaMinutos),
+        sinCadeteAltaMinutos: Number(sinCadeteAltaMinutos),
+        cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
+      },
+      montoBaseCadete: Number(montoBaseCadete),
+      portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
+      autocompletadoClientesHabilitado: Boolean(autocompletadoClientesHabilitado),
+      alertaCriticaFlotante: {
+        habilitada: nuevoValor,
+        tiempoCocinaMinutos: Number(alertaCocinaMinutos),
+        tiempoListoMinutos: Number(alertaListoMinutos),
+        tiempoTotalMinutos: Number(alertaTotalMinutos),
+        tiempoAplazoMinutos: Number(alertaAplazoMinutos),
+        sonidoHabilitado: Boolean(alertaSonidoHabilitado),
+      },
+    }
+
+    await guardarConfiguracionOperativa(
+      nuevaConfig as any,
+      nuevoValor
+        ? 'Cartel flotante de pedidos demorados activado.'
+        : 'Cartel flotante de pedidos demorados desactivado.'
+    )
+  }
+
+  // Guardar inmediatamente al cambiar el switch de Sonido del Cartel
+  const manejarCambioSwitchSonidoAlerta = async (nuevoValor: boolean) => {
+    setAlertaSonidoHabilitado(nuevoValor)
+
+    const nuevaConfig = {
+      limites: {
+        pedidoAtrasadoMinutos: Number(pedidoAtrasadoMinutos),
+        listoDemoradoMinutos: Number(listoDemoradoMinutos),
+        cocinaDemoradoMinutos: Number(cocinaDemoradoMinutos),
+        pedidoOlvidadoMinutos: Number(pedidoOlvidadoMinutos),
+      },
+      prioridades: {
+        pedidoAtrasadoAltaMinutos: Number(pedidoAtrasadoAltaMinutos),
+        listoDemoradoAltaMinutos: Number(listoDemoradoAltaMinutos),
+        sinCadeteAltaMinutos: Number(sinCadeteAltaMinutos),
+        cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
+      },
+      montoBaseCadete: Number(montoBaseCadete),
+      portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
+      autocompletadoClientesHabilitado: Boolean(autocompletadoClientesHabilitado),
+      alertaCriticaFlotante: {
+        habilitada: Boolean(alertaHabilitada),
+        tiempoCocinaMinutos: Number(alertaCocinaMinutos),
+        tiempoListoMinutos: Number(alertaListoMinutos),
+        tiempoTotalMinutos: Number(alertaTotalMinutos),
+        tiempoAplazoMinutos: Number(alertaAplazoMinutos),
+        sonidoHabilitado: nuevoValor,
+      },
+    }
+
+    await guardarConfiguracionOperativa(
+      nuevaConfig as any,
+      nuevoValor
+        ? 'Sonido de alarma para pedidos demorados activado.'
+        : 'Sonido de alarma para pedidos demorados silenciado.'
     )
   }
 
@@ -496,6 +572,36 @@ function PestanaParametros() {
               <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
+
+          {/* Función 3: Cartel Flotante de Pedidos Demorados (Estilo Alarma) */}
+          <div className="flex items-center justify-between pt-3">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Cartel Flotante de Pedidos Demorados (Estilo Alarma)
+                </span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  alertaHabilitada
+                    ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {alertaHabilitada ? 'Activado' : 'Desactivado'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Muestra un aviso persistente flotante en pantalla con sonido cuando un pedido supera los límites tolerables de tiempo.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={alertaHabilitada}
+                onChange={(e) => manejarCambioSwitchAlerta(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -534,9 +640,18 @@ function PestanaParametros() {
               <Bell size={18} />
             </span>
             <div>
-              <h3 className="text-sm font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                Cartel Flotante de Pedidos Demorados (Estilo Alarma)
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  Cartel Flotante de Pedidos Demorados (Estilo Alarma)
+                </h3>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  alertaHabilitada
+                    ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {alertaHabilitada ? 'Activado' : 'Desactivado'}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400">
                 Aviso persistente en pantalla que no se cierra solo hasta avanzar el pedido o tocar "Aplazar".
               </p>
@@ -551,7 +666,7 @@ function PestanaParametros() {
               <input
                 type="checkbox"
                 checked={alertaSonidoHabilitado}
-                onChange={(e) => setAlertaSonidoHabilitado(e.target.checked)}
+                onChange={(e) => manejarCambioSwitchSonidoAlerta(e.target.checked)}
                 className="sr-only peer"
               />
               <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
@@ -562,7 +677,7 @@ function PestanaParametros() {
               <input
                 type="checkbox"
                 checked={alertaHabilitada}
-                onChange={(e) => setAlertaHabilitada(e.target.checked)}
+                onChange={(e) => manejarCambioSwitchAlerta(e.target.checked)}
                 className="sr-only peer"
               />
               <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>

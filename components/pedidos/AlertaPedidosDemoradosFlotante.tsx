@@ -66,7 +66,7 @@ export default function AlertaPedidosDemoradosFlotante() {
       tiempoAplazoMinutos: 5,
       sonidoHabilitado: true,
     }
-    const conf = (configuracionOperativa as any)?.alertaCriticaFlotante
+    const conf = (configuracionOperativa as any)?.alertaCriticaFlotante || (configuracionOperativa as any)?.prioridades?.alertaCriticaFlotante
     if (!conf) return fallback
     return {
       habilitada: conf.habilitada !== undefined ? Boolean(conf.habilitada) : fallback.habilitada,

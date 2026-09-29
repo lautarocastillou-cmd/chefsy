@@ -98,7 +98,11 @@ export async function POST(request: Request) {
 
     const habilitado = portalCadeteriaHabilitado !== undefined ? Boolean(portalCadeteriaHabilitado) : true
     const monto = Number(montoBaseCadete ?? 4000)
-    const alerta = alertaCriticaFlotante || prioridades.alertaCriticaFlotante || (configuracionFallback as any).alertaCriticaFlotante
+    const alerta = {
+      ...((configuracionFallback as any).alertaCriticaFlotante || {}),
+      ...(prioridades?.alertaCriticaFlotante || {}),
+      ...(alertaCriticaFlotante || {}),
+    }
     const autocompletado = autocompletadoClientesHabilitado !== undefined
       ? Boolean(autocompletadoClientesHabilitado)
       : (prioridades.autocompletadoClientesHabilitado !== undefined ? Boolean(prioridades.autocompletadoClientesHabilitado) : true)
@@ -141,7 +145,13 @@ export async function POST(request: Request) {
       )
     }
 
-    return NextResponse.json({ ok: true, portalCadeteriaHabilitado: habilitado, montoBaseCadete: monto })
+    return NextResponse.json({
+      ok: true,
+      portalCadeteriaHabilitado: habilitado,
+      montoBaseCadete: monto,
+      alertaCriticaFlotante: alerta,
+      autocompletadoClientesHabilitado: autocompletado,
+    })
   } catch (error: any) {
     console.error('[API Config] Error al procesar la solicitud:', error)
     return NextResponse.json(
