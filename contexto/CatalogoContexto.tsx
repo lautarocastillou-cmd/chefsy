@@ -189,6 +189,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   }
 
   const descontarStockProducto = (productoId: string, cantidad: number) => {
+    // Actualizar estado local optimistamente sin sincronizar todo el catálogo
     const nuevosProductos = productosRef.current.map((p) => {
       if (p.id === productoId && typeof p.stock === 'number') {
         const nuevoStock = Math.max(0, p.stock - cantidad)
@@ -196,7 +197,19 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
       }
       return p
     })
-    actualizarProductos(nuevosProductos)
+    setProductos(nuevosProductos)
+    productosRef.current = nuevosProductos
+    setCache('chefsy-productos-v1', nuevosProductos)
+
+    // Sincronizar solo el stock de este producto vía endpoint PATCH específico
+    const productoActualizado = nuevosProductos.find((p) => p.id === productoId)
+    if (productoActualizado && typeof productoActualizado.stock === 'number') {
+      fetch('/api/admin/catalogo/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productoId, stock: productoActualizado.stock }),
+      }).catch((err) => console.error('[Catalogo] Error al sincronizar stock:', err))
+    }
   }
 
   return (

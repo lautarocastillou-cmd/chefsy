@@ -88,7 +88,6 @@ export async function GET() {
         web: 'operativo',
         supabase: {
           estado: 'desconectado',
-          error: errorDbMensaje,
           latencia_ms: dbLatencia,
         },
       },

@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
       }
       console.error('[API Rastreo] Error de Supabase:', error)
-      return NextResponse.json({ error: `Error de base de datos: ${error.message}` }, { status: 500 })
+      return NextResponse.json({ error: 'Error al consultar el pedido' }, { status: 500 })
     }
 
     if (!data) {

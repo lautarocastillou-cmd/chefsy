@@ -8,7 +8,7 @@
 import { SignJWT, jwtVerify, JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
-import { createHash } from 'crypto'
+import { createHash, timingSafeEqual } from 'crypto'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 const NOMBRE_COOKIE = 'chefsy-token'
@@ -60,12 +60,23 @@ export async function validarCredenciales(
 
     if (error || !usuarioBd) {
       // Fallback: verificación con variables de entorno si la tabla usuarios no fue sembrada
+      // Usa timingSafeEqual para prevenir ataques de timing
       const adminPass = process.env.CHEFSY_ADMIN_PASS
       const cadetePass = process.env.CHEFSY_CADETE_PASS
-      if (uLimpio === 'admin' && adminPass && clave === adminPass) {
+
+      const compararSeguro = (a: string, b: string): boolean => {
+        try {
+          const bufA = Buffer.from(a)
+          const bufB = Buffer.from(b)
+          if (bufA.length !== bufB.length) return false
+          return timingSafeEqual(bufA, bufB)
+        } catch { return false }
+      }
+
+      if (uLimpio === 'admin' && adminPass && compararSeguro(clave, adminPass)) {
         return { usuario: 'admin', nombre: 'Administrador', rol: 'admin' }
       }
-      if (uLimpio === 'cadete' && cadetePass && clave === cadetePass) {
+      if (uLimpio === 'cadete' && cadetePass && compararSeguro(clave, cadetePass)) {
         return { usuario: 'cadete', nombre: 'Cadete', rol: 'cadete' }
       }
       return null

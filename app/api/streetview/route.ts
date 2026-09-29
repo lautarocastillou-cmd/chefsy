@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
 
 // Helper: Calcular ángulo de rumbo desde la cámara del auto de Google hacia el pin del cliente
 function calcularRumboHacia(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -14,6 +15,16 @@ function calcularRumboHacia(lat1: number, lon1: number, lat2: number, lon2: numb
 }
 
 export async function GET(request: Request) {
+  // Rate limit: 30 peticiones/minuto por IP para proteger cuota de Google Maps API
+  const ip = obtenerIpCliente(request)
+  const rl = verificarRateLimit(`streetview:${ip}`, 30, 60)
+  if (!rl.permitido) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Esperá unos segundos.' },
+      { status: 429, headers: { 'Retry-After': String(rl.segundosParaReset) } }
+    )
+  }
+
   const { searchParams } = new URL(request.url)
   const latStr = searchParams.get('lat')
   const lngStr = searchParams.get('lng')
