@@ -124,10 +124,35 @@ export async function GET(request: Request) {
 
     const supabaseAdmin = obtenerSupabaseAdmin()
 
-    // 1. Obtener todas las comandas requeridas paginando de a 1.000 filas
+    // 1a. Query histórica completa (sin filtro de fechas) — para análisis de retención de clientes
+    // Necesita toda la historia para calcular frecuencia, primer/último pedido, etc.
+    const step = 1000
+    let pedidosHistoricos: any[] = []
+    let fromHist = 0
+
+    while (true) {
+      const { data, error } = await supabaseAdmin
+        .from('pedidos')
+        .select('id, fecha, hora, estado, total, productos, created_at, cliente, telefono, tipoEntrega')
+        .neq('estado', 'cancelado')
+        .neq('es_prueba', true)
+        .neq('turno_tipo', 'prueba')
+        .order('created_at', { ascending: true })
+        .range(fromHist, fromHist + step - 1)
+
+      if (error) {
+        console.error('[API Metricas Avanzadas] Error consultando histórico:', error)
+        throw error
+      }
+      if (!data || data.length === 0) break
+      pedidosHistoricos = pedidosHistoricos.concat(data)
+      if (data.length < step) break
+      fromHist += step
+    }
+
+    // 1b. Query del período seleccionado (filtrada en SQL) — para todos los otros módulos
     let pedidos: any[] = []
     let from = 0
-    const step = 1000
 
     while (true) {
       let query = supabaseAdmin
@@ -139,9 +164,13 @@ export async function GET(request: Request) {
         .order('created_at', { ascending: true })
         .range(from, from + step - 1)
 
+      // Filtros de fecha aplicados en SQL — evita traer toda la tabla para filtrar en JS
+      if (desde) query = query.gte('fecha', desde)
+      if (hasta) query = query.lte('fecha', hasta)
+
       const { data, error } = await query
       if (error) {
-        console.error('[API Metricas Avanzadas] Error consultando pedidos:', error)
+        console.error('[API Metricas Avanzadas] Error consultando pedidos del período:', error)
         throw error
       }
 
@@ -170,7 +199,7 @@ export async function GET(request: Request) {
       pedidosList: PedidoHistCliente[]
     }>()
 
-    pedidos.forEach(p => {
+    pedidosHistoricos.forEach(p => {
       const tel = (p.telefono || '').replace(/\D/g, '')
       if (!tel || tel.length < 6) return
 
@@ -229,19 +258,15 @@ export async function GET(request: Request) {
       }
     })
 
-    // 3. Filtrar pedidos según rango de fecha y turno seleccionado
-    const pedidosFiltrados = pedidos.filter(p => {
-      if (desde && p.fecha < desde) return false
-      if (hasta && p.fecha > hasta) return false
-
-      if (turnoFiltro !== 'todos') {
-        const esMediodia = esPedidoMediodia(p)
-        if (turnoFiltro === 'mediodia' && !esMediodia) return false
-        if (turnoFiltro === 'noche' && esMediodia) return false
-      }
-
-      return true
-    })
+    // 3. Filtrar pedidos del período por turno (fechas ya vienen filtradas desde SQL)
+    const pedidosFiltrados = turnoFiltro === 'todos'
+      ? pedidos
+      : pedidos.filter(p => {
+          const esMediodia = esPedidoMediodia(p)
+          if (turnoFiltro === 'mediodia' && !esMediodia) return false
+          if (turnoFiltro === 'noche' && esMediodia) return false
+          return true
+        })
 
     const totalComandas = pedidosFiltrados.length
 
