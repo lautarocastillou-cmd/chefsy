@@ -86,6 +86,8 @@ export async function GET(request: Request) {
         .from('pedidos')
         .select('id, fecha, hora, estado, total, productos, created_at')
         .neq('estado', 'cancelado')
+        .neq('es_prueba', true)
+        .neq('turno_tipo', 'prueba')
         .order('created_at', { ascending: true })
         .range(from, from + step - 1)
 

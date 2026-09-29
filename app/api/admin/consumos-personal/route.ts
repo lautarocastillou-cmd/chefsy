@@ -92,9 +92,13 @@ export async function POST(request: Request) {
         }
 
         const id = 'cons-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
+        const fechaConsumo = payload.fecha && !isNaN(new Date(payload.fecha).getTime())
+          ? new Date(payload.fecha).toISOString()
+          : new Date().toISOString()
+
         const nuevoConsumo: ConsumoPersonal = {
           id,
-          fecha: new Date().toISOString(),
+          fecha: fechaConsumo,
           producto_id: payload.producto_id,
           producto_nombre: payload.producto_nombre,
           categoria_nombre: payload.categoria_nombre,

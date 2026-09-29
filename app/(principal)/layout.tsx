@@ -9,11 +9,12 @@
 import { useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import BottomNavMobile from '@/components/layout/BottomNavMobile'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, FlaskConical } from 'lucide-react'
 import { usarAuth } from '@/contexto/AuthContexto'
 import VerificadorLogin from '@/components/auth/VerificadorLogin'
 import NotificadorAccesos from '@/components/auth/NotificadorAccesos'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
@@ -26,7 +27,7 @@ import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const { usuarioActivo } = usarAuth()
-  const { modalNuevoPedidoAbierto, abrirModalNuevoPedido, cerrarModalNuevoPedido } = usarPedidos()
+  const { modalNuevoPedidoAbierto, abrirModalNuevoPedido, cerrarModalNuevoPedido, estadoTurno } = usarPedidos()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -103,6 +104,28 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
             className="w-8 h-8 rounded-lg bg-white p-0.5 object-contain"
           />
         </header>
+
+        {/* Banner Global de Turno de Prueba */}
+        {estadoTurno?.activo && estadoTurno.tipoTurno === 'prueba' && (
+          <div className="bg-purple-900 border-b border-purple-700 text-purple-100 px-4 py-2.5 flex items-center justify-between gap-3 text-xs shrink-0 z-30 shadow-md">
+            <div className="flex items-center gap-2 font-medium">
+              <span className="p-1 bg-purple-800 text-purple-200 rounded-md shrink-0 border border-purple-600">
+                <FlaskConical size={14} />
+              </span>
+              <span>
+                <strong className="font-extrabold uppercase tracking-wide text-purple-200">Modo Turno de Prueba Activo:</strong> Los pedidos y operaciones están aislados. No afectan estadísticas, cierres ni la tienda online.
+              </span>
+            </div>
+            {pathname !== '/cierre' && (
+              <Link
+                href="/cierre"
+                className="shrink-0 px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition-colors border border-purple-500/50 shadow-xs"
+              >
+                Ir a Cierre / Finalizar
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Contenedor de Contenido Principal con padding inferior para BottomNav */}
         <main className="flex-1 p-3 md:p-6 pb-28 md:pb-6">

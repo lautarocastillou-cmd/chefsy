@@ -30,4 +30,5 @@ export interface NuevoConsumoPayload {
   tipo_pago: 'anotado' | 'pagado'
   descontar_stock?: boolean
   notas?: string
+  fecha?: string // Timestamp ISO o fecha personalizada (permite registro retroactivo)
 }

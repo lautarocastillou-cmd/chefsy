@@ -19,7 +19,8 @@ import {
   Layers,
   ChevronDown,
   FileText,
-  Banknote
+  Banknote,
+  Calendar
 } from 'lucide-react'
 import { cn, formatearPrecio } from '@/lib/utils'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
@@ -27,6 +28,22 @@ import { notificarAviso } from '@/lib/notificaciones'
 import { usarConsumosPersonal } from '@/contexto/ConsumosPersonalContexto'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { ProductoCatalogo } from '@/tipos/catalogo'
+
+function obtenerFechaHoraLocal(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = date.getFullYear()
+  const m = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const min = pad(date.getMinutes())
+  return `${y}-${m}-${d}T${h}:${min}`
+}
+
+function obtenerFechaHoraAyer(): string {
+  const ayer = new Date()
+  ayer.setDate(ayer.getDate() - 1)
+  return obtenerFechaHoraLocal(ayer)
+}
 
 export default function ConsumoPersonalFlotante() {
   const [abierto, setAbierto] = useState(false)
@@ -56,6 +73,7 @@ export default function ConsumoPersonalFlotante() {
   const [personaNombre, setPersonaNombre] = useState('')
   const [tipoPago, setTipoPago] = useState<'anotado' | 'pagado'>('anotado')
   const [descontarStock, setDescontarStock] = useState(true)
+  const [fechaConsumo, setFechaConsumo] = useState<string>(() => obtenerFechaHoraLocal())
   const [guardando, setGuardando] = useState(false)
 
   // Filtros del Registro
@@ -140,6 +158,7 @@ export default function ConsumoPersonalFlotante() {
         persona_nombre: personaNombre.trim(),
         tipo_pago: tipoPago,
         descontar_stock: descontarStock,
+        fecha: fechaConsumo ? new Date(fechaConsumo).toISOString() : new Date().toISOString(),
       })
 
       if (ok) {
@@ -148,6 +167,7 @@ export default function ConsumoPersonalFlotante() {
         setPrecio('')
         setCantidad(1)
         setBusquedaProducto('')
+        setFechaConsumo(obtenerFechaHoraLocal())
       }
     } finally {
       setGuardando(false)
@@ -443,7 +463,42 @@ export default function ConsumoPersonalFlotante() {
                     )}
                   </div>
 
-                  {/* 4. Casilla: Tipo de Cobro / Descuento */}
+                  {/* 4. Casilla: Momento del Consumo (Permite Fechas Anteriores / Retroactivas) */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Calendar size={13} className="text-rose-500" />
+                        <span>Fecha y Hora del Consumo:</span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setFechaConsumo(obtenerFechaHoraLocal())}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-[#2a2a2a] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#333] transition-colors cursor-pointer"
+                        >
+                          Ahora
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFechaConsumo(obtenerFechaHoraAyer())}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-[#2a2a2a] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#333] transition-colors cursor-pointer"
+                        >
+                          Ayer
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="datetime-local"
+                      value={fechaConsumo}
+                      onChange={(e) => setFechaConsumo(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-[#3d3d3d] bg-white dark:bg-[#282828] text-slate-800 dark:text-slate-100 text-xs font-bold outline-none focus:border-rose-500 shadow-2xs"
+                    />
+                    <p className="text-[10.5px] text-slate-400">
+                      Podés elegir una fecha anterior si te olvidaste de anotar el producto en su momento.
+                    </p>
+                  </div>
+
+                  {/* 5. Casilla: Tipo de Cobro / Descuento */}
                   <div className="space-y-1.5 pt-1">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                       Estado de Pago:
@@ -672,6 +727,7 @@ export default function ConsumoPersonalFlotante() {
                     ) : (
                       consumosFiltrados.map((c) => {
                         const fechaFormateada = new Date(c.fecha).toLocaleString('es-AR', {
+                          weekday: 'short',
                           day: '2-digit',
                           month: '2-digit',
                           hour: '2-digit',

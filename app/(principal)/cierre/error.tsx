@@ -20,7 +20,7 @@ export default function ErrorCierreCaja({
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 sm:p-8 min-h-[60vh]">
-      <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center backdrop-blur-xl">
+      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center">
         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-5 text-amber-400">
           <BarChart2 className="w-8 h-8 stroke-[2.2]" />
         </div>

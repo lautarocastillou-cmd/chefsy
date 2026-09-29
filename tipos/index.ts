@@ -18,8 +18,8 @@ export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto' | 's
 /** Forma en que el cliente recibe el pedido */
 export type TipoEntrega = 'delivery' | 'retiro' | 'consumo_local'
 
-/** Tipo de turno operativo: mediodía vs noche */
-export type TipoTurno = 'mediodia' | 'noche'
+/** Tipo de turno operativo: mediodía vs noche vs prueba */
+export type TipoTurno = 'mediodia' | 'noche' | 'prueba'
 
 /** Coordenadas geográficas de entrega */
 export interface Coordenadas {
@@ -92,6 +92,7 @@ export interface Pedido {
   itinerario_paradas?: any[]
   cadete_gps_activo?: boolean
   cadete_ocupado_en_otro_viaje?: boolean
+  es_prueba?: boolean
 }
 
 export interface CadetePagoExtra {

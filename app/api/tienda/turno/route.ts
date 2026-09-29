@@ -31,16 +31,18 @@ export async function GET() {
       .eq('id', 1)
       .single()
 
-    const turnoActivoEnDb = !error && data ? Boolean(data.activo) : false
+    // Si el turno es de prueba, para los clientes externos la tienda online permanece cerrada
+    const esTurnoPrueba = data?.tipo_turno === 'prueba'
+    const turnoActivoEnDb = !error && data && !esTurnoPrueba ? Boolean(data.activo) : false
     const estadoHorario = obtenerEstadoHorarioLocal(turnoActivoEnDb)
 
     const payload = {
-      activo: estadoHorario.abierto,
+      activo: esTurnoPrueba ? false : estadoHorario.abierto,
       esDomingo: estadoHorario.esDomingo,
-      motivo: estadoHorario.motivo,
-      mensaje: estadoHorario.mensaje,
-      tipoTurno: data?.tipo_turno || null,
-      fechaInicio: data?.fecha_inicio || null,
+      motivo: esTurnoPrueba ? 'turno_prueba' : estadoHorario.motivo,
+      mensaje: esTurnoPrueba ? 'El local se encuentra cerrado temporalmente.' : estadoHorario.mensaje,
+      tipoTurno: esTurnoPrueba ? null : (data?.tipo_turno || null),
+      fechaInicio: esTurnoPrueba ? null : (data?.fecha_inicio || null),
     }
 
     guardarEnCache(CACHE_KEY, payload, 10) // 10 segundos de TTL

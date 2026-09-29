@@ -28,7 +28,7 @@ export async function GET() {
       })
     }
     
-    const tipoTurnoCalculado = 'noche'
+    const tipoTurnoCalculado = (data.tipo_turno as string) || 'noche'
 
     return NextResponse.json({
       activo: data.activo,
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { activo, cajaInicial, fechaInicio } = body
+    const { activo, cajaInicial, fechaInicio, tipoTurno } = body
 
     if (typeof activo !== 'boolean') {
       return NextResponse.json({ error: 'Campo "activo" requerido y debe ser booleano.' }, { status: 400 })
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       activo, 
       caja_inicial: cajaInicialNum, 
       fecha_inicio: typeof fechaInicio === 'string' && fechaInicio.trim() ? fechaInicio.trim() : null,
-      tipo_turno: 'noche'
+      tipo_turno: typeof tipoTurno === 'string' && tipoTurno.trim() ? tipoTurno.trim() : 'noche'
     }
 
     let { error } = await supabase.from('turnos').upsert(payloadConTipo)

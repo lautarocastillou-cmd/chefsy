@@ -27,7 +27,8 @@ import {
   Clock,
   Zap,
   Plus,
-  Coffee
+  Coffee,
+  FlaskConical
 } from 'lucide-react'
 import { Pedido, TipoTurno, CadetePagoExtra } from '@/tipos'
 import { usarConsumosPersonal } from '@/contexto/ConsumosPersonalContexto'
@@ -61,6 +62,7 @@ export default function PaginaCierreCaja() {
   const [modalVerificacionAbierto, setModalVerificacionAbierto] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [copiadoConsumos, setCopiadoConsumos] = useState(false)
   const [tabActual, setTabActual] = useState<'calculadora' | 'metricas'>('calculadora')
   const [filtroTurno, setFiltroTurno] = useState<'todos' | 'noche'>('noche')
   // cajaInicial del snapshot histórico (cuando se ve "Por Fecha" de un turno ya cerrado)
@@ -76,6 +78,12 @@ export default function PaginaCierreCaja() {
 
   const abrirModalIniciarTurno = () => {
     setTipoTurnoInput('noche')
+    setModalInicioAbierto(true)
+  }
+
+  const abrirModalIniciarTurnoPrueba = () => {
+    setTipoTurnoInput('prueba')
+    setCajaInicialInput('0')
     setModalInicioAbierto(true)
   }
 
@@ -164,14 +172,23 @@ export default function PaginaCierreCaja() {
     }
   }, [modoOrigen, fechaSeleccionada, obtenerPedidosPorFecha, pedidos, refrescarConsumos])
 
-  // Filtrar pedidos por tipo de turno seleccionado
+  // Filtrar pedidos por tipo de turno seleccionado con aislamiento de modo prueba
   const pedidosFiltradosPorTurno = useMemo(() => {
-    if (modoOrigen === 'en_vivo' || filtroTurno === 'todos') return pedidosDelDia
+    if (modoOrigen === 'en_vivo') {
+      if (estadoTurno.activo && estadoTurno.tipoTurno === 'prueba') {
+        return pedidosDelDia.filter((p) => p.es_prueba || p.turno_tipo === 'prueba')
+      }
+      return pedidosDelDia.filter((p) => !p.es_prueba && p.turno_tipo !== 'prueba')
+    }
+    if (filtroTurno === 'todos') {
+      return pedidosDelDia.filter((p) => !p.es_prueba && p.turno_tipo !== 'prueba')
+    }
     return pedidosDelDia.filter((p) => {
+      if (p.es_prueba || p.turno_tipo === 'prueba') return false
       if (p.turno_tipo) return p.turno_tipo === 'noche'
       return true
     })
-  }, [pedidosDelDia, filtroTurno, modoOrigen])
+  }, [pedidosDelDia, filtroTurno, modoOrigen, estadoTurno])
 
 
   // Pedidos válidos (no cancelados) para estadísticas de caja
@@ -440,6 +457,69 @@ _Generado automáticamente desde Chefsy_`.trim()
       })
   }
 
+  // Copiar detalle completo de consumos del personal para WhatsApp/reporte
+  const copiarConsumosAlPortapapeles = () => {
+    if (consumosDelTurno.length === 0) return
+
+    const formatearOperacion = (c: any) => {
+      const d = new Date(c.fecha)
+      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+      const diaSemana = !isNaN(d.getTime()) ? dias[d.getDay()] : 'Día'
+      const diaNum = !isNaN(d.getTime()) ? String(d.getDate()).padStart(2, '0') : ''
+      const mesNum = !isNaN(d.getTime()) ? String(d.getMonth() + 1).padStart(2, '0') : ''
+      const hora = !isNaN(d.getTime()) ? String(d.getHours()).padStart(2, '0') : ''
+      const min = !isNaN(d.getTime()) ? String(d.getMinutes()).padStart(2, '0') : ''
+      const fechaTexto = !isNaN(d.getTime()) ? `${diaSemana} ${diaNum}/${mesNum} ${hora}:${min} hs` : c.fecha
+
+      const cant = c.cantidad > 1 ? `${c.cantidad}x ` : ''
+      const subtotal = c.total || (c.precio * c.cantidad)
+      return `• ${c.persona_nombre} | ${cant}${c.producto_nombre} (${formatearPrecio(subtotal)}) | ${fechaTexto}`
+    }
+
+    const anotadosTexto = consumosAnotadosSueldo.length > 0
+      ? consumosAnotadosSueldo.map(formatearOperacion).join('\n')
+      : '• Sin consumos anotados a cuenta de sueldo'
+
+    const pagadosTexto = consumosPagadosActo.length > 0
+      ? consumosPagadosActo.map(formatearOperacion).join('\n')
+      : '• Sin consumos abonados en el acto'
+
+    const totalGeneralConsumos = totalConsumosAnotadosSueldo + totalConsumosPagadosActo
+
+    const formattedDate = new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-AR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+
+    const mensaje = `*📋 DETALLE DE CONSUMOS DEL PERSONAL - CHEFSY*
+*Fecha de Turno:* ${formattedDate}
+----------------------------------------
+*📌 ANOTADOS (A CUENTA DE SUELDO / PENDIENTES):*
+${anotadosTexto}
+*Subtotal a descontar de sueldos:* ${formatearPrecio(totalConsumosAnotadosSueldo)}
+
+----------------------------------------
+*💵 ABONADOS EN EL ACTO:*
+${pagadosTexto}
+*Subtotal abonado en el momento:* ${formatearPrecio(totalConsumosPagadosActo)}
+
+----------------------------------------
+*TOTAL GENERAL CONSUMOS:* ${formatearPrecio(totalGeneralConsumos)}
+----------------------------------------
+_Generado automáticamente desde Chefsy_`.trim()
+
+    navigator.clipboard.writeText(mensaje)
+      .then(() => {
+        setCopiadoConsumos(true)
+        setTimeout(() => setCopiadoConsumos(false), 2000)
+      })
+      .catch((err) => {
+        console.error('Error al copiar consumos:', err)
+      })
+  }
+
   // Finalizar el turno (Archivar pedidos con asistente de verificación)
   const manejarFinalizarTurno = async () => {
     if (pedidosFiltradosPorTurno.length === 0) {
@@ -536,17 +616,31 @@ _Generado automáticamente desde Chefsy_`.trim()
           )}
 
           <button
-            onClick={() => setModalInicioAbierto(true)}
+            onClick={abrirModalIniciarTurno}
             disabled={estadoTurno.activo}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5",
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer",
               estadoTurno.activo
                 ? "bg-slate-100 text-slate-500 dark:bg-[#333] dark:text-[#888] cursor-not-allowed border border-slate-200 dark:border-slate-800"
                 : "bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 active:scale-95"
             )}
           >
             <Play size={16} />
-            {estadoTurno.activo ? 'Turno Noche activo' : 'Iniciar Turno'}
+            {estadoTurno.activo ? (estadoTurno.tipoTurno === 'prueba' ? 'Turno Prueba activo' : 'Turno Noche activo') : 'Iniciar Turno'}
+          </button>
+          <button
+            onClick={abrirModalIniciarTurnoPrueba}
+            disabled={estadoTurno.activo}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer",
+              estadoTurno.activo
+                ? "bg-slate-100 text-slate-500 dark:bg-[#333] dark:text-[#888] cursor-not-allowed border border-slate-200 dark:border-slate-800"
+                : "bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 active:scale-95"
+            )}
+            title="Iniciar turno de prueba aislado para testing de errores sin afectar estadísticas ni la tienda online"
+          >
+            <FlaskConical size={16} />
+            Iniciar Turno de Prueba
           </button>
           <button
             onClick={() => setModalVerificacionAbierto(true)}
@@ -567,6 +661,34 @@ _Generado automáticamente desde Chefsy_`.trim()
           </button>
         </div>
       </div>
+
+      {/* Alerta Destacada: Turno de Prueba Activo */}
+      {estadoTurno.activo && estadoTurno.tipoTurno === 'prueba' && (
+        <div className="bg-purple-900 border border-purple-700 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white shadow-lg animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-purple-700 text-purple-200 rounded-xl shrink-0 mt-0.5 sm:mt-0 shadow-sm">
+              <FlaskConical size={22} />
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold uppercase tracking-wider text-purple-200 flex items-center gap-2">
+                Modo Turno de Prueba Activo
+                <span className="text-[10px] bg-purple-800 px-2 py-0.5 rounded-full border border-purple-600 font-bold">
+                  SANDBOX AISLADO
+                </span>
+              </h4>
+              <p className="text-xs text-purple-200/90 mt-1 font-medium leading-relaxed">
+                Estás en un turno de prueba para verificar errores. Los pedidos y acciones creados aquí <strong>no afectarán</strong> las estadísticas mensuales, el historial de cierres diarios ni las métricas de productos. La <strong>tienda online pública está cerrada</strong> para clientes reales.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={manejarFinalizarTurno}
+            className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+          >
+            Finalizar Turno de Prueba
+          </button>
+        </div>
+      )}
 
       {/* Alerta de Turno Pendiente de Fecha Anterior */}
       {infoTurnoPendiente && (
@@ -685,25 +807,48 @@ _Generado automáticamente desde Chefsy_`.trim()
               {' '}({formatearPrecio(facturacionBruta)} bruto − {formatearPrecio(totalCostosEnvio)} envíos)
             </p>
           </div>
-          <button
-            onClick={copiarReporteAlPortapapeles}
-            disabled={totalPedidos === 0 && canceladosCount === 0 && consumosDelTurno.length === 0}
-            className={`relative z-10 px-5 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-              copiado
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                : 'bg-white hover:bg-chefsy-50 text-chefsy-800'
-            }`}
-          >
-            {copiado ? (
-              <>
-                <Check size={14} /> ¡Reporte Copiado!
-              </>
-            ) : (
-              <>
-                <Copy size={14} /> Copiar Reporte de Caja
-              </>
-            )}
-          </button>
+          <div className="relative z-10 flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={copiarReporteAlPortapapeles}
+              disabled={totalPedidos === 0 && canceladosCount === 0 && consumosDelTurno.length === 0}
+              className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                copiado
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  : 'bg-white hover:bg-chefsy-50 text-chefsy-800'
+              }`}
+            >
+              {copiado ? (
+                <>
+                  <Check size={14} /> ¡Reporte Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy size={14} /> Copiar Reporte de Caja
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={copiarConsumosAlPortapapeles}
+              disabled={consumosDelTurno.length === 0}
+              className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                copiadoConsumos
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  : 'bg-chefsy-700/90 hover:bg-chefsy-700 text-white border border-white/20'
+              }`}
+              title="Copiar mensaje detallando lo que deben los empleados (anotados) y lo que abonaron en el acto"
+            >
+              {copiadoConsumos ? (
+                <>
+                  <Check size={14} /> ¡Consumos Copiados!
+                </>
+              ) : (
+                <>
+                  <Coffee size={14} /> Copiar Consumos Personal
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Tarjeta Extra: Total Efectivo a Rendir */}
@@ -1072,8 +1217,17 @@ _Generado automáticamente desde Chefsy_`.trim()
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200 overflow-hidden will-change-transform">
             <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 p-5">
               <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                <Play size={18} className="text-emerald-500 fill-emerald-500" />
-                Iniciar Turno
+                {tipoTurnoInput === 'prueba' ? (
+                  <>
+                    <FlaskConical size={18} className="text-purple-500" />
+                    Iniciar Turno de Prueba
+                  </>
+                ) : (
+                  <>
+                    <Play size={18} className="text-emerald-500 fill-emerald-500" />
+                    Iniciar Turno Noche
+                  </>
+                )}
               </h2>
               <button
                 onClick={() => setModalInicioAbierto(false)}
@@ -1082,22 +1236,71 @@ _Generado automáticamente desde Chefsy_`.trim()
                 <X size={20} />
               </button>
             </div>
+
+            {/* Selector de Tipo de Turno */}
+            <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-1.5 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setTipoTurnoInput('noche')}
+                className={cn(
+                  "flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
+                  tipoTurnoInput === 'noche'
+                    ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                )}
+              >
+                <Moon size={14} />
+                <span>Turno Noche</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoTurnoInput('prueba')}
+                className={cn(
+                  "flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
+                  tipoTurnoInput === 'prueba'
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                )}
+              >
+                <FlaskConical size={14} />
+                <span>Turno de Prueba</span>
+              </button>
+            </div>
             
-            <form onSubmit={manejarIniciarTurno} className="p-5 space-y-5">
-              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                    <Moon size={20} />
+            <form onSubmit={manejarIniciarTurno} className="p-5 space-y-4">
+              {tipoTurnoInput === 'prueba' ? (
+                <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-2xl p-3.5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-xl">
+                        <FlaskConical size={18} />
+                      </div>
+                      <p className="text-sm font-bold text-purple-900 dark:text-purple-200">Sandbox Aislado</p>
+                    </div>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                      Pruebas
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Turno Noche</p>
-                    <p className="text-xs text-slate-400">Horario habitual: 20:30 a 01:00 hs</p>
-                  </div>
+                  <p className="text-[11px] text-purple-800/90 dark:text-purple-300/90 leading-snug pt-1">
+                    No afecta estadísticas, cierres ni reportes mensuales. La tienda online pública permanecerá cerrada para clientes reales.
+                  </p>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Activo
-                </span>
-              </div>
+              ) : (
+                <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                      <Moon size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Turno Noche Habitual</p>
+                      <p className="text-xs text-slate-400">Horario habitual: 20:30 a 01:00 hs</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    Normal
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
@@ -1113,10 +1316,19 @@ _Generado automáticamente desde Chefsy_`.trim()
                     value={cajaInicialInput}
                     onChange={(e) => setCajaInicialInput(e.target.value)}
                     placeholder="Ej: 5000"
-                    className="w-full pl-7 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 font-bold transition-all"
+                    className={cn(
+                      "w-full pl-7 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl outline-none text-slate-800 dark:text-slate-100 font-bold transition-all",
+                      tipoTurnoInput === 'prueba'
+                        ? "border-purple-300 dark:border-purple-700 focus:ring-2 focus:ring-purple-500/50"
+                        : "border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500/50"
+                    )}
                   />
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2">Esta plata se sumará al efectivo de las ventas al final del día para el conteo de la caja.</p>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  {tipoTurnoInput === 'prueba'
+                    ? 'Podés dejar en $0 para tus pruebas.'
+                    : 'Esta plata se sumará al efectivo de las ventas al final del día para el conteo de la caja.'}
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -1131,9 +1343,18 @@ _Generado automáticamente desde Chefsy_`.trim()
                 <button
                   type="submit"
                   disabled={guardandoTurno}
-                  className="px-4 py-2 text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-sm shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+                  className={cn(
+                    "px-4 py-2 text-sm font-bold text-white rounded-xl transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2",
+                    tipoTurnoInput === 'prueba'
+                      ? "bg-purple-600 hover:bg-purple-700 shadow-purple-600/20"
+                      : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+                  )}
                 >
-                  {guardandoTurno ? 'Iniciando...' : 'Confirmar e Iniciar'}
+                  {guardandoTurno
+                    ? 'Iniciando...'
+                    : tipoTurnoInput === 'prueba'
+                    ? 'Iniciar Turno de Prueba'
+                    : 'Confirmar e Iniciar'}
                 </button>
               </div>
             </form>

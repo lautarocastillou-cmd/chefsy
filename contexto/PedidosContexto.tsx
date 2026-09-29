@@ -485,16 +485,23 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   // ── Operaciones CRUD ──────────────────────────────────
 
   const agregarPedido = async (pedido: Pedido) => {
-    cambiosLocalesRef.current[pedido.id] = Date.now()
-    despachar({ tipo: 'AGREGAR_PEDIDO', pedido })
+    const esModoPrueba = estadoTurno?.tipoTurno === 'prueba'
+    const pedidoConTurno: Pedido = {
+      ...pedido,
+      turno_tipo: esModoPrueba ? 'prueba' : (pedido.turno_tipo || estadoTurno?.tipoTurno || 'noche'),
+      es_prueba: esModoPrueba || Boolean(pedido.es_prueba),
+    }
+
+    cambiosLocalesRef.current[pedidoConTurno.id] = Date.now()
+    despachar({ tipo: 'AGREGAR_PEDIDO', pedido: pedidoConTurno })
     mutateSWR((current) => {
       const arr = current || []
-      const existe = arr.some((p) => p.id === pedido.id)
-      return existe ? arr.map((p) => (p.id === pedido.id ? pedido : p)) : [pedido, ...arr]
+      const existe = arr.some((p) => p.id === pedidoConTurno.id)
+      return existe ? arr.map((p) => (p.id === pedidoConTurno.id ? pedidoConTurno : p)) : [pedidoConTurno, ...arr]
     }, false)
     reproducirSonidoCampanaCocina()
     try {
-      await enviarAccionPedido({ accion: 'crear', pedido })
+      await enviarAccionPedido({ accion: 'crear', pedido: pedidoConTurno })
     } catch (e: any) {
       console.error('[Servidor/Supabase] Error al crear pedido:', e)
       agregarNotificacion(`Error al guardar el pedido en la nube: ${e.message || 'Error interno'}`, 'warning')
@@ -789,9 +796,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const finalizarTurno = async () => {
     try {
       const todosPedidosActivos = estado.pedidos
-      const tipoTurnoActual: TipoTurno = 'noche'
+      const tipoTurnoActual: TipoTurno = (estadoTurno?.tipoTurno as TipoTurno) || 'noche'
 
-      // Al cerrar turno nocturno, todos los pedidos activos del panel corresponden al turno actual
+      // Al cerrar turno, todos los pedidos activos del panel corresponden al turno actual
       const pedidosDelTurnoActual = todosPedidosActivos
       const idsDelTurno = pedidosDelTurnoActual.map((p) => p.id)
 
@@ -853,7 +860,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       prevPedidosRef.current = pedidosRestantes
       import('swr').then((mod) => mod.mutate('pedidosActivos', pedidosRestantes, false))
 
-      const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null }
+      const turnoCerrado = { activo: false, cajaInicial: 0, fechaInicio: null, tipoTurno: 'noche' as TipoTurno }
       await fetch('/api/admin/turno', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -861,7 +868,11 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       })
       setEstadoTurno(turnoCerrado)
 
-      agregarNotificacion('Turno Noche finalizado. Panel limpio para el próximo turno.', 'success')
+      if (tipoTurnoActual === 'prueba') {
+        agregarNotificacion('Turno de prueba finalizado. El panel se limpió sin afectar las estadísticas reales.', 'success')
+      } else {
+        agregarNotificacion('Turno Noche finalizado. Panel limpio para el próximo turno.', 'success')
+      }
     } catch (err) {
       console.error('[Servidor/Supabase] Error al finalizar turno:', err)
       agregarNotificacion('Error al finalizar el turno en la nube. Intente nuevamente.', 'warning')

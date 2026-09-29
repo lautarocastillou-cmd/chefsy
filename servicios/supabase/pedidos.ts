@@ -3,15 +3,19 @@ import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 // Columnas estándar para listados (excluye ruta_historial y push_subscription para no descargar datos innecesarios)
-const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega'
+const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega, es_prueba, turno_tipo'
 
 /**
  * Obtiene todos los pedidos ordenados de forma descendente (más nuevos primero)
- * históricamente de una fecha específica.
+ * históricamente de una fecha específica (excluyendo turnos de prueba).
  */
 export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
   try {
-    let query = supabaseAnon.from('pedidos').select(COLUMNAS_PEDIDO_LISTA)
+    let query = supabaseAnon
+      .from('pedidos')
+      .select(COLUMNAS_PEDIDO_LISTA)
+      .neq('es_prueba', true)
+      .neq('turno_tipo', 'prueba')
     if (fecha) {
       query = query.eq('fecha', fecha)
     }

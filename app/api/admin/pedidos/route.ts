@@ -104,7 +104,9 @@ const CAMPOS_PERMITIDOS_PEDIDO = [
   'cliente_id',
   'puntos_ganados',
   'puntos_gastados',
-  'orden_entrega'
+  'orden_entrega',
+  'es_prueba',
+  'turno_tipo'
 ] as const
 
 function filtrarCamposPermitidos(origen: Record<string, any>): Record<string, any> {
@@ -163,8 +165,9 @@ export async function POST(request: Request) {
           archivado: false,
         }
 
-        // 1. Ejecutar transacción de puntos si aplica (con validación de cotas de seguridad)
-        if (payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
+        // 1. Ejecutar transacción de puntos si aplica (solo para pedidos reales, nunca en turnos de prueba)
+        const esPedidoPrueba = Boolean(payload.es_prueba) || payload.turno_tipo === 'prueba'
+        if (!esPedidoPrueba && payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
           const puntosAGastar = Math.max(0, Math.min(Number(payload.puntos_gastados) || 0, 50000))
           // Máximo de puntos ganables limitado al 20% del total para prevenir inyección de saldo infinito
           const maxPuntosGanables = Math.max(10, Math.floor((Number(payload.total) || 0) * 0.2))
@@ -432,11 +435,23 @@ export async function POST(request: Request) {
 
           const turnoTipo = snapshot?.turno_tipo || 'noche'
 
-          // Consultar pedidos de hoy en la base de datos para consolidar (solo columnas de cálculo financiero)
+          // Si es un turno de prueba, cerramos el turno inmediatamente sin tocar cierres_diarios
+          if (turnoTipo === 'prueba') {
+            await supabaseAdmin
+              .from('turnos')
+              .update({ activo: false, tipo_turno: 'noche' })
+              .eq('id', 1)
+
+            return NextResponse.json({ ok: true, es_prueba: true, mensaje: 'Turno de prueba finalizado sin afectar historial ni métricas.' })
+          }
+
+          // Consultar pedidos de hoy en la base de datos para consolidar (excluyendo estrictamente pedidos de prueba)
           const { data: pedidosDelDia } = await supabaseAdmin
             .from('pedidos')
-            .select('id, estado, total, costoEnvio, metodoPago, tipoEntrega')
+            .select('id, estado, total, costoEnvio, metodoPago, tipoEntrega, es_prueba, turno_tipo')
             .eq('fecha', fechaStr)
+            .neq('es_prueba', true)
+            .neq('turno_tipo', 'prueba')
 
           if (pedidosDelDia && pedidosDelDia.length > 0) {
             // En servicio exclusivamente nocturno, todos los pedidos de la fecha corresponden a este turno
