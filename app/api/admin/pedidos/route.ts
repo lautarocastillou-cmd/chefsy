@@ -123,6 +123,24 @@ function filtrarCamposPermitidos(origen: Record<string, any>): Record<string, an
 // Columnas de listado. Mismas que COLUMNAS_PEDIDO_LISTA en
 // servicios/supabase/pedidos.ts, y por el mismo motivo: no bajar
 // `ruta_historial` (puede tener cientos de puntos) ni `push_subscription`.
+/**
+ * ¿Es una fecha de calendario válida en formato YYYY-MM-DD?
+ * Rechaza '2024-13-45' y '2023-02-29', que la forma sola dejaría pasar.
+ */
+function esFechaValida(valor: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor)
+  if (!m) return false
+  const [, anio, mes, dia] = m
+  const d = new Date(Number(anio), Number(mes) - 1, Number(dia))
+  // El constructor de Date desborda (2024-02-31 -> marzo 2), así que se
+  // comparan las partes de vuelta.
+  return (
+    d.getFullYear() === Number(anio) &&
+    d.getMonth() === Number(mes) - 1 &&
+    d.getDate() === Number(dia)
+  )
+}
+
 const COLUMNAS_LISTA =
   'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega, es_prueba, turno_tipo'
 
@@ -155,7 +173,10 @@ export async function GET(request: Request) {
     const fecha = searchParams.get('fecha')
     const limiteParam = parseInt(searchParams.get('limite') || '', 10)
 
-    if (fecha !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    // Valida que sea una fecha real, no solo que tenga 4-2-2 dígitos:
+    // con una regex sola, '2024-13-45' pasaba y devolvía un listado vacío
+    // en vez de un error, que es más difícil de debuggear que un 400.
+    if (fecha !== null && !esFechaValida(fecha)) {
       return NextResponse.json(
         { error: 'Parámetro fecha inválido. Se espera YYYY-MM-DD.' },
         { status: 400 }
