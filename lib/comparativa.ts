@@ -3,8 +3,19 @@
 // Lógica para comparar el turno activo con el mismo día de la semana anterior.
 // ─────────────────────────────────────────────────────
 
-import { supabase } from './supabase'
 import { TipoTurno } from '@/tipos'
+
+// Los cierres de caja NO se leen desde el navegador con la anon key: van por
+// /api/admin/comparativa (service_role). Ver migracion RLS en supabase/.
+interface SnapshotAnterior {
+  fecha: string
+  facturacion_neta: number | null
+  total_pedidos: number | null
+  ticket_promedio: number | null
+  efectivo_ventas: number | null
+  transferencia_total: number | null
+  total_envios_delivery: number | null
+}
 
 export interface MetricasTurno {
   facturacionNeta: number
@@ -66,30 +77,20 @@ export async function calcularComparativaSemanal(
   const diaNombre = obtenerNombreDia(fechaHoy)
 
   try {
-    // Buscar en cierres_diarios el snapshot del mismo turno hace 7 días
-    const { data: cierres } = await supabase
-      .from('cierres_diarios')
-      .select('*')
-      .eq('fecha', fechaSemanaPasada)
-      .eq('turno_tipo', turnoTipo)
-      .limit(1)
+    // Pedir al servidor el snapshot del mismo turno hace 7 días.
+    const respuesta = await fetch(
+      `/api/admin/comparativa?fecha=${encodeURIComponent(fechaHoy)}&turno_tipo=${encodeURIComponent(turnoTipo)}`
+    )
 
-    let snapshotAnterior = cierres && cierres.length > 0 ? cierres[0] : null
-
-    // Si no encontró exactamente hace 7 días, buscar el último cierre cerrado de ese mismo turno
-    if (!snapshotAnterior) {
-      const { data: ultimosCierres } = await supabase
-        .from('cierres_diarios')
-        .select('*')
-        .eq('turno_tipo', turnoTipo)
-        .lt('fecha', fechaHoy)
-        .order('fecha', { ascending: false })
-        .limit(1)
-
-      if (ultimosCierres && ultimosCierres.length > 0) {
-        snapshotAnterior = ultimosCierres[0]
-      }
+    if (!respuesta.ok) {
+      throw new Error(`El servidor respondió ${respuesta.status}`)
     }
+
+    const { snapshot } = (await respuesta.json()) as {
+      snapshot: SnapshotAnterior | null
+    }
+
+    const snapshotAnterior = snapshot
 
     if (!snapshotAnterior) {
       return {

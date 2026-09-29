@@ -57,3 +57,20 @@ yarn-error.log*
 # ─────────────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+
+# ─────────────────────────────────────────────────────
+# App Flutter del cadete — proyecto separado, no pertenece a este repo
+# (antes estaba como submódulo fantasma: gitlink sin .gitmodules,
+#  lo que rompía el checkout de cualquier clon)
+# ─────────────────────────────────────────────────────
+/app_cadete_flutter
+/app_cadete_flutter_cloned
+
+# ─────────────────────────────────────────────────────
+# Scripts de prueba sueltos en la raíz (usan SUPABASE_SERVICE_ROLE_KEY)
+# ─────────────────────────────────────────────────────
+/test.js
+/test.mjs
+/test2.js
+/test_insert.js
+/check_cadetes.js
