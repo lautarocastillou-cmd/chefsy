@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('pedidos')
-      .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega, total, metodoPago, direccion, observaciones, hora, costoEnvio')
+      .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega, total, metodoPago, direccion, observaciones, hora, fecha, created_at, en_camino_at, orden_entrega, costoEnvio')
       .eq('id', pedidoId)
       .maybeSingle()
 
@@ -123,6 +123,8 @@ export async function GET(request: Request) {
     let paradasPrevias = 0
     let totalParadas = 1
     let paradaActual = 1
+    let totalPrevios = 0
+    let previosEntregados = 0
     let cadeteOcupadoEnOtroViaje = false
     let esProximaEntrega = true
 
@@ -137,16 +139,65 @@ export async function GET(request: Request) {
     }> = []
 
     if (data.cadete_id && data.estado !== 'entregado' && data.estado !== 'cancelado') {
-      const { data: pedidosActivosCadete } = await supabase
+      const { data: pedidosCadete } = await supabase
         .from('pedidos')
-        .select('id, estado, hora, created_at, coordenadas, orden_entrega, cliente')
-        .ilike('cadete_id', data.cadete_id)
-        .in('estado', ['en_cocina', 'listo', 'en_camino'])
-        .eq('archivado', false)
+        .select('id, estado, hora, created_at, coordenadas, orden_entrega, cliente, entregado_at, en_camino_at, fecha')
         .eq('tipoEntrega', 'delivery')
+        .eq('archivado', false)
+        .in('estado', ['en_cocina', 'listo', 'en_camino', 'entregado'])
+        .ilike('cadete_id', data.cadete_id)
 
-      if (pedidosActivosCadete && pedidosActivosCadete.length > 0) {
-        totalParadas = pedidosActivosCadete.length
+      if (pedidosCadete && pedidosCadete.length > 0) {
+        const ahora = Date.now()
+        const fechaHoy = data.fecha || new Date().toISOString().slice(0, 10)
+
+        // Pedidos activos del cadete
+        const pedidosActivos = pedidosCadete.filter(
+          (p) => ['en_cocina', 'listo', 'en_camino'].includes(p.estado)
+        )
+
+        // Pedidos entregados en este mismo viaje/turno
+        const pedidosEntregadosRecientes = pedidosCadete.filter((p) => {
+          if (p.estado !== 'entregado') return false
+          if (p.fecha && p.fecha !== fechaHoy) return false
+
+          const entregadoMs = p.entregado_at ? new Date(p.entregado_at).getTime() : 0
+          if (!entregadoMs) return false
+
+          // Entregado en los últimos 90 minutos
+          if (ahora - entregadoMs > 90 * 60 * 1000) return false
+
+          // Si data tiene orden_entrega manual y p tiene orden_entrega manual:
+          if (data.orden_entrega != null && p.orden_entrega != null) {
+            return Number(p.orden_entrega) < Number(data.orden_entrega)
+          }
+
+          // Si este pedido tiene referencia de tiempo de salida o creación:
+          const refInicioTrip = data.en_camino_at
+            ? new Date(data.en_camino_at).getTime()
+            : (data.created_at ? new Date(data.created_at).getTime() : 0)
+
+          if (refInicioTrip > 0) {
+            if (entregadoMs < refInicioTrip - 20 * 60 * 1000) {
+              return false
+            }
+          }
+
+          return true
+        })
+
+        // Unificar pedidos del viaje garantizando que data esté incluido y sin duplicados
+        const mapaTodos = new Map<string, any>()
+        pedidosEntregadosRecientes.forEach((p) => mapaTodos.set(p.id, p))
+        pedidosActivos.forEach((p) => mapaTodos.set(p.id, p))
+        mapaTodos.set(data.id, {
+          ...data,
+          coordenadas: data.coordenadas,
+          orden_entrega: data.orden_entrega,
+        })
+
+        const todosDelViaje = Array.from(mapaTodos.values())
+        totalParadas = todosDelViaje.length
 
         // Ordenar la cola de entregas:
         // 1. Manual si existe 'orden_entrega' asignado desde /cadeteria
@@ -175,32 +226,37 @@ export async function GET(request: Request) {
           })
         }
 
-        const colaOrdenada = ordenarCola(pedidosActivosCadete)
+        const colaOrdenada = ordenarCola(todosDelViaje)
 
         // Localizar la posición de ESTE pedido en la cola de entregas del cadete
         const indiceMiPedido = colaOrdenada.findIndex((p) => p.id === pedidoId)
 
         if (indiceMiPedido >= 0) {
           paradaActual = indiceMiPedido + 1
-          paradasPrevias = indiceMiPedido
-          esProximaEntrega = indiceMiPedido === 0
-          cadeteOcupadoEnOtroViaje = indiceMiPedido > 0
+          const pedidosAntes = colaOrdenada.slice(0, indiceMiPedido)
+          totalPrevios = pedidosAntes.length
+          previosEntregados = pedidosAntes.filter((p) => p.estado === 'entregado').length
+          paradasPrevias = pedidosAntes.filter((p) => p.estado !== 'entregado').length
+          esProximaEntrega = paradasPrevias === 0
+          cadeteOcupadoEnOtroViaje = paradasPrevias > 0
         } else {
+          totalParadas = 1
           paradaActual = 1
+          totalPrevios = 0
+          previosEntregados = 0
           paradasPrevias = 0
           esProximaEntrega = true
           cadeteOcupadoEnOtroViaje = false
         }
 
-        // PRIVACIDAD ESTRICTA:
-        // El cliente 1 NUNCA debe ver la ruta ni el destino del cliente 2.
-        // El cliente 2 solo ve hasta su propio pedido (sabe que hay una parada previa pero no ve paradas posteriores).
-        // Por lo tanto, cortamos la lista exactamente en SU pedido (slice(0, indiceMiPedido + 1)).
-        const paradasPermitidas = indiceMiPedido >= 0
-          ? colaOrdenada.slice(0, indiceMiPedido + 1)
+        // PRIVACIDAD ESTRICTA Y RUTA ACTIVA:
+        // El cliente solo ve en el mapa su propio destino y las paradas intermedias PENDIENTES.
+        // Las entregas que el cadete ya finalizó ('entregado') se quitan del mapa porque ya no son paradas futuras.
+        const paradasPendientesRuta = indiceMiPedido >= 0
+          ? colaOrdenada.slice(0, indiceMiPedido + 1).filter((p) => p.id === pedidoId || p.estado !== 'entregado')
           : [data]
 
-        itinerarioParadas = paradasPermitidas
+        itinerarioParadas = paradasPendientesRuta
           .filter(
             (p) =>
               p.coordenadas &&
@@ -213,7 +269,7 @@ export async function GET(request: Request) {
               id: p.id,
               orden: idx + 1,
               es_mi_pedido: esMiPedido,
-              cliente: esMiPedido ? (data.cliente || 'Tu Domicilio') : `Parada ${idx + 1} (Entrega previa)`,
+              cliente: esMiPedido ? (data.cliente || 'Tu Domicilio') : `Parada previa (${idx + 1})`,
               coordenadas: {
                 latitud: Number(p.coordenadas.latitud),
                 longitud: Number(p.coordenadas.longitud),
@@ -260,6 +316,7 @@ export async function GET(request: Request) {
       cliente: data.cliente,
       telefono: telEnmascarado,
       estado: data.estado,
+      cadete_id: data.cadete_id ?? null,
       cadete_nombre: data.cadete_nombre ?? cadeteNombreFallback ?? null,
       cadete_coordenadas: coordsFinalesCadete,
       cadete_volviendo_al_local: false,
@@ -269,6 +326,8 @@ export async function GET(request: Request) {
       paradas_previas: paradasPrevias,
       total_paradas: totalParadas,
       parada_actual: paradaActual,
+      total_previos: totalPrevios,
+      previos_entregados: previosEntregados,
       es_proxima_entrega: esProximaEntrega,
       itinerario_paradas: itinerarioParadas,
       local_coordenadas: { latitud: LOCAL_LAT, longitud: LOCAL_LNG },

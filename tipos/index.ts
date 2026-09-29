@@ -83,6 +83,15 @@ export interface Pedido {
   archivado?: boolean
   ruta_historial?: PuntoRutaBreadcrumb[] | null
   orden_entrega?: number | null
+  paradas_previas?: number
+  total_paradas?: number
+  parada_actual?: number
+  es_proxima_entrega?: boolean
+  total_previos?: number
+  previos_entregados?: number
+  itinerario_paradas?: any[]
+  cadete_gps_activo?: boolean
+  cadete_ocupado_en_otro_viaje?: boolean
 }
 
 export interface CadetePagoExtra {

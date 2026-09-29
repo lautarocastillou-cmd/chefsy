@@ -125,6 +125,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const [paradasPrevias, setParadasPrevias] = useState(0)
   const [totalParadas, setTotalParadas]     = useState(1)
   const [paradaActual, setParadaActual]     = useState(1)
+  const [totalPrevios, setTotalPrevios]     = useState(0)
+  const [previosEntregados, setPreviosEntregados] = useState(0)
   const [esProximaEntrega, setEsProximaEntrega] = useState(true)
   const [bottomSheetAbierto, setBottomSheetAbierto] = useState(false)
   const [isDragging, setIsDragging]                 = useState(false)
@@ -188,7 +190,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
     const fetchPrincipal = async () => {
       try {
-        const res  = await fetch(`/api/public/rastreo?id=${pedidoId}`)
+        const res  = await fetch(`/api/public/rastreo?id=${pedidoId}&_t=${Date.now()}`, { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Error al obtener el pedido')
 
@@ -197,6 +199,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           cliente: data.cliente,
           telefono: data.telefono ?? '',
           estado: data.estado,
+          cadete_id: data.cadete_id ?? null,
           cadete_nombre: data.cadete_nombre ?? null,
           cadete_coordenadas: (data.estado === 'entregado' || data.estado === 'cancelado') ? null : (data.cadete_coordenadas ?? null),
           cadete_volviendo_al_local: false,
@@ -213,6 +216,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           paradas_previas: (data.estado === 'entregado' || data.estado === 'cancelado') ? 0 : (data.paradas_previas ?? 0),
           total_paradas: (data.estado === 'entregado' || data.estado === 'cancelado') ? 1 : (data.total_paradas ?? 1),
           parada_actual: data.parada_actual ?? 1,
+          total_previos: (data.estado === 'entregado' || data.estado === 'cancelado') ? 0 : (data.total_previos ?? 0),
+          previos_entregados: (data.estado === 'entregado' || data.estado === 'cancelado') ? 0 : (data.previos_entregados ?? 0),
           es_proxima_entrega: (data.estado === 'entregado' || data.estado === 'cancelado') ? true : (data.es_proxima_entrega ?? true),
           itinerario_paradas: (data.estado === 'entregado' || data.estado === 'cancelado') ? [] : (data.itinerario_paradas ?? []),
         } as unknown as Pedido)
@@ -221,6 +226,8 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         setParadasPrevias(Number(data.paradas_previas ?? 0))
         setTotalParadas(Number(data.total_paradas ?? 1))
         setParadaActual(Number(data.parada_actual ?? 1))
+        setTotalPrevios(Number(data.total_previos ?? 0))
+        setPreviosEntregados(Number(data.previos_entregados ?? 0))
         setEsProximaEntrega(Boolean(data.es_proxima_entrega ?? true))
 
         // Sincronizar localStorage y suspender polling si el pedido finalizó
@@ -274,26 +281,39 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   }, [pedidoId])
 
   // ── Suscripción en tiempo real al lote de pedidos del cadete ─────────────────
-  // Si en /cadeteria se reordenan las posiciones (orden_entrega), este listener
-  // detecta la actualización al instante y recalcula la ruta en el mapa en vivo.
+  // Si en /cadeteria se reordenan las posiciones (orden_entrega) o se entrega una
+  // parada previa, este listener detecta la actualización al instante y recalcula la ruta.
+  const cadeteIdAsignado = (pedido?.estado === 'entregado' || pedido?.estado === 'cancelado')
+    ? null
+    : ((pedido as any)?.cadete_id || null)
   const nombreCadeteAsignado = (pedido?.estado === 'entregado' || pedido?.estado === 'cancelado')
     ? null
     : pedido?.cadete_nombre
+
   useEffect(() => {
-    if (!nombreCadeteAsignado) return
+    if (!cadeteIdAsignado && !nombreCadeteAsignado) return
 
     const canalCadete = supabaseAnon
-      .channel(`cadete-recorrido-${nombreCadeteAsignado}`)
+      .channel(`lote-cadete-${pedidoId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'pedidos',
-          filter: `cadete_nombre=eq.${nombreCadeteAsignado}`,
         },
-        () => {
-          fetchPrincipalRef.current?.()
+        (payload) => {
+          const nuevo = payload.new as any
+          if (!nuevo) return
+
+          const coincideCadete =
+            (cadeteIdAsignado && nuevo.cadete_id && String(nuevo.cadete_id).toLowerCase() === String(cadeteIdAsignado).toLowerCase()) ||
+            (nombreCadeteAsignado && nuevo.cadete_nombre && String(nuevo.cadete_nombre).toLowerCase() === String(nombreCadeteAsignado).toLowerCase())
+          const coincidePedido = nuevo.id === pedidoId
+
+          if (coincideCadete || coincidePedido) {
+            fetchPrincipalRef.current?.()
+          }
         }
       )
       .subscribe()
@@ -301,7 +321,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     return () => {
       supabaseAnon.removeChannel(canalCadete)
     }
-  }, [nombreCadeteAsignado])
+  }, [cadeteIdAsignado, nombreCadeteAsignado, pedidoId])
 
   // ── Fetch de los pedidos adicionales (desde localStorage) ───────────────────
   useEffect(() => {
@@ -396,8 +416,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                 ? '¡Pedido entregado con éxito!'
                 : isEnCamino
                 ? (paradasPrevias > 0
-                    ? `¡${cadeteNombre} en viaje con paradas!`
-                    : `¡${cadeteNombre} en camino!`)
+                    ? (previosEntregados > 0
+                        ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado!`
+                        : `¡${cadeteNombre} en viaje con paradas!`)
+                    : (totalPrevios > 0 && previosEntregados >= totalPrevios
+                        ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado!`
+                        : `¡${cadeteNombre} en camino!`))
                 : cadeteOcupadoEnOtroViaje
                 ? `¡${cadeteNombre} en otra entrega!`
                 : isEnPreparacion
@@ -445,8 +469,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <MapPin className="w-3.5 h-3.5" />
             <span>
               {esProximaEntrega
-                ? 'Próxima parada (destino actual)'
-                : `Parada ${paradaActual} de ${totalParadas} (${paradasPrevias} antes)`}
+                ? (totalPrevios > 0
+                    ? `Pedido ${totalPrevios} de ${totalPrevios} entregado • ¡Sos el próximo destino!`
+                    : 'Próxima parada (destino actual)')
+                : (previosEntregados > 0
+                    ? `Pedido ${previosEntregados} de ${totalPrevios} entregado • Falta ${paradasPrevias} antes`
+                    : `Parada ${paradaActual} de ${totalParadas} (${paradasPrevias} antes)`)}
             </span>
           </span>
         </div>
@@ -598,10 +626,14 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-xs font-black text-amber-200">
-              ¡{cadeteNombre} está realizando {paradasPrevias === 1 ? '1 entrega previa' : `${paradasPrevias} entregas previas`} en tu zona!
+              {previosEntregados > 0
+                ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado!`
+                : `¡${cadeteNombre} está realizando ${paradasPrevias === 1 ? '1 entrega previa' : `${paradasPrevias} entregas previas`} en tu zona!`}
             </h3>
             <p className="text-[11px] text-amber-300/80">
-              Tu pedido es la <strong>Parada #{paradaActual} de {totalParadas}</strong>. Podés seguir la ubicación del cadete en vivo en el mapa. Apenas se dirija a tu casa, te avisaremos.
+              {previosEntregados > 0
+                ? `Falta ${paradasPrevias === 1 ? '1 entrega previa antes' : `${paradasPrevias} entregas previas antes`} de tu domicilio. Tu turno: Parada #${paradaActual} de ${totalParadas}.`
+                : `Tu pedido es la Parada #${paradaActual} de ${totalParadas}. Podés seguir la ubicación del cadete en vivo en el mapa. Apenas se dirija a tu casa, te avisaremos.`}
             </p>
           </div>
         </div>
@@ -611,7 +643,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             <Bike size={22} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-black text-emerald-300">¡{cadeteNombre} va directo a tu casa!</h3>
+            <h3 className="text-xs font-black text-emerald-300">
+              {totalPrevios > 0 && previosEntregados >= totalPrevios
+                ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado! Va directo a tu casa`
+                : `¡${cadeteNombre} va directo a tu casa!`}
+            </h3>
             <p className="text-[11px] text-emerald-200/90">Tu domicilio es el próximo destino en su recorrido.</p>
           </div>
         </div>

@@ -147,6 +147,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
   const paradasPrevias = Number((pedido as any).paradas_previas ?? 0)
   const totalParadas = Number((pedido as any).total_paradas ?? 1)
   const paradaActual = Number((pedido as any).parada_actual ?? 1)
+  const totalPrevios = Number((pedido as any).total_previos ?? 0)
+  const previosEntregados = Number((pedido as any).previos_entregados ?? 0)
   const esProximaEntrega = (pedido as any).es_proxima_entrega !== undefined 
     ? Boolean((pedido as any).es_proxima_entrega) 
     : (paradasPrevias === 0)
@@ -1038,7 +1040,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
           <div className="bg-gradient-to-r from-[#1c1917]/90 to-[#292524]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-amber-200 tracking-wide">
-              Entrega previa en curso • Tu turno: Parada {paradaActual} de {totalParadas}
+              {previosEntregados > 0
+                ? `Pedido ${previosEntregados} de ${totalPrevios} entregado • Falta ${paradasPrevias}`
+                : `Entrega previa en curso • Tu turno: Parada ${paradaActual} de ${totalParadas}`}
             </span>
           </div>
         </div>
@@ -1047,7 +1051,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
           <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-emerald-200 tracking-wide">
-              {pedido.cadete_nombre ? `${pedido.cadete_nombre} va directo a tu domicilio` : 'Repartidor en camino directo a tu domicilio'}
+              {totalPrevios > 0 && previosEntregados >= totalPrevios
+                ? `Pedido ${previosEntregados} de ${totalPrevios} entregado • ¡Sos el próximo destino!`
+                : (pedido.cadete_nombre ? `${pedido.cadete_nombre} va directo a tu domicilio` : 'Repartidor en camino directo a tu domicilio')}
             </span>
           </div>
         </div>
