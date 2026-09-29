@@ -1,56 +1,67 @@
-import { supabase, supabaseAnon } from '@/lib/supabase'
+import { CANAL_PEDIDOS, crearClienteEscucha, type TipoCambioPedido } from '@/lib/pedidos-broadcast'
 import { Pedido, PuntoRutaBreadcrumb } from '@/tipos'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
-// Columnas estándar para listados (excluye ruta_historial y push_subscription para no descargar datos innecesarios)
-const COLUMNAS_PEDIDO_LISTA = 'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega, es_prueba, turno_tipo'
+// NOTA DE ARQUITECTURA (2026-09)
+// Estas funciones ya NO leen `pedidos` desde el navegador. Antes usaban
+// `supabaseAnon`, lo que significaba que la anon key —que viaja dentro del
+// bundle, es pública por diseño— podía bajarse las 2.072 filas con `curl`,
+// con nombre, teléfono y dirección de cada cliente.
+//
+// Ahora van por route handlers con service_role + sesión validada. Ver
+// supabase/migrations/002_rls_pedidos.sql.
 
 /**
- * Obtiene todos los pedidos ordenados de forma descendente (más nuevos primero)
- * históricamente de una fecha específica (excluyendo turnos de prueba).
+ * Wrapper de fetch contra los route handlers de pedidos.
+ * Centraliza el manejo de errores para no repetirlo en cada función.
  */
-export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
-  try {
-    let query = supabaseAnon
-      .from('pedidos')
-      .select(COLUMNAS_PEDIDO_LISTA)
-      .neq('es_prueba', true)
-      .neq('turno_tipo', 'prueba')
-    if (fecha) {
-      query = query.eq('fecha', fecha)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
+async function pedirJson<T>(url: string, etiqueta: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    // Las credenciales de sesión viajan en la cookie httpOnly que emite
+    // /api/auth/login; sin esto el route handler la vería anónima.
+    credentials: 'same-origin',
+  })
 
-    if (error) {
-      console.error('Error en Supabase al obtener pedidos:', error.message)
-      throw new Error(error.message)
+  if (!res.ok) {
+    let mensaje = `Error HTTP ${res.status}`
+    try {
+      const data = await res.json()
+      if (data?.error) mensaje = data.error
+    } catch {
+      // respuesta sin cuerpo JSON: se queda el mensaje por defecto
     }
-
-    return (data as Pedido[]) || []
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido al obtener pedidos'
-    console.error('Error atrapado en la capa de servicios:', errorMessage)
-    throw new Error(errorMessage)
+    throw new Error(`[${etiqueta}] ${mensaje}`)
   }
+
+  return (await res.json()) as T
 }
 
 /**
- * Obtiene los pedidos activos de Supabase (no archivados)
+ * Obtiene pedidos históricos (más recientes primero), opcionalmente de una
+ * fecha concreta. Excluye turnos de prueba.
+ */
+export async function obtenerPedidosHistoricos(fecha?: string): Promise<Pedido[]> {
+  const params = new URLSearchParams()
+  if (fecha) params.set('fecha', fecha)
+
+  const query = params.toString()
+  const data = await pedirJson<{ pedidos: Pedido[] }>(
+    `/api/admin/pedidos${query ? `?${query}` : ''}`,
+    'obtenerPedidosHistoricos'
+  )
+  return data.pedidos || []
+}
+
+/**
+ * Obtiene los pedidos activos (no archivados) para el kanban en vivo.
  */
 export async function obtenerPedidosActivos(limite = 100): Promise<Pedido[]> {
-  const { data, error } = await supabaseAnon
-    .from('pedidos')
-    .select(COLUMNAS_PEDIDO_LISTA)
-    .eq('archivado', false)
-    .order('created_at', { ascending: false })
-    .limit(limite)
-
-  if (error) {
-    console.error('[Servicio Pedidos] Error al obtener pedidos activos:', error.message)
-    throw new Error(error.message)
-  }
-
-  return (data as Pedido[]) || []
+  const data = await pedirJson<{ pedidos: Pedido[] }>(
+    `/api/admin/pedidos?activos=1&limite=${limite}`,
+    'obtenerPedidosActivos'
+  )
+  return data.pedidos || []
 }
 
 /**
@@ -78,26 +89,38 @@ export async function insertarPedidoLocal(payload: any): Promise<void> {
 }
 
 /**
- * Suscribe a los cambios en la tabla de pedidos
+ * Suscribe a los cambios en la tabla de pedidos.
+ *
+ * ANTES: `postgres_changes`, que lee la tabla directamente desde el navegador
+ * con la anon key. Con `pedidos` cerrada por RLS eso ya no es posible —
+ * postgres_changes no pasa por route handlers, se autentica contra Postgres.
+ *
+ * AHORA: un canal `broadcast`. El servidor emite una señal mínima
+ * ({id, tipo}, sin datos del cliente) por el endpoint de Realtime cuando
+ * escribe un pedido, y el panel reactiona refetchendo por el route handler
+ * autenticado. La señal no lleva PII; los datos vuelven por sesión.
+ *
+ * El payload se ignora a propósito: se dispara un refetch en vez de aplicar
+ * el cambio, así que no hay forma de inyectar datos falsos por este canal.
+ * El poll de SWR (refreshInterval) queda como red de contención.
  */
 export function suscribirAPedidos(
-  onInsertOrUpdate: (pedido: Pedido, archivado: boolean) => void,
-  onDelete: (id: string) => void
-): RealtimeChannel {
-  return supabase
-    .channel('tabla-pedidos')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'pedidos' },
-      (payload) => {
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const pedidoCrudo = payload.new as any
-          onInsertOrUpdate(pedidoCrudo as Pedido, !!pedidoCrudo.archivado)
-        } else if (payload.eventType === 'DELETE') {
-          onDelete(payload.old.id)
-        }
-      }
-    )
+  onCambio: (payload: { id: string; tipo: TipoCambioPedido }) => void
+): RealtimeChannel | null {
+  const cliente = crearClienteEscucha()
+  if (!cliente) {
+    console.warn('[Pedidos] Sin configuración de Supabase: se pierde la actualización en vivo.')
+    return null
+  }
+
+  return cliente
+    .channel(CANAL_PEDIDOS)
+    .on('broadcast', { event: 'cambio' }, (mensaje) => {
+      const payload = mensaje.payload as { id?: unknown; tipo?: unknown } | undefined
+      if (!payload || typeof payload.id !== 'string') return
+      const tipo = typeof payload.tipo === 'string' ? payload.tipo : 'update'
+      onCambio({ id: payload.id, tipo: tipo as TipoCambioPedido })
+    })
     .subscribe()
 }
 
@@ -107,14 +130,11 @@ export function suscribirAPedidos(
  */
 export async function obtenerRutaHistorialPedido(id: string): Promise<PuntoRutaBreadcrumb[] | null> {
   try {
-    const { data, error } = await supabaseAnon
-      .from('pedidos')
-      .select('ruta_historial')
-      .eq('id', id)
-      .single()
-
-    if (error || !data) return null
-    return (data.ruta_historial as PuntoRutaBreadcrumb[]) || null
+    const data = await pedirJson<{ ruta: PuntoRutaBreadcrumb[] | null }>(
+      `/api/admin/pedidos/${encodeURIComponent(id)}/ruta`,
+      'obtenerRutaHistorialPedido'
+    )
+    return data.ruta
   } catch (err) {
     console.error('[obtenerRutaHistorialPedido] Error al obtener ruta:', err)
     return null

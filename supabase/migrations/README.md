@@ -19,42 +19,43 @@ Las migraciones son **idempotentes**: se pueden correr más de una vez.
 
 ## Archivos
 
-| Archivo | Qué hace |
+| Archivo | Qué hace | Estado |
+|---|---|---|
+| `001_rls_cierra_pagos_y_config.sql` | Cierra la lectura de `anon` sobre cierres de caja, stock, turnos, consumos, metadata, configuración interna y usuarios. | **Aplicada** (verificado 2026-09-29: las 10 tablas devuelven 0 filas a `anon`) |
+| `002_rls_pedidos.sql` | Cierra la lectura de `anon` sobre `pedidos`, la última tabla con PII de clientes abierta. | **Pendiente de aplicar** |
+
+## `pedidos` ya no está abierto (migración 002)
+
+Cuando se escribió `001`, `pedidos` quedó afuera a propósito porque seis lugares
+la leían directo desde el navegador. Eso ya se resolvió: ninguno lo hace más.
+
+| Antes (con `anon`, en el bundle) | Ahora |
 |---|---|
-| `001_rls_cierra_pagos_y_config.sql` | Cierra la lectura de `anon` sobre cierres de caja, stock, turnos, consumos, metadata, configuración interna y usuarios. |
+| `contexto/PedidosContexto.tsx` | `GET /api/admin/pedidos` (nuevo) |
+| `hooks/usePedidosRealtime.ts` | idem + `GET /api/admin/pedidos?activos=1` |
+| `hooks/useAgendaClientes.ts` | idem |
+| `components/cadeteria/ModalBreadcrumbTrail.tsx` | `GET /api/admin/pedidos/[id]/ruta` (nuevo) |
+| `app/cadete-en-vivo/[id]/layout.tsx` | `service_role` en el servidor |
+| `suscribirAPedidos` (`postgres_changes`) | canal `broadcast` + refetch |
 
-## Por qué `pedidos` sigue abierto
+El Realtime era la parte difícil y quedó resuelta con el enfoque de
+**señal, no datos**: el servidor emite un broadcast con `{id, tipo}` al
+escribir un pedido, y el panel refetchea por el route handler autenticado. El
+payload mínimo no contiene PII, así que el canal no filtra nada aunque sea
+público. Ver `lib/pedidos-broadcast.ts`.
 
-La anon key es pública por diseño: viaja en el bundle del navegador. Antes de
-`001`, cualquiera podía leer los 2.072 pedidos (con nombre, teléfono, dirección
-y detalle de compra) y los 115 cierres de caja.
+**Antes de aplicar 002**, hay que desplegar el código: si se cierra la tabla sin
+desplegar los route handlers nuevos, el panel deja de cargar pedidos.
 
-`001` cierra todo lo que el navegador no necesita, pero **no puede cerrar
-`pedidos`** sin romper la app, porque estas lecturas ocurren directo desde el
-cliente con la anon key:
+## Lo que 002 no cierra
 
-- `contexto/PedidosContexto.tsx` (histórico y activos)
-- `hooks/usePedidosRealtime.ts` (SWR + Realtime)
-- `hooks/useAgendaClientes.ts`
-- `components/cadeteria/ModalBreadcrumbTrail.tsx` (`ruta_historial`)
-- `app/cadete-en-vivo/[id]/layout.tsx`
-- Realtime: `servicios/supabase/pedidos.ts` (`suscribirAPedidos`)
-
-El bloqueo real de `pedidos` es un refactor, no una migración: hay que crear
-`GET /api/admin/pedidos` (hoy solo tiene `POST`) y `GET /api/public/pedidos/:id`
-con un token de tracking, y apuntar esas lecturas a los route handlers. El
-Realtime es la parte difícil: `postgres_changes` no pasa por route handler, así
-que requiere o un JWT de Supabase Auth de verdad, o cambiar a un canal
-`broadcast` que el servidor empuje.
-
-Mientras tanto, `pedidos` es **deuda de seguridad conocida y documentada**, no
-un descuido. Como mitigación parcial se puede reducir el `SELECT` de `anon` a un
-subconjunto de columnas sin PII (los teléfonos y direcciones pasarían a leerse
-solo por route handler), pero eso requiere el mismo refactor.
-
-Nota: para reducir el riesgo ya mismo, la superficie del menú público
-(`categorias`, `productos`, `modificadores`, `catalogo`) es lo único que
-`anon` debería poder leer. Todo lo demás debería ir por service_role.
+`/api/public/rastreo` y `/api/public/maptest/activos` siguen devolviendo datos
+de pedidos a quien conozca un id, porque usan `service_role` y filtran a mano.
+Los ids son `ped-<timestamp>-<random>`, así que no son adivinables, pero un link
+de tracking filtrado (por WhatsApp, por ejemplo) alcanza para ver el nombre y la
+dirección. Arreglarlo requiere probar titularidad sin romper el flujo de
+tracking que el cliente usa por diseño: es un cambio aparte, con decisión de
+producto de por medio.
 
 ## Verificación
 

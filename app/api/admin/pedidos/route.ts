@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { notificarCambioPedido, type TipoCambioPedido } from '@/lib/pedidos-broadcast'
 import { enviarNotificacionCadete } from '@/lib/webpush'
 import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
@@ -119,7 +120,120 @@ function filtrarCamposPermitidos(origen: Record<string, any>): Record<string, an
   return limpio
 }
 
+// Columnas de listado. Mismas que COLUMNAS_PEDIDO_LISTA en
+// servicios/supabase/pedidos.ts, y por el mismo motivo: no bajar
+// `ruta_historial` (puede tener cientos de puntos) ni `push_subscription`.
+const COLUMNAS_LISTA =
+  'id, cliente, telefono, tipoEntrega, direccion, coordenadas, productos, total, costoEnvio, distanciaKm, estado, metodoPago, observaciones, hora, fecha, created_at, cocina_at, listo_at, entregado_at, ubicacion_cadete, cadete_coordenadas, pago_confirmado, archivado, cadete_id, cadete_nombre, reparto_at, montoEfectivo, montoTransferencia, montoTarjeta, notificacion_manual, cliente_id, puntos_ganados, puntos_gastados, en_camino_at, orden_entrega, es_prueba, turno_tipo'
+
+/**
+ * GET — Lecturas de `pedidos` desde el servidor.
+ *
+ * Existe porque `pedidos` se cierra a `anon` por RLS: contiene nombre,
+ * teléfono, dirección y detalle de compra de cada cliente. Antes de esta
+ * migración el navegador la leía directo con la anon key y cualquiera con
+ * `curl` se bajaba las 2.072 filas.
+ *
+ * Este handler corre con service_role (que saltea RLS) y solo responde a
+ * usuarios autenticados. Por eso devuelve los datos crudos del pedido sin
+ * enmascarar: quien llega acá ya pasó el control de sesión.
+ *
+ * Parámetros:
+ *   ?activos=1&limite=100   → pedidos no archivados, para el kanban en vivo
+ *   ?fecha=YYYY-MM-DD      → pedidos de una fecha, para el histórico
+ *   (sin params)            → histórico completo, para la agenda de clientes
+ */
+export async function GET(request: Request) {
+  try {
+    const sesion = await obtenerSesion()
+    if (!sesion) {
+      return NextResponse.json({ error: 'Acceso denegado. No autenticado.' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const soloActivos = searchParams.get('activos') === '1'
+    const fecha = searchParams.get('fecha')
+    const limiteParam = parseInt(searchParams.get('limite') || '', 10)
+
+    if (fecha !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return NextResponse.json(
+        { error: 'Parámetro fecha inválido. Se espera YYYY-MM-DD.' },
+        { status: 400 }
+      )
+    }
+
+    // Tope duro: sin esto, ?limite=999999 dripa la tabla entera.
+    const limite = soloActivos
+      ? Math.min(Number.isFinite(limiteParam) && limiteParam > 0 ? limiteParam : 100, 200)
+      : 2000
+
+    const supabase = obtenerSupabaseAdmin()
+
+    let query = supabase
+      .from('pedidos')
+      .select(COLUMNAS_LISTA)
+      .neq('es_prueba', true)
+      .neq('turno_tipo', 'prueba')
+
+    if (soloActivos) {
+      query = query.eq('archivado', false)
+    }
+    if (fecha) {
+      query = query.eq('fecha', fecha)
+    }
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(limite)
+
+    if (error) throw error
+
+    return NextResponse.json({ pedidos: data || [] })
+  } catch (error) {
+    console.error('[API Pedidos GET] Error:', error)
+    // No se filtra error.message al cliente: puede traer nombres de tabla,
+    // columnas o fragmentos de consulta.
+    return NextResponse.json({ error: 'Error interno al obtener los pedidos.' }, { status: 500 })
+  }
+}
+
+/**
+ * Envuelve al manejador real para emitir la señal de "cambio en pedidos".
+ *
+ * Se hace acá y no dentro de cada `case` del switch a propósito: hay más de
+ * diez acciones que escriben en la tabla (crear, editar, cambiar_estado,
+ * confirmar_pago, archivar, archivar_lote, asignar_cadete, cobrar, ...), y
+ * emitir en cada return es un lugar fácil de olvidar. Acá hay un solo punto
+ * de salida y es imposible saltearlo.
+ *
+ * El payload va mínimo a propósito: ver lib/pedidos-broadcast.ts.
+ */
 export async function POST(request: Request) {
+  // Se clona porque el manejador interno consume el body con request.json().
+  let idPedido: string | null = null
+  let tipo: TipoCambioPedido = 'update'
+  try {
+    const previo: any = await request.clone().json()
+    idPedido = typeof previo?.pedido?.id === 'string' ? previo.pedido.id
+      : typeof previo?.id === 'string' ? previo.id
+      : null
+    if (previo?.accion === 'crear') tipo = 'insert'
+    if (previo?.accion === 'archivar' || previo?.accion === 'archivar_lote') tipo = 'archive'
+  } catch {
+    // Body ilegible: lo va a rechazar el manejador interno con un 400 claro.
+  }
+
+  const respuesta = await procesarPOST(request)
+
+  // Solo se avisa si la operación salió bien. Un 4xx/5xx no cambió nada
+  // y avisar haría refetchear al panel para nada.
+  if (respuesta.ok && idPedido) {    await notificarCambioPedido(idPedido, tipo)
+  }
+
+  return respuesta
+}
+
+async function procesarPOST(request: Request) {
   // 1. Validar sesión en el servidor
   const sesion = await obtenerSesion()
   if (!sesion) {

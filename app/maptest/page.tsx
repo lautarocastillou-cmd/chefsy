@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { useSearchParams } from 'next/navigation'
 import { supabaseAnon } from '@/lib/supabase'
+import { CANAL_PEDIDOS, crearClienteEscucha } from '@/lib/pedidos-broadcast'
 import { 
   Bike, 
   Compass, 
@@ -55,6 +56,9 @@ function MapTestContent() {
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any | null>(null)
   const [cadeteSeleccionado, setCadeteSeleccionado] = useState<any | null>(null)
   const [inputManualId, setInputManualId] = useState(initialPedidoId)
+
+  // Ref al refetch de detalle, para dispararlo desde el listener de broadcast.
+  const actualizarDetallePedidoRef = useRef<(() => Promise<void>) | null>(null)
 
   // Controles de MapLibre GL (Google HD por defecto para carga ultrarrápida a 60-120 FPS)
   const [estilo, setEstilo] = useState<EstiloMapa>('google-calles')
@@ -144,6 +148,9 @@ function MapTestContent() {
     }
 
     actualizarDetallePedido()
+    // Se guarda en un ref para que el listener de broadcast (efecto 3) pueda
+    // disparar el refetch sin recrearse en cada cambio del pedido.
+    actualizarDetallePedidoRef.current = actualizarDetallePedido
     const interval = setInterval(actualizarDetallePedido, 3000)
     return () => clearInterval(interval)
   }, [pedidoSeleccionado?.id])
@@ -178,23 +185,26 @@ function MapTestContent() {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'pedidos' },
-        (payload: any) => {
-          const pActualizado = payload.new
-          if (pedidoSeleccionado?.id === pActualizado.id) {
-            setPedidoSeleccionado((prev: any) => ({
-              ...(prev || {}),
-              ...pActualizado,
-            }))
-          }
-        }
-      )
+      .subscribe()
+
+    // `pedidos` ya no se escucha con postgres_changes: la tabla está cerrada
+    // a `anon`. La señal por broadcast no trae la fila, así que en vez de
+    // parchar el estado local se recarga desde la API, que ya devuelve los
+    // pedidos con sus datos completos.
+    const clientePedidos = crearClienteEscucha()
+    const canalPedidos = clientePedidos?.channel(CANAL_PEDIDOS)
+      .on('broadcast', { event: 'cambio' }, (mensaje) => {
+        const payload = mensaje.payload as { id?: unknown } | undefined
+        if (typeof payload?.id !== 'string') return
+        if (pedidoSeleccionado?.id && payload.id !== pedidoSeleccionado.id) return
+        recargarActivos()
+        actualizarDetallePedidoRef.current?.()
+      })
       .subscribe()
 
     return () => {
       supabaseAnon.removeChannel(canal)
+      if (canalPedidos) clientePedidos?.removeChannel(canalPedidos)
     }
   }, [cadeteSeleccionado?.id, pedidoSeleccionado?.id, pedidoSeleccionado?.cadete_id])
 

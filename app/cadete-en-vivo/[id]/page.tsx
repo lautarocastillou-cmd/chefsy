@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
-import { supabaseAnon } from '@/lib/supabase'
+import { CANAL_PEDIDOS, crearClienteEscucha } from '@/lib/pedidos-broadcast'
 import { formatearPrecio } from '@/lib/utils'
 import { resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
@@ -255,9 +255,29 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     fetchPrincipalRef.current = fetchPrincipal
     fetchPrincipal()
 
-    const canal = supabaseAnon
-      .channel(`rastreo-${pedidoId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, fetchPrincipal)
+    // Señal de cambio. Antes era `postgres_changes` sobre `pedidos`, que
+    // entrega la fila completa al navegador — imposible ahora que la tabla
+    // está cerrada a `anon` (contiene PII del cliente). El broadcast solo
+    // dice "algo cambió"; los datos siguen viniendo por fetchPrincipal(), que
+    // pega al route handler público /api/public/rastreo y ya filtra por
+    // pedido. La latencia es la misma; lo que viaja por el cable, no.
+    // Cada listener usa su propia instancia de cliente: `removeChannel`
+    // que se suscribió.
+    // Un solo canal para los dos casos que cubrían los listeners anteriores:
+    // el cambio del pedido propio y el de los demás pedidos del mismo cadete
+    // (reordenamiento de la ruta). Dos canales serían dos WebSockets para
+    // recibir la misma señal.
+    const clienteEscucha = crearClienteEscucha()
+    const canal = clienteEscucha?.channel(CANAL_PEDIDOS)
+      .on('broadcast', { event: 'cambio' }, (mensaje) => {
+        const payload = mensaje.payload as { id?: unknown } | undefined
+        if (typeof payload?.id !== 'string') return
+        // El canal es compartido con el panel admin, así que llegan señales
+        // de todos los pedidos del local. No se puede filtrar por pedido acá
+        // porque el payload mínimo no trae cadete_id, pero el refetch sale
+        // barato: la respuesta ya viene filtrada por el route handler.
+        fetchPrincipal()
+      })
       .subscribe()
 
     // Polling inteligente cada 4 segundos
@@ -276,52 +296,18 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       clearInterval(intervalo)
       window.removeEventListener('online', onReconectar)
       window.removeEventListener('focus', onReconectar)
-      supabaseAnon.removeChannel(canal)
+      if (canal) clienteEscucha?.removeChannel(canal)
     }
   }, [pedidoId])
 
-  // ── Suscripción en tiempo real al lote de pedidos del cadete ─────────────────
-  // Si en /cadeteria se reordenan las posiciones (orden_entrega) o se entrega una
-  // parada previa, este listener detecta la actualización al instante y recalcula la ruta.
-  const cadeteIdAsignado = (pedido?.estado === 'entregado' || pedido?.estado === 'cancelado')
-    ? null
-    : ((pedido as any)?.cadete_id || null)
-  const nombreCadeteAsignado = (pedido?.estado === 'entregado' || pedido?.estado === 'cancelado')
-    ? null
-    : pedido?.cadete_nombre
-
-  useEffect(() => {
-    if (!cadeteIdAsignado && !nombreCadeteAsignado) return
-
-    const canalCadete = supabaseAnon
-      .channel(`lote-cadete-${pedidoId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pedidos',
-        },
-        (payload) => {
-          const nuevo = payload.new as any
-          if (!nuevo) return
-
-          const coincideCadete =
-            (cadeteIdAsignado && nuevo.cadete_id && String(nuevo.cadete_id).toLowerCase() === String(cadeteIdAsignado).toLowerCase()) ||
-            (nombreCadeteAsignado && nuevo.cadete_nombre && String(nuevo.cadete_nombre).toLowerCase() === String(nombreCadeteAsignado).toLowerCase())
-          const coincidePedido = nuevo.id === pedidoId
-
-          if (coincideCadete || coincidePedido) {
-            fetchPrincipalRef.current?.()
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabaseAnon.removeChannel(canalCadete)
-    }
-  }, [cadeteIdAsignado, nombreCadeteAsignado, pedidoId])
+  // ── Lote de pedidos del cadete ─────────────────────────────────────────────
+  // Antes esto era un listener propio que comparaba cadete_id/cadete_nombre
+  // contra la fila completa que le llegaba por postgres_changes, para
+  // recalcular la ruta cuando en /cadeteria se reordenaba el orden de entrega.
+  // Ya no hace falta: el canal de arriba dispara el refetch ante CUALQUIER
+  // cambio de pedido, y fetchPrincipal() ya devuelve el lote del cadete con la
+  // ruta recalculada por el servidor. Un solo canal, menos código, misma
+  // cobertura.
 
   // ── Fetch de los pedidos adicionales (desde localStorage) ───────────────────
   useEffect(() => {

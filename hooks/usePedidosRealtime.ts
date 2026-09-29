@@ -1,6 +1,5 @@
-// Responsabilidad única: carga inicial de pedidos con SWR
-// y suscripción a cambios en tiempo real con Supabase Realtime.
-// Aísla la sincronización de datos de la lógica de negocio.
+// Responsabilidad única: carga de pedidos con SWR y reacción a los cambios
+// en vivo. Aísla la sincronización de datos de la lógica de negocio.
 
 'use client'
 
@@ -17,7 +16,11 @@ export type AccionDespachar =
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
   prevPedidosRef?: MutableRefObject<Pedido[]>
-  cambiosLocalesRef: MutableRefObject<Record<string, number>>
+  // `cambiosLocalesRef` ya no se usa acá: servía para descartar el eco del
+  // canal postgres_changes, que entregaba el pedido completo. Con el canal
+  // broadcast el refetch reemplaza todo el estado, así que no hay eco que
+  // filtrar. Se mantiene en la firma para no romper al llamador.
+  cambiosLocalesRef?: MutableRefObject<Record<string, number>>
   eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
   habilitado?: boolean
 }
@@ -29,8 +32,6 @@ const fetcher = async () => {
 
 export function usePedidosRealtime({
   despachar,
-  prevPedidosRef,
-  cambiosLocalesRef,
   eliminadosLocalesRef,
   habilitado = true,
 }: UsePedidosRealtimeProps) {
@@ -49,7 +50,12 @@ export function usePedidosRealtime({
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: 10000,
+      // Red de contención: si el broadcast se pierde, el panel se actualiza
+      // igual. Bajado de 10s a 6s porque ahora cada refresh es un route
+      // handler con service_role (más caro que el select directo que había
+      // antes), pero a la vez la respuesta trae los datos ya filtrados por
+      // servidor. Es el punto de equilibrio entre frescura y carga.
+      refreshInterval: 6000,
       dedupingInterval: 3000,
       fallbackData: [],
     }
@@ -95,49 +101,27 @@ export function usePedidosRealtime({
     }
   }, [pedidosSWR, error, despachar, eliminadosLocalesRef, habilitado])
 
-  // 2) Suscripción a Supabase Realtime (solo si está habilitado y autenticado)
+  // 2) Señal de cambio en vivo (canal broadcast) + poll de SWR como respaldo
+  //
+  // El canal ya NO entrega el pedido: solo avisa que algo cambió, sin datos.
+  // Por eso la reacción correcta es `mutate()` (refetch por el route handler
+  // autenticado) y no aplicar el payload. Así no hay forma de que alguien
+  // inyecte un pedido falso por el canal, ni de que la PII viaje por Realtime.
   useEffect(() => {
     if (!estaListo || !habilitado) return
 
-    const channel = suscribirAPedidos(
-      (pedido, archivado) => {
-        // Si el pedido fue eliminado localmente recientemente, ignorar cualquier eco
-        if (eliminadosLocalesRef?.current?.[pedido.id]) {
-          const tiempoEliminado = Date.now() - eliminadosLocalesRef.current[pedido.id]
-          if (tiempoEliminado < 30000) return
-        }
-
-        const ultCambio = cambiosLocalesRef.current[pedido.id] || 0
-        // Ignorar rebote/eco local durante 3 segundos
-        if (Date.now() - ultCambio < 3000) return
-
-        if (archivado) {
-          despachar({ tipo: 'ELIMINAR_PEDIDO', id: pedido.id })
-          swrPrevRef.current = swrPrevRef.current.filter((p) => p.id !== pedido.id)
-          mutate((current) => current ? current.filter((p) => p.id !== pedido.id) : [], false)
-        } else {
-          despachar({ tipo: 'UPSERT_PEDIDO', pedido })
-          mutate((current) => {
-            if (!current) return [pedido]
-            const exists = current.some((p) => p.id === pedido.id)
-            return exists 
-              ? current.map((p) => p.id === pedido.id ? pedido : p)
-              : [pedido, ...current]
-          }, false)
-        }
-      },
-      (id) => {
-        despachar({ tipo: 'ELIMINAR_PEDIDO', id })
-        swrPrevRef.current = swrPrevRef.current.filter((p) => p.id !== id)
-        mutate((current) => current ? current.filter((p) => p.id !== id) : [], false)
-      }
-    )
+    const channel = suscribirAPedidos(() => {
+      // Refetch en lugar de aplicar el payload. El canal no trae datos
+      // (solo {id, tipo}), y SWR descarta respuestas idénticas por el
+      // `sonIguales` del efecto 1, así que no hay riesgo de bucle.
+      mutate()
+    })
 
     return () => {
-      channel.unsubscribe()
+      channel?.unsubscribe()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estaListo, habilitado])
+  }, [estaListo, habilitado, mutate])
 
   // Difundir estado de conexión para herramientas de diagnóstico
   useEffect(() => {

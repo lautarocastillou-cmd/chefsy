@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { supabaseAnon } from '@/lib/supabase'
+import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function generateMetadata({
   params,
@@ -14,7 +14,13 @@ export async function generateMetadata({
 
   try {
     if (id) {
-      const { data: pedido } = await supabaseAnon
+      // service_role, no la anon key: `pedidos` está cerrada a `anon` por
+      // RLS y además contiene PII. Esto corre en el servidor (generateMetadata),
+      // así que la key nunca viaja al bundle.
+      //
+      // Solo se piden 3 columnas, y de `cliente` únicamente sale el primer
+      // nombre, que va al <title>. No se expone el resto en el HTML.
+      const { data: pedido } = await obtenerSupabaseAdmin()
         .from('pedidos')
         .select('id, cliente, estado')
         .eq('id', id)

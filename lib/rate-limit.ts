@@ -11,20 +11,55 @@ interface RateLimitEntry {
 const rateLimitMap = new Map<string, RateLimitEntry>()
 
 /**
+ * Valida que un segmento de cabecera tenga forma de IPv4 o IPv6.
+ * Descarta valores que no son IPs (que un cliente malicioso podría colar).
+ */
+function esIpValida(ip: string): boolean {
+  return /^[0-9a-fA-F:.]+$/.test(ip) && ip.length <= 45
+}
+
+/**
  * Obtiene la IP cliente de forma consistente y segura desde las cabeceras HTTP.
+ *
+ * ⚠️ X-Forwarded-For es una CABECERA COMPUESTA: cada proxy en la cadena
+ * AGREGA su valor al final. El primero lo pone el cliente y es 100%
+ * falsificable mandando `X-Forwarded-For: <ip-cualquiera>`.
+ * El ÚLTIMO lo agregó el último proxy (el CDN/plataforma de hosting),
+ * que es el único que conoce la IP real de la conexión.
+ *
+ * Por eso se toma la ÚLTIMA IP válida, no la primera.
  */
 export function obtenerIpCliente(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) {
-    const primeraIp = forwarded.split(',')[0].trim()
-    if (primeraIp && /^[0-9a-fA-F:\.]+$/.test(primeraIp)) {
-      return primeraIp
+    // Recorremos de derecha a izquierda: la última entry válida es la del
+    // proxy más cercano al origen, que es la que no puede falsearse.
+    const candidatas = forwarded.split(',').map((ip) => ip.trim())
+    for (let i = candidatas.length - 1; i >= 0; i--) {
+      const ip = candidatas[i]
+      if (ip && esIpValida(ip)) {
+        return ip
+      }
     }
   }
 
+  // Fallback: algunos setups exponen la IP real en una cabecera dedicada.
+  // Esta sí la controla el servidor, no el cliente.
   const realIp = request.headers.get('x-real-ip')
-  if (realIp && /^[0-9a-fA-F:\.]+$/.test(realIp.trim())) {
-    return realIp.trim()
+  if (realIp) {
+    const ip = realIp.trim()
+    if (esIpValida(ip)) {
+      return ip
+    }
+  }
+
+  // Vercel / plataformas con cabecera propia
+  const vercelIp = request.headers.get('x-vercel-forwarded-for')
+  if (vercelIp) {
+    const ip = vercelIp.trim()
+    if (esIpValida(ip)) {
+      return ip
+    }
   }
 
   return '127.0.0.1'
