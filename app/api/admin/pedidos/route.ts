@@ -650,18 +650,20 @@ export async function POST(request: Request) {
         if (!Array.isArray(pedidosOrdenados)) {
           return NextResponse.json({ error: 'pedidosOrdenados inválido.' }, { status: 400 })
         }
-        for (const item of pedidosOrdenados) {
-          if (!item?.id) continue
-          let query = supabaseAdmin
-            .from('pedidos')
-            .update({ orden_entrega: item.orden_entrega ?? null })
-            .eq('id', item.id)
-
-          if (rol === 'cadete') {
-            query = query.eq('cadete_id', sesion.usuario)
-          }
-          await query
-        }
+        await Promise.all(
+          pedidosOrdenados
+            .filter((item: any) => !!item?.id)
+            .map((item: any) => {
+              let query = supabaseAdmin
+                .from('pedidos')
+                .update({ orden_entrega: item.orden_entrega ?? null })
+                .eq('id', item.id)
+              if (rol === 'cadete') {
+                query = query.eq('cadete_id', sesion.usuario)
+              }
+              return query
+            })
+        )
         return NextResponse.json({ ok: true })
       }
 
