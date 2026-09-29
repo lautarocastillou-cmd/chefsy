@@ -13,6 +13,7 @@
   },
   "montoBaseCadete": 4000,
   "portalCadeteriaHabilitado": true,
+  "autocompletadoClientesHabilitado": true,
   "alertaCriticaFlotante": {
     "habilitada": true,
     "tiempoCocinaMinutos": 25,

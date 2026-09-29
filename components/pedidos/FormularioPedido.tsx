@@ -39,7 +39,8 @@ export default function FormularioPedido({
       envioManual, costoEnvioManualInput, distanciaKm,
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
-      sugerenciasActivas, mostrarDropdownSugerencias
+      sugerenciasActivas, mostrarDropdownSugerencias,
+      autocompletadoHabilitado
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
@@ -202,14 +203,14 @@ export default function FormularioPedido({
                   value={cliente}
                   onChange={(e) => setCliente(e.target.value)}
                   onFocus={() => {
-                    if (sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
+                    if (autocompletadoHabilitado && sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
                   }}
                   placeholder="Ej: Juan García"
                   className={claseInput}
                 />
 
                 {/* Dropdown flotante de sugerencias inteligentes con Fuse.js */}
-                {mostrarDropdownSugerencias && sugerenciasActivas.length > 0 && (
+                {autocompletadoHabilitado && mostrarDropdownSugerencias && sugerenciasActivas.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-chefsy-300 dark:border-chefsy-800 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                     <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1.5 text-chefsy-600 dark:text-chefsy-400">
@@ -274,7 +275,7 @@ export default function FormularioPedido({
                 />
                 
                 {/* Alerta de Autocompletado CRM */}
-                {clienteEncontrado && (
+                {autocompletadoHabilitado && clienteEncontrado && (
                   <button
                     type="button"
                     onClick={aplicarDatosCRM}

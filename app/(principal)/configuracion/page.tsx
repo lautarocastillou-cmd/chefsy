@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError } from '@/lib/notificaciones'
 
@@ -240,6 +240,9 @@ function PestanaParametros() {
   // Estado local para habilitar/deshabilitar el portal web de cadetería
   const [portalCadeteriaHabilitado, setPortalCadeteriaHabilitado] = useState(true)
 
+  // Estado local para habilitar/deshabilitar el autocompletado de clientes en "+ Crear Pedido"
+  const [autocompletadoClientesHabilitado, setAutocompletadoClientesHabilitado] = useState(true)
+
   // Estados locales para el cartel de alerta flotante de pedidos demorados (estilo alarma)
   const [alertaHabilitada, setAlertaHabilitada] = useState(true)
   const [alertaCocinaMinutos, setAlertaCocinaMinutos] = useState(25)
@@ -265,6 +268,7 @@ function PestanaParametros() {
 
       setMontoBaseCadete((configuracionOperativa as any).montoBaseCadete ?? 4000)
       setPortalCadeteriaHabilitado((configuracionOperativa as any).portalCadeteriaHabilitado ?? true)
+      setAutocompletadoClientesHabilitado((configuracionOperativa as any).autocompletadoClientesHabilitado ?? true)
 
       const confAlerta = (configuracionOperativa as any).alertaCriticaFlotante
       if (confAlerta) {
@@ -278,7 +282,7 @@ function PestanaParametros() {
     }
   }, [configuracionOperativa])
 
-  // Guardar inmediatamente al cambiar el switch
+  // Guardar inmediatamente al cambiar el switch de Cadetería
   const manejarCambioSwitchCadeteria = async (nuevoValor: boolean) => {
     setPortalCadeteriaHabilitado(nuevoValor)
     
@@ -297,6 +301,7 @@ function PestanaParametros() {
       },
       montoBaseCadete: Number(montoBaseCadete),
       portalCadeteriaHabilitado: nuevoValor,
+      autocompletadoClientesHabilitado: Boolean(autocompletadoClientesHabilitado),
       alertaCriticaFlotante: {
         habilitada: Boolean(alertaHabilitada),
         tiempoCocinaMinutos: Number(alertaCocinaMinutos),
@@ -310,6 +315,44 @@ function PestanaParametros() {
     await guardarConfiguracionOperativa(
       nuevaConfig as any,
       nuevoValor ? 'Acceso web a cadetería habilitado.' : 'Acceso web a cadetería bloqueado (obligando App móvil).'
+    )
+  }
+
+  // Guardar inmediatamente al cambiar el switch de Autocompletado de Clientes
+  const manejarCambioSwitchAutocompletado = async (nuevoValor: boolean) => {
+    setAutocompletadoClientesHabilitado(nuevoValor)
+    
+    const nuevaConfig = {
+      limites: {
+        pedidoAtrasadoMinutos: Number(pedidoAtrasadoMinutos),
+        listoDemoradoMinutos: Number(listoDemoradoMinutos),
+        cocinaDemoradoMinutos: Number(cocinaDemoradoMinutos),
+        pedidoOlvidadoMinutos: Number(pedidoOlvidadoMinutos),
+      },
+      prioridades: {
+        pedidoAtrasadoAltaMinutos: Number(pedidoAtrasadoAltaMinutos),
+        listoDemoradoAltaMinutos: Number(listoDemoradoAltaMinutos),
+        sinCadeteAltaMinutos: Number(sinCadeteAltaMinutos),
+        cocinaDemoradoAltaMinutos: Number(cocinaDemoradoAltaMinutos),
+      },
+      montoBaseCadete: Number(montoBaseCadete),
+      portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
+      autocompletadoClientesHabilitado: nuevoValor,
+      alertaCriticaFlotante: {
+        habilitada: Boolean(alertaHabilitada),
+        tiempoCocinaMinutos: Number(alertaCocinaMinutos),
+        tiempoListoMinutos: Number(alertaListoMinutos),
+        tiempoTotalMinutos: Number(alertaTotalMinutos),
+        tiempoAplazoMinutos: Number(alertaAplazoMinutos),
+        sonidoHabilitado: Boolean(alertaSonidoHabilitado),
+      },
+    }
+
+    await guardarConfiguracionOperativa(
+      nuevaConfig as any,
+      nuevoValor
+        ? 'Autocompletado de clientes en "+ Crear Pedido" activado.'
+        : 'Autocompletado de clientes en "+ Crear Pedido" desactivado.'
     )
   }
 
@@ -333,6 +376,7 @@ function PestanaParametros() {
       },
       montoBaseCadete: Number(montoBaseCadete),
       portalCadeteriaHabilitado: Boolean(portalCadeteriaHabilitado),
+      autocompletadoClientesHabilitado: Boolean(autocompletadoClientesHabilitado),
       alertaCriticaFlotante: {
         habilitada: Boolean(alertaHabilitada),
         tiempoCocinaMinutos: Number(alertaCocinaMinutos),
@@ -361,6 +405,7 @@ function PestanaParametros() {
       setCocinaDemoradoAltaMinutos(30)
       setMontoBaseCadete(4000)
       setPortalCadeteriaHabilitado(true)
+      setAutocompletadoClientesHabilitado(true)
 
       setAlertaHabilitada(true)
       setAlertaCocinaMinutos(25)
@@ -373,25 +418,85 @@ function PestanaParametros() {
 
   return (
     <form onSubmit={manejarGuardar} className="space-y-6">
-      {/* Interruptor Minimalista: Acceso Web de Cadetería */}
-      <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs transition-colors">
-        <div>
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-            Acceso a la página web de cadetería
-          </span>
-          <span className="text-[11px] text-slate-400">
-            {portalCadeteriaHabilitado ? 'Habilitado (portal web activo)' : 'Deshabilitado (obliga a usar la App móvil)'}
-          </span>
+      {/* ── SECCIÓN DE MÓDULOS Y FUNCIONES DEL SISTEMA (HABILITAR / DESHABILITAR) ── */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="border-b border-slate-100 dark:border-slate-800/60 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <Sliders size={18} />
+            </span>
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Funciones y Módulos del Sistema
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Activá o desactivá comportamientos automáticos y accesos según el flujo de trabajo de tu local.
+              </p>
+            </div>
+          </div>
         </div>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={portalCadeteriaHabilitado}
-            onChange={(e) => manejarCambioSwitchCadeteria(e.target.checked)}
-            className="sr-only peer"
-          />
-          <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-        </label>
+
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60 space-y-3 pt-1">
+          {/* Función 1: Autocompletado de Clientes en + Crear Pedido */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Autocompletado de Clientes en "+ Crear Pedido"
+                </span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  autocompletadoClientesHabilitado
+                    ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {autocompletadoClientesHabilitado ? 'Activado' : 'Desactivado'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Muestra la lista desplegable de clientes anteriores y completa automáticamente el celular y dirección al tipear el nombre.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={autocompletadoClientesHabilitado}
+                onChange={(e) => manejarCambioSwitchAutocompletado(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          {/* Función 2: Acceso a la página web de cadetería */}
+          <div className="flex items-center justify-between pt-3">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Acceso Web al Portal de Cadetería
+                </span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  portalCadeteriaHabilitado
+                    ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {portalCadeteriaHabilitado ? 'Habilitado' : 'Bloqueado'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Permite a los repartidores usar la versión de navegador web. Si se desactiva, los obliga a usar exclusivamente la App móvil (.APK).
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={portalCadeteriaHabilitado}
+                onChange={(e) => manejarCambioSwitchCadeteria(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Tarjeta de Pago Base a Cadetes */}

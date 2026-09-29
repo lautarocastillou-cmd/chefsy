@@ -49,12 +49,17 @@ export async function GET() {
           sonidoHabilitado: true,
         }
 
+    const autocompletadoClientesHabilitado = prioridades.autocompletadoClientesHabilitado !== undefined
+      ? Boolean(prioridades.autocompletadoClientesHabilitado)
+      : (configuracionFallback as any).autocompletadoClientesHabilitado ?? true
+
     return NextResponse.json({
       limites: data.limites || configuracionFallback.limites,
       prioridades,
       montoBaseCadete,
       portalCadeteriaHabilitado,
       alertaCriticaFlotante,
+      autocompletadoClientesHabilitado,
     })
   } catch (error: any) {
     console.error('[API Config] Error al leer la configuración:', error)
@@ -75,7 +80,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { limites, prioridades, montoBaseCadete, portalCadeteriaHabilitado, alertaCriticaFlotante } = body
+    const {
+      limites,
+      prioridades,
+      montoBaseCadete,
+      portalCadeteriaHabilitado,
+      alertaCriticaFlotante,
+      autocompletadoClientesHabilitado,
+    } = body
 
     if (!limites || !prioridades) {
       return NextResponse.json(
@@ -87,11 +99,25 @@ export async function POST(request: Request) {
     const habilitado = portalCadeteriaHabilitado !== undefined ? Boolean(portalCadeteriaHabilitado) : true
     const monto = Number(montoBaseCadete ?? 4000)
     const alerta = alertaCriticaFlotante || prioridades.alertaCriticaFlotante || (configuracionFallback as any).alertaCriticaFlotante
+    const autocompletado = autocompletadoClientesHabilitado !== undefined
+      ? Boolean(autocompletadoClientesHabilitado)
+      : (prioridades.autocompletadoClientesHabilitado !== undefined ? Boolean(prioridades.autocompletadoClientesHabilitado) : true)
 
     // Guardar dentro de JSONB prioridades (compatible 100% con Postgres sin columnas extra)
     const prioridadesActualizadas = typeof prioridades === 'object' && prioridades !== null
-      ? { ...prioridades, montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado, alertaCriticaFlotante: alerta }
-      : { montoBaseCadete: monto, portalCadeteriaHabilitado: habilitado, alertaCriticaFlotante: alerta }
+      ? {
+          ...prioridades,
+          montoBaseCadete: monto,
+          portalCadeteriaHabilitado: habilitado,
+          alertaCriticaFlotante: alerta,
+          autocompletadoClientesHabilitado: autocompletado,
+        }
+      : {
+          montoBaseCadete: monto,
+          portalCadeteriaHabilitado: habilitado,
+          alertaCriticaFlotante: alerta,
+          autocompletadoClientesHabilitado: autocompletado,
+        }
 
     const supabase = obtenerSupabaseAdmin()
 

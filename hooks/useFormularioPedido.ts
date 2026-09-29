@@ -43,8 +43,10 @@ interface PropsUseFormularioPedido {
 }
 
 export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormularioPedido = {}) {
-  const { agregarPedido, editarPedido, pedidos, productos } = usarPedidos()
+  const { agregarPedido, editarPedido, pedidos, productos, configuracionOperativa } = usarPedidos()
   const router = useRouter()
+
+  const autocompletadoHabilitado = (configuracionOperativa as any)?.autocompletadoClientesHabilitado !== false
 
   const [clienteEncontrado, setClienteEncontrado] = useState<Pedido | null>(null)
   const [sugerenciasActivas, setSugerenciasActivas] = useState<SugerenciaCliente[]>([])
@@ -263,7 +265,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   // ── Búsqueda reactiva en tiempo real al escribir Nombre o Celular ──────────
   useEffect(() => {
-    if (pedidoInicial) return
+    if (pedidoInicial || !autocompletadoHabilitado) {
+      setSugerenciasActivas([])
+      setMostrarDropdownSugerencias(false)
+      setClienteEncontrado(null)
+      return
+    }
 
     const queryNom = (cliente || '').trim()
     const queryTel = normalizarTelefonoArgentino(telefono) || (telefono || '').trim()
@@ -308,7 +315,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       setMostrarDropdownSugerencias(false)
       setClienteEncontrado(null)
     }
-  }, [cliente, telefono, indiceClientes, pedidoInicial])
+  }, [cliente, telefono, indiceClientes, pedidoInicial, autocompletadoHabilitado])
 
   // 5. Acciones
   const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
@@ -679,7 +686,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       cargandoEnvio, envioManual, costoEnvioManualInput,
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
-      sugerenciasActivas, mostrarDropdownSugerencias
+      sugerenciasActivas, mostrarDropdownSugerencias,
+      autocompletadoHabilitado
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
