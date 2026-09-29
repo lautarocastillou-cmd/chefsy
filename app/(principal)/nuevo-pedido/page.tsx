@@ -1,18 +1,26 @@
+'use client'
+
 // ─────────────────────────────────────────────────────
 // app/(principal)/nuevo-pedido/page.tsx
-// Página para registrar un nuevo pedido.
+// Redirecciona a /pedidos abriendo el modal flotante oficial.
 // ─────────────────────────────────────────────────────
 
-import FormularioPedido from '@/components/pedidos/FormularioPedido'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { usarPedidos } from '@/contexto/PedidosContexto'
 
 export default function PaginaNuevoPedido() {
+  const router = useRouter()
+  const { abrirModalNuevoPedido } = usarPedidos()
+
+  useEffect(() => {
+    abrirModalNuevoPedido()
+    router.replace('/pedidos')
+  }, [abrirModalNuevoPedido, router])
+
   return (
-    <div>
-      <p className="text-sm text-gray-500 mb-6">
-        Elegí el tipo de pedido (delivery, retiro o consumo en local). Los campos marcados con{' '}
-        <span className="text-red-400">*</span> son obligatorios. La dirección solo se pide en delivery.
-      </p>
-      <FormularioPedido />
+    <div className="min-h-[50vh] flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }

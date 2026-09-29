@@ -25,6 +25,8 @@ import React, {
   useReducer,
   useEffect,
   useRef,
+  useState,
+  useCallback,
   ReactNode,
 } from 'react'
 import { Pedido, EstadoPedido, TipoTurno, EstadoTurno } from '@/tipos'
@@ -169,6 +171,9 @@ interface ValorContextoPedidosInterno {
   iniciarTurno: (cajaInicial: number, tipoTurno?: TipoTurno) => Promise<boolean>
   asignarOrdenEntrega: (id: string, orden: number | null) => Promise<void>
   reordenarPedidosCadete: (cadeteId: string, nuevosPedidosOrdenados: { id: string; orden_entrega: number }[]) => Promise<void>
+  modalNuevoPedidoAbierto: boolean
+  abrirModalNuevoPedido: () => void
+  cerrarModalNuevoPedido: () => void
 }
 
 const ContextoPedidosInterno = createContext<ValorContextoPedidosInterno | undefined>(undefined)
@@ -258,6 +263,21 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     usuarioActivo,
     agregarNotificacion,
   })
+
+  // ── Modal Global Flotante de Nuevo Pedido ─────────────
+  const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
+
+  const abrirModalNuevoPedido = useCallback(() => {
+    if (!estadoTurno.activo) {
+      agregarNotificacion('Debés iniciar el turno desde "Cierre de Caja" para cargar pedidos.', 'warning')
+      return
+    }
+    setModalNuevoPedidoAbierto(true)
+  }, [estadoTurno.activo, agregarNotificacion])
+
+  const cerrarModalNuevoPedido = useCallback(() => {
+    setModalNuevoPedidoAbierto(false)
+  }, [])
 
   // ── Configuración operativa (con caché y deduplicación SWR) ───────────────────────────
   const [configuracionOperativa, setConfiguracionOperativa] = React.useState<
@@ -892,6 +912,9 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         iniciarTurno,
         asignarOrdenEntrega,
         reordenarPedidosCadete,
+        modalNuevoPedidoAbierto,
+        abrirModalNuevoPedido,
+        cerrarModalNuevoPedido,
       }}
     >
       {children}
@@ -944,6 +967,9 @@ interface ValorContextoPedidos {
   actualizarProductos: (productos: ProductoCatalogo[]) => void
   actualizarModificadores: (modificadores: ModificadorCatalogo[]) => void
   descontarStockProducto: (productoId: string, cantidad: number) => void
+  modalNuevoPedidoAbierto: boolean
+  abrirModalNuevoPedido: () => void
+  cerrarModalNuevoPedido: () => void
   notificaciones: import('./TemaNotificacionContexto').Notificacion[]
   eliminarNotificacion: (id: string) => void
   modoOscuro: boolean
@@ -982,6 +1008,9 @@ export function usarPedidos(): ValorContextoPedidos {
     iniciarTurno: contextoPedidos.iniciarTurno,
     asignarOrdenEntrega: contextoPedidos.asignarOrdenEntrega,
     reordenarPedidosCadete: contextoPedidos.reordenarPedidosCadete,
+    modalNuevoPedidoAbierto: contextoPedidos.modalNuevoPedidoAbierto,
+    abrirModalNuevoPedido: contextoPedidos.abrirModalNuevoPedido,
+    cerrarModalNuevoPedido: contextoPedidos.cerrarModalNuevoPedido,
 
     // Catálogo
     categorias: contextoCatalogo.categorias,

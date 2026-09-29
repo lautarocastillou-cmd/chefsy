@@ -17,7 +17,6 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns, Zap } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
-import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
 import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
 
@@ -32,7 +31,7 @@ const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
 ]
 
 export default function PaginaPedidos() {
-  const { pedidos, obtenerPedidosPorFecha, estadoTurno } = usarPedidos()
+  const { pedidos, obtenerPedidosPorFecha, estadoTurno, abrirModalNuevoPedido } = usarPedidos()
   const { agregarNotificacion } = usarTemaNotificacion()
   
   // Vistas: activos (no archivados, tiempo real) o historial (por fecha, incluye archivados)
@@ -47,21 +46,11 @@ export default function PaginaPedidos() {
   const [filtroActivo, setFiltroActivo] = useState<EstadoPedido | 'todos'>('todos')
   const [filtroEntrega, setFiltroEntrega] = useState<TipoEntrega | 'todos'>('todos')
   
-  const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
   const [pedidoAEditar, setPedidoAEditar] = useState<Pedido | null>(null)
 
   const handleAbrirNuevoPedido = () => {
-    if (!estadoTurno.activo) {
-      agregarNotificacion('Debés iniciar el turno desde "Cierre de Caja" para cargar pedidos.', 'warning')
-      return
-    }
-    setModalNuevoPedidoAbierto(true)
+    abrirModalNuevoPedido()
   }
-
-  useAtajoNuevoPedido({
-    modalAbierto: modalNuevoPedidoAbierto || Boolean(pedidoAEditar),
-    onAbrirModal: handleAbrirNuevoPedido,
-  })
 
   // Cargar pedidos del día seleccionado cuando corresponda (solo al cambiar fecha o entrar a historial)
   useEffect(() => {
@@ -354,9 +343,14 @@ export default function PaginaPedidos() {
         <span>+ Nuevo Pedido</span>
       </button>
 
-      {/* ── Modal de Nuevo / Editar Pedido (Fullscreen en Móvil, Diálogo en Desktop) ── */}
-      {(modalNuevoPedidoAbierto || pedidoAEditar) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in">
+      {/* ── Modal de Editar Pedido (Fullscreen en Móvil, Diálogo en Desktop) ── */}
+      {pedidoAEditar && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPedidoAEditar(null)
+          }}
+        >
           <div 
             className="bg-white dark:bg-slate-900 border-0 md:border border-slate-200/50 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative flex flex-col" 
             data-lenis-prevent="true"
@@ -364,12 +358,9 @@ export default function PaginaPedidos() {
             onTouchMove={(e) => e.stopPropagation()}
           >
             <FormularioPedido 
-              pedidoInicial={pedidoAEditar || undefined}
+              pedidoInicial={pedidoAEditar}
               conHeaderModal={true}
-              onClose={() => {
-                setModalNuevoPedidoAbierto(false)
-                setPedidoAEditar(null)
-              }} 
+              onClose={() => setPedidoAEditar(null)} 
             />
           </div>
         </div>

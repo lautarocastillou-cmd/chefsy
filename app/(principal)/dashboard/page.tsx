@@ -41,28 +41,17 @@ const FormularioPedido = dynamic(() => import('@/components/pedidos/FormularioPe
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'
-import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
 
 export default function PaginaDashboard() {
-  const { pedidos, cadetes, estadoTurno } = usarPedidos()
+  const { pedidos, cadetes, estadoTurno, abrirModalNuevoPedido } = usarPedidos()
   const { agregarNotificacion } = usarTemaNotificacion()
-  const [modalNuevoPedidoAbierto, setModalNuevoPedidoAbierto] = useState(false)
   const [pedidoSeleccionadoParaEditar, setPedidoSeleccionadoParaEditar] = useState<any>(null)
   const [cadeteFiltro, setCadeteFiltro] = useState<string>('todos')
 
   const handleAbrirNuevoPedido = () => {
-    if (!estadoTurno.activo) {
-      agregarNotificacion('Debés iniciar el turno desde "Cierre de Caja" para cargar pedidos.', 'warning')
-      return
-    }
-    setModalNuevoPedidoAbierto(true)
+    abrirModalNuevoPedido()
   }
-
-  useAtajoNuevoPedido({
-    modalAbierto: modalNuevoPedidoAbierto || Boolean(pedidoSeleccionadoParaEditar),
-    onAbrirModal: handleAbrirNuevoPedido,
-  })
 
   // ── Cálculo de métricas ──
   const activos   = pedidos.filter((p) => !['entregado', 'cancelado'].includes(p.estado)).length
@@ -301,27 +290,6 @@ export default function PaginaDashboard() {
         <Plus size={18} strokeWidth={3} />
         <span>Crear Pedido</span>
       </button>
-
-      {/* ── Modal de Nuevo Pedido ── */}
-      {modalNuevoPedidoAbierto && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 transition-opacity duration-150 animate-in fade-in"
-          onClick={() => setModalNuevoPedidoAbierto(false)}
-        >
-          <div 
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-150 relative" 
-            data-lenis-prevent="true"
-            onClick={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-          >
-            <FormularioPedido 
-              conHeaderModal={true}
-              onClose={() => setModalNuevoPedidoAbierto(false)} 
-            />
-          </div>
-        </div>
-      )}
 
       {/* ── Modal de Editar Pedido (Alertas Operativas) ── */}
       {pedidoSeleccionadoParaEditar && (

@@ -45,6 +45,20 @@ export default function SeccionProductosPedido({
     }
   }, [mostrarBuscador])
 
+  // Escuchar si se disparó el atajo global para abrir el buscador al montar el modal
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__chefsyAbrirBuscadorAlMontar) {
+      ;(window as any).__chefsyAbrirBuscadorAlMontar = false
+      setMostrarBuscador(true)
+    }
+
+    const handler = () => {
+      setMostrarBuscador(true)
+    }
+    window.addEventListener('chefsy:abrir-buscador-productos', handler)
+    return () => window.removeEventListener('chefsy:abrir-buscador-productos', handler)
+  }, [])
+
   // Atajo de teclado universal Ctrl + K y Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
