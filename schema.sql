@@ -340,27 +340,73 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 -- =============================================================================
 -- ÍNDICES
 -- =============================================================================
--- ⚠️  NO VERIFICADOS. Esta base no se pudo inspeccionar (pg_indexes no es
--- legible con la anon key). Los 4 índices de abajo son los que DECLARA el
--- schema anterior, que puede estar equivocado.
+-- VERIFICADOS el 2026-09-29 contra pg_indexes. La base tiene 47 índices.
+-- La versión anterior de este archivo declaraba 4. En realidad la base tiene
+-- 47, y 5 de los 6 que sugería la auditoría ya existían.
 --
--- Antes de crear cualquier índice, correr:
---   SELECT tablename, indexname, indexdef FROM pg_indexes
---   WHERE schemaname = 'public' ORDER BY tablename;
+-- ESTE ARCHIVO NO ES UN SCRIPT DE PROVISIÓN: lo de abajo documenta lo que
+-- hay, no crea nada. Para agregar índices, usar supabase/migrations/.
 --
--- Candidatos que el analisis de queries identifica como faltantes
--- (verificar primero que no existan):
---   pedidos(cadete_id)            -- filtrar el lote de un repartidor
---   pedidos(cliente_id)           -- historial de un cliente
---   pedidos(fecha)                -- métricas y histórico por día
---   pedidos(telefono)             -- buscar cliente por teléfono
---   pedidos(estado, archivado, created_at)  -- kanban
---   cierres_diarios(turno_tipo)
+-- ── pedidos (6 índices) — la tabla que más crece, 2.082 filas ──────────────
+--   pedidos_pkey                     UNIQUE (id)
+--   idx_pedidos_cadete_id            (cadete_id)
+--   idx_pedidos_cliente_id           (cliente_id)
+--   idx_pedidos_fecha                (fecha)
+--   idx_pedidos_archivado_estado     (archivado, estado)
+--   idx_pedidos_archivado_created_at (archivado, created_at DESC)
+--   idx_pedidos_telefono             (telefono)   <- agregado en 003
+--
+-- ── resto de la base ───────────────────────────────────────────────────────
+--   cadetes_pkey                     UNIQUE (id)
+--   cadetes_pagos_extras_pkey        UNIQUE (id)
+--   idx_cadetes_pagos_extras_cadete  (cadete_id)
+--   idx_cadetes_pagos_extras_fecha   (fecha)
+--   cadetes_rendimiento_diario_pkey  UNIQUE (id)
+--   idx_cadetes_rendimiento_diario_cadete (cadete_id)
+--   idx_cadetes_rendimiento_diario_fecha  (fecha)
+--   uq_cadete_fecha                  UNIQUE (cadete_id, fecha)
+--   cadetes_rendimiento_semanal_pkey UNIQUE (id)
+--   idx_cadetes_rendimiento_cadete   (cadete_id)
+--   idx_cadetes_rendimiento_semana   (anio, semana_numero)
+--   uq_cadete_semana                 UNIQUE (cadete_id, anio, semana_numero)
+--   catalogo_pkey                    UNIQUE (id)
+--   categorias_pkey                  UNIQUE (id)
+--   idx_categorias_orden             (orden)
+--   cierres_diarios_pkey             UNIQUE (id)
+--   cierres_diarios_fecha_turno_key  UNIQUE (fecha, turno_tipo)
+--   clientes_pkey                    UNIQUE (id)
+--   idx_clientes_telefono            (telefono)
+--   configuracion_operativa_pkey     UNIQUE (id)
+--   configuracion_tienda_pkey        UNIQUE (id)
+--   consumos_personal_pkey           UNIQUE (id)
+--   modificadores_pkey               UNIQUE (id)
+--   producto_costos_pkey             UNIQUE (producto_id)
+--   productos_pkey                   UNIQUE (id)
+--   idx_productos_categoria          (categoria_id)
+--   idx_productos_activo             (activo)
+--   push_subscriptions_pkey          UNIQUE (id)
+--   push_subscriptions_usuario_id_key UNIQUE (usuario_id)
+--   stock_categorias_pkey            UNIQUE (id)
+--   stock_insumos_pkey               UNIQUE (id)
+--   idx_stock_insumos_categoria_id   (categoria_id)
+--   stock_movimientos_pkey           UNIQUE (id)
+--   idx_stock_mov_insumo             (insumo_id)
+--   idx_stock_mov_fecha              (created_at DESC)
+--   stock_recetas_pkey               UNIQUE (producto_id, insumo_id)
+--   idx_stock_recetas_insumo_id      (insumo_id)
+--   tienda_metadata_pkey             UNIQUE (producto_id)
+--   turnos_pkey                      UNIQUE (id)
+--   usuarios_pkey                    UNIQUE (usuario)
+--   idx_usuarios_rol                 (rol)
+--
+-- ── Tablas que salen del listado por volumen ───────────────────────────────
+-- Las siguientes se consultan y NO tienen índice propio más allá del pkey.
+-- No es un problema a la escala actual:
+--   cadetes            4 filas
+--   clientes           6 filas
+--   turnos             1 fila
+--   consumos_personal 35 filas
+--   cierres_diarios  115 filas (cubierta por el UNIQUE de fecha+turno_tipo)
+-- Un índice sobre una tabla de 4 filas es más lento que leerla entera.
 -- =============================================================================
 
-CREATE INDEX IF NOT EXISTS idx_pedidos_estado     ON pedidos(estado)  WHERE archivado = FALSE;
-CREATE INDEX IF NOT EXISTS idx_pedidos_created_at ON pedidos(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id);
--- El cuarto índice de la versión anterior apuntaba a clientes_cuentas(telefono),
--- tabla que no existe. Se corrige a clientes.
-CREATE INDEX IF NOT EXISTS idx_clientes_telefono  ON clientes(telefono);

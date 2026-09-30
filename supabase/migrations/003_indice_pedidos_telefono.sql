@@ -1,0 +1,86 @@
+-- =============================================================================
+-- CHEFSY — 003_indice_pedidos_telefono.sql
+-- =============================================================================
+-- Agrega el ÚNICO índice que realmente faltaba de los 6 que sugería la
+-- auditoría. Los otros 5 ya existían (ver abajo).
+--
+-- POR QUÉ ESTE
+-- `pedidos` es la tabla que más crece: 2.082 filas y subiendo, es la única
+-- del proyecto que justificaría un índice. Tiene ya 5 índices, pero ninguno
+-- sobre `telefono`, y hay dos consultas que filtran exactamente por ahí:
+--
+--   1. app/api/tienda/pedido/route.ts:124
+--      SELECT count(*) FROM pedidos WHERE telefono = $1 AND archivado = false
+--      Corre en CADA intento de compra. Es el límite anti-abuso: cuenta los
+--      pedidos activos de un teléfono.
+--
+--   2. app/api/public/rastreo/route.ts:110
+--      SELECT ... FROM pedidos WHERE telefono = $1 AND estado IN (...) ...
+--      Corre en CADA visita a la página de seguimiento. O sea, cada vez que
+--      un cliente abre el link de su pedido.
+--
+-- Sin índice, las dos hacen un barrido completo de la tabla. Con 2.082 filas
+-- hoy es sub-milisegundo y nadie lo nota. Con 50.000 son decenas de
+-- milisegundos, en la ruta más caliente que tiene la app.
+--
+-- POR QUÉ NO SE AGREGAN LOS OTROS
+-- La auditoría pedía 6 índices. Verificados contra pg_indexes:
+--
+--   idx_pedidos_cadete_id            (cadete_id)                    YA EXISTÍA
+--   idx_pedidos_cliente_id           (cliente_id)                   YA EXISTÍA
+--   idx_pedidos_fecha                (fecha)                        YA EXISTÍA
+--   idx_pedidos_archivado_estado     (archivado, estado)            YA EXISTÍA
+--   idx_pedidos_archivado_created_at (archivado, created_at DESC)   YA EXISTÍA
+--   cierres_diarios_fecha_turno_key  (fecha, turno_tipo)            YA EXISTÍA
+--     └ sirve para las consultas por fecha, que son las que hay
+--
+-- Faltaban índices en otras tablas, pero los volúmenes los hacen
+-- innecesarios. Un índice en una tabla de 4 filas es más lento que leerla:
+--
+--   cadetes              4 filas
+--   clientes             6 filas
+--   turnos               1 fila
+--   consumos_personal   35 filas
+--   cierres_diarios    115 filas  (y ya está indexada por fecha+turno)
+--
+-- `cadetes.nombre` se consulta con `ilike` en 4 rutas, que un índice btree
+-- normal no puede aprovechar. Se necesitaría un índice trigram
+-- (gin_trgm_ops), pero sobre 4 filas es absurdo. Si algún día la tabla
+-- `cadetes` crece a cientos de filas, ahí sí:
+--
+--   CREATE EXTENSION IF NOT EXISTS pg_trgm;
+--   CREATE INDEX idx_cadetes_nombre_trgm ON cadetes
+--     USING gin (nombre gin_trgm_ops);
+--
+-- =============================================================================
+
+BEGIN;
+
+-- CONCURRENTLY no se puede usar dentro de una transacción, y en Supabase el
+-- SQL Editor envuelve en transacción. La tabla tiene 2.082 filas: el bloqueo
+-- dura milisegundos y se hace de madrugada si hace falta.
+CREATE INDEX IF NOT EXISTS idx_pedidos_telefono
+    ON public.pedidos USING btree (telefono);
+
+COMMIT;
+
+-- =============================================================================
+-- VERIFICACIÓN
+-- =============================================================================
+-- 1. El índice existe:
+--    SELECT indexname FROM pg_indexes
+--    WHERE tablename = 'pedidos' AND indexname = 'idx_pedidos_telefono';
+--
+-- 2. Postgres lo usa para la consulta del checkout:
+--    EXPLAIN SELECT id FROM pedidos
+--      WHERE telefono = '+5493815000000' AND archivado = false;
+--
+--    Con el índice:  "Index Scan using idx_pedidos_telefono on pedidos"
+--    Sin él:         "Seq Scan on pedidos"
+--
+--    Ojo: con solo 2.082 filas el optimizador puede elegir el barrido igual
+--    porque sale más barato. Eso es correcto y no es un problema: el
+--    planner knows what it's doing. El índice se va a usar solo cuando la
+--    tabla crezca lo suficiente como para que pagara. Para forzarlo en una
+--    prueba: SET enable_seqscan = off;
+-- =============================================================================
