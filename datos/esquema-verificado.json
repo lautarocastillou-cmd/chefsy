@@ -1,13 +1,8 @@
 {
   "generado": "2026-09-29",
   "fuente": "information_schema.columns en Supabase (proyecto Chefsy)",
-  "nota": "Tablas no incluidas: usuarios, turnos, tienda_metadata y la columna cantidad de stock_recetas (la consulta vino cortada). Regenerar con scripts/actualizar-esquema.mjs",
-  "sin_verificar": [
-    "usuarios",
-    "turnos",
-    "tienda_metadata",
-    "stock_recetas"
-  ],
+  "nota": "Esquema completo: 23 tablas, todas verificadas contra information_schema. Para actualizar: correr la consulta en Supabase Studio y copiar el resultado a este archivo.",
+  "sin_verificar": [],
   "tablas": {
     "cadetes": [
       "id",
@@ -277,20 +272,31 @@
       "referencia_id"
     ],
     "stock_recetas": [
-      "producto_id"
+      "producto_id",
+      "insumo_id",
+      "cantidad"
     ],
     "turnos": [
       "id",
+      "activo",
+      "caja_inicial",
       "fecha_inicio",
-      "tipo_turno",
-      "activo"
+      "tipo_turno"
     ],
     "usuarios": [
       "usuario",
+      "clave_hash",
       "nombre",
       "rol",
-      "archivado",
       "created_at"
+    ],
+    "tienda_metadata": [
+      "producto_id",
+      "nombre_publico",
+      "descripcion_publica",
+      "imagen_url",
+      "created_at",
+      "updated_at"
     ]
   }
 }

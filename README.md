@@ -67,9 +67,10 @@ Queda en [http://localhost:3000](http://localhost:3000).
 | Script | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
+| `npm run build` | Verifica el esquema y después compila |
 | `npm run start` | Corre el build |
 | `npm run typecheck` | `tsc --noEmit`, debe dar 0 errores |
+| `npm run verificar:esquema` | Cruza el código contra el esquema real de la base |
 | `npm run dev:limpio` | Borra `.next` y reinicia (Windows) |
 
 > **Todavía no hay linter, tests ni CI.** `next lint` está en el `package.json`
@@ -276,10 +277,30 @@ curl "$URL/rest/v1/pedidos?select=*" -H "apikey: $ANON"
 
 ---
 
+## Verificación automática
+
+`npm run build` corre primero `verificar:esquema`, que cruza todas las
+columnas que el código le pide a la base contra el esquema real verificado
+(ver [`datos/esquema-verificado.md`](datos/esquema-verificado.md)). Si el
+código pide una columna que no existe, **el build falla y no se despliega**.
+
+Existe porque ya pasó tres veces: `viaje_numero` y `clientes.puntos` hicieron
+que consultas enteras devolvieran `42703` en producción, en bloques que
+capturaban el error y seguían, así que morían en silencio. `tsc` no lo detecta,
+porque TypeScript no sabe contra qué base se corre el proyecto.
+
+Antes de compilar, también conviene:
+
+```bash
+npm run typecheck    # 0 errores
+```
+
 ## Cosas que faltan
 
-- **Tests.** No hay ninguno. `npm run typecheck` es la única red de seguridad.
-- **CI.** No hay `.github/workflows`. La verificación es manual.
+- **Tests.** No hay ninguno. El typecheck y el verificador de esquema son las
+  dos únicas redes.
+- **CI.** No hay `.github/workflows`. La verificación pasa por el build de
+  Vercel, pero nadie lo corre hasta que alguien pushea.
 - **Lint.** El script existe pero no hay config de ESLint.
 - **Catálogo en la base.** `datos/productos.ts` (1.576 líneas) es la fuente
   real del menú; la tabla `productos` está vacía. Agregar un producto hoy

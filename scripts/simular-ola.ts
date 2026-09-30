@@ -37,7 +37,10 @@ async function main() {
   console.log('[SIMULACION] Iniciando simulación de ola masiva de pedidos en Chefsy...')
 
   // 1. Activar turno si no estuviera
-  await supabase.from('turnos').upsert({ id: 1, activo: true, updated_at: new Date().toISOString() })
+  // `turnos` no tiene columna `updated_at`: solo id, activo, caja_inicial,
+  // fecha_inicio y tipo_turno. Con `updated_at` el upsert fallaba entero con
+  // 42703 y el turno nunca se activaba. Lo detectó verificar:esquema.
+  await supabase.from('turnos').upsert({ id: 1, activo: true })
 
   const ahora = new Date()
   const fechaHoy = ahora.toISOString().split('T')[0]

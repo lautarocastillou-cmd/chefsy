@@ -70,10 +70,54 @@ const ESQUEMA = JSON.parse(fs.readFileSync(ESQUEMA_PATH, 'utf8'));
 // Tablas sin datos verificados: se omiten en vez de reportar falsos positivos.
 const SIN_VERIFICAR = new Set(ESQUEMA.sin_verificar || []);
 
-const archivos = execSync('git ls-files "*.ts" "*.tsx"', { cwd: RAIZ, encoding: 'utf8' })
-  .split('\n')
-  .filter(Boolean)
-  .filter((f) => /^(app|servicios|lib|contexto|hooks|scripts)\//.test(f));
+// Lista de archivos a revisar.
+//
+// Se usa `git ls-files` para no comerse node_modules ni .next. Pero en CI
+// (Vercel) el repo puede no estar disponible, así que hay un respaldo que
+// recorre el disco.
+const PREFIJOS = /^(app|servicios|lib|contexto|hooks|scripts)\//;
+
+function listarArchivos() {
+  try {
+    // stdio pipe para que el "fatal: not a git repository" no ensucie la
+    // salida cuando caemos al recorrido de disco.
+    const salida = execSync('git ls-files "*.ts" "*.tsx"', {
+      cwd: RAIZ,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const lista = salida.split('\n').filter(Boolean).filter((f) => PREFIJOS.test(f));
+    if (lista.length > 0) return lista;
+    console.warn('[verificar-esquema] git no devolvió archivos, se recorre el disco.');
+  } catch {
+    console.warn('[verificar-esquema] git no disponible, se recorre el disco.');
+  }
+
+  const salida = [];
+  const recorrer = (dir) => {
+    for (const entrada of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entrada.name === 'node_modules' || entrada.name === '.next' || entrada.name.startsWith('.')) continue;
+      const completo = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) recorrer(completo);
+      else if (/\.tsx?$/.test(entrada.name)) {
+        const rel = path.relative(RAIZ, completo).split(path.sep).join('/');
+        if (PREFIJOS.test(rel)) salida.push(rel);
+      }
+    }
+  };
+  for (const d of ['app', 'servicios', 'lib', 'contexto', 'hooks', 'scripts']) {
+    const p = path.join(RAIZ, d);
+    if (fs.existsSync(p)) recorrer(p);
+  }
+  return salida;
+}
+
+const archivos = listarArchivos();
+
+if (archivos.length === 0) {
+  console.error('[verificar-esquema] No se encontró ningún archivo para revisar.');
+  process.exit(2);
+}
 
 // Resuelve constantes tipo .select(COLUMNAS_PEDIDO) para no perder columnas
 // que llegan por indirección.

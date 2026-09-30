@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:limpio": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/dev-limpio.ps1",
-    "build": "next build",
+    "build": "npm run verificar:esquema && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

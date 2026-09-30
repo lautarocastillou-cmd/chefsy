@@ -27,7 +27,27 @@ Cruza todas las columnas que el código le pide a la base contra este archivo.
 Si alguna no existe, dice qué tabla, qué columna, en qué archivo, y sale con
 código 1.
 
-Conviene correrlo junto con `npm run typecheck` antes de pushear.
+## Corre en el build automáticamente
+
+No hace falta acordarse de correrlo:
+
+```json
+"build": "npm run verificar:esquema && next build"
+```
+
+Si el código y la base discrepan, **el build falla y no se despliega**. Eso es
+intencional: es preferible que Vercel rechace el deploy a que un 42703 llegue
+a producción y deje de funcionar una funcionalidad en silencio.
+
+Probado en los dos sentidos: reintroduciendo `clientes.puntos` a propósito, el
+build corta con código 1 sin llegar a compilar. Sin el bug, compila.
+
+El script usa `git ls-files` para no meterse en `node_modules`, y si no
+encuentra git (CI) cae a un recorrido del disco por las carpetas del proyecto.
+
+**Ojo:** esto solo se ejecuta en el build, no en `npm run dev`. Si estás
+trabajando contra una base que todavía no tenés en este archivo, corré el
+comando a mano de vez en cuando.
 
 ## Cómo se regenera
 
