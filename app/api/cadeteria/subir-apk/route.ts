@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { verificarTokenFlutter } from '@/lib/auth-flutter'
+import { responderError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,9 @@ export async function POST(request: Request) {
       publicUrl: urlData.publicUrl
     })
   } catch (error: any) {
-    console.error('[API Subir APK] Error interno:', error)
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
+    return responderError(error, {
+      contexto: '[API Subir APK]',
+      mensaje: 'No se pudo subir el APK. Probá de nuevo.',
+    })
   }
 }

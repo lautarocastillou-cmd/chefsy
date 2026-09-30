@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { responderError } from '@/lib/api-error'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import configuracionFallback from '@/config/operacion.json'
@@ -138,11 +139,10 @@ export async function POST(request: Request) {
       )
 
     if (error) {
-      console.error('[API Config] Error al guardar en Supabase:', error)
-      return NextResponse.json(
-        { error: 'Error al guardar la configuración en la base de datos: ' + error.message },
-        { status: 500 }
-      )
+      return responderError(error, {
+        contexto: '[API Config] guardando en Supabase',
+        mensaje: 'No se pudo guardar la configuración. Probá de nuevo.',
+      })
     }
 
     return NextResponse.json({

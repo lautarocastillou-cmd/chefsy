@@ -3,6 +3,7 @@ import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { ConsumoPersonal, NuevoConsumoPayload } from '@/tipos/consumo'
 import { registrarConsumoPersonalKardex } from '@/lib/stock-motor'
+import { responderError } from '@/lib/api-error'
 
 // ─────────────────────────────────────────────────────
 // app/api/admin/consumos-personal/route.ts
@@ -222,6 +223,6 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error('[API Consumos] Error POST:', error)
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
+    return responderError(error, { contexto: '[API Consumos Personal]' })
   }
 }

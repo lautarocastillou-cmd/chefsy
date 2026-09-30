@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerSesion } from '@/lib/auth-server'
+import { responderError } from '@/lib/api-error'
 
 export async function GET() {
   try {
@@ -177,7 +178,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('[API Torre Control POST] Error al apagar GPS:', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return responderError(error, { contexto: '[API Torre Control POST] apagando GPS' })
     }
 
     return NextResponse.json({

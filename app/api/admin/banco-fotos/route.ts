@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { responderError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,6 +123,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: true, deleted: fileName || url })
   } catch (err: any) {
     console.error('[BancoFotos DELETE] Error:', err)
-    return NextResponse.json({ error: err.message || 'Error al eliminar foto' }, { status: 500 })
+    return responderError(err, { contexto: '[API Banco Fotos DELETE]', mensaje: 'Error al eliminar la foto.' })
   }
 }

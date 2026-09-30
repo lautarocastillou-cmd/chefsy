@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
+import { responderError } from '@/lib/api-error'
 
 export async function POST(request: Request) {
   try {
@@ -99,8 +100,10 @@ export async function POST(request: Request) {
       })
 
     if (error) {
-      console.error('[Upload API] Error subiendo a Supabase:', error)
-      return NextResponse.json({ error: error.message || 'Error al subir la imagen al servidor.' }, { status: 500 })
+      return responderError(error, {
+        contexto: '[Upload API] subiendo a Supabase Storage',
+        mensaje: 'No se pudo subir la imagen. Probá de nuevo.',
+      })
     }
 
     const { data: publicData } = supabaseAdmin.storage
@@ -113,7 +116,9 @@ export async function POST(request: Request) {
       urlTransformada: publicData.publicUrl
     })
   } catch (err: any) {
-    console.error('[Upload API] Error interno:', err)
-    return NextResponse.json({ error: err.message || 'Error interno del servidor' }, { status: 500 })
+    return responderError(err, {
+      contexto: '[Upload API] error interno',
+      mensaje: 'No se pudo subir la imagen. Probá de nuevo.',
+    })
   }
 }

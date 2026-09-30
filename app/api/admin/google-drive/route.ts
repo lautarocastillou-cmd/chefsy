@@ -164,7 +164,11 @@ export async function POST(req: Request) {
           nombreArchivo: fileName,
         })
       } catch (err: any) {
-        errores.push({ fileId: id, error: err.message || 'Error procesando archivo' })
+        // El `fileId` sí se devuelve: el admin necesita saber qué archivo
+        // falló para reintentarlo. El motivo real no, porque el mensaje de
+        // Supabase/Google Drive revela nombres de bucket y de columna.
+        console.error('[Google Drive] Error procesando archivo', id, err)
+        errores.push({ fileId: id, error: 'No se pudo procesar este archivo.' })
       }
     }
 

@@ -3,6 +3,7 @@ import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { normalizarTelefonoArgentino } from '@/lib/motor-clientes'
 import { invalidarCache } from '@/lib/cache-servidor'
+import { responderError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -185,6 +186,6 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('[API Fusión Clientes] Error:', error)
-    return NextResponse.json({ error: error.message || 'Error al fusionar clientes' }, { status: 500 })
+    return responderError(error, { contexto: '[API Fusion Clientes]', mensaje: 'Error al fusionar los clientes.' })
   }
 }

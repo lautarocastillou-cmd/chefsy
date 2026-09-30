@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerFechaNegocio, detectarTipoTurnoActual } from '@/lib/tiempo'
+import { responderError } from '@/lib/api-error'
 
 export async function GET(request: Request) {
   try {
@@ -28,8 +29,7 @@ export async function GET(request: Request) {
     const { data, error } = await query
 
     if (error) {
-      console.error('[API Pagos Extras Cadetes GET] Error:', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return responderError(error, { contexto: '[API Pagos Extras Cadetes GET]' })
     }
 
     return NextResponse.json(data || [])
@@ -84,8 +84,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('[API Pagos Extras Cadetes POST] Error:', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return responderError(error, { contexto: '[API Pagos Extras Cadetes POST]' })
     }
 
     return NextResponse.json(data)
@@ -116,8 +115,7 @@ export async function DELETE(request: Request) {
       .eq('id', id)
 
     if (error) {
-      console.error('[API Pagos Extras Cadetes DELETE] Error:', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return responderError(error, { contexto: '[API Pagos Extras Cadetes DELETE]' })
     }
 
     return NextResponse.json({ ok: true, id })

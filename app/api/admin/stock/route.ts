@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { TipoMovimientoStock } from '@/tipos/stock'
+import { responderError } from '@/lib/api-error'
 
 export async function POST(request: Request) {
   const sesion = await obtenerSesion()
@@ -236,6 +237,6 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error('[API Stock] Error:', error)
-    return NextResponse.json({ error: error.message || 'Error del servidor' }, { status: 500 })
+    return responderError(error, { contexto: '[API Stock]' })
   }
 }

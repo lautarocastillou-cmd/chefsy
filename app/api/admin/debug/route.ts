@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerConfiguracionTienda } from '@/servicios/supabase/configuracion'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { responderError } from '@/lib/api-error'
 
 export async function GET(request: Request) {
   const sesion = await obtenerSesion()
@@ -30,6 +31,17 @@ export async function GET(request: Request) {
           const { error } = await supabaseAdmin.from(id).select(columna).limit(1)
           const latenciaMs = Math.round(performance.now() - tInicio)
           if (error) {
+            // NOTA DE SEGURIDAD: acá el mensaje crudo SÍ se devuelve a
+            // propósito, y es la única excepción en todo app/api.
+            //
+            // Este endpoint existe para responder "¿qué tablas están
+            // accesibles ahora mismo?", así que un mensaje genérico lo haría
+            // inútil. El riesgo real (filtrar nombres de tabla) no agrega
+            // nada: esta ruta es admin-only por el proxy, y el mismo admin
+            // puede consultar todo el esquema desde Supabase Studio.
+            //
+            // NO copiar este patrón a otros route handlers: para el resto
+            // está `responderError` de lib/api-error.ts.
             return { id, nombre, ok: false, latenciaMs, error: error.message }
           }
           return { id, nombre, ok: true, latenciaMs }
@@ -53,6 +65,8 @@ export async function GET(request: Request) {
     const config = await obtenerConfiguracionTienda()
     return NextResponse.json(config)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // Este sí se sanitiza: la tabla de resultados de arriba es el que tiene
+    // un motivo claro para mostrar el detalle, este no.
+    return responderError(error, { contexto: '[API Debug] config' })
   }
 }
