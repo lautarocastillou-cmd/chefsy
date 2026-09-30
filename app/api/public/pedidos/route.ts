@@ -45,12 +45,26 @@ export async function GET(request: Request) {
     if (error) throw error
 
     // Consultar viajes y pagos extras asignados al cadete en el turno/fecha de negocio actual
-    const { data: extrasData } = await supabase
+    //
+    // OJO: `viaje_numero` se pedía acá pero esa columna NO existe (ni en la
+    // tabla, ni en el INSERT de /api/admin/cadetes/pagos-extras, ni en el
+    // tipo CadetePagoExtra). Postgres rechazaba la consulta entera con
+    // 42703 y, como el error se ignoraba, `extrasData` llegaba siempre null:
+    // el cadete no veía sus pagos extras y, peor, `tieneActividad` de abajo
+    // daba false, así que el monto base le podía aparecer en 0.
+    const { data: extrasData, error: extrasError } = await supabase
       .from('cadetes_pagos_extras')
-      .select('id, cadete_id, cadete_nombre, monto, motivo, viaje_numero, created_at, fecha')
+      .select('id, cadete_id, cadete_nombre, monto, motivo, created_at, fecha')
       .or(`cadete_id.ilike.${cadeteIdNorm},cadete_nombre.ilike.${cadeteIdNorm}`)
       .eq('fecha', fechaHoy)
       .order('created_at', { ascending: false })
+
+    // Antes esto se tragaba el error en silencio. Si la consulta vuelve a
+    // fallar (columna que no existe, tabla renombrada) hay que enterarse en
+    // el log, no descubrirlo semanas después porque al cadete le sale 0.
+    if (extrasError) {
+      console.error('[API Publica Pedidos] Error consultando pagos extras:', extrasError)
+    }
 
     // Consultar estado del turno y monto base configurado (Cacheado 30s en memoria para eliminar ~33k queries diarias)
     const CACHE_TURNO_CONFIG = 'cache_turno_y_config_cadetes'

@@ -77,9 +77,13 @@ CREATE TABLE IF NOT EXISTS cadetes_pagos_extras (
     fecha           TEXT,               -- TEXT: el código la trata como string
     monto           NUMERIC,
     motivo          TEXT,
-    viaje_numero    INTEGER,
+    turno_tipo      TEXT,
     creado_por      TEXT,
     created_at      TIMESTAMPTZ
+    -- `viaje_numero` NO existe. Aparecía en un SELECT de
+    -- app/api/public/pedidos/route.ts pero nunca se insertó ni se declaró en
+    -- el tipo CadetePagoExtra. Postgres devolvía 42703 y la app Flutter no
+    -- veía los pagos extras. Corregido en el commit que acompaña a este archivo.
 );
 
 
