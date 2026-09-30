@@ -33,7 +33,6 @@ import {
 import { Pedido, TipoTurno, CadetePagoExtra } from '@/tipos'
 import { usarConsumosPersonal } from '@/contexto/ConsumosPersonalContexto'
 import MetricasHistoricas from '@/components/cierre/MetricasHistoricas'
-import ComparativaTurnoVivo from '@/components/cierre/ComparativaTurnoVivo'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import ModalVerificacionCierre from '@/components/cierre/ModalVerificacionCierre'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
@@ -1192,22 +1191,6 @@ _Generado automáticamente desde Chefsy_`.trim()
           </div>
         )}
 
-        {/* Comparativa de Turno en Vivo vs Histórico */}
-        <ErrorBoundary contexto="Cierre Caja - Comparativa Turno">
-          <ComparativaTurnoVivo
-            fecha={fechaSeleccionada}
-            turnoTipo="noche"
-            metricasActuales={{
-              facturacionNeta: totalGeneradoNoche,
-              totalPedidos,
-              ticketPromedio,
-              efectivoVentas: efectivoTotal + totalConsumosPagadosActo,
-              transferenciaTotal,
-              totalDelivery: deliveryTotal,
-            }}
-          />
-        </ErrorBoundary>
-        
       </div>
       )}
 
