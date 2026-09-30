@@ -238,20 +238,27 @@ export async function POST(request: Request) {
     const clienteId = body.cliente_id ? String(body.cliente_id).trim() : null
 
     if (clienteId && totalPuntosAGastar > 0) {
+      // La columna se llama `puntos_actuales`, NO `puntos`. Con `puntos`,
+      // Postgres devolvía 42703 y caía al 400 de abajo, así que pagar con
+      // puntos desde la tienda no funcionaba para ningún cliente.
+      // Los otros 19 lugares del proyecto que consultan `clientes` ya usan
+      // el nombre correcto; este se había quedado atrás.
       const { data: clienteDb, error: errCliente } = await supabaseAdmin
         .from('clientes')
-        .select('id, puntos')
+        .select('id, puntos_actuales')
         .eq('id', clienteId)
         .single()
 
       if (errCliente || !clienteDb) {
+        console.error('[API Pedido] Error verificando saldo del cliente:', errCliente)
         return NextResponse.json({ error: 'No se pudo verificar la cuenta del cliente.' }, { status: 400 })
       }
 
-      if ((clienteDb.puntos || 0) < totalPuntosAGastar) {
+      const saldoActual = Number(clienteDb.puntos_actuales) || 0
+      if (saldoActual < totalPuntosAGastar) {
         return NextResponse.json(
           {
-            error: `Puntos insuficientes. Tu saldo actual es de ${clienteDb.puntos || 0} pts (se requieren ${totalPuntosAGastar} pts).`,
+            error: `Puntos insuficientes. Tu saldo actual es de ${saldoActual} pts (se requieren ${totalPuntosAGastar} pts).`,
           },
           { status: 400 }
         )

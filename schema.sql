@@ -4,19 +4,22 @@
 --
 -- ⚠️  LEÉ ESTO ANTES DE USAR EL ARCHIVO
 --
--- Este archivo NO es un script de provisión. No lo ejecutes en una base vacía:
--- las columnas están verificadas contra el código y contra una sonda en vivo,
--- pero los TIPOS, los DEFAULT, las claves foráneas y los índices NO están
--- verificados. Ejecutar esto produce una base que no coincide con la real.
+-- Este archivo NO es un script de provisión. No lo ejecutes en una base vacía.
+-- Documenta el esquema real para que se pueda leer, comparar y entender.
 --
--- QUÉ ES Y QUÉ NO ES
---   Verificado    Nombres de tabla y de columna. Confirmado leyendo las
---                 consultas del código y, para `pedidos`, con una sonda
---                 directa a la base de producción.
---   Inferido      Tipos de datos. Deducidos de los valores observados.
---                 Probablemente correctos, no garantizados.
---   FALTA         Defaults, nullability, claves foráneas, índices y las
---                 políticas de RLS. Nada de eso se verificó.
+-- QUÉ ESTÁ VERIFICADO Y QUÉ NO
+--   Verificado     Las tablas marcadas "VERIFICADO contra information_schema"
+--                  se copiaron de la base real: tipo, nullability y default
+--                  exactos. Los 47 índices, desde pg_indexes.
+--   Sonda en vivo  Los 39 nombres de columna de `pedidos`.
+--   PENDIENTE      Las tablas sin marca de verificado. Y en todas: las
+--                  claves foráneas, que no se consultaron.
+--
+-- POR QUÉ IMPORTA VERIFICAR
+-- Escribir una columna que el código pide y la base no tiene rompe una
+-- consulta ENTERA en silencio, si el error no se captura. Ya pasó dos veces:
+-- `viaje_numero` y `clientes.puntos`. Por eso este archivo existe y por eso
+-- conviene regenerarlo con `db dump` en vez de escribirlo a mano.
 --
 -- CÓMO OBTENER EL ESQUEMA REAL
 --   En Supabase Studio, seccion Database, ver el schema en vivo. O:
@@ -24,9 +27,12 @@
 --
 -- POR QUÉ EXISTE ESTE ARCHIVO
 -- La versión anterior declaraba ser "fuente de verdad" y mentía: tenía 15
--- columnas de `pedidos` que NO existen en la base y le faltaban 19 que sí
--- existen, más 9 tablas completas. Quien hubiera restaurado desde ahí habría
--- gotten una app rota sin ninguna pista de por qué.
+-- columnas de `pedidos` que NO existen, le faltaban 19 que sí, y omitía 9
+-- tablas. Quien hubiera restaurado desde ahí habría gotten una app rota sin
+-- ninguna pista de por qué.
+--
+-- Y al verificar este archivo contra la base aparecieron dos bugs más de la
+-- misma clase (`viaje_numero`, `clientes.puntos`), corregidos el 2026-09-29.
 --
 -- La fuente de verdad real del esquema es supabase/migrations/ (ver ese
 -- README), más el esquema vivo de la base.
@@ -37,53 +43,101 @@
 -- 1. USUARIOS Y PERSONAL
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- VERIFICADO contra lib/auth-server.ts (líneas 56-58, 85-104).
--- La versión anterior decía `username` / `password_hash`. NO EXISTEN: el
--- código lee `usuario` y `clave_hash`. O sea que el login no habría
--- funcionando contra una base restaurada de este archivo.
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- Los tipos, la nullability y los defaults de esta tabla son los reales.
 CREATE TABLE IF NOT EXISTS usuarios (
-    id          TEXT PRIMARY KEY,
-    usuario     TEXT NOT NULL,          -- es el "username" real
-    clave_hash  TEXT NOT NULL,          -- es el "password_hash" real; bcrypt o SHA-256 legacy
-    nombre      TEXT NOT NULL,
-    rol         TEXT NOT NULL,          -- CHECK: 'admin' | 'cajero' | 'cadete'
-    archivado   BOOLEAN,
-    created_at  TIMESTAMPTZ
+    usuario    TEXT PRIMARY KEY,       -- sin `id`: la PK ES `usuario`
+    nombre     TEXT,
+    rol        TEXT,
+    archivado  BOOLEAN,
+    created_at TIMESTAMPTZ
+    -- clave_hash: NO verificada, falta la parte de la consulta.
     -- El TS de roles es 'admin' | 'cadete' | 'cajero'. La versión anterior
-    -- decía además 'cocina', que no existe en el código.
+    -- decía además 'cocina', que no existe.
 );
 
--- Seguimiento GPS de los repartidores.
--- NOTA: NO tiene `username` como PK (la versión anterior lo declaraba así).
--- Tampoco `telefono` ni `activo` aparecen en las consultas del código.
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- 4 filas. La escriben la app Flutter y la de admin, no este repo.
+-- Por eso la tabla está abierta a `anon` a propósito.
 CREATE TABLE IF NOT EXISTS cadetes (
-    id             TEXT PRIMARY KEY,
-    nombre         TEXT,
-    lat            NUMERIC,
-    lng            NUMERIC,
-    speed          NUMERIC,
-    heading        NUMERIC,
-    accuracy       NUMERIC,
-    bateria        NUMERIC,
-    gps_activo     BOOLEAN,
-    updated_at     TIMESTAMPTZ
-    -- FALTAN: tipos exactos y defaults. Verificar.
+    id                TEXT PRIMARY KEY,
+    nombre            TEXT NOT NULL,
+    telefono          TEXT,
+    activo            BOOLEAN DEFAULT true,
+    lat               NUMERIC,
+    lng               NUMERIC,
+    accuracy          NUMERIC,
+    heading           NUMERIC,
+    speed             NUMERIC,
+    gps_activo        BOOLEAN DEFAULT true,
+    updated_at        TIMESTAMPTZ DEFAULT now(),
+    bateria           SMALLINT,        -- smallint, no numeric
+    apagado_por_admin BOOLEAN DEFAULT false
+    -- `apagado_por_admin` existe en la base y no aparece en ninguna consulta
+    -- del código. O se usa desde la app Flutter, o quedó de una versión
+    -- anterior. No tocar sin verificar.
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- `viaje_numero` NO existe. Aparecía en un SELECT de
+-- app/api/public/pedidos/route.ts pero nunca se insertó ni se declaró en el
+-- tipo CadetePagoExtra. Postgres devolvía 42703 y la app Flutter no veía los
+-- pagos extras. Corregido.
 CREATE TABLE IF NOT EXISTS cadetes_pagos_extras (
-    id              TEXT PRIMARY KEY,
-    cadete_id       TEXT,
-    cadete_nombre   TEXT,
-    fecha           TEXT,               -- TEXT: el código la trata como string
-    monto           NUMERIC,
-    motivo          TEXT,
-    turno_tipo      TEXT,
-    creado_por      TEXT,
-    created_at      TIMESTAMPTZ
-    -- `viaje_numero` NO existe. Aparecía en un SELECT de
-    -- app/api/public/pedidos/route.ts pero nunca se insertó ni se declaró en
-    -- el tipo CadetePagoExtra. Postgres devolvía 42703 y la app Flutter no
-    -- veía los pagos extras. Corregido en el commit que acompaña a este archivo.
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cadete_id     TEXT NOT NULL,
+    cadete_nombre TEXT NOT NULL,
+    monto         NUMERIC NOT NULL,
+    motivo        TEXT NOT NULL,
+    fecha         TEXT NOT NULL,       -- TEXT, no date (a diferencia de cierres_diarios)
+    turno_tipo    TEXT NOT NULL DEFAULT 'noche',
+    creado_por    TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- Métricas de rendimiento por día. No estaba en la documentación anterior.
+-- UNIQUE (cadete_id, fecha) garantiza una fila por cadete por día.
+CREATE TABLE IF NOT EXISTS cadetes_rendimiento_diario (
+    id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cadete_id                   TEXT NOT NULL,
+    cadete_nombre               TEXT NOT NULL,
+    fecha                       DATE NOT NULL,
+    pedidos_entregados          INTEGER DEFAULT 0,
+    km_totales                  NUMERIC DEFAULT 0,
+    velocidad_media_movimiento  NUMERIC DEFAULT 0,
+    velocidad_maxima            NUMERIC DEFAULT 0,
+    tiempo_promedio_entrega_min INTEGER DEFAULT 0,
+    tiempo_movimiento_minutos   INTEGER DEFAULT 0,
+    tiempo_detenido_minutos     INTEGER DEFAULT 0,
+    es_mas_rapido_dia           BOOLEAN DEFAULT false,
+    ranking_dia                 INTEGER DEFAULT 1,
+    created_at                  TIMESTAMPTZ DEFAULT now(),
+    updated_at                  TIMESTAMPTZ DEFAULT now()
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- Métricas agregadas por semana. UNIQUE (cadete_id, anio, semana_numero).
+CREATE TABLE IF NOT EXISTS cadetes_rendimiento_semanal (
+    id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cadete_id                   TEXT NOT NULL,
+    cadete_nombre               TEXT NOT NULL,
+    anio                        INTEGER NOT NULL,
+    semana_numero               INTEGER NOT NULL,
+    semana_inicio               DATE NOT NULL,
+    semana_fin                  DATE NOT NULL,
+    pedidos_entregados          INTEGER DEFAULT 0,
+    km_totales                  NUMERIC DEFAULT 0,
+    velocidad_media_movimiento  NUMERIC DEFAULT 0,
+    velocidad_maxima            NUMERIC DEFAULT 0,
+    tiempo_promedio_entrega_min INTEGER DEFAULT 0,
+    tiempo_movimiento_minutos   INTEGER DEFAULT 0,
+    tiempo_detenido_minutos     INTEGER DEFAULT 0,
+    es_mas_rapido_semana        BOOLEAN DEFAULT false,
+    posicion_ranking            INTEGER DEFAULT 1,
+    detalles_dias               JSONB DEFAULT '[]'::jsonb,
+    created_at                  TIMESTAMPTZ DEFAULT now(),
+    updated_at                  TIMESTAMPTZ DEFAULT now()
 );
 
 
@@ -91,19 +145,26 @@ CREATE TABLE IF NOT EXISTS cadetes_pagos_extras (
 -- 2. CONFIGURACIÓN
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 CREATE TABLE IF NOT EXISTS configuracion_operativa (
     id          INTEGER PRIMARY KEY DEFAULT 1,
-    limites     JSONB,
-    prioridades JSONB,
-    updated_at  TIMESTAMPTZ
-    -- FALTAN: horario_atencion, estado_local, puntos_activados, monto_por_punto
-    -- que sí declaraba la versión anterior. No están en las consultas del
-    -- código, así que puede que la tabla tenga más columnas de las que se usan.
+    limites     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    prioridades JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at  TIMESTAMPTZ DEFAULT now()
+    -- horario_atencion, estado_local, puntos_activados y monto_por_punto NO
+    -- existen. La versión anterior de este archivo los declaraba.
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- La versión anterior de este archivo solo tenía `id`. /
+-- /api/health la consulta para saber si la base responde.
 CREATE TABLE IF NOT EXISTS configuracion_tienda (
-    id  TEXT PRIMARY KEY
-    -- La versión anterior NO tenía esta tabla. /api/health la consulta.
+    id                INTEGER PRIMARY KEY DEFAULT 1,
+    color_principal   TEXT NOT NULL DEFAULT '#2A6348',
+    titulo_principal  TEXT NOT NULL DEFAULT '¿Qué pinta hoy?',
+    palabras_animadas TEXT[] NOT NULL DEFAULT ARRAY['LOMOS','MILAS','ZAPPING','BURGERS','PIZZAS','PATYS'],
+    logo_url          TEXT NOT NULL DEFAULT '/logo.jpg',
+    hero_image_url    TEXT NOT NULL DEFAULT '/burger.jpg'
 );
 
 
@@ -142,12 +203,24 @@ CREATE TABLE IF NOT EXISTS modificadores (
 
 -- Tabla legacy: guarda el menú entero en una sola fila JSONB.
 -- VERIFICADO: existe y tiene 1 fila. El código la consulta como fallback.
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- 1 fila: guarda el menú entero como JSONB. `id` NO tiene default en la base
+-- (la versión anterior de este archivo le ponía DEFAULT 'principal').
 CREATE TABLE IF NOT EXISTS catalogo (
-    id           TEXT PRIMARY KEY DEFAULT 'principal',
-    categorias   JSONB,
-    productos    JSONB,
-    modificadores JSONB,
-    updated_at   TIMESTAMPTZ
+    id            TEXT PRIMARY KEY,
+    categorias    JSONB NOT NULL,
+    productos     JSONB NOT NULL,
+    modificadores JSONB NOT NULL,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    precio_puntos INTEGER
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+CREATE TABLE IF NOT EXISTS categorias (
+    id     TEXT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    orden  INTEGER DEFAULT 0,
+    activa BOOLEAN DEFAULT true
 );
 
 -- Costos de insumos por producto, para las métricas de rentabilidad.
@@ -168,14 +241,18 @@ CREATE TABLE IF NOT EXISTS producto_costos (
 -- `password_hash`. El código usa la tabla `clientes` con `clave_hash`.
 -- Ninguna consulta del proyecto toca `clientes_cuentas`.
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- ⭐ NO existe una columna `puntos`. La real es `puntos_actuales`.
+--   20 lugares del proyecto consultan esta tabla y 19 usan el nombre
+--   correcto; app/api/tienda/pedido/route.ts usaba `puntos` y por eso
+--   pagar con puntos desde la tienda fallaba siempre con 42703.
 CREATE TABLE IF NOT EXISTS clientes (
-    id              TEXT PRIMARY KEY,
+    id              UUID PRIMARY KEY,
     nombre          TEXT,
     telefono        TEXT,
-    clave_hash      TEXT,
-    puntos          INTEGER,
-    puntos_actuales INTEGER,
-    created_at      TIMESTAMPTZ
+    puntos_actuales INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    clave_hash      TEXT
 );
 
 
@@ -238,24 +315,30 @@ CREATE TABLE IF NOT EXISTS pedidos (
 -- 6. CAJA, TURNOS Y CONSUMOS
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- ⭐ `fecha` es DATE, no TEXT. Ojo: en cadetes_pagos_extras SÍ es TEXT.
+--   La PK real es (fecha, turno_tipo), no `fecha` sola: se puede cerrar el
+--   mismo día en turno mediodía y en turno noche.
+--   La columna de timestamp se llama `creado_el`, NO `created_at`.
 CREATE TABLE IF NOT EXISTS cierres_diarios (
-    fecha                  TEXT PRIMARY KEY,   -- 'YYYY-MM-DD'
-    facturacion_neta       NUMERIC,
-    efectivo_ventas        NUMERIC,
-    caja_inicial           NUMERIC,
-    efectivo_rendir        NUMERIC,
-    tarjeta_total          NUMERIC,
-    transferencia_total    NUMERIC,
-    total_pedidos          INTEGER,
-    total_envios_delivery  INTEGER,
-    costo_envios_cadetes   NUMERIC,
-    total_retiros          INTEGER,
-    total_consumo_local    INTEGER,
-    ticket_promedio        NUMERIC,
-    pedidos_cancelados     INTEGER,
-    monto_cancelados       NUMERIC,
-    turno_tipo             TEXT,               -- la migración 001 la menciona
-    created_at             TIMESTAMPTZ
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fecha                DATE NOT NULL,
+    turno_tipo           TEXT DEFAULT 'noche',
+    facturacion_neta     NUMERIC NOT NULL DEFAULT 0,
+    efectivo_ventas      NUMERIC NOT NULL DEFAULT 0,
+    caja_inicial         NUMERIC NOT NULL DEFAULT 0,
+    efectivo_rendir      NUMERIC NOT NULL DEFAULT 0,
+    tarjeta_total        NUMERIC NOT NULL DEFAULT 0,
+    transferencia_total  NUMERIC NOT NULL DEFAULT 0,
+    total_pedidos        INTEGER NOT NULL DEFAULT 0,
+    total_envios_delivery INTEGER NOT NULL DEFAULT 0,
+    costo_envios_cadetes NUMERIC NOT NULL DEFAULT 0,
+    total_retiros        INTEGER NOT NULL DEFAULT 0,
+    total_consumo_local  INTEGER NOT NULL DEFAULT 0,
+    ticket_promedio      NUMERIC NOT NULL DEFAULT 0,
+    pedidos_cancelados   INTEGER NOT NULL DEFAULT 0,
+    monto_cancelados     NUMERIC NOT NULL DEFAULT 0,
+    creado_el            TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
 CREATE TABLE IF NOT EXISTS turnos (
