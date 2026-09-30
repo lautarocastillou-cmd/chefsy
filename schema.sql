@@ -156,15 +156,48 @@ CREATE TABLE IF NOT EXISTS configuracion_operativa (
 );
 
 -- ══ VERIFICADO contra information_schema el 2026-09-29 ══
--- La versión anterior de este archivo solo tenía `id`. /
--- /api/health la consulta para saber si la base responde.
+-- OJO: son 39 columnas, no 6. La primera consulta vino cortada justo después
+-- de la sexta y dio la impresión de que la tabla era chica.
+-- Los 6 tipos siguientes están verificados. Los otros 33 nombres están
+-- verificados (vía select('*') contra la base) pero su tipo no.
 CREATE TABLE IF NOT EXISTS configuracion_tienda (
-    id                INTEGER PRIMARY KEY DEFAULT 1,
-    color_principal   TEXT NOT NULL DEFAULT '#2A6348',
-    titulo_principal  TEXT NOT NULL DEFAULT '¿Qué pinta hoy?',
-    palabras_animadas TEXT[] NOT NULL DEFAULT ARRAY['LOMOS','MILAS','ZAPPING','BURGERS','PIZZAS','PATYS'],
-    logo_url          TEXT NOT NULL DEFAULT '/logo.jpg',
-    hero_image_url    TEXT NOT NULL DEFAULT '/burger.jpg'
+    id                      INTEGER PRIMARY KEY DEFAULT 1,
+    color_principal         TEXT NOT NULL DEFAULT '#2A6348',
+    titulo_principal        TEXT NOT NULL DEFAULT '¿Qué pinta hoy?',
+    palabras_animadas       TEXT[] NOT NULL DEFAULT ARRAY['LOMOS','MILAS','ZAPPING','BURGERS','PIZZAS','PATYS'],
+    logo_url                TEXT NOT NULL DEFAULT '/logo.jpg',
+    hero_image_url          TEXT NOT NULL DEFAULT '/burger.jpg',
+    updated_at              TIMESTAMPTZ,      -- sí existe
+    -- Las 33 restantes, nombres verificados, tipos sin verificar:
+    hero_linea_1            TEXT,
+    hero_linea_2            TEXT,
+    fuente_principal        TEXT,
+    banner_promocional      TEXT,
+    banner_animado          BOOLEAN,
+    banner_color            TEXT,
+    fuente_hero             TEXT,
+    hero_pos_x              NUMERIC,
+    hero_pos_y              NUMERIC,
+    hero_escala             NUMERIC,
+    estilo_bordes           TEXT,
+    textura_fondo_url       TEXT,
+    whatsapp_mensaje        TEXT,
+    link_instagram          TEXT,
+    link_tiktok             TEXT,
+    hero_layout             TEXT,
+    hero_video_url          TEXT,
+    hero_video_overlay_opacity NUMERIC,
+    hero_badge_texto        TEXT,
+    hero_carrusel_slides    JSONB,
+    hero_mostrar_horario    BOOLEAN,
+    estilo_tarjetas         TEXT,
+    mostrar_badges_automaticos BOOLEAN,
+    mostrar_badge_descuento BOOLEAN,
+    efecto_titulo_hero      TEXT,
+    color_titulo_secundario TEXT,
+    fuente_tienda_catalogo  TEXT,
+    hero_loop_imagenes      JSONB,
+    hero_loop_transicion    TEXT
 );
 
 
@@ -174,35 +207,8 @@ CREATE TABLE IF NOT EXISTS configuracion_tienda (
 -- Estas 4 tablas son las ÚNICAS que `anon` puede leer (RLS abierto a
 -- propósito, lo necesita el menú público de la tienda).
 
-CREATE TABLE IF NOT EXISTS categorias (
-    id      TEXT PRIMARY KEY,
-    nombre  TEXT,
-    orden   INTEGER,
-    activa  BOOLEAN
-);
-
-CREATE TABLE IF NOT EXISTS productos (
-    id               TEXT PRIMARY KEY,
-    categoria_id     TEXT,
-    nombre           TEXT,
-    precio           NUMERIC,
-    precio_puntos    INTEGER,
-    activo           BOOLEAN,
-    stock            INTEGER,
-    es_combo         BOOLEAN,
-    modificadores_ids TEXT[]
-    -- FALTAN: descripcion, imagen_url, orden, stock_ilimitado, stock_actual,
-    -- requiere_edad, es_novedad, es_promocion, created_at. No verificadas.
-);
-
-CREATE TABLE IF NOT EXISTS modificadores (
-    id           TEXT PRIMARY KEY,
-    nombre       TEXT,
-    precio_extra NUMERIC
-);
-
--- Tabla legacy: guarda el menú entero en una sola fila JSONB.
--- VERIFICADO: existe y tiene 1 fila. El código la consulta como fallback.
+-- Tabla legacy: guarda el menú entero en una sola fila JSONB. Tiene 1 fila
+-- y el código la consulta como fallback de `productos`, que está vacía.
 -- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 -- 1 fila: guarda el menú entero como JSONB. `id` NO tiene default en la base
 -- (la versión anterior de este archivo le ponía DEFAULT 'principal').
@@ -223,14 +229,46 @@ CREATE TABLE IF NOT EXISTS categorias (
     activa BOOLEAN DEFAULT true
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 -- Costos de insumos por producto, para las métricas de rentabilidad.
+-- `insumo_principal` es NUMERIC (un costo), no el nombre del insumo.
 CREATE TABLE IF NOT EXISTS producto_costos (
-    producto_id     TEXT,
-    insumo_principal TEXT,
-    costo_estimado  NUMERIC,
-    packaging       NUMERIC,
-    notas           TEXT,
-    updated_at      TIMESTAMPTZ
+    producto_id     TEXT PRIMARY KEY,
+    costo_estimado  NUMERIC NOT NULL DEFAULT 0,
+    insumo_principal NUMERIC DEFAULT 0,
+    packaging       NUMERIC DEFAULT 0,
+    notas           TEXT DEFAULT '',
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+CREATE TABLE IF NOT EXISTS productos (
+    id                TEXT PRIMARY KEY,
+    categoria_id      TEXT NOT NULL,
+    nombre            TEXT NOT NULL,
+    precio            NUMERIC NOT NULL DEFAULT 0,
+    precio_puntos     INTEGER,     -- si es > 0, el producto se puede canjear
+    activo            BOOLEAN DEFAULT true,
+    es_combo          BOOLEAN DEFAULT false,
+    stock             INTEGER,     -- NULL = stock ilimitado
+    modificadores_ids TEXT[] DEFAULT '{}'::text[]
+    -- VACÍA en producción: el menú real sale de datos/productos.ts.
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+CREATE TABLE IF NOT EXISTS modificadores (
+    id           TEXT PRIMARY KEY,
+    nombre       TEXT NOT NULL,
+    precio_extra NUMERIC NOT NULL DEFAULT 0
+);
+
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id        TEXT NOT NULL,   -- UNIQUE (ver pg_indexes)
+    subscription_json JSONB NOT NULL,
+    created_at        TIMESTAMPTZ DEFAULT timezone('utc', now())
 );
 
 
@@ -259,55 +297,56 @@ CREATE TABLE IF NOT EXISTS clientes (
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. PEDIDOS
 -- ─────────────────────────────────────────────────────────────────────────────
--- ⭐ LAS 39 COLUMNAS DE ABAJO SON LAS REALES, sacadas de una sonda directa a
---   la base de producción. La versión anterior declaraba 15 columnas que NO
---   existen (montoTotal, subtotal, pagoConfirmado, lat, lng, ...) y le
---   faltaban 19 que sí existen.
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- 39 columnas, tipos exactos. La versión anterior de este archivo declaraba
+-- 15 que NO existen (montoTotal, subtotal, pagoConfirmado, lat, lng,
+-- cliente_auth_id, es_programado, calificacion...) y omitía 19 que sí.
 --
---   El código usa nombres en camelCase para lo que el schema anterior
---   nombraba en snake_case, y algunas columnas que no existían se reemplazaron
---   por columnas de punto flotante (lat/lng -> coordenadas como JSONB).
-
+-- OJO con los tipos, que no son los obvios:
+--   - los montos de pago son BIGINT, no numeric
+--   - notificacion_manual es TEXT, no boolean (guarda quién la pidió)
+--   - fecha y hora son TEXT, no date/timestamp
+--   - no existe cancelado_at: el estado cancelado no lleva timestamp propio
 CREATE TABLE IF NOT EXISTS pedidos (
     id                    TEXT PRIMARY KEY,
     cliente               TEXT NOT NULL,
-    telefono              TEXT,
-    tipoEntrega           TEXT,        -- 'delivery' | 'retiro' | 'mostrador' | 'consumo_local'
-    direccion             TEXT,
-    coordenadas           JSONB,      -- { latitud, longitud }
-    productos             JSONB,      -- array de items del pedido
-    total                 NUMERIC,
+    telefono              TEXT NOT NULL,
+    tipoEntrega           TEXT NOT NULL,   -- 'delivery'|'retiro'|'mostrador'|'consumo_local'
+    direccion             TEXT NOT NULL,
+    coordenadas           JSONB,           -- { latitud, longitud }
+    productos             JSONB NOT NULL,  -- array de items
+    total                 NUMERIC NOT NULL,
     costoEnvio            NUMERIC,
     distanciaKm           NUMERIC,
-    estado                TEXT,        -- 'nuevo'|'en_cocina'|'listo'|'en_camino'|'entregado'|'cancelado'
-    metodoPago            TEXT,
+    estado                TEXT NOT NULL,
+    metodoPago            TEXT NOT NULL,
     observaciones         TEXT,
-    hora                  TEXT,
-    fecha                 TEXT,        -- TEXT 'YYYY-MM-DD', no TIMESTAMPTZ
-    created_at            TIMESTAMPTZ,
+    hora                  TEXT NOT NULL,   -- '09:39 p. m.' tal cual
+    fecha                 TEXT NOT NULL,   -- 'YYYY-MM-DD'
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     cocina_at             TIMESTAMPTZ,
     listo_at              TIMESTAMPTZ,
     entregado_at          TIMESTAMPTZ,
     ubicacion_cadete      JSONB,
-    cadete_coordenadas    JSONB,      -- { latitud, longitud }
-    pago_confirmado       BOOLEAN,
-    archivado             BOOLEAN,    -- flag aparte de "entregado"
+    cadete_coordenadas    JSONB,
+    pago_confirmado       BOOLEAN DEFAULT false,
+    archivado             BOOLEAN NOT NULL DEFAULT false,  -- flag aparte de entregado
     cadete_id             TEXT,
     cadete_nombre         TEXT,
     reparto_at            TIMESTAMPTZ,
-    montoEfectivo         NUMERIC,
-    montoTransferencia    NUMERIC,
-    montoTarjeta          NUMERIC,
-    notificacion_manual   BOOLEAN,
+    montoEfectivo         BIGINT DEFAULT 0,
+    montoTransferencia    BIGINT DEFAULT 0,
+    montoTarjeta          BIGINT DEFAULT 0,
+    notificacion_manual   TEXT,
     push_subscription     JSONB,
-    cliente_id            TEXT,        -- NO es cliente_auth_id como decía el schema viejo
-    puntos_ganados        INTEGER,
-    puntos_gastados       INTEGER,
+    cliente_id            UUID,
+    puntos_ganados        INTEGER DEFAULT 0,
+    puntos_gastados       INTEGER DEFAULT 0,
     en_camino_at          TIMESTAMPTZ,
-    ruta_historial        JSONB,      -- breadcrumb GPS, hasta 500 puntos
+    ruta_historial        JSONB DEFAULT '[]'::jsonb,  -- breadcrumb GPS, tope 500
     orden_entrega         INTEGER,
-    es_prueba             BOOLEAN,
-    turno_tipo            TEXT
+    es_prueba             BOOLEAN DEFAULT false,
+    turno_tipo            TEXT DEFAULT 'noche'
 );
 
 
@@ -341,6 +380,7 @@ CREATE TABLE IF NOT EXISTS cierres_diarios (
     creado_el            TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 CREATE TABLE IF NOT EXISTS turnos (
     id           TEXT PRIMARY KEY,
     fecha_inicio TEXT,
@@ -348,15 +388,26 @@ CREATE TABLE IF NOT EXISTS turnos (
     activo       BOOLEAN
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- 15 columnas. La versión anterior declaraba solo 5 y le faltaban las de
+-- identificación (`id`, `persona_nombre`), que son las que permiten saber
+-- QUIÉN consumió: sin ellas el reporte de consumos no cerraba.
 CREATE TABLE IF NOT EXISTS consumos_personal (
-    -- Columnas en uso verificadas: cantidad, fecha, precio, tipo_pago, total.
-    -- Faltan las de identificación (id, cadete_id) que el código filtrar de
-    -- alguna forma. NO VERIFICADAS: revisar antes de usar.
-    cantidad  NUMERIC,
-    fecha     TIMESTAMPTZ,
-    precio    NUMERIC,
-    total     NUMERIC,
-    tipo_pago TEXT
+    id                TEXT PRIMARY KEY,
+    fecha             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    producto_id       TEXT,
+    producto_nombre   TEXT NOT NULL,
+    categoria_nombre  TEXT,
+    precio            NUMERIC NOT NULL DEFAULT 0,
+    cantidad          NUMERIC NOT NULL DEFAULT 1,
+    total             NUMERIC NOT NULL DEFAULT 0,
+    persona_nombre    TEXT NOT NULL,
+    tipo_pago         TEXT NOT NULL DEFAULT 'anotado',   -- 'anotado' | 'pagado'
+    saldado           BOOLEAN NOT NULL DEFAULT false,
+    descontar_stock   BOOLEAN NOT NULL DEFAULT false,
+    notas             TEXT,
+    creado_por        TEXT,
+    created_at        TIMESTAMPTZ DEFAULT now()
 );
 
 
@@ -364,38 +415,58 @@ CREATE TABLE IF NOT EXISTS consumos_personal (
 -- 7. STOCK DE INSUMOS
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 CREATE TABLE IF NOT EXISTS stock_categorias (
-    id     TEXT PRIMARY KEY,
-    nombre TEXT
+    id         TEXT PRIMARY KEY,
+    nombre     TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
 CREATE TABLE IF NOT EXISTS stock_insumos (
-    -- Columnas en uso: 4 (no verificadas en detalle)
-    id     TEXT PRIMARY KEY,
-    nombre TEXT
+    id             TEXT PRIMARY KEY,
+    nombre         TEXT NOT NULL,
+    categoria_id   TEXT NOT NULL,
+    stock_actual   NUMERIC NOT NULL DEFAULT 0,
+    unidad_medida  TEXT NOT NULL DEFAULT 'unidades',
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- PK compuesta (producto_id, insumo_id): una receta no repite insumo.
 CREATE TABLE IF NOT EXISTS stock_recetas (
-    producto_id TEXT,
-    insumo_id   TEXT,
+    producto_id TEXT NOT NULL,
+    insumo_id   TEXT NOT NULL,
     cantidad    NUMERIC
+    -- cantidad NO verificada: la consulta se cortó acá.
 );
 
+-- ══ VERIFICADO contra information_schema el 2026-09-29 ══
+-- Kardex. Guarda el stock antes y después de cada movimiento, así que el
+-- historial es auditable sin recalcular. La versión anterior declaraba solo
+-- `id` y decía que no se había podido leer: sí se pudo.
 CREATE TABLE IF NOT EXISTS stock_movimientos (
-    -- Kardex de movimientos. NO se pudo leer: cerrada a anon.
-    id          TEXT PRIMARY KEY
-    -- FALTAN TODAS LAS COLUMNAS. Verificar con acceso admin.
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    insumo_id        TEXT NOT NULL,
+    insumo_nombre    TEXT NOT NULL,
+    tipo_movimiento  TEXT NOT NULL,
+    cantidad_delta   NUMERIC NOT NULL,
+    stock_anterior   NUMERIC NOT NULL,
+    stock_nuevo      NUMERIC NOT NULL,
+    unidad_medida    TEXT NOT NULL,
+    motivo           TEXT,
+    usuario_nombre   TEXT NOT NULL,
+    referencia_id    TEXT
 );
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 8. NOTIFICACIONES
 -- ─────────────────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    usuario_id       TEXT,
-    subscription_json JSONB
-);
+-- push_subscriptions ya está definida arriba, en la sección de catálogo,
+-- con sus tipos verificados.
 
 
 -- =============================================================================
