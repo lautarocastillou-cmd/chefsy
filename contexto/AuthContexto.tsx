@@ -9,7 +9,7 @@
 // a la versión anterior para mantener compatibilidad total.
 // ─────────────────────────────────────────────────────
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { setCache, getCache, removeCache } from '@/lib/localCache'
 import { Usuario } from '@/tipos'
 
@@ -75,7 +75,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
    * Inicia sesión llamando al endpoint del servidor.
    * Retorna true si las credenciales son válidas, false en caso contrario.
    */
-  const iniciarSesion = async (usuario: string, clave: string): Promise<string | null> => {
+  const iniciarSesion = useCallback(async (usuario: string, clave: string): Promise<string | null> => {
     try {
       const res = await fetch('/api/auth/login', {
         method:      'POST',
@@ -102,13 +102,13 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     } catch {
       return null
     }
-  }
+  }, [])
 
   /**
    * Cierra la sesión del usuario llamando al endpoint del servidor,
    * que invalida la cookie HttpOnly.
    */
-  const cerrarSesion = async (): Promise<void> => {
+  const cerrarSesion = useCallback(async (): Promise<void> => {
     try {
       await fetch('/api/auth/logout', {
         method:      'POST',
@@ -120,10 +120,19 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       setUsuarioActivo(null)
       try { removeCache('chefsy_admin_sesion_cache') } catch {}
     }
-  }
+  }, [])
+
+  // Memorizado: sin esto el objeto de valor es nuevo en cada render y React
+  // redibuja a todos los consumidores aunque el estado no haya cambiado.
+  // Las dos funciones van en useCallback porque si fueran nuevas cada vez,
+  // este useMemo no serviría de nada.
+  const valor = useMemo(
+    () => ({ usuarioActivo, estaListoAuth, iniciarSesion, cerrarSesion }),
+    [usuarioActivo, estaListoAuth, iniciarSesion, cerrarSesion]
+  )
 
   return (
-    <ContextoAuth.Provider value={{ usuarioActivo, estaListoAuth, iniciarSesion, cerrarSesion }}>
+    <ContextoAuth.Provider value={valor}>
       {children}
     </ContextoAuth.Provider>
   )

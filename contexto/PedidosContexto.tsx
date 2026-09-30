@@ -27,6 +27,7 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react'
 import { Pedido, EstadoPedido, TipoTurno, EstadoTurno } from '@/tipos'
@@ -899,35 +900,71 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   // ── Render ────────────────────────────────────────────
 
+  // Memorizado: sin esto el objeto de valor es nuevo en cada render y React
+  // le avisa a TODOS los consumidores del contexto que algo cambió, aunque
+  // nada haya cambiado. Este contexto cuelga de app/layout.tsx, o sea del
+  // layout raíz, así que el efecto se multiplicaba por cada página.
+  //
+  // Este es el contexto más grande de la app (28 campos), por eso era el que
+  // más pinchaba: cualquier estado que cambiara arriba obligaba a redibujar
+  // el kanban, la torre de control, la cadetería y el cierre.
+  const valor = useMemo(
+    () => ({
+      pedidos: estado.pedidos,
+      cadetes,
+      estaListo,
+      agregarPedido,
+      editarPedido,
+      cambiarEstado,
+      revertirEstado,
+      marcarPagoConfirmado,
+      asignarCadete,
+      cambiarMetodoPago,
+      eliminarPedido,
+      dbEstado,
+      finalizarTurno,
+      obtenerPedidosPorFecha,
+      configuracionOperativa,
+      guardarConfiguracionOperativa,
+      refrescarCadetes,
+      estadoTurno,
+      iniciarTurno,
+      asignarOrdenEntrega,
+      reordenarPedidosCadete,
+      modalNuevoPedidoAbierto,
+      abrirModalNuevoPedido,
+      cerrarModalNuevoPedido,
+    }),
+    [
+      estado.pedidos,
+      cadetes,
+      estaListo,
+      agregarPedido,
+      editarPedido,
+      cambiarEstado,
+      revertirEstado,
+      marcarPagoConfirmado,
+      asignarCadete,
+      cambiarMetodoPago,
+      eliminarPedido,
+      dbEstado,
+      finalizarTurno,
+      obtenerPedidosPorFecha,
+      configuracionOperativa,
+      guardarConfiguracionOperativa,
+      refrescarCadetes,
+      estadoTurno,
+      iniciarTurno,
+      asignarOrdenEntrega,
+      reordenarPedidosCadete,
+      modalNuevoPedidoAbierto,
+      abrirModalNuevoPedido,
+      cerrarModalNuevoPedido,
+    ]
+  )
+
   return (
-    <ContextoPedidosInterno.Provider
-      value={{
-        pedidos: estado.pedidos,
-        cadetes,
-        estaListo,
-        agregarPedido,
-        editarPedido,
-        cambiarEstado,
-        revertirEstado,
-        marcarPagoConfirmado,
-        asignarCadete,
-        cambiarMetodoPago,
-        eliminarPedido,
-        dbEstado,
-        finalizarTurno,
-        obtenerPedidosPorFecha,
-        configuracionOperativa,
-        guardarConfiguracionOperativa,
-        refrescarCadetes,
-        estadoTurno,
-        iniciarTurno,
-        asignarOrdenEntrega,
-        reordenarPedidosCadete,
-        modalNuevoPedidoAbierto,
-        abrirModalNuevoPedido,
-        cerrarModalNuevoPedido,
-      }}
-    >
+    <ContextoPedidosInterno.Provider value={valor}>
       {children}
     </ContextoPedidosInterno.Provider>
   )

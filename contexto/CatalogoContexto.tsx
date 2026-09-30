@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { categoriasCatalogo, productosCatalogo, modificadoresCatalogo } from '@/datos/productos'
 import { obtenerCatalogoPrincipal, inicializarCatalogo, suscribirACatalogo } from '@/servicios/supabase/catalogo'
@@ -129,7 +129,7 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   }, [estaListoCatalogo])
 
   // Guardar catálogo completo en Supabase a través del servidor seguro
-  const sincronizarCatalogoCompleto = async () => {
+  const sincronizarCatalogoCompleto = useCallback(async () => {
     if (!estaListoCatalogo) {
       console.warn('[Catalogo] Sincronización cancelada: el catálogo aún no terminó su carga inicial.')
       return
@@ -165,30 +165,33 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
         esCambioCatalogoLocalRef.current = false
       }, 1200)
     }
-  }
+  }, [estaListoCatalogo])
 
-  const actualizarCategorias = (nuevasCategorias: CategoriaCatalogo[]) => {
+  // Todas en useCallback. Leen y escriben a través de refs
+  // (categoriasRef/productosRef/...), no estado directo, así que no hay riesgo
+  // de closure viejo: el ref siempre tiene el valor actual.
+  const actualizarCategorias = useCallback((nuevasCategorias: CategoriaCatalogo[]) => {
     setCategorias(nuevasCategorias)
     categoriasRef.current = nuevasCategorias
     setCache('chefsy-categorias-v1', nuevasCategorias)
     sincronizarCatalogoCompleto()
-  }
+  }, [sincronizarCatalogoCompleto])
 
-  const actualizarProductos = (nuevosProductos: ProductoCatalogo[]) => {
+  const actualizarProductos = useCallback((nuevosProductos: ProductoCatalogo[]) => {
     setProductos(nuevosProductos)
     productosRef.current = nuevosProductos
     setCache('chefsy-productos-v1', nuevosProductos)
     sincronizarCatalogoCompleto()
-  }
+  }, [sincronizarCatalogoCompleto])
 
-  const actualizarModificadores = (nuevosModificadores: ModificadorCatalogo[]) => {
+  const actualizarModificadores = useCallback((nuevosModificadores: ModificadorCatalogo[]) => {
     setModificadores(nuevosModificadores)
     modificadoresRef.current = nuevosModificadores
     setCache('chefsy-modificadores-v1', nuevosModificadores)
     sincronizarCatalogoCompleto()
-  }
+  }, [sincronizarCatalogoCompleto])
 
-  const descontarStockProducto = (productoId: string, cantidad: number) => {
+  const descontarStockProducto = useCallback((productoId: string, cantidad: number) => {
     // Actualizar estado local optimistamente sin sincronizar todo el catálogo
     const nuevosProductos = productosRef.current.map((p) => {
       if (p.id === productoId && typeof p.stock === 'number') {
@@ -210,22 +213,37 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
         body: JSON.stringify({ productoId, stock: productoActualizado.stock }),
       }).catch((err) => console.error('[Catalogo] Error al sincronizar stock:', err))
     }
-  }
+  }, [])
+
+  // Memorizado: sin esto el objeto de valor se crea en cada render y React
+  // redibuja a todo el árbol del catálogo en cada cambio de estado.
+  const valor = useMemo(
+    () => ({
+      categorias,
+      productos,
+      modificadores,
+      actualizarCategorias,
+      actualizarProductos,
+      actualizarModificadores,
+      descontarStockProducto,
+      sincronizarCatalogoCompleto,
+      estaListoCatalogo,
+    }),
+    [
+      categorias,
+      productos,
+      modificadores,
+      actualizarCategorias,
+      actualizarProductos,
+      actualizarModificadores,
+      descontarStockProducto,
+      sincronizarCatalogoCompleto,
+      estaListoCatalogo,
+    ]
+  )
 
   return (
-    <ContextoCatalogo.Provider
-      value={{
-        categorias,
-        productos,
-        modificadores,
-        actualizarCategorias,
-        actualizarProductos,
-        actualizarModificadores,
-        descontarStockProducto,
-        sincronizarCatalogoCompleto,
-        estaListoCatalogo,
-      }}
-    >
+    <ContextoCatalogo.Provider value={valor}>
       {children}
     </ContextoCatalogo.Provider>
   )

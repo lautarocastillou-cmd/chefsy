@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { ConfiguracionTienda, obtenerConfiguracionTienda } from '@/servicios/supabase/configuracion'
 import { setCache, getCache } from '@/lib/localCache'
 
@@ -70,8 +70,15 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
     }
   }, [configuracion])
 
+  // Memorizado: sin esto el objeto de valor se crea nuevo en cada render y
+  // React redibuja a todos los consumidores aunque no haya cambiado nada.
+  const valor = useMemo(
+    () => ({ configuracion, setConfiguracion, cargando }),
+    [configuracion, cargando]
+  )
+
   return (
-    <ConfiguracionContext.Provider value={{ configuracion, setConfiguracion, cargando }}>
+    <ConfiguracionContext.Provider value={valor}>
       {children}
     </ConfiguracionContext.Provider>
   )

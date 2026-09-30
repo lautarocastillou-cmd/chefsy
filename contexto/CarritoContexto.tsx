@@ -469,8 +469,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
   }, [procesandoCompra, nombreCliente, telefonoCliente, tipoEntrega, direccionCliente, carrito, totalCarrito, costoEnvio, metodoPago, observaciones, distanciaClienteKm, coordenadasCliente])
 
-  return (
-    <ContextoCarrito.Provider value={{
+  // Memorizado: sin esto el objeto de valor se crea en cada render y React
+  // redibuja a todos los consumidores del carrito aunque no haya cambiado
+  // nada. Todas las piezas del objeto son estables (useState, setters
+  // identicos, y useCallback) así que el objeto solo se rehace cuando algo
+  // real cambia: abrir el carrito, cambiar cantidades, etc.
+  const valor = useMemo(
+    () => ({
       carrito, cartAbierto, setCartAbierto,
       productoAPersonalizar, modsSeleccionados, cantidadModal, notaPersonalizacion,
       setProductoAPersonalizar, setModsSeleccionados, setCantidadModal, setNotaPersonalizacion,
@@ -488,7 +493,29 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
       pedidoCompletado, setPedidoCompletado,
       procesarCompra, turnoActivo, esDomingoCerrado, mensajeCierre, procesandoCompra
-    }}>
+    }),
+    [
+      carrito, cartAbierto,
+      productoAPersonalizar, modsSeleccionados, cantidadModal, notaPersonalizacion,
+      abrirModalPersonalizacion, alternarModificador, calcularPrecioUnitarioModal, agregarAlCarritoDesdeModal,
+      actualizarCantidadCarrito, eliminarDelCarrito,
+      mostrarCheckout,
+      tipoEntrega,
+      nombreCliente,
+      telefonoCliente,
+      direccionCliente,
+      coordenadasCliente,
+      metodoPago,
+      observaciones,
+      distanciaClienteKm, costoEnvio,
+      totalProductosCarrito, subtotalCarrito, totalCarrito, totalPuntosGastados,
+      pedidoCompletado,
+      procesarCompra, turnoActivo, esDomingoCerrado, mensajeCierre, procesandoCompra
+    ]
+  )
+
+  return (
+    <ContextoCarrito.Provider value={valor}>
       {children}
     </ContextoCarrito.Provider>
   )

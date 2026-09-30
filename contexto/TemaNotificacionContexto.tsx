@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react'
 import { X, CheckCircle2, AlertTriangle, Bell, Bike } from 'lucide-react'
@@ -231,17 +232,37 @@ export function ProveedorTemaNotificacion({ children }: { children: ReactNode })
     setNotificaciones([])
   }, [])
 
+  // El objeto de valor se memoriza. Sin esto se crea un objeto NUEVO en
+  // cada render del provider, y React compara por identidad: al ser distinto,
+  // le avisa a TODOS los consumidores que algo cambió, aunque no haya
+  // cambiado nada.
+  //
+  // Este provider es el más externo de la app (envuelve al árbol entero), así
+  // que el efecto se multiplicaba: cada toast que aparecía, cada cambio de
+  // cualquier estado arriba, redibujaba todo lo que consume el contexto.
+  // Las dependencias son todas estables: dos useState y tres useCallback con
+  // deps [], así que el objeto solo se rehace cuando cambia algo de verdad.
+  const valor = useMemo(
+    () => ({
+      modoOscuro,
+      alternarModoOscuro,
+      notificaciones,
+      agregarNotificacion,
+      eliminarNotificacion,
+      eliminarTodasNotificaciones,
+    }),
+    [
+      modoOscuro,
+      alternarModoOscuro,
+      notificaciones,
+      agregarNotificacion,
+      eliminarNotificacion,
+      eliminarTodasNotificaciones,
+    ]
+  )
+
   return (
-    <ContextoTemaNotificacion.Provider
-      value={{
-        modoOscuro,
-        alternarModoOscuro,
-        notificaciones,
-        agregarNotificacion,
-        eliminarNotificacion,
-        eliminarTodasNotificaciones,
-      }}
-    >
+    <ContextoTemaNotificacion.Provider value={valor}>
       {children}
       <ContenedorToasts
         notificaciones={notificaciones}

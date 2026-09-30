@@ -7,7 +7,7 @@
 // - Google OAuth como opción alternativa (Supabase Auth)
 // ─────────────────────────────────────────────────────
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { verificarVersionEsquema, setCache, getCache, removeCache } from '@/lib/localCache'
 
@@ -283,20 +283,33 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
     ])
   }, [])
 
+  // Memorizado: sin esto el objeto de valor se crea en cada render y React
+  // redibuja a todos los consumidores de la sesión del cliente.
+  const valor = useMemo(
+    () => ({
+      perfil,
+      estaListo,
+      fuenteSesion,
+      registrar,
+      iniciarSesion,
+      iniciarSesionGoogle,
+      cerrarSesion,
+      // Alias para compatibilidad con componentes existentes que usan `usuario`
+      usuario: perfil,
+    }),
+    [
+      perfil,
+      estaListo,
+      fuenteSesion,
+      registrar,
+      iniciarSesion,
+      iniciarSesionGoogle,
+      cerrarSesion,
+    ]
+  )
+
   return (
-    <ContextoClienteAuth.Provider
-      value={{
-        perfil,
-        estaListo,
-        fuenteSesion,
-        registrar,
-        iniciarSesion,
-        iniciarSesionGoogle,
-        cerrarSesion,
-        // Alias para compatibilidad con componentes existentes que usan `usuario`
-        usuario: perfil,
-      }}
-    >
+    <ContextoClienteAuth.Provider value={valor}>
       {children}
     </ContextoClienteAuth.Provider>
   )
