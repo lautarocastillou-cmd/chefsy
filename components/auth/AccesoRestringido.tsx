@@ -30,7 +30,7 @@ export default function AccesoRestringido() {
             Acceso Restringido
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
-            Tu cuenta con rol <span className="font-bold text-slate-700 dark:text-slate-300 uppercase">"{usuarioActivo?.rol}"</span> no tiene permisos para visualizar esta sección.
+            Tu cuenta con rol <span className="font-bold text-slate-700 dark:text-slate-300 uppercase">&quot;{usuarioActivo?.rol}&quot;</span> no tiene permisos para visualizar esta sección.
           </p>
         </div>
 

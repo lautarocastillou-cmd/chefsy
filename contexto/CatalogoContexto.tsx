@@ -44,16 +44,16 @@ export function ProveedorCatalogo({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function cargarInicial() {
       // 1.a) Primero cargar fallbacks desde caché (con TTL) o estáticos
-      let catsActuales = leerCatalogoCache<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
+      const catsActuales = leerCatalogoCache<CategoriaCatalogo[]>('chefsy-categorias-v1', categoriasCatalogo)
         .filter((c: any) => c.id !== 'promos' && c.nombre?.toLowerCase().trim() !== 'promos')
       setCategorias(catsActuales)
       categoriasRef.current = catsActuales
 
-      let prodsActuales = leerCatalogoCache<ProductoCatalogo[]>('chefsy-productos-v1', productosCatalogo)
+      const prodsActuales = leerCatalogoCache<ProductoCatalogo[]>('chefsy-productos-v1', productosCatalogo)
       setProductos(prodsActuales)
       productosRef.current = prodsActuales
 
-      let modsActuales = leerCatalogoCache<ModificadorCatalogo[]>('chefsy-modificadores-v1', modificadoresCatalogo)
+      const modsActuales = leerCatalogoCache<ModificadorCatalogo[]>('chefsy-modificadores-v1', modificadoresCatalogo)
       setModificadores(modsActuales)
       modificadoresRef.current = modsActuales
 

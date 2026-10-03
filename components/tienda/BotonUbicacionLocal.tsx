@@ -12,6 +12,31 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
   const containerRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // En móvil el popover es `fixed` y hay que ubicarlo bajo el botón. Medimos la
+  // posición del contenedor y la guardamos en estado, en vez de leer
+  // `containerRef.current` durante el render: un ref todavía vale `null` en el
+  // primer render (el popover saldría desalineado) y, con renderizado
+  // concurrente, podría devolver la posición de un render ya descartado.
+  const [offsetAbajo, setOffsetAbajo] = useState<number | null>(null)
+
+  const medirPosicion = () => {
+    if (typeof window === 'undefined' || !containerRef.current) return
+    const esMovil = window.innerWidth < 768
+    setOffsetAbajo(esMovil ? containerRef.current.getBoundingClientRect().bottom + 8 : null)
+  }
+
+  useEffect(() => {
+    if (!abierto) {
+      setOffsetAbajo(null)
+      return
+    }
+    // Medimos al abrir para que el popover no llegue a verse en el lugar
+    // equivocado ni dé un salto de posición.
+    medirPosicion()
+    window.addEventListener('resize', medirPosicion)
+    return () => window.removeEventListener('resize', medirPosicion)
+  }, [abierto])
+
   const googleMapsUrl = 'https://maps.app.goo.gl/TRGjNnbVmeAABR3t8'
 
   // Cierre al hacer click afuera
@@ -68,11 +93,9 @@ export default function BotonUbicacionLocal({ size = 'md' }: BotonUbicacionLocal
       {abierto && (
         <div 
           className="fixed left-1/2 -translate-x-1/2 md:absolute md:left-0 md:translate-x-0 md:top-full mt-2 z-[9999] w-[calc(100vw-32px)] max-w-sm md:w-80 bg-[#161618] border border-white/15 text-white rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
-          style={{ 
-            top: typeof window !== 'undefined' && window.innerWidth < 768 && containerRef.current
-              ? (containerRef.current.getBoundingClientRect().bottom + 8) 
-              : undefined,
-            filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))' 
+          style={{
+            top: offsetAbajo ?? undefined,
+            filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))'
           }}
         >
           {/* Triángulo indicador superior */}

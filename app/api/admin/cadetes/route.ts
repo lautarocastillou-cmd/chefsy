@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerSesion } from '@/lib/auth-server'
+import { notificarCambioCadete } from '@/lib/cadetes-broadcast'
 
 // ── GET: Obtener lista de cadetes con estado GPS/Turno en tiempo real ────────
 export async function GET() {
@@ -100,6 +101,10 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
+    // Avisar al panel que este cadete se movió. Fire-and-forget: si falla, el
+    // poll de respaldo de useCadetes lo recupera igual.
+    await notificarCambioCadete(cadeteId, 'gps')
+
     // Grabar Breadcrumb Trail en pedidos en camino si el GPS está activo y las coordenadas son válidas
     if (Boolean(camposActualizar.gps_activo) && coordenadasValidas) {
       try {
@@ -145,7 +150,7 @@ export async function POST(request: Request) {
           }
 
           for (const p of pedidosEnCamino) {
-            let historial = Array.isArray(p.ruta_historial) ? [...p.ruta_historial] : []
+            const historial = Array.isArray(p.ruta_historial) ? [...p.ruta_historial] : []
             let huboCambios = false
 
             for (const punto of puntosAProcesar) {

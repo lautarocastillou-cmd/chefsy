@@ -120,7 +120,7 @@ export function usePedidosRealtime({
     return () => {
       channel?.unsubscribe()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [estaListo, habilitado, mutate])
 
   // Difundir estado de conexión para herramientas de diagnóstico

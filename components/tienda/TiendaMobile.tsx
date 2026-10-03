@@ -164,7 +164,7 @@ export default function TiendaMobile() {
   }, [productos, categoriaSeleccionada, busqueda])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
-    let rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834225445'
+    const rawTel = (configuracion as any)?.telefono_negocio || process.env.NEXT_PUBLIC_WHATSAPP_NEGOCIO || '5493834225445'
     let telLimpio = rawTel.toString().replace(/\D/g, '')
     if (!telLimpio || telLimpio === '5493834554453' || telLimpio === '3834554453') {
       telLimpio = '5493834225445'

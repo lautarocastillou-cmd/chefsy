@@ -113,10 +113,6 @@ export default function SwipeToConfirm({
     }
   }, [estaPresionado])
 
-  const progreso = contenedorRef.current && botonRef.current
-    ? deslizamiento / (contenedorRef.current.offsetWidth - botonRef.current.offsetWidth)
-    : 0
-
   // Colores según variante
   const colorFondoConfirmado = esRojo ? 'bg-red-500' : esAzul ? 'bg-blue-500' : 'bg-emerald-500'
   const colorFondoBase = esRojo ? 'bg-red-950/20 border border-red-900/30' : esAzul ? 'bg-blue-950/20 border border-blue-900/30' : 'bg-green-950/20 border border-green-900/30'

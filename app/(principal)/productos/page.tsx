@@ -1288,7 +1288,7 @@ export default function PaginaAdministracionCatalogos() {
                     className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-100"
                   />
                   <p className="text-[9px] text-gray-400 dark:text-slate-500">
-                    Ingresá 0 si es un cambio que no modifica el precio (ej. "Sin Cebolla")
+                    Ingresá 0 si es un cambio que no modifica el precio (ej. &quot;Sin Cebolla&quot;)
                   </p>
                 </div>
 

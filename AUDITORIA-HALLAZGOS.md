@@ -399,7 +399,85 @@ citados por subagentes deberían tratarse como aproximados.**
 
 ---
 
-## 5. Lo que se resolvió en esta sesión
+## 4-bis. Segunda ronda de arreglos (30/09/2026)
+
+Estado verificado **contra la base real** con la anon key (solo lecturas).
+
+### RLS — cerrado y aplicado
+
+| Tabla | Antes | Ahora (anon) |
+|---|---|---|
+| `pedidos` | 2.072 | **0** |
+| `cierres_diarios` | 115 | **0** |
+| `stock_movimientos` | 750 | **0** |
+| `tienda_metadata` | 102 | **0** |
+| `configuracion_operativa` | 1 | **0** |
+| `usuarios` / `turnos` / `consumos_personal` / `clientes` | 0 | 0 |
+| **`cadetes`** | **4** | **4 — ABIERTA** |
+
+Siguen abiertas a propósito: `catalogo` (1) y `configuracion_tienda` (1), que
+son el menú público y la configuración de la tienda.
+
+### Bugs reales que encontró ESLint (corregidos)
+
+ESLint no estaba instalado: el script `lint` usaba `next lint`, que Next 16
+eliminó, y `eslint` no figuraba en `devDependencies`. Al instalarlo aparecieron
+240 errores. Los que eran bugs de verdad:
+
+| Ubicación | Bug | Corrección |
+|---|---|---|
+| `hooks/useEscapeKey.ts:9` | Se escribía un ref durante el render | La asignación pasó a un `useEffect` |
+| `components/tienda/BotonUbicacionLocal.tsx:72` | Leía `containerRef.current` en el render para posicionar el popover. En el primer render el ref es `null`, así que salía desalineado | Medida guardada en estado, con listener de `resize` |
+| `components/pedidos/AlertaPedidosDemoradosFlotante.tsx:48` | Idem: ref escrito en el render | Va a un `useEffect` |
+| `app/cadete-en-vivo/[id]/page.tsx:599` | Leía `startStateRef.current` en el render | Espejado a estado (`arranqueAbierto`) |
+| `components/ui/SwipeToConfirm.tsx:116` | Leía dos refs en el render | Al investigar: la variable `progreso` **estaba muerta**, el JSX usa `deslizamiento + 56`. Se borró |
+| `app/(principal)/configuracion/editor/page.tsx:161` | `handleSave` usado antes de declararse | Pasó a declaración de función |
+| `contexto/ClienteAuthContexto.tsx:128` | `cargarPerfilGoogle` usada antes de declararse | Pasó a declaración de función |
+| `app/error.tsx:53` | `<a href="/">` en vez de `next/link` | Corregido |
+| `contexto/CarritoContexto.tsx:88` | `let intv: any` asignado una sola vez | `const intv = setInterval(...)`, y de paso un `any` menos |
+| `components/ubicacion/MapaSeguimiento.tsx:158` | `useMemo` con `(pedido as any)?.itinerario_paradas` dentro del array de deps, que ESLint no puede verificar | Referencia extraída a variable |
+| 32 lugares | Comillas `"` sin escapar en texto JSX | `&quot;`, que renderiza idéntico |
+
+### Lo que quedó en warning, y por qué
+
+2.117 warnings, todos deliberados y documentados en `eslint.config.mjs`:
+
+- **451 `any`** y **1.105 expresiones sin efecto**: deuda heredada.
+- **129 del React Compiler** (`set-state-in-effect` 82,
+  `preserve-manual-memoization` 35, `purity` 12): no son crashes, son
+  optimizaciones que exigen entender el flujo de datos de cada caso. Con cero
+  tests, cambiarlos en masa es la forma más rápida de romper algo que hoy
+  funciona.
+- **8 `rules-of-hooks`**: los hooks se llaman `usar*` (`usarPedidos`,
+  `usarCarrito`...) por convención del proyecto. La regla solo reconoce el
+  prefijo `use`. Renombrar son **179 referencias en 7 hooks**: es decisión de
+  proyecto, no un fix.
+- **9 `immutability`**: falsos positivos del compiler, que no modela la
+  mutación del DOM directo (`document.body.style` en `CartDrawer`), la mutación
+  de refs dentro de callbacks de mapa (`MapaLibreSeguimiento`) ni el hoisting
+  de funciones.
+
+### Tooling
+
+| Script | Estado |
+|---|---|
+| `npm run typecheck` | 0 errores |
+| `npm run lint` | 0 errores, exit 0 (antes era un script roto) |
+| `npm run verificar:esquema` | 23 tablas, 0 discrepancias |
+| `npm run build` | compila |
+
+### Pendiente
+
+1. **`supabase/migrations/004_rls_cadetes.sql` escrita pero NO aplicada.** Es
+   DDL contra producción: necesita que la corras vos.
+2. Los 5 scripts de prueba (`test*.js`, `check_cadetes.js`) siguen en disco,
+   ya ignorados por git y por ESLint. `test2.js` muta el estado de un pedido real.
+3. Sin tests: 0 infraestructura. Sigue siendo el gap más grande del proyecto, y
+   la razón por la que todo lo anterior es riesgoso de tocar en masa.
+
+---
+
+## 5. Lo que se resolvió en la primera sesión (29/09/2026)
 
 | ID | Cambio | Archivos |
 |---|---|---|

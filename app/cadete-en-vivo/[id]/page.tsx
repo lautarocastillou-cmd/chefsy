@@ -141,6 +141,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const startStateRef      = useRef(false)
   const hasMovedRef        = useRef(false)
 
+  // Espejo en estado del ref de arriba, para que el render pueda leer si la
+  // hoja arrancaba abierta sin leer un ref durante el render. El ref sigue
+  // existiendo porque los handlers de pointermove lo necesitan en cada
+  // movimiento sin provocar un re-render por evento.
+  const [arranqueAbierto, setArranqueAbierto] = useState(false)
+
   const [direccionLegible, setDireccionLegible] = useState<string>('')
   const fetchPrincipalRef = useRef<(() => void) | null>(null)
   const intervaloRef = useRef<NodeJS.Timeout | null>(null)
@@ -512,6 +518,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
     startYRef.current = e.clientY
     startTimeRef.current = Date.now()
     startStateRef.current = bottomSheetAbierto
+    setArranqueAbierto(bottomSheetAbierto)
     hasMovedRef.current = false
     setDragDeltaY(0)
   }
@@ -596,7 +603,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   if (!isDragging) {
     currentTranslateY = bottomSheetAbierto ? 0 : contentHeight
   } else {
-    if (!startStateRef.current) {
+    if (!arranqueAbierto) {
       // Estaba cerrado: delta negativo hacia arriba reduce el translateY
       currentTranslateY = Math.max(0, contentHeight + dragDeltaY)
     } else {

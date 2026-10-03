@@ -13,7 +13,7 @@ import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 
 const TIPOS_ENTREGA_VALIDOS = ['delivery', 'retiro', 'mostrador', 'consumo_local']
-const METODOS_PAGO_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'sin_especificar', 'puntos']
+const METODOS_PAGO_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'mixto', 'sin_especificar', 'puntos']
 
 function validarPedidoParaCrear(pedido: any): string | null {
   if (!pedido || typeof pedido !== 'object') return 'El pedido es requerido y debe ser un objeto.'
@@ -320,7 +320,7 @@ async function procesarPOST(request: Request) {
           }
         }
 
-        let { error } = await supabaseAdmin
+        const { error } = await supabaseAdmin
           .from('pedidos')
           .insert(payload)
 
@@ -737,7 +737,7 @@ async function procesarPOST(request: Request) {
           return NextResponse.json({ error: 'Operación reservada para personal autorizado.' }, { status: 403 })
         }
 
-        const { id, metodoPago } = body
+        const { id, metodoPago, montoEfectivo, montoTransferencia, montoTarjeta } = body
         if (!id || typeof id !== 'string' || !id.trim() || id.length > 64) {
           return NextResponse.json({ error: 'ID de pedido inválido.' }, { status: 400 })
         }
@@ -745,9 +745,14 @@ async function procesarPOST(request: Request) {
           return NextResponse.json({ error: `Método de pago inválido. Permitidos: ${METODOS_PAGO_VALIDOS.join(', ')}` }, { status: 400 })
         }
 
+        const updateData: Record<string, any> = { metodoPago }
+        if (montoEfectivo !== undefined) updateData.montoEfectivo = Math.max(0, Number(montoEfectivo) || 0)
+        if (montoTransferencia !== undefined) updateData.montoTransferencia = Math.max(0, Number(montoTransferencia) || 0)
+        if (montoTarjeta !== undefined) updateData.montoTarjeta = Math.max(0, Number(montoTarjeta) || 0)
+
         const { error } = await supabaseAdmin
           .from('pedidos')
-          .update({ metodoPago })
+          .update(updateData)
           .eq('id', id)
 
         if (error) throw error

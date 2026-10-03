@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { reportarErrorManualmente } from '@/lib/logger'
 
@@ -50,13 +51,13 @@ export default function ErrorPage({
             <span>Reintentar</span>
           </button>
 
-          <a
+          <Link
             href="/"
             className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-3 px-4 rounded-xl transition-all active:scale-95"
           >
             <Home className="w-4 h-4" />
             <span>Inicio</span>
-          </a>
+          </Link>
         </div>
       </div>
     </main>

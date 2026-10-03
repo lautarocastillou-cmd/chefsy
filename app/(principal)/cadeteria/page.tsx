@@ -15,7 +15,6 @@ import { crearEnlaceGoogleMaps, calcularDistanciaKm, esEnlaceOCoordenadas } from
 import { usarAuth } from '@/contexto/AuthContexto'
 import LoginPage from '@/components/auth/LoginPage'
 import TimerPedido from '@/components/pedidos/TimerPedido'
-import { supabase } from '@/lib/supabase'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
 import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
@@ -373,20 +372,21 @@ export default function PaginaCadeteria() {
 
     const consultarEstadoGps = async () => {
       try {
-        const res = await supabase
-          .from('cadetes')
-          .select('id, nombre, updated_at, gps_activo')
-          .eq('activo', true)
-        
-        if (res.data) {
+        // Va por la API y no por Supabase directo: la tabla `cadetes` esta
+        // cerrada a anon por RLS (ubicacion en vivo + telefono de repartidores).
+        const res = await fetch('/api/admin/cadetes')
+        if (!res.ok) return
+        const res2: Array<{ id: string; updated_at: string | null; gps_activo: boolean }> =
+          await res.json()
+        if (res2) {
           const ahora = Date.now()
           const nuevoEstado: Record<string, { activo: boolean; hace: string }> = {}
-          
-          for (const c of res.data) {
+
+          for (const c of res2) {
             const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
             const segundos = Math.floor((ahora - updatedAt) / 1000)
             const gpsActivo = c.gps_activo !== false && segundos < 120 // más de 2min = sin señal
-            
+
             let hace = ''
             if (segundos < 60) hace = `${segundos}s`
             else if (segundos < 3600) hace = `${Math.floor(segundos / 60)}min`

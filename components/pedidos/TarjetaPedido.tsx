@@ -33,6 +33,7 @@ import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
 import { copiarConNotificacion } from '@/lib/notificaciones'
+import ModalPagoMixto from './ModalPagoMixto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
@@ -94,6 +95,7 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [ticketCopiado, setTicketCopiado] = useState(false)
   const [modalImpresion, setModalImpresion] = useState(false)
   const [modalConfigImpresora, setModalConfigImpresora] = useState(false)
+  const [modalPagoMixtoAbierto, setModalPagoMixtoAbierto] = useState(false)
   const [infoImpresora, setInfoImpresora] = useState(gestorImpresora.obtenerInfo())
   const [sheetMobileAbierto, setSheetMobileAbierto] = useState(false)
 
@@ -188,7 +190,7 @@ ${pedido.observaciones ? `Nota: ${pedido.observaciones}` : ''}`.trim()
       let nombreBase = p.nombre
       let extrasTexto = ''
       let precioBase = p.precio // precio unitario del producto con extras
-      let extrasDetalle: { nombre: string; precio: number }[] = []
+      const extrasDetalle: { nombre: string; precio: number }[] = []
 
       if (match) {
         nombreBase = match[1].trim()
@@ -478,7 +480,11 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             value={pedido.metodoPago}
             onChange={(e) => {
               const nuevoMetodo = e.target.value as any
-              cambiarMetodoPago(pedido.id, nuevoMetodo)
+              if (nuevoMetodo === 'mixto') {
+                setModalPagoMixtoAbierto(true)
+              } else {
+                cambiarMetodoPago(pedido.id, nuevoMetodo)
+              }
             }}
             disabled={soloLectura}
             className={cn(
@@ -495,13 +501,24 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             <option value="mixto">Mixto</option>
           </select>
           {pedido.metodoPago === 'mixto' && (
-            <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded">
-              {pedido.montoEfectivo ? `Ef: ${formatearPrecio(pedido.montoEfectivo)}` : ''}
-              {pedido.montoEfectivo && (pedido.montoTransferencia || pedido.montoTarjeta) ? ' + ' : ''}
-              {pedido.montoTransferencia ? `Transf: ${formatearPrecio(pedido.montoTransferencia)}` : ''}
-              {pedido.montoTransferencia && pedido.montoTarjeta ? ' + ' : ''}
-              {pedido.montoTarjeta ? `Tarj: ${formatearPrecio(pedido.montoTarjeta)}` : ''}
-            </span>
+            <button
+              type="button"
+              onClick={() => !soloLectura && setModalPagoMixtoAbierto(true)}
+              className="text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 border border-amber-300/60 dark:border-amber-800/60 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+              title="Hacé clic para editar el desglose del pago mixto"
+            >
+              {pedido.montoEfectivo || pedido.montoTransferencia || pedido.montoTarjeta ? (
+                <>
+                  {pedido.montoEfectivo ? `Ef: ${formatearPrecio(pedido.montoEfectivo)}` : ''}
+                  {pedido.montoEfectivo && (pedido.montoTransferencia || pedido.montoTarjeta) ? ' + ' : ''}
+                  {pedido.montoTransferencia ? `Transf: ${formatearPrecio(pedido.montoTransferencia)}` : ''}
+                  {pedido.montoTransferencia && pedido.montoTarjeta ? ' + ' : ''}
+                  {pedido.montoTarjeta ? `Tarj: ${formatearPrecio(pedido.montoTarjeta)}` : ''}
+                </>
+              ) : (
+                <span>⚠️ Configurar montos</span>
+              )}
+            </button>
           )}
           {pedido.tipoEntrega === 'delivery' && (
             <SelectorCadetePedido
@@ -675,6 +692,24 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         <ModalVistaMapa
           pedido={pedido}
           onClose={() => setVerMapa(false)}
+        />
+      )}
+
+      {/* Modal Desglose Pago Mixto */}
+      {modalPagoMixtoAbierto && montado && (
+        <ModalPagoMixto
+          abierto={modalPagoMixtoAbierto}
+          totalPedido={pedido.total}
+          montosIniciales={{
+            efectivo: pedido.montoEfectivo,
+            transferencia: pedido.montoTransferencia,
+            tarjeta: pedido.montoTarjeta,
+          }}
+          onGuardar={(montos) => {
+            cambiarMetodoPago(pedido.id, 'mixto', montos)
+            setModalPagoMixtoAbierto(false)
+          }}
+          onCerrar={() => setModalPagoMixtoAbierto(false)}
         />
       )}
 

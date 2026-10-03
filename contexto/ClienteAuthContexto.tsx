@@ -168,7 +168,11 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
   }, [])
 
   // ── Cargar perfil de Google desde la tabla clientes ────────────────────
-  const cargarPerfilGoogle = async (uid: string, user: { user_metadata?: any; email?: string; phone?: string }) => {
+  // Declaración de función (y no `const` + arrow) a propósito: se usa más
+  // arriba, dentro de los efectos de resolución de sesión. Una `const` arrow
+  // declarada más abajo no estaría inicializada todavía en ese punto, aunque en
+  // la práctica los efectos corran después del cuerpo del componente.
+  async function cargarPerfilGoogle(uid: string, user: { user_metadata?: any; email?: string; phone?: string }) {
     const fallback: PerfilCliente = {
       id:              uid,
       nombre:          user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',

@@ -65,24 +65,27 @@ export function getCache<T>(clave: string, ttlHoras = 1): T | null {
     const raw = localStorage.getItem(clave)
     if (!raw) return null
 
-    const entrada = JSON.parse(raw) as EntradaCache<T>
+    const parsed = JSON.parse(raw)
+    if (!parsed) return null
 
-    // Compatibilidad: si el dato guardado no tiene la forma { v, ts }, es un
-    // caché viejo sin TTL — lo descartamos y forzamos refetch limpio.
-    if (!entrada || typeof entrada.ts !== 'number') {
-      localStorage.removeItem(clave)
-      return null
+    // Si es un formato directo sin wrapper { v, ts }
+    if (!('ts' in parsed) || typeof parsed.ts !== 'number') {
+      return (parsed.v !== undefined ? parsed.v : parsed) as T
     }
 
+    const entrada = parsed as EntradaCache<T>
+
+    // Las claves de catálogo (productos, categorías, modificadores) NUNCA se eliminan por TTL
+    const esCatalogo = clave.includes('producto') || clave.includes('categoria') || clave.includes('modificador')
+    
     const edadHoras = (Date.now() - entrada.ts) / 3_600_000
-    if (edadHoras > ttlHoras) {
+    if (!esCatalogo && ttlHoras > 0 && edadHoras > ttlHoras) {
       localStorage.removeItem(clave)
       return null
     }
 
     return entrada.v
   } catch {
-    localStorage.removeItem(clave)
     return null
   }
 }

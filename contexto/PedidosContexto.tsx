@@ -160,7 +160,7 @@ interface ValorContextoPedidosInterno {
   revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
   asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
-  cambiarMetodoPago: (id: string, metodoPago: string) => void
+  cambiarMetodoPago: (id: string, metodoPago: string, montos?: { montoEfectivo?: number; montoTransferencia?: number; montoTarjeta?: number }) => void
   eliminarPedido: (id: string) => void
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>
@@ -710,11 +710,21 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     }
   }
 
-  const cambiarMetodoPago = async (id: string, metodoPago: string) => {
+  const cambiarMetodoPago = async (
+    id: string, 
+    metodoPago: string, 
+    montos?: { montoEfectivo?: number; montoTransferencia?: number; montoTarjeta?: number }
+  ) => {
     cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
-      const pedidoActualizado = { ...pedido, metodoPago: metodoPago as any }
+      const pedidoActualizado = { 
+        ...pedido, 
+        metodoPago: metodoPago as any,
+        ...(montos?.montoEfectivo !== undefined ? { montoEfectivo: montos.montoEfectivo } : {}),
+        ...(montos?.montoTransferencia !== undefined ? { montoTransferencia: montos.montoTransferencia } : {}),
+        ...(montos?.montoTarjeta !== undefined ? { montoTarjeta: montos.montoTarjeta } : {}),
+      }
       despachar({
         tipo: 'EDITAR_PEDIDO',
         pedido: pedidoActualizado,
@@ -724,7 +734,12 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         return current.map((p) => (p.id === id ? pedidoActualizado : p))
       }, false)
       try {
-        await enviarAccionPedido({ accion: 'cambiar_metodo_pago', id, metodoPago })
+        await enviarAccionPedido({ 
+          accion: 'cambiar_metodo_pago', 
+          id, 
+          metodoPago,
+          ...(montos || {})
+        })
       } catch (e) {
         console.error('[Servidor/Supabase] Error al cambiar método de pago', e)
         agregarNotificacion('Error al actualizar el método de pago en el servidor.', 'warning')
@@ -999,7 +1014,7 @@ interface ValorContextoPedidos {
   revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
   asignarCadete: (id: string, cadete_id: string | null, cadete_nombre: string | null) => void
-  cambiarMetodoPago: (id: string, metodoPago: string) => void
+  cambiarMetodoPago: (id: string, metodoPago: string, montos?: { montoEfectivo?: number; montoTransferencia?: number; montoTarjeta?: number }) => void
   eliminarPedido: (id: string) => void
   dbEstado: 'conectado' | 'desconectado' | 'cargando'
   finalizarTurno: () => Promise<void>

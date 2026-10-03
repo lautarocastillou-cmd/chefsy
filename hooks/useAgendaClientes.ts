@@ -216,7 +216,7 @@ export function useAgendaClientes() {
     if (!Array.isArray(clientesAgrupados)) return []
     const query = (busqueda || '').toLowerCase()
 
-    let resultado = clientesAgrupados.filter((c) => {
+    const resultado = clientesAgrupados.filter((c) => {
       if (!c) return false
       const nom = (c.nombre || '').toLowerCase()
       const tel = (c.telefono || '').toLowerCase()

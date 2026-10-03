@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { verificarTokenFlutter } from '@/lib/auth-flutter'
 import { obtenerSesion } from '@/lib/auth-server'
+import { notificarCambioCadete } from '@/lib/cadetes-broadcast'
 
 function esCoordenadaValida(lat: any, lng: any): boolean {
   if (lat === null || lat === undefined || lat === '' || typeof lat === 'boolean') return false
@@ -130,6 +131,11 @@ export async function POST(request: Request) {
       }
     }
 
+    // Avisar al panel que hubo movimiento. Fire-and-forget: los pings llegan
+    // cada pocos segundos, así que no tiene sentido esperar la respuesta ni
+    // dejar que un fallo de la señal corte el guardado de la posición.
+    void notificarCambioCadete(idNormalizado, 'gps')
+
     // 2. Grabar Breadcrumb Trail en pedidos activos en viaje (en_camino) solo si GPS está activo
     if (estadoGpsFinal) {
       try {
@@ -180,7 +186,7 @@ export async function POST(request: Request) {
           }
 
           for (const p of pedidosEnCamino) {
-            let historial = Array.isArray(p.ruta_historial) ? [...p.ruta_historial] : []
+            const historial = Array.isArray(p.ruta_historial) ? [...p.ruta_historial] : []
             let huboCambios = false
 
             for (const punto of puntosAProcesar) {

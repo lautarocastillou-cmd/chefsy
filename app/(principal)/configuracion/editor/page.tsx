@@ -171,7 +171,10 @@ export default function EditorTienda() {
     registrarCambio(nueva)
   }
 
-  const handleSave = async () => {
+  // Declaración de función y no `const` + arrow: se referencia en el handler de
+  // teclado de más arriba, y con una `const` quedaría declarada después de su
+  // uso en el código.
+  async function handleSave() {
     if (!configLive || guardando) return
     setGuardando(true)
     const success = await actualizarConfiguracionTienda({

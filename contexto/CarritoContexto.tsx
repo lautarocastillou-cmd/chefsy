@@ -85,7 +85,6 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [procesandoCompra, setProcesandoCompra] = useState(false)
 
   useEffect(() => {
-    let intv: any
     const verificarTurno = async () => {
       if (document.hidden) return
       try {
@@ -101,7 +100,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       }
     }
     verificarTurno()
-    intv = setInterval(verificarTurno, 20000)
+    const intv = setInterval(verificarTurno, 20000)
 
     const handleVisibility = () => {
       if (!document.hidden) verificarTurno()

@@ -86,11 +86,16 @@ export function obtenerModificadorPorId(id: string): ModificadorCatalogo | undef
 
 export function construirNombreProductoPedido(
   categoriaId: string,
-  productoCatalogoId: string
+  productoCatalogoId: string,
+  catalogoContexto?: ProductoCatalogo[],
+  categoriasContexto?: CategoriaCatalogo[]
 ): string {
-  const categoria = obtenerCategoriaPorId(categoriaId)
-  const producto = obtenerProductoCatalogoPorId(productoCatalogoId)
+  const categoria = categoriasContexto?.find(c => c.id === categoriaId) || obtenerCategoriaPorId(categoriaId)
+  const producto = catalogoContexto?.find(p => p.id === productoCatalogoId) || obtenerProductoCatalogoPorId(productoCatalogoId)
   if (!categoria || !producto) return producto?.nombre ?? 'Producto'
+  if (producto.nombre.toLowerCase().startsWith(categoria.nombre.toLowerCase())) {
+    return producto.nombre
+  }
   return `${categoria.nombre} - ${producto.nombre}`
 }
 
@@ -100,22 +105,40 @@ export function calcularTotalFilas(filas: FilaProductoPedido[]): number {
 
 export function filasAProductosPedido(
   filas: FilaProductoPedido[],
-  generarId: () => string
+  generarId: () => string,
+  catalogoContexto?: ProductoCatalogo[],
+  categoriasContexto?: CategoriaCatalogo[]
 ): ProductoPedido[] {
   return filas
     .filter((f) => f.idProductoCatalogo && f.idCategoria)
     .map((fila) => {
-      // Preferir los nombres ya guardados en la fila (más confiable)
-      // y usar el caché solo como fallback
-      const nombreProducto = fila.nombreProducto
-        ?? obtenerProductoCatalogoPorId(fila.idProductoCatalogo)?.nombre
-        ?? 'Producto'
-      const nombreCategoria = fila.nombreCategoria
-        ?? obtenerCategoriaPorId(fila.idCategoria)?.nombre
+      // Buscar primero en el catálogo en memoria del contexto (siempre fresco), luego en caché
+      const producto = catalogoContexto?.find((p) => p.id === fila.idProductoCatalogo) 
+        || obtenerProductoCatalogoPorId(fila.idProductoCatalogo)
+      
+      const categoria = categoriasContexto?.find((c) => c.id === fila.idCategoria) 
+        || obtenerCategoriaPorId(fila.idCategoria)
 
-      let nombreFinal = nombreCategoria
-        ? `${nombreCategoria} - ${nombreProducto}`
+      // Resolver nombre de producto: fila.nombreProducto > catálogo en memoria > nombre guardado
+      let nombreProducto = fila.nombreProducto
+      if (!nombreProducto || nombreProducto.trim().toLowerCase() === 'producto') {
+        nombreProducto = producto?.nombre || fila.nombreProducto || 'Producto'
+      }
+
+      // Si el nombre del producto ya tiene prefijo "Categoria - ", extraerlo
+      const nombreCat = fila.nombreCategoria || categoria?.nombre
+      if (nombreCat && nombreProducto.toLowerCase().startsWith(`${nombreCat.toLowerCase()} - `)) {
+        nombreProducto = nombreProducto.slice(nombreCat.length + 3).trim()
+      }
+
+      let nombreFinal = nombreCat
+        ? `${nombreCat} - ${nombreProducto}`
         : nombreProducto
+
+      // Protección final contra '... - Producto': si tenemos el producto real, restaurarlo
+      if (nombreFinal.endsWith(' - Producto') && producto?.nombre) {
+        nombreFinal = nombreCat ? `${nombreCat} - ${producto.nombre}` : producto.nombre
+      }
 
       if (fila.modificadoresSeleccionadosIds && fila.modificadoresSeleccionadosIds.length > 0) {
         const modsNombres: string[] = []

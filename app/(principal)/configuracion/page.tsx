@@ -518,7 +518,7 @@ function PestanaParametros() {
             <div className="space-y-0.5 pr-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Autocompletado de Clientes en "+ Crear Pedido"
+                  Autocompletado de Clientes en &quot;+ Crear Pedido&quot;
                 </span>
                 <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
                   autocompletadoClientesHabilitado
@@ -653,7 +653,7 @@ function PestanaParametros() {
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Aviso persistente en pantalla que no se cierra solo hasta avanzar el pedido o tocar "Aplazar".
+                Aviso persistente en pantalla que no se cierra solo hasta avanzar el pedido o tocar &quot;Aplazar&quot;.
               </p>
             </div>
           </div>
@@ -764,7 +764,7 @@ function PestanaParametros() {
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">min</span>
               </div>
               <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-1 block font-medium">
-                Al tocar "Aplazar", el cartel se silencia por esta cantidad de minutos antes de insistir.
+                Al tocar &quot;Aplazar&quot;, el cartel se silencia por esta cantidad de minutos antes de insistir.
               </span>
             </div>
           </div>
@@ -810,7 +810,7 @@ function PestanaParametros() {
                 required
               />
               <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
-                Minutos en estado "Listo" esperando entrega o cadete (Por defecto: 10)
+                Minutos en estado &quot;Listo&quot; esperando entrega o cadete (Por defecto: 10)
               </span>
             </div>
 
@@ -879,7 +879,7 @@ function PestanaParametros() {
                 required
               />
               <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
-                Minutos en "Listo" antes de alertar con color rojo (Por defecto: 15)
+                Minutos en &quot;Listo&quot; antes de alertar con color rojo (Por defecto: 15)
               </span>
             </div>
 

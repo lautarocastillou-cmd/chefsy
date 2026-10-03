@@ -476,11 +476,13 @@ export default function ModalImportarCarpetaYDrive({
         </div>
 
         {/* ── Inputs Ocultos de Selección de Carpeta y Archivos ───── */}
-        {/* @ts-ignore: webkitdirectory and directory are non-standard but supported */}
+        {/* webkitdirectory y directory no son atributos estándar de TypeScript
+            pero el navegador los soporta; la supresión real está en el
+            atributo de abajo. */}
         <input
           ref={inputCarpetaRef}
           type="file"
-          // @ts-expect-error
+          // @ts-expect-error: webkitdirectory no existe en los tipos de React
           webkitdirectory=""
           directory=""
           multiple
@@ -721,7 +723,7 @@ export default function ModalImportarCarpetaYDrive({
                   <span>¿Cómo importar desde Google Drive Web?</span>
                 </p>
                 <p className="text-slate-300 text-[11px] leading-relaxed">
-                  Copiá el enlace de la carpeta o de las fotos compartidas en Google Drive (asegurate de que tengan permiso <strong>"Cualquier persona con el enlace"</strong>) y pegalas acá abajo.
+                  Copiá el enlace de la carpeta o de las fotos compartidas en Google Drive (asegurate de que tengan permiso <strong>&quot;Cualquier persona con el enlace&quot;</strong>) y pegalas acá abajo.
                 </p>
               </div>
 

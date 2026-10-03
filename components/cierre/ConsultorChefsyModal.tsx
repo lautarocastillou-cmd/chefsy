@@ -184,7 +184,7 @@ export default function ConsultorChefsyModal({
 
     setTimeout(() => {
       let respuesta = ''
-      let sugerencia: any = null
+      const sugerencia: any = null
 
       if (lower.includes('aumentar') || lower.includes('precio') || lower.includes('subir')) {
         respuesta = 'Para aumentar precios sin que la gente se queje, la regla de oro gastronómica es segmentar: a los platos estrella y de mayor calidad podés subirles entre un 7% y un 10% sin que caiga la demanda, porque el cliente los elige por sabor y lealtad. A las bebidas y entradas estándar, mantenelas firmes porque son las que el cliente usa de referencia para comparar con otros locales.'

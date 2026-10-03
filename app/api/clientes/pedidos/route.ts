@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       }
     }
 
-    let filtros: string[] = []
+    const filtros: string[] = []
     if (clienteId && /^[0-9a-fA-F\-]{36}$/.test(clienteId)) {
       filtros.push(`cliente_id.eq.${clienteId}`)
     }

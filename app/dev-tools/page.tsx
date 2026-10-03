@@ -155,7 +155,7 @@ function SelectorProductoBuscableBanco({
       <div className="max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-slate-700">
         {productosFiltrados.length === 0 ? (
           <p className="text-[11px] text-slate-500 text-center py-3 italic">
-            No se encontró ningún plato con "{busqueda}"
+            No se encontró ningún plato con &quot;{busqueda}&quot;
           </p>
         ) : (
           productosFiltrados.map(p => {
@@ -1787,7 +1787,7 @@ export default function DevToolsPage() {
                             <div className="absolute inset-0 z-30 bg-slate-950 flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in">
                               <Loader2 className="animate-spin text-chefsy-400 w-8 h-8" />
                               <p className="text-xs font-black text-white">Comprimiendo y subiendo foto...</p>
-                              <p className="text-[10px] text-slate-400">Asignando a "{nombreAMostrar}"</p>
+                              <p className="text-[10px] text-slate-400">Asignando a &quot;{nombreAMostrar}&quot;</p>
                             </div>
                           )}
 
@@ -1796,7 +1796,7 @@ export default function DevToolsPage() {
                             <div className="absolute inset-0 z-20 bg-chefsy-950 border-2 border-dashed border-chefsy-400 rounded-3xl flex flex-col items-center justify-center p-4 text-center gap-2 animate-in fade-in pointer-events-none">
                               <UploadCloud className="w-10 h-10 text-chefsy-400 animate-bounce" />
                               <p className="text-xs font-black text-white">Soltá la foto acá</p>
-                              <p className="text-[10px] text-chefsy-200">Se establecerá como portada de "{nombreAMostrar}"</p>
+                              <p className="text-[10px] text-chefsy-200">Se establecerá como portada de &quot;{nombreAMostrar}&quot;</p>
                             </div>
                           )}
 
@@ -1874,7 +1874,7 @@ export default function DevToolsPage() {
                             {/* Extracto de Descripción */}
                             {descripcion ? (
                               <p className="text-xs text-slate-400 line-clamp-2 italic leading-relaxed">
-                                "{descripcion}"
+                                &quot;{descripcion}&quot;
                               </p>
                             ) : (
                               <p className="text-xs text-slate-600 italic">

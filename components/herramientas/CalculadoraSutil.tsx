@@ -8,7 +8,7 @@ const evaluarExpresion = (expr: string): string => {
   try {
     const sanitizada = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/,/g, '.')
     if (!/^[0-9+\-*/. ()]+$/.test(sanitizada)) return 'Error'
-    // eslint-disable-next-line no-new-func
+     
     const resultado = new Function(`return ${sanitizada}`)()
     if (!Number.isFinite(resultado) || isNaN(resultado)) return 'Error'
     return parseFloat(resultado.toFixed(8)).toString()

@@ -153,9 +153,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
     ? Boolean((pedido as any).es_proxima_entrega) 
     : (paradasPrevias === 0)
 
+  // La referencia va en una variable propia: dentro del array de dependencias
+  // no se puede poner una expresión compleja, porque ESLint no la puede
+  // verificar estáticamente y la dependencia quedaría sin comprobar.
+  const paradasPedido = (pedido as any)?.itinerario_paradas
+
   const itinerario: any[] = useMemo(() => {
-    return (pedido as any)?.itinerario_paradas || []
-  }, [(pedido as any)?.itinerario_paradas])
+    return paradasPedido || []
+  }, [paradasPedido])
 
   // Firma única de la secuencia de paradas: reacciona inmediatamente al reordenar pedidos en cadetería
   const paradasSignature = useMemo(() => {

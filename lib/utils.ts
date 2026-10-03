@@ -134,7 +134,7 @@ export function generarBlurUrl(url: string): string {
   }
 
   if (limpia.includes('.supabase.co/storage/v1/')) {
-    let baseUrl = limpia.replace('/object/public/', '/render/image/public/')
+    const baseUrl = limpia.replace('/object/public/', '/render/image/public/')
     const urlLimpiaParams = baseUrl.replace(/[?&](width|quality|resize)=[^&]*/g, '')
     const sepFinal = urlLimpiaParams.includes('?') ? '&' : '?'
     return `${urlLimpiaParams}${sepFinal}width=20&quality=10&resize=contain`

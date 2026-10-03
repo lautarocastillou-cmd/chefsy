@@ -45,7 +45,12 @@ export default function AlertaPedidosDemoradosFlotante() {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [arrastrando, setArrastrando] = useState(false)
   const posRef = useRef<{ x: number; y: number } | null>(null)
-  posRef.current = pos
+  // Se sincroniza en un efecto, no en el cuerpo del componente: escribir en un
+  // ref durante el render es un efecto secundario y, con renderizado
+  // concurrente, podría quedar el valor de un render descartado.
+  useEffect(() => {
+    posRef.current = pos
+  }, [pos])
 
   const dragInfoRef = useRef<{
     pointerId: number

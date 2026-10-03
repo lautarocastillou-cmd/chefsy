@@ -43,7 +43,7 @@ interface PropsUseFormularioPedido {
 }
 
 export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormularioPedido = {}) {
-  const { agregarPedido, editarPedido, pedidos, productos, configuracionOperativa } = usarPedidos()
+  const { agregarPedido, editarPedido, pedidos, productos, categorias, configuracionOperativa } = usarPedidos()
   const router = useRouter()
 
   const autocompletadoHabilitado = (configuracionOperativa as any)?.autocompletadoClientesHabilitado !== false
@@ -157,18 +157,33 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
         setCostoEnvio(0)
       }
 
-      const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => ({
-        id: p.id,
-        idCategoria: p.categoriaId || '',
-        idProductoCatalogo: p.idCatalogo || '',
-        cantidad: p.cantidad,
-        precio: p.precio,
-        modificadoresSeleccionadosIds: [],
-        coccion: (p.coccion === 'fritas' || p.coccion === 'al_horno') ? p.coccion : undefined,
-      }))
+      const filas: FilaProductoPedido[] = pedidoInicial.productos.map(p => {
+        const prodCatalogo = productos.find(pr => pr.id === p.idCatalogo)
+        const catId = p.categoriaId || prodCatalogo?.categoriaId || ''
+        const catCatalogo = categorias.find(c => c.id === catId)
+
+        let nombreLimpio = prodCatalogo?.nombre
+        if (!nombreLimpio && p.nombre) {
+          const partes = p.nombre.split(' - ')
+          nombreLimpio = partes.length > 1 ? partes.slice(1).join(' - ') : p.nombre
+          nombreLimpio = nombreLimpio.replace(/\s*\(\+.*?\)$/, '').trim()
+        }
+
+        return {
+          id: p.id,
+          idCategoria: catId,
+          nombreCategoria: catCatalogo?.nombre,
+          idProductoCatalogo: p.idCatalogo || '',
+          nombreProducto: nombreLimpio || p.nombre,
+          cantidad: p.cantidad,
+          precio: p.precio,
+          modificadoresSeleccionadosIds: [],
+          coccion: (p.coccion === 'fritas' || p.coccion === 'al_horno') ? p.coccion : undefined,
+        }
+      })
       setFilasProductos(filas.length > 0 ? filas : [crearFilaProductoVacia()])
     }
-  }, [pedidoInicial])
+  }, [pedidoInicial, productos, categorias])
 
 
   // 2. CRM Express
@@ -499,7 +514,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return setError('La dirección es obligatoria para delivery.')
     }
 
-    const productosParseados = filasAProductosPedido(filasProductos, generarIdProducto)
+    const productosParseados = filasAProductosPedido(
+      filasProductos, 
+      generarIdProducto, 
+      productos, 
+      categorias
+    )
 
     if (productosParseados.length === 0) {
       return setError('Agregá al menos un producto del catálogo.')

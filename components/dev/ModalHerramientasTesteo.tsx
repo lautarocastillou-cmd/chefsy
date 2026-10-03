@@ -1376,7 +1376,7 @@ export default function ModalHerramientasTesteo() {
                     </div>
                   ) : (
                     <div className="bg-slate-950/40 border border-white/5 p-3 rounded-xl text-center text-slate-500 text-[11px]">
-                      Presioná "Escanear Tablas" para medir la latencia individual en Supabase.
+                      Presioná &quot;Escanear Tablas&quot; para medir la latencia individual en Supabase.
                     </div>
                   )}
                 </div>
@@ -1493,7 +1493,7 @@ export default function ModalHerramientasTesteo() {
                     </div>
                   ) : (
                     <p className="text-[11px] text-slate-400">
-                      Presioná "Escanear" para auditar el inventario y detectar insumos en negativo.
+                      Presioná &quot;Escanear&quot; para auditar el inventario y detectar insumos en negativo.
                     </p>
                   )}
                 </div>

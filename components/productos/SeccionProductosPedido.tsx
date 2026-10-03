@@ -324,7 +324,7 @@ export default function SeccionProductosPedido({
             >
               {busqueda.trim() !== '' && productosFiltrados.length === 0 ? (
                 <div className="p-5 text-center text-xs text-gray-400">
-                  No se encontraron productos con "{busqueda}".
+                  No se encontraron productos con &quot;{busqueda}&quot;.
                 </div>
               ) : (
                 listaParaMostrar.map((prod, idx) => {

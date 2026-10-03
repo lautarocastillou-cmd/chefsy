@@ -530,7 +530,7 @@ export default function ModalFusionClientes({
                 <>
                   <CheckCircle size={14} />
                   <span>
-                    Unificar {cantidadSecundariosSeleccionados} {cantidadSecundariosSeleccionados === 1 ? 'ficha' : 'fichas'} en "{nombreElegido}"
+                    Unificar {cantidadSecundariosSeleccionados} {cantidadSecundariosSeleccionados === 1 ? 'ficha' : 'fichas'} en &quot;{nombreElegido}&quot;
                   </span>
                 </>
               )}

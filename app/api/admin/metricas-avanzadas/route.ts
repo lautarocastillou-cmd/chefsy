@@ -677,9 +677,9 @@ export async function GET(request: Request) {
     }
 
     // ── MÓDULO 2: MEDIDORES DE SLA Y VELOCIDAD (TACÓMETROS) ─────────────────
-    let cocinaMuestras: number[] = []
-    let cadeteMuestras: number[] = []
-    let leadTimeMuestras: number[] = []
+    const cocinaMuestras: number[] = []
+    const cadeteMuestras: number[] = []
+    const leadTimeMuestras: number[] = []
 
     pedidosFiltrados.forEach(p => {
       if (p.created_at && p.listo_at) {
