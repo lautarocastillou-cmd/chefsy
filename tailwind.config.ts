@@ -17,6 +17,7 @@ const config: Config = {
         '3xl': 'var(--radius-3xl, 1.5rem)',
       },
       fontFamily: {
+        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
         bebas: ['var(--font-bebas)', 'sans-serif'],
         montserrat: ['var(--font-montserrat)', 'sans-serif'],
         inter: ['var(--font-inter)', 'sans-serif'],

@@ -279,7 +279,7 @@ export default function TiendaDesktop() {
     montserrat: 'font-montserrat',
     inter: 'font-inter',
     anton: 'font-anton'
-  }[configuracion?.fuente_principal || 'bebas'] || 'font-bebas'
+  }[configuracion?.fuente_principal || 'inter'] || 'font-inter'
 
   const estiloBordes = configuracion?.estilo_bordes || 'suaves'
   const borderRadiusVars = 
