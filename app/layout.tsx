@@ -161,11 +161,12 @@ export const metadata: Metadata = {
 
 export default function LayoutRaiz({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
         <JsonLdLocalBusiness />
       </head>
       <body
+        suppressHydrationWarning
         className={`font-sans antialiased overflow-x-clip ${bebas.variable} ${montserrat.variable} ${inter.variable} ${anton.variable} ${playfair.variable} ${outfit.variable} ${plusJakarta.variable} ${syne.variable} ${permanentMarker.variable} ${cinzel.variable}`}
       >
         <SeoFallbackContent />
