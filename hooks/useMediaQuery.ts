@@ -1,28 +1,20 @@
 'use client'
 
-import { useSyncExternalStore, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 export function useMediaQuery(query: string, serverFallback = false): boolean {
-  const subscribe = useCallback(
-    (callback: () => void) => {
-      if (typeof window === 'undefined') return () => {}
-      const matchMedia = window.matchMedia(query)
-      matchMedia.addEventListener('change', callback)
-      return () => {
-        matchMedia.removeEventListener('change', callback)
-      }
-    },
-    [query]
-  )
+  // Inicializar en serverFallback garantiza coincidencia 100% entre SSR y el primer render del cliente
+  const [matches, setMatches] = useState(serverFallback)
 
-  const getSnapshot = useCallback(() => {
-    if (typeof window === 'undefined') return serverFallback
-    return window.matchMedia(query).matches
-  }, [query, serverFallback])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const matchMedia = window.matchMedia(query)
+    setMatches(matchMedia.matches)
 
-  const getServerSnapshot = useCallback(() => {
-    return serverFallback
-  }, [serverFallback])
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
+    matchMedia.addEventListener('change', handler)
+    return () => matchMedia.removeEventListener('change', handler)
+  }, [query])
 
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return matches
 }

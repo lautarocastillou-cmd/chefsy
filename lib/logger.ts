@@ -133,8 +133,14 @@ if (typeof window !== 'undefined') {
       if (esAbortError(e.message, e.error)) {
         return
       }
-      // Ignorar fallos de in-app browsers de terceros (ej: Instagram/Facebook WebView cerrándose)
-      if (e.message.includes('Java object is gone') || e.message.includes('iabjs://') || e.filename?.includes('iabjs://')) {
+      // Ignorar fallos de in-app browsers de terceros (ej: Instagram/Facebook WebView cerrándose o scripts de tracking)
+      if (
+        e.message.includes('Java object is gone') ||
+        e.message.includes('iabjs://') ||
+        e.filename?.includes('iabjs://') ||
+        e.message.includes('ResizeObserver loop') ||
+        (e.message === 'Script error.' && !e.filename)
+      ) {
         return
       }
       registrarLogSistema('error', 'UI Crash', e.message, e.error?.stack)

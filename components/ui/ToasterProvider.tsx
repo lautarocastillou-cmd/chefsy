@@ -1,17 +1,26 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Toaster, useToasterStore, toast } from 'react-hot-toast'
 
 export default function ToasterProvider() {
+  const [montado, setMontado] = useState(false)
   const { toasts } = useToasterStore()
 
   useEffect(() => {
+    setMontado(true)
+  }, [])
+
+  useEffect(() => {
+    if (!montado) return
     toasts
       .filter((t) => t.visible)
       .filter((_, i) => i >= 3)
       .forEach((t) => toast.dismiss(t.id))
-  }, [toasts])
+  }, [toasts, montado])
+
+  if (!montado) return null
+
   return (
     <Toaster
       position="bottom-center"
