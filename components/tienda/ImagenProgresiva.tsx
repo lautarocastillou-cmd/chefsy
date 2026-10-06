@@ -38,16 +38,17 @@ export default function ImagenProgresiva({
   const isCdn = src.includes('res.cloudinary.com') || src.includes('supabase.co') || src.includes('unsplash.com') || src.includes('lh3.googleusercontent.com')
   const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover'
 
-  // Si ya fue vista previamente en el visor, no esperamos ni mostramos blur
-  const yaVista = esFotoVista(urlFinal, src)
-  const [cargada, setCargada] = useState(() => yaVista)
+  // Evitar discrepancia de hidratación con sessionStorage entre SSR y Cliente (evita error #418)
+  const [cargada, setCargada] = useState(false)
   const [error, setError] = useState(false)
   const [reintentos, setReintentos] = useState(0)
 
-  // Reset al cambiar de src (si ya estaba en caché, queda cargada inmediatamente)
+  // Reset al cambiar de src o si ya estaba vista previamente en la sesión del cliente
   useEffect(() => {
     const vista = esFotoVista(urlFinal, src)
-    setCargada(vista)
+    if (vista) {
+      setCargada(true)
+    }
     setError(false)
   }, [src, urlFinal, reintentos])
 
@@ -65,8 +66,7 @@ export default function ImagenProgresiva({
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#161616]">
       {/* ── 1. Miniatura Blur-Up ultraliviana (< 1 KB) ── */}
-      {/* Solo se muestra si la foto no fue vista antes, evitando parpadeos al reabrir */}
-      {!cargada && !yaVista && !error && urlBlur && (
+      {!cargada && !error && urlBlur && (
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           <Image
             src={urlBlur}

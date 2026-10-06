@@ -352,6 +352,7 @@ export default function CartDrawer() {
 
   useEffect(() => {
     if (cartAbierto) {
+      cerradoPorAtrasRef.current = false
       document.documentElement.style.overflow = 'hidden'
       document.body.style.overflow = 'hidden'
 

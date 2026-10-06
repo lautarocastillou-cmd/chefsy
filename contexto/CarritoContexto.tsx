@@ -423,9 +423,8 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
         }
       }
     } catch (e) {
-      console.error('Error verificando turno en compra:', e)
-      notificarAviso('No pudimos verificar si el local está abierto. Por favor comprobá tu conexión a internet o intentá de nuevo.')
-      return
+      console.warn('Advertencia verificando turno en compra (se delega validación definitiva al backend):', e)
+      // No abortamos la orden: la API /api/tienda/pedido valida el turno en tiempo real contra la base de datos
     }
 
     try {

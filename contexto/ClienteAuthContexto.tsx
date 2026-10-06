@@ -44,29 +44,10 @@ interface ValorContextoClienteAuth {
 const ContextoClienteAuth = createContext<ValorContextoClienteAuth | undefined>(undefined)
 
 export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
-  const [perfil, setPerfil] = useState<PerfilCliente | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        if (localStorage.getItem('chefsy_logout_manual') === 'true') {
-          return null
-        }
-        return getCache<PerfilCliente>('chefsy_cliente_sesion_cache', TTL_SESION_HS)
-      } catch {}
-    }
-    return null
-  })
+  // Inicializar en null garantiza 0 discrepancias de hidratación SSR vs Cliente (evita error #418)
+  const [perfil, setPerfil] = useState<PerfilCliente | null>(null)
   const [estaListo, setEstaListo] = useState(false)
-  const [fuenteSesion, setFuenteSesion] = useState<FuenteSesion>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        if (localStorage.getItem('chefsy_logout_manual') === 'true') {
-          return null
-        }
-        return getCache<FuenteSesion>('chefsy_cliente_fuente_cache', TTL_SESION_HS)
-      } catch {}
-    }
-    return null
-  })
+  const [fuenteSesion, setFuenteSesion] = useState<FuenteSesion>(null)
 
   const guardarSesionCache = (p: PerfilCliente | null, fuente: FuenteSesion) => {
     setPerfil(p)
@@ -99,6 +80,18 @@ export function ProveedorClienteAuth({ children }: { children: ReactNode }) {
         guardarSesionCache(null, null)
         if (!cancelado) setEstaListo(true)
         return
+      }
+
+      // Cargar sesión de caché local de inmediato tras el montaje en cliente
+      if (typeof window !== 'undefined') {
+        try {
+          const pCache = getCache<PerfilCliente>('chefsy_cliente_sesion_cache', TTL_SESION_HS)
+          const fCache = getCache<FuenteSesion>('chefsy_cliente_fuente_cache', TTL_SESION_HS)
+          if (pCache && fCache && !cancelado) {
+            setPerfil(pCache)
+            setFuenteSesion(fCache)
+          }
+        } catch {}
       }
 
       let perfilPropioEncontrado = false

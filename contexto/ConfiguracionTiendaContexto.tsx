@@ -23,22 +23,26 @@ export const ConfiguracionContext = createContext<ConfiguracionContextType>({
 export const usarConfiguracionTienda = () => useContext(ConfiguracionContext)
 
 export const ConfiguracionTiendaProvider = ({ children }: { children: React.ReactNode }) => {
-  const [configuracion, setConfiguracion] = useState<ConfiguracionTienda | null>(() => {
-    if (typeof window !== 'undefined') {
-      return getCache<ConfiguracionTienda>('chefsy_configuracion_cache', TTL_CONFIG_HS)
-    }
-    return null
-  })
+  // Inicializar en null garantiza coincidencia estricta 1:1 entre SSR y el primer render del cliente (evita error #418)
+  const [configuracion, setConfiguracion] = useState<ConfiguracionTienda | null>(null)
   const [cargando, setCargando] = useState(true)
 
-  // Cargar desde DB al iniciar
+  // Cargar desde DB y caché local al montar en cliente
   useEffect(() => {
+    // 1. Restaurar de caché local inmediatamente tras montar en cliente sin desfase de hidratación
+    const cacheLocal = getCache<ConfiguracionTienda>('chefsy_configuracion_cache', TTL_CONFIG_HS)
+    if (cacheLocal) {
+      setConfiguracion(cacheLocal)
+    }
+
     async function cargarConfiguracion() {
       try {
         const configDB = await obtenerConfiguracionTienda()
-        setConfiguracion(configDB)
-        if (typeof window !== 'undefined' && configDB) {
-          setCache('chefsy_configuracion_cache', configDB)
+        if (configDB) {
+          setConfiguracion(configDB)
+          if (typeof window !== 'undefined') {
+            setCache('chefsy_configuracion_cache', configDB)
+          }
         }
       } catch (error) {
         console.error('Error cargando configuracion:', error)

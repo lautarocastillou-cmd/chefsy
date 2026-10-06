@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import LoginPage from './LoginPage'
 
-export default function VerificadorLogin() {
+function VerificadorLoginContenido() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [estado, setEstado] = useState<'esperando' | 'aprobado' | 'rechazado'>('esperando')
@@ -67,5 +67,17 @@ export default function VerificadorLogin() {
         VOLVER A LA TIENDA
       </button>
     </div>
+  )
+}
+
+export default function VerificadorLogin() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#0d0d0d] text-white">
+        <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <VerificadorLoginContenido />
+    </Suspense>
   )
 }

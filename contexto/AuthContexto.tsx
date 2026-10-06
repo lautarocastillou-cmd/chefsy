@@ -31,18 +31,18 @@ interface ValorContextoAuth {
 const ContextoAuth = createContext<ValorContextoAuth | undefined>(undefined)
 
 export function ProveedorAuth({ children }: { children: ReactNode }) {
-  const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return getCache<Usuario>('chefsy_admin_sesion_cache', TTL_ADMIN_HS)
-      } catch {}
-    }
-    return null
-  })
+  // Inicializar en null garantiza compatibilidad estricta con SSR (evita error #418)
+  const [usuarioActivo, setUsuarioActivo] = useState<Usuario | null>(null)
   const [estaListoAuth, setEstaListoAuth] = useState(false)
 
-  // Al montar: intentar recuperar la sesión activa consultando el servidor
+  // Al montar: recuperar la sesión activa
   useEffect(() => {
+    // 1. Cargar sesión de caché local en cliente tras montaje
+    try {
+      const cacheAdmin = getCache<Usuario>('chefsy_admin_sesion_cache', TTL_ADMIN_HS)
+      if (cacheAdmin) setUsuarioActivo(cacheAdmin)
+    } catch {}
+
     async function restaurarSesion() {
       try {
         const res = await fetch('/api/auth/sesion', { credentials: 'same-origin' })
