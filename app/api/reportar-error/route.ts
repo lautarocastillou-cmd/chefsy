@@ -25,6 +25,12 @@ const ERRORES_IGNORADOS = [
   'iabjs://', // Scripts inyectados por el navegador interno de Instagram/Facebook
   'navigation_performance_logger',
   'postMessage: Java object is gone',
+  'Text content does not match server-rendered HTML',
+  'Minified React error #418',
+  'Minified React error #423',
+  'Minified React error #425',
+  'Hydration failed because',
+  'error while hydrating',
 ]
 
 export async function POST(req: NextRequest) {

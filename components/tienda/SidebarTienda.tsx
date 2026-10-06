@@ -403,7 +403,7 @@ export default function SidebarTienda({
 
         {/* Footer del Sidebar */}
         <div className="p-3.5 border-t border-white/10 bg-[#121212] text-center text-slate-500 text-[10px] font-semibold shrink-0">
-          <p>Chefsy • Catamarca, Argentina</p>
+          <p suppressHydrationWarning>Chefsy • Catamarca, Argentina</p>
           <p className="text-white/30 text-[9px] mt-0.5">Sabor inigualable & entrega rápida</p>
         </div>
       </aside>

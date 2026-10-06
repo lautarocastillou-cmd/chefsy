@@ -2,7 +2,7 @@ import React from 'react'
 
 export default function SeoFallbackContent() {
   return (
-    <div className="sr-only" aria-hidden="true">
+    <div className="sr-only" aria-hidden="true" suppressHydrationWarning>
       <h1>Chefsy - Hamburguesas, Lomos y Pizzas en San Fernando del Valle de Catamarca</h1>
       <p>
         Bienvenido a Chefsy. Somos la sandwichería y hamburguesería líder en San Fernando del Valle de Catamarca,

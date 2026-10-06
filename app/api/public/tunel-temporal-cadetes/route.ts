@@ -62,10 +62,19 @@ export async function GET(request: Request) {
       }
     }
 
+    const ahoraMs = Date.now()
+    const SEGUNDOS_GPS_FRESCO = 180 // 3 minutos
+
     const cadetes = (cadetesData || []).map((c: any) => {
       const idLower = String(c.id || '').toLowerCase()
       const nombreReal = nombresMap.get(idLower) || c.nombre || c.id
       const pedidoActivo = pedidosMap.get(idLower) || null
+
+      const diffSeg = c.updated_at
+        ? Math.max(0, Math.floor((ahoraMs - new Date(c.updated_at).getTime()) / 1000))
+        : 999999
+      const esFresco = diffSeg < SEGUNDOS_GPS_FRESCO
+      const gpsActivo = Boolean(c.gps_activo) && esFresco && !c.apagado_por_admin
 
       return {
         id: c.id,
@@ -76,8 +85,9 @@ export async function GET(request: Request) {
         heading: c.heading ?? null,
         accuracy: c.accuracy ?? null,
         bateria: c.bateria ?? null,
-        gps_activo: Boolean(c.gps_activo),
+        gps_activo: gpsActivo,
         updated_at: c.updated_at ?? null,
+        segundos_offline: diffSeg,
         pedidoActivo: pedidoActivo
           ? {
               id: pedidoActivo.id,

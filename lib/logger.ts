@@ -134,13 +134,26 @@ if (typeof window !== 'undefined') {
         return
       }
       // Ignorar fallos de in-app browsers de terceros (ej: Instagram/Facebook WebView cerrándose o scripts de tracking)
+      // y advertencias de hidratación de React que se resuelven automáticamente con renderizado en cliente
+      const esHydrationMismatch =
+        e.message.includes('Minified React error #418') ||
+        e.message.includes('Minified React error #423') ||
+        e.message.includes('Minified React error #425') ||
+        e.message.includes('Text content does not match') ||
+        e.message.includes('Hydration failed') ||
+        e.message.includes('error while hydrating')
+
       if (
+        esHydrationMismatch ||
         e.message.includes('Java object is gone') ||
         e.message.includes('iabjs://') ||
         e.filename?.includes('iabjs://') ||
         e.message.includes('ResizeObserver loop') ||
         (e.message === 'Script error.' && !e.filename)
       ) {
+        if (esHydrationMismatch) {
+          registrarLogSistema('warn', 'Hydration Soft-Recover', e.message)
+        }
         return
       }
       registrarLogSistema('error', 'UI Crash', e.message, e.error?.stack)

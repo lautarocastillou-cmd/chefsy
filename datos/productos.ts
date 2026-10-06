@@ -130,7 +130,7 @@ export const productosCatalogo: ProductoCatalogo[] = [
     "id": "zapping-comun",
     "stock": null,
     "activo": true,
-    "nombre": "Zapping Comun",
+    "nombre": "Zapping Común",
     "precio": 10000,
     "esCombo": false,
     "categoriaId": "zapping",
@@ -270,7 +270,7 @@ export const productosCatalogo: ProductoCatalogo[] = [
     "id": "pizzas-muzzarella",
     "stock": null,
     "activo": true,
-    "nombre": "Muzzarella",
+    "nombre": "MUZZARELLA",
     "precio": 9000,
     "esCombo": false,
     "categoriaId": "pizzas",
@@ -340,7 +340,7 @@ export const productosCatalogo: ProductoCatalogo[] = [
     "id": "pizzas-argentina",
     "stock": null,
     "activo": true,
-    "nombre": "Argentina",
+    "nombre": "ARGENTINA",
     "precio": 13000,
     "esCombo": false,
     "categoriaId": "pizzas",
@@ -1159,7 +1159,7 @@ export const metadataRespaldo: Record<string, { nombre_publico: string; descripc
     "imagen_url": ""
   },
   "zapping-american": {
-    "nombre_publico": "Zapping American ",
+    "nombre_publico": "Zapping American",
     "descripcion_publica": "",
     "imagen_url": ""
   },
@@ -1209,7 +1209,7 @@ export const metadataRespaldo: Record<string, { nombre_publico: string; descripc
     "imagen_url": "https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009737/uaxhg1i98qzqfzkfn1f1.jpg | https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009737/uciuia9wtsg68pupasv8.jpg"
   },
   "prod-1779932158043-401": {
-    "nombre_publico": "Media especial",
+    "nombre_publico": "MEDIA ESPECIAL",
     "descripcion_publica": "",
     "imagen_url": "https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009780/moshvzpxe4lc6dpb809q.jpg | https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009780/pqlxyfpkruyc4wg0rkx8.jpg"
   },
