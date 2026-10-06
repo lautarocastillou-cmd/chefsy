@@ -89,7 +89,7 @@ export default function ImagenProgresiva({
           alt={alt}
           fill
           sizes={sizes}
-          priority={priority || yaVista}
+          priority={priority}
           unoptimized={isCdn}
           onLoad={() => {
             setCargada(true)
@@ -97,10 +97,8 @@ export default function ImagenProgresiva({
             onLoadSuccess?.()
           }}
           onError={() => setError(true)}
-          className={`relative z-[1] ${fitClass} ${
-            yaVista
-              ? 'opacity-100'
-              : `transition-opacity duration-300 ${cargada ? 'opacity-100' : 'opacity-0'}`
+          className={`relative z-[1] ${fitClass} transition-opacity duration-300 ${
+            cargada ? 'opacity-100' : 'opacity-0'
           } ${className}`}
         />
       )}
