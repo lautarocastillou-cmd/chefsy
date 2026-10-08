@@ -237,14 +237,14 @@ export default function PaginaDashboard() {
           
           <div className="space-y-3">
             <Button asChild variant="outline" className="group w-full h-auto justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <Link href="/cadeteria">
+              <Link href="/torre-control">
                 <div className="flex items-center gap-3.5">
                   <div className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                     <Users size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Cadetería</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Gestión de repartidores</p>
+                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Torre de Control</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Cadetería, mapa y repartos en vivo</p>
                   </div>
                 </div>
                 <ArrowUpRight size={16} className="text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />

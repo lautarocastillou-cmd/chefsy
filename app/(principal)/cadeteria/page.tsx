@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Pedido, EstadoPedido, Coordenadas } from '@/tipos'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import BadgeEstado from '@/components/pedidos/BadgeEstado'
@@ -32,6 +33,7 @@ import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 
 
 export default function PaginaCadeteria() {
+  const router = useRouter()
   const { pedidos, cambiarEstado, dbEstado, configuracionOperativa, cadetes } = usarPedidos()
   const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
   const [errorGps, setErrorGps] = useState<string | null>(null)
@@ -349,6 +351,23 @@ export default function PaginaCadeteria() {
   }
 
   const esAdmin = usuarioActivo.rol === 'admin'
+
+  // Unificación con Torre de Control (Fase 3): el admin opera desde /torre-control.
+  // Los no-admin conservan esta página (bloqueo + APK) porque la App de Cadetes
+  // la usa para el rastreo GPS en segundo plano.
+  useEffect(() => {
+    if (estaListoAuth && esAdmin) {
+      router.replace('/torre-control')
+    }
+  }, [estaListoAuth, esAdmin, router])
+
+  if (esAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-chefsy-50">
+        <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   // Acceso EXCLUSIVO para Administradores.
   // Cadetes, empleados y usuarios generales tienen el acceso web bloqueado.

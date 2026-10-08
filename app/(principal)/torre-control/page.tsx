@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown } from 'lucide-react'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown, Download } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
@@ -16,6 +16,8 @@ import { esPedidoDelivery } from '@/lib/entrega'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
 import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
+import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
+import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
 import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
@@ -104,6 +106,7 @@ export default function TorreControlPage() {
   const [pedidoParaBreadcrumb, setPedidoParaBreadcrumb] = useState<any | null>(null)
   const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
+  const [modalCompartirUbicacionAbierto, setModalCompartirUbicacionAbierto] = useState(false)
   const [vistaMobile, setVistaMobile] = useState<'mapa' | 'cadetes'>('mapa')
   const [mostrarReferenciasMobile, setMostrarReferenciasMobile] = useState(false)
 
@@ -123,6 +126,10 @@ export default function TorreControlPage() {
     return { id: c.id, nombre: c.nombre, activo: c.gps_activo, hace }
   })
   const gpsActivosCount = estadoGps.filter((e) => e.activo).length
+  // Mismo formato que /cadeteria le pasaba al informe (sin fetch extra)
+  const estadoGpsRecord: Record<string, { activo: boolean; hace: string }> = Object.fromEntries(
+    estadoGps.map((e) => [e.id, { activo: e.activo, hace: e.hace }])
+  )
 
   // Agrupar pedidos delivery activos por cadete (base para Repartos y Recorridos)
   const pedidosDeliveryActivos = pedidos.filter(
@@ -343,6 +350,23 @@ export default function TorreControlPage() {
                 <Plus size={14} />
                 <span>+ Pago Extra</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setModalCompartirUbicacionAbierto(true)}
+                className="p-2 text-sky-600 hover:text-sky-700 rounded-full hover:bg-sky-50 transition-colors"
+                title="Compartir ubicación en vivo de un cadete sin necesidad de login"
+              >
+                <Radio size={16} className="animate-pulse" />
+              </button>
+              <a
+                href="/api/cadeteria/descargar-apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+                title="Descargar última versión APK de Cadetería"
+              >
+                <Download size={16} />
+              </a>
               <button
                 onClick={fetchTorreData}
                 disabled={isRefreshing}
@@ -780,21 +804,23 @@ export default function TorreControlPage() {
         </div>
       )}
 
-      {/* ── Tab Rendimiento: se migra en la Fase 3 ── */}
+      {/* ── Tab Rendimiento: informe migrado desde /cadeteria (Fase 3) ── */}
       {tabSuperior === 'rendimiento' && (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-3xl mx-auto w-full p-1">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm p-8 text-center">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                Informe de Rendimiento
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Esta sección se migra desde /cadeteria en la Fase 3. Por ahora sigue disponible en su página original.
-              </p>
-            </div>
+          <div className="max-w-5xl mx-auto w-full space-y-4 p-1 sm:px-3">
+            <InformeRendimientoCadetes
+              pedidosEnVivo={pedidos}
+              estadoGpsCadetes={estadoGpsRecord}
+            />
           </div>
         </div>
       )}
+
+      {/* Modal Compartir Ubicación en Vivo (migrado desde /cadeteria) */}
+      <ModalCompartirUbicacion
+        abierto={modalCompartirUbicacionAbierto}
+        onClose={() => setModalCompartirUbicacionAbierto(false)}
+      />
 
       {/* Modal Organizar / Acomodar Recorrido de Cadete (migrado desde /cadeteria) */}
       {cadeteParaOrganizar && (

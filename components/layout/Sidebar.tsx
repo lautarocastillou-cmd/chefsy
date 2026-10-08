@@ -16,7 +16,7 @@ import { setCache, getCache } from '@/lib/localCache'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   LogOut, Settings,
-  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
+  LayoutDashboard, ClipboardList, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
   ChevronLeft, Radar
 } from 'lucide-react'
 
@@ -24,10 +24,10 @@ import {
 const TTL_UI_HS = 90 * 24
 
 // Ítems de navegación principal (Configuración va al pie, Tienda pública abajo aparte)
+// Cadetería se unificó dentro de Torre de Control (tabs Mapa/Repartos/GPS/Rendimiento).
 const elementosNavegacion = [
   { href: '/dashboard',     etiqueta: 'Dashboard',       icono: LayoutDashboard },
   { href: '/pedidos',       etiqueta: 'Pedidos',         icono: ClipboardList },
-  { href: '/cadeteria',     etiqueta: 'Cadetería',       icono: Bike },
   { href: '/torre-control', etiqueta: 'Torre de Control', icono: Radar },
   { href: '/cierre',        etiqueta: 'Cierre de Caja',  icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',       icono: UtensilsCrossed },
@@ -82,7 +82,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
   const elementosFiltrados = elementosNavegacion.filter((item) => {
     if (usuarioActivo?.rol !== 'admin') {
-      if (item.href === '/cadeteria' || item.href === '/dev-tools') {
+      if (item.href === '/dev-tools') {
         return false
       }
     }
