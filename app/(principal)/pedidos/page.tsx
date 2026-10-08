@@ -17,6 +17,7 @@ import { Plus, X, Calendar, LayoutGrid, List, Grid, Zap } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
+import { Button } from '@/components/ui/button'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -102,41 +103,39 @@ export default function PaginaPedidos() {
     <div className="space-y-5">
 
       {/* ── Selector de Vista (Activos vs Historial) ── */}
-      <div className="flex items-center justify-between gap-2 border-b border-gray-150 dark:border-slate-800 pb-3 flex-wrap">
-        <div className="flex gap-2">
-          <button
+      <div className="flex items-end justify-between gap-2 border-b border-gray-150 dark:border-slate-800 flex-wrap">
+        <div className="flex gap-1 self-stretch">
+          <Button
+            variant="ghost"
             onClick={() => {
               setVista('activos')
               setFiltroActivo('todos')
             }}
             className={cn(
-              "pb-2.5 px-4 font-semibold text-sm transition-all border-b-2 -mb-[13px] cursor-pointer",
+              "h-auto p-0 px-4 pt-2.5 pb-1.5 mb-[-1px] font-semibold text-sm transition-all border-b-2 rounded-none inline-flex items-center gap-1.5 leading-none",
               vista === 'activos'
-                ? "border-chefsy text-chefsy dark:text-chefsy-400"
+                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-transparent hover:bg-transparent"
                 : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
             )}
           >
-            <span className="inline-flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" /> Pedidos en Curso
-            </span>
-          </button>
-          <button
+            <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20 shrink-0" /> Pedidos en Curso
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => {
               setVista('historial')
               setFiltroActivo('todos')
               setModoVista('cuadricula') // Historial siempre en cuadricula
             }}
             className={cn(
-              "pb-2.5 px-4 font-semibold text-sm transition-all border-b-2 -mb-[13px] cursor-pointer",
+              "h-auto p-0 px-4 pt-2.5 pb-1.5 mb-[-1px] font-semibold text-sm transition-all border-b-2 rounded-none inline-flex items-center gap-1.5 leading-none",
               vista === 'historial'
-                ? "border-chefsy text-chefsy dark:text-chefsy-400"
+                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-transparent hover:bg-transparent"
                 : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
             )}
           >
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-slate-500" /> Historial del Día
-            </span>
-          </button>
+            <Calendar className="w-4 h-4 text-slate-500 shrink-0" /> Historial del Día
+          </Button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -195,17 +194,19 @@ export default function PaginaPedidos() {
                 const activo = filtroActivo === opcion.valor
 
                 return (
-                  <button
+                  <Button
                     key={opcion.valor}
+                    variant={activo ? 'default' : 'outline'}
+                    size="sm"
                     onClick={() => {
                       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
                       setFiltroActivo(opcion.valor)
                     }}
                     className={cn(
-                      'snap-start shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 active:scale-95 select-none shadow-xs',
+                      'snap-start shrink-0 rounded-xl text-xs font-black transition-all flex items-center gap-2 active:scale-95 select-none h-auto px-3.5 py-2',
                       activo
-                        ? 'bg-chefsy text-white shadow-md shadow-chefsy/20'
-                        : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 border-transparent'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850'
                     )}
                   >
                     <span>{opcion.etiqueta}</span>
@@ -219,38 +220,42 @@ export default function PaginaPedidos() {
                     >
                       {count}
                     </span>
-                  </button>
+                  </Button>
                 )
               })}
             </div>
 
             {/* Filtros de Tipo de Entrega */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none snap-x py-0.5 -mx-3 px-3 md:mx-0 md:px-0">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setFiltroEntrega('todos')}
                 className={cn(
-                  'snap-start shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 select-none',
+                  'snap-start shrink-0 rounded-lg text-[11px] font-bold transition-all active:scale-95 select-none h-auto px-2.5 py-1.5',
                   filtroEntrega === 'todos'
-                    ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs'
+                    ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs hover:bg-slate-800'
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
                 )}
               >
                 Todos los canales
-              </button>
+              </Button>
               {opcionesTipoEntrega.map((opcion) => (
-                <button
+                <Button
                   key={opcion.valor}
+                  variant="outline"
+                  size="sm"
                   onClick={() => setFiltroEntrega(opcion.valor)}
                   className={cn(
-                    'snap-start shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95 select-none',
+                    'snap-start shrink-0 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1.5 active:scale-95 select-none h-auto px-2.5 py-1.5',
                     filtroEntrega === opcion.valor
-                      ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs'
+                      ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-700 shadow-xs hover:bg-slate-800'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
                   )}
                 >
                   <IconoTipoEntrega tipo={opcion.valor} />
                   <span>{opcion.etiqueta}</span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -298,13 +303,13 @@ export default function PaginaPedidos() {
       )}
 
       {/* ── Botón Flotante para Crear Pedido (Solo Desktop/Tablet, en Móvil está en BottomNav) ── */}
-      <button
+      <Button
         onClick={handleAbrirNuevoPedido}
-        className="hidden md:flex fixed bottom-6 right-6 z-40 bg-chefsy hover:bg-chefsy-700 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-chefsy/20 items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer"
+        className="hidden md:flex fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-bold py-3 px-5 rounded-full shadow-lg shadow-emerald-600/20 items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm"
       >
         <Plus size={18} />
-        <span>+ Nuevo Pedido</span>
-      </button>
+        <span>Nuevo Pedido</span>
+      </Button>
 
       {/* ── Modal de Editar Pedido (Fullscreen en Móvil, Diálogo en Desktop) ── */}
       {pedidoAEditar && (
