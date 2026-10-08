@@ -97,6 +97,72 @@ input,
 }
 .toast-animate { animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+/* ─── Barrido de tema con View Transitions ─────────────────
+   La versión nueva se revela de arriba hacia abajo sobre la vieja:
+   cada componente se va tiñendo a medida que pasa la ola. */
+::view-transition-old(root) {
+  animation: none;
+}
+::view-transition-new(root) {
+  animation: barridoTemaVT 1.4s both;
+  will-change: clip-path;
+}
+/* Resorte real: la ola cae con gravedad y oscila 3 veces cada vez más chico
+   hasta plantarse. Cada franja muestra el tema viejo (color contrario). */
+@keyframes barridoTemaVT {
+  0%   { clip-path: inset(0 0 100% 0); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.4); }
+  40%  { clip-path: inset(0 0 0% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  55%  { clip-path: inset(0 0 8% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  68%  { clip-path: inset(0 0 1% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  80%  { clip-path: inset(0 0 4% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  90%  { clip-path: inset(0 0 0.5% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  100% { clip-path: inset(0 0 0% 0); }
+}
+
+/* Durante el barrido los componentes cambian al instante por debajo del wipe.
+   Los pseudo-elementos de la transición viven en un árbol aparte, así que
+   esta regla no afecta a la animación del wipe en sí. Se excluye el
+   tembleque del toggle, que debe vibrar durante el barrido. */
+.vt-sin-transiciones *:not(.animar-tembleque),
+.vt-sin-transiciones *::before,
+.vt-sin-transiciones *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Temblequeo de "miedo" del toggle presionado. Vive en el snapshot viejo
+   de la View Transition: empieza junto con la ola y no contamina el botón
+   que aparece en el tema nuevo. */
+::view-transition-old(theme-toggle-pressed) {
+  animation: tembleque-desaparece 1.4s ease-in-out both;
+  transform-origin: center bottom;
+}
+::view-transition-new(theme-toggle-pressed) {
+  animation: none;
+}
+@keyframes tembleque {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  15%  { transform: translate(-2px, 1px) rotate(-10deg); }
+  30%  { transform: translate(2px, 2px) rotate(8deg); }
+  45%  { transform: translate(-2px, 2px) rotate(-6deg); }
+  60%  { transform: translate(2px, 3px) rotate(5deg); }
+  75%  { transform: translate(-1px, 3px) rotate(-3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* El snapshot viejo debe salir de escena: si solo temblara, quedaría
+   dibujado encima del botón nuevo durante el resto de la transición. */
+@keyframes tembleque-desaparece {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  12%  { opacity: 1; transform: translate(-2px, 1px) rotate(-10deg); }
+  24%  { opacity: 1; transform: translate(2px, 2px) rotate(8deg); }
+  36%  { opacity: 1; transform: translate(-2px, 2px) rotate(-6deg); }
+  48%  { opacity: 1; transform: translate(2px, 3px) rotate(5deg); }
+  62%  { opacity: 0.9; transform: translate(-1px, 3px) rotate(-3deg); }
+  78%  { opacity: 0.35; transform: translate(0, 4px) rotate(0deg); }
+  100% { opacity: 0; transform: translate(0, 7px) rotate(0deg); }
+}
+
 /* ─── Toasts en modo oscuro ────────────────────────── */
 .dark .toast-animate {
   background-color: var(--dk-surface) !important;

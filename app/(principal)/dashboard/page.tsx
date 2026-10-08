@@ -8,7 +8,6 @@
 import { useState } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import dynamic from 'next/dynamic'
-import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import TarjetaPedidoErrorBoundary from '@/components/pedidos/TarjetaPedidoErrorBoundary'
 import Link from 'next/link'
@@ -17,13 +16,10 @@ import {
   Clock, 
   Clock3, 
   ChefHat, 
-  CheckCircle2, 
-  Users, 
-  Plus, 
+  CheckCircle2,
+  Plus,
   X, 
-  DollarSign, 
-  Activity, 
-  Zap, 
+  DollarSign,
   Calendar, 
   ArrowUpRight, 
   PlusCircle, 
@@ -133,58 +129,83 @@ export default function PaginaDashboard() {
       </div>
 
 
-      {/* ── Métricas ── */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Activity size={18} className="text-emerald-600 dark:text-emerald-400" />
-            <span>Métricas del Servicio</span>
-          </h2>
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Tiempo real</span>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          <TarjetaMetrica
-            etiqueta="Pedidos Activos"
-            valor={activos}
-            descripcion="Pendientes de entregar"
-            variante="azul"
-            icon={Clock}
-          />
-          <TarjetaMetrica
-            etiqueta="En Cocina"
-            valor={enCocina}
-            descripcion="Órdenes en preparación"
-            variante="naranja"
-            icon={ChefHat}
-          />
-          <TarjetaMetrica
-            etiqueta="Completados Hoy"
-            valor={completadosHoy}
-            descripcion="Entregas totales hoy"
-            variante="verde"
-            icon={CheckCircle2}
-          />
-          <TarjetaMetrica
-            etiqueta="Envíos y Viajes"
-            valor={formatearPrecio(totalEnvios)}
-            descripcion={`${totalViajes} ${totalViajes === 1 ? 'viaje' : 'viajes'} de delivery hoy`}
-            variante="neutro"
-            icon={DollarSign}
-          >
-            <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-              <select
-                value={cadeteFiltro}
-                onChange={(e) => setCadeteFiltro(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 px-2.5 rounded-xl text-[11px] font-bold outline-none cursor-pointer transition-colors"
-              >
-                <option value="todos">Todos los cadetes</option>
-                {cadetes.map(c => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
+      {/* ── Estado operativo ── */}
+      <section>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[240px_1px_1fr] lg:items-center">
+            {/* Izquierda: ahora mismo */}
+            <div className="space-y-2.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums leading-none">
+                  {activos}
+                </span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+                  pedido{activos === 1 ? '' : 's'} en curso
+                </span>
+              </div>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {enCocina} en cocina · {completadosHoy} cerrados hoy
+              </p>
+              {/* avance del día */}
+              <div className="space-y-1.5 pt-1">
+                <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
+                    style={{
+                      width: `${pedidosHoy.length === 0 ? 0 : Math.round((completadosHoy / pedidosHoy.length) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                  {pedidosHoy.length === 0
+                    ? 'Sin movimiento todavía hoy'
+                    : `${completadosHoy} de ${pedidosHoy.length} cerrados`}
+                </p>
+              </div>
             </div>
-          </TarjetaMetrica>
+
+            {/* divisor */}
+            <div className="hidden lg:block w-px self-stretch bg-slate-200 dark:bg-slate-800" />
+
+            {/* Derecha: desglose */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-0 sm:divide-x divide-slate-200 dark:divide-slate-800">
+              <div className="flex sm:px-5 sm:first:pl-0 items-start gap-2.5">
+                <ChefHat size={17} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white leading-none">{enCocina}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1.5">En cocina</p>
+                </div>
+              </div>
+
+              <div className="flex sm:px-5 items-start gap-2.5">
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white leading-none">{completadosHoy}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1.5">Completados hoy</p>
+                </div>
+              </div>
+
+              <div className="flex sm:px-5 sm:last:pr-0 items-start gap-2.5">
+                <DollarSign size={17} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white leading-none">{formatearPrecio(totalEnvios)}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+                    {totalViajes} viaje{totalViajes === 1 ? '' : 's'} hoy
+                  </p>
+                  <select
+                    value={cadeteFiltro}
+                    onChange={(e) => setCadeteFiltro(e.target.value)}
+                    className="mt-1 w-full bg-transparent text-[11px] font-semibold text-slate-400 dark:text-slate-500 outline-none cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                  >
+                    <option value="todos">Todos los cadetes</option>
+                    {cadetes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -228,46 +249,9 @@ export default function PaginaDashboard() {
           )}
         </section>
 
-        {/* ── Acceso rápido lateral ── */}
+        {/* ── Herramientas laterales ── */}
         <section className="space-y-4">
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Zap size={18} className="text-amber-500" />
-            <span>Atajos Directos</span>
-          </h2>
-          
           <div className="space-y-3">
-            <Button asChild variant="outline" className="group w-full h-auto justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <Link href="/torre-control">
-                <div className="flex items-center gap-3.5">
-                  <div className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                    <Users size={20} />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Torre de Control</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Cadetería, mapa y repartos en vivo</p>
-                  </div>
-                </div>
-                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </Link>
-            </Button>
-            
-            <Button asChild variant="outline" className="group w-full h-auto justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 hover:border-sky-300 dark:hover:border-sky-800 hover:bg-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <Link href="/pedidos">
-                <div className="flex items-center gap-3.5">
-                  <div className="bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 p-3 rounded-2xl text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
-                    <Clock size={20} />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Historial</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Todos los pedidos y filtros</p>
-                  </div>
-                </div>
-                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="pt-2 space-y-3">
             <GeneradorQrCadete />
             <ImpresorTicketsPromocionales botonVariante="sidebar" />
           </div>

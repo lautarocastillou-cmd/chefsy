@@ -95,7 +95,8 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   return (
     <aside
       className={cn(
-        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,height] motion-reduce:transition-none",
+        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+        esDock && "delay-[1000ms]",
         isMobile
           ? "bg-white dark:bg-slate-900 border-r border-slate-200/70 dark:border-slate-800 flex flex-col h-full w-full"
           : "m-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg flex flex-col items-center",
@@ -128,20 +129,20 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
       {/* Marca: logo + indicador de estado Supabase */}
       <div className={cn(
-        "w-full transition-all duration-300 flex flex-col items-center gap-2 pb-2.5",
+        "w-full transition-[padding,border-color] duration-300 flex flex-col items-center gap-2 pb-2.5",
         !esDock && "border-b border-slate-200/70 dark:border-slate-800"
       )}>
         <img
           src="/logo.jpg"
           alt="Chefsy Logo"
           className={cn(
-            "object-contain bg-white shadow-md rounded-xl transition-all duration-300",
+            "object-contain bg-white shadow-md rounded-xl transition-[width,height,padding,border-color] duration-300",
             esDock ? "w-9 h-9 p-0.5" : "w-16 h-16 sm:w-20 sm:h-20 p-1 border border-slate-200/70 dark:border-slate-700"
           )}
         />
         {/* Indicador de estado Supabase */}
         <div className={cn(
-          "flex items-center justify-center rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
+          "flex items-center justify-center rounded-full text-[9px] font-black tracking-wider select-none border transition-[width,padding,gap,background-color,border-color] duration-300",
           esDock ? "w-6 h-6 p-0" : "px-2.5 py-0.5 gap-1.5",
           dbEstado === 'conectado'
             ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/40"
@@ -169,19 +170,19 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
       {/* Navegación (con contención de layout: el recálculo de la animación no se propaga afuera) */}
       <nav className={cn(
-        "flex-1 w-full flex flex-col overflow-x-hidden overflow-y-auto transition-all duration-300 [contain:layout_style] motion-reduce:transition-none",
-        esDock ? "gap-1.5 py-1 items-center" : "gap-1 py-2 px-0.5"
+        "flex-1 w-full flex flex-col items-center overflow-x-hidden overflow-y-auto transition-[padding,gap] duration-300 [contain:layout_style] motion-reduce:transition-none",
+        esDock ? "gap-1.5 py-1" : "gap-1 py-2 px-0.5"
       )}>
         {/* Espaciador superior: centra el grupo en dock y colapsa al expandir,
             haciendo que los ítems deslicen hacia arriba con animación */}
         <div
           aria-hidden
           className={cn(
-            "w-full overflow-hidden transition-[flex-grow,height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-            esDock ? "flex-1" : "flex-none h-0"
+            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            esDock ? "flex-1 delay-[1000ms]" : "flex-none h-0"
           )}
         />
-        {elementosFiltrados.map((item) => {
+        {elementosFiltrados.map((item, idx) => {
           const estaActivo = rutaActual === item.href
           const Icono = item.icono
 
@@ -191,10 +192,11 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
               href={item.href}
               onClick={() => onCloseMobile?.()}
               className={cn(
-                "flex items-center rounded-xl font-medium transition-[width,padding,gap,background-color,border-color] duration-500 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
+                "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color,border-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
                 esDock
-                  ? "w-11 h-11 items-center justify-center shrink-0 p-0"
-                  : "w-full items-center px-3 py-2.5 gap-3",
+                  ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms]"
+                  : "w-full items-center h-11 px-3 gap-3",
+                "justify-start",
                 estaActivo
                   ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/50 shadow-sm font-semibold"
                   : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100"
@@ -208,13 +210,18 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
                 )}
               />
 
-              {/* Etiqueta animada con fade y slide (con delay al expandir) */}
+              {/* Etiqueta con cascada: al expandir aparece de arriba hacia abajo
+                  con delay; al contraer se desvanece rápido de abajo hacia arriba
+                  mientras las cajas se acomodan al centro */}
               <span
+                style={{
+                  transitionDelay: `${120 + idx * 50}ms`,
+                }}
                 className={cn(
-                  "tracking-tight whitespace-nowrap transition-[max-width,opacity,transform] duration-500 overflow-hidden motion-reduce:transition-none",
+                  "tracking-tight whitespace-nowrap transition-[max-width,opacity,transform] overflow-hidden motion-reduce:transition-none",
                   esDock
-                    ? "max-w-0 opacity-0 -translate-x-4 pointer-events-none"
-                    : "max-w-[140px] opacity-100 translate-x-0 delay-200"
+                    ? "max-w-0 opacity-0 -translate-x-4 pointer-events-none duration-600"
+                    : "max-w-[140px] opacity-100 translate-x-0 duration-600"
                 )}
               >
                 {item.etiqueta}
@@ -233,15 +240,15 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         <div
           aria-hidden
           className={cn(
-            "w-full overflow-hidden transition-[flex-grow,height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-            esDock ? "flex-1" : "flex-none h-0"
+            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            esDock ? "flex-1 delay-[1000ms]" : "flex-none h-0"
           )}
         />
       </nav>
 
       {/* Separador fino sobre el pie */}
       <div className={cn(
-        "h-[1px] bg-slate-200/70 dark:bg-slate-800 transition-all duration-300 my-1 shrink-0",
+        "h-[1px] bg-slate-200/70 dark:bg-slate-800 transition-[width] duration-300 my-1 shrink-0",
         esDock ? "w-8" : "w-full"
       )} />
 
@@ -253,11 +260,12 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         title="Ver la tienda online como la ve el cliente"
         onClick={() => onCloseMobile?.()}
         className={cn(
-          "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs shrink-0",
+          "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs shrink-0 motion-reduce:transition-none",
           "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
           esDock
-            ? "w-11 h-11 items-center justify-center self-center"
-            : "w-full items-center px-3 py-2.5 gap-3"
+            ? "w-11 h-11 items-center self-center px-[13px] delay-[1000ms]"
+            : "w-full items-center h-11 px-3 gap-3",
+          "justify-start"
         )}
       >
         <Store
@@ -282,10 +290,10 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
       </a>
 
       {/* Pie del Sidebar */}
-      <div className="w-full transition-all duration-300 flex flex-col shrink-0 items-center">
+      <div className="w-full flex flex-col shrink-0 items-center">
         {/* Fecha y Hora en tiempo real con transición de altura sin unmount */}
         <div className={cn(
-          "flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium px-2 tracking-tight transition-all duration-300 overflow-hidden whitespace-nowrap w-full",
+          "flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium px-2 tracking-tight transition-[max-height,opacity,margin,padding,transform] duration-300 overflow-hidden whitespace-nowrap w-full",
           esDock
             ? "max-h-0 opacity-0 my-0 py-0 pointer-events-none -translate-y-1"
             : "max-h-8 opacity-100 my-1 py-1 translate-y-0"
@@ -305,10 +313,11 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
             onClick={() => onCloseMobile?.()}
             title={esDock ? undefined : "Configuración"}
             className={cn(
-              "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs overflow-hidden",
+              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
               esDock
-                ? "w-11 h-11 items-center justify-center shrink-0 p-0 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60"
-                : "w-full items-center px-3 py-2 gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
+                ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                : "w-full items-center h-11 px-3 gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
+              "justify-start",
               rutaActual === '/configuracion' && "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
             )}
           >
@@ -334,10 +343,11 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
               onCloseMobile?.()
             }}
             className={cn(
-              "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs overflow-hidden",
+              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
               esDock
-                ? "w-11 h-11 items-center justify-center shrink-0 p-0 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
-                : "w-full items-center px-3 py-2 gap-3 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
+                ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms] text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                : "w-full items-center h-11 px-3 gap-3 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400",
+              "justify-start"
             )}
             title={esDock ? undefined : "Cerrar sesión"}
           >
