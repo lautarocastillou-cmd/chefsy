@@ -110,6 +110,12 @@ El grupo `app/(principal)` contiene las rutas protegidas por `proxy.ts`:
 
 `/dev-tools` es una herramienta de diagnóstico administrativa. `/maptest` contiene vistas experimentales y no forma parte del flujo operativo principal.
 
+### Torre de Control: renderer de mapas
+
+La Torre de Control continúa usando Leaflet por defecto. Para probar el renderer experimental MapLibre con una sesión administrativa, abrir `/torre-control?mapa=maplibre`. Si MapLibre encuentra un error fatal al iniciar, la vista vuelve automáticamente a Leaflet. No se debe quitar este fallback ni cambiar el renderer predeterminado hasta completar pruebas operativas y visuales con autenticación válida.
+
+El modo experimental comparte los datos y la selección de cadetes de la Torre de Control. Incluye marcadores de cadetes y destinos, rutas, telemetría y controles de cámara. Requiere conectividad para cargar el estilo y los tiles del proveedor configurado; incidencias de red de tiles por sí solas no activan el fallback. Ante un fallo, revisar primero la consola del navegador y las solicitudes del estilo/worker antes de considerar el cambio de motor.
+
 ### Tienda y tracking
 
 - `/` y `/tienda`: tienda pública.

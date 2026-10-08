@@ -1,0 +1,1099 @@
+'use client'
+
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import {
+  UBICACION_LOCAL,
+  calcularDistanciaKm,
+  esEnlaceOCoordenadas,
+  CARTO_VOYAGER_URL,
+  CARTO_ATTRIBUTION,
+  obtenerRutaMultiParada,
+  obtenerRutaConduccion,
+  encontrarIndiceMasCercano,
+  Coordenadas
+} from '@/lib/ubicacion'
+import { formatearPrecio } from '@/lib/utils'
+import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
+import { Compass, Bike, Store, Maximize2, Layers, Gauge, Zap, ChevronDown, ChevronUp, Activity, Navigation } from 'lucide-react'
+import 'leaflet/dist/leaflet.css'
+
+// Coordenadas del local Chefsy
+const LOCAL_LAT = UBICACION_LOCAL.latitud
+const LOCAL_LNG = UBICACION_LOCAL.longitud
+
+export interface CadeteData {
+  id: string
+  nombre: string
+  lat: number | null
+  lng: number | null
+  speed?: number | null
+  heading?: number | null
+  gps_activo: boolean
+  bateria?: number | null
+  updated_at: string | null
+  segundos_offline?: number | null
+  pedidoActivo?: {
+    id: string
+    cliente: string
+    direccion?: string | null
+    coordenadas?: { latitud: number; longitud: number } | null
+    estado: string
+    total?: number | null
+    parada_num?: number
+  } | null
+  pedidosActivos?: Array<{
+    id: string
+    cliente: string
+    direccion?: string | null
+    coordenadas?: { latitud: number; longitud: number } | null
+    estado: string
+    total?: number | null
+    parada_num?: number
+    orden_entrega?: number | null
+  }>
+}
+
+export interface MapaGlobalProps {
+  cadetes: CadeteData[]
+  focusedId?: string | null
+  onSelectCadete?: (id: string) => void
+}
+
+// Helper: Calcular Ã¡ngulo de rumbo geogrÃ¡fico (0Â° a 360Â°)
+function calcularRumbo(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const toDeg = (rad: number) => (rad * 180) / Math.PI
+  const dLng = toRad(lon2 - lon1)
+  const phi1 = toRad(lat1)
+  const phi2 = toRad(lat2)
+  const y = Math.sin(dLng) * Math.cos(phi2)
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLng)
+  const brng = toDeg(Math.atan2(y, x))
+  return (brng + 360) % 360
+}
+
+// Helper: Camino angular mÃ¡s corto (-180Â° a +180Â°)
+function calcularRumboMasCorto(inicio: number, destino: number): number {
+  return ((destino - inicio + 540) % 360) - 180
+}
+
+// Helper: Curva de aceleraciÃ³n sinusoidal
+function easeInOutSine(x: number): number {
+  return -(Math.cos(Math.PI * x) - 1) / 2
+}
+
+interface CadeteAnimState {
+  latActual: number
+  lngActual: number
+  rumboActual: number
+  latInicio: number
+  lngInicio: number
+  rumboInicio: number
+  latDestino: number
+  lngDestino: number
+  rumboDestino: number
+  startTime: number
+  duracion: number
+  terminado?: boolean
+}
+
+export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaGlobalProps) {
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const markersRef = useRef<{
+    local?: any
+    cadetes: Record<string, any>
+    clientes: Record<string, any>
+    rutasBase: Record<string, any>
+    rutasDash: Record<string, any>
+  }>({ cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} })
+
+  // â”€â”€ Referencias del Motor de InterpolaciÃ³n Multi-Cadete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const animStatesRef = useRef<Record<string, CadeteAnimState>>({})
+  const ultimosUpdatesRef = useRef<Record<string, number>>({})
+  const animFrameRef = useRef<number | null>(null)
+  const ultimoRenderCadetesRef = useRef<Record<string, number>>({})
+  const rutasGeometriaRef = useRef<Record<string, [number, number][]>>({})
+  const rutasFirmaRef = useRef<Record<string, string>>({})
+  const indicesRutaRef = useRef<Record<string, number>>({})
+  const abortControllersRef = useRef<Record<string, AbortController>>({})
+  const estaVisibleRef = useRef<boolean>(true)
+  const cadetesDataRef = useRef<CadeteData[]>([])
+  const focusedIdRef = useRef<string | null | undefined>(focusedId)
+  const [modoCamara, setModoCamara] = useState<'todo' | 'cadete' | 'manual'>('todo')
+  const modoCamaraRef = useRef<'todo' | 'cadete' | 'manual'>('todo')
+  const [mostrarPanelVelocidad, setMostrarPanelVelocidad] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setMostrarPanelVelocidad(true)
+    }
+  }, [])
+
+  const cadetesActivosConGps = useMemo(() => {
+    return cadetes.filter((c) => c.gps_activo && c.lat != null && c.lng != null)
+  }, [cadetes])
+
+  useEffect(() => {
+    cadetesDataRef.current = cadetes
+  }, [cadetes])
+
+  useEffect(() => {
+    focusedIdRef.current = focusedId
+    if (focusedId) {
+      setModoCamara('cadete')
+    }
+  }, [focusedId])
+
+  useEffect(() => {
+    modoCamaraRef.current = modoCamara
+  }, [modoCamara])
+
+  // Helper ultra optimizado para rotar elementos del marcador con cachÃ© directa en el nodo
+  const aplicarRotacionCadete = useCallback((cadeteId: string, rumbo: number) => {
+    const marker = markersRef.current.cadetes[cadeteId]
+    if (!marker) return
+    const el = marker.getElement()
+    if (!el) return
+
+    let cached = (el as any)._rotCache
+    if (!cached) {
+      cached = {
+        arrow: el.querySelector('.cadete-direction-arrow') as HTMLElement | null,
+        cone: el.querySelector('.cadete-headlight-cone') as HTMLElement | null,
+        moto: el.querySelector('.cadete-moto-flip') as HTMLElement | null,
+      }
+      ;(el as any)._rotCache = cached
+    }
+
+    // 1. Rotar faro delantero y flecha direccional en 360Â°
+    if (cached.arrow) {
+      cached.arrow.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
+    }
+    if (cached.cone) {
+      cached.cone.style.transform = `rotate(${rumbo}deg)`
+    }
+
+    // 2. Espejar la moto horizontalmente si va al Oeste
+    if (cached.moto) {
+      const esOeste = rumbo > 180 && rumbo < 360
+      cached.moto.style.transform = esOeste ? 'scaleX(-1)' : 'scaleX(1)'
+    }
+  }, [])
+
+  // â”€â”€ 1. Inicializar Mapa Leaflet (1 sola vez al montar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mapContainerRef.current || mapInstanceRef.current) return
+
+    const L = require('leaflet')
+
+    if ((mapContainerRef.current as any)._leaflet_id) {
+      delete (mapContainerRef.current as any)._leaflet_id
+    }
+
+    const map = L.map(mapContainerRef.current, {
+      center: [LOCAL_LAT, LOCAL_LNG],
+      zoom: 14,
+      zoomControl: false,
+      attributionControl: false,
+    })
+
+    // Capa HD (Google Maps con mÃ¡xima compatibilidad y carga inmediata)
+    L.tileLayer(CARTO_VOYAGER_URL, {
+      attribution: CARTO_ATTRIBUTION,
+      maxZoom: 20,
+    }).addTo(map)
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map)
+
+    map.on('dragstart', () => {
+      setModoCamara('manual')
+    })
+
+    mapInstanceRef.current = map
+
+    // Marcador del Local Chefsy
+    const localIcon = L.divIcon({
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+          <div style="width:40px;height:40px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(42,99,72,0.45);display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+          </div>
+          <div style="margin-top:2px;background:#2A6348;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.25);white-space:nowrap;border:1px solid #ffffff;">
+            Local Chefsy
+          </div>
+        </div>
+      `,
+      className: 'custom-local-icon',
+      iconSize: [80, 56],
+      iconAnchor: [40, 20],
+      popupAnchor: [0, -22],
+    })
+
+    markersRef.current.local = L.marker([LOCAL_LAT, LOCAL_LNG], { icon: localIcon, zIndexOffset: 500 })
+      .addTo(map)
+      .bindPopup(`
+        <div style="text-align:center;padding:4px;font-family:sans-serif;">
+          <b style="font-size:14px;color:#2A6348;">Local Chefsy</b>
+          <p style="margin:4px 0 0;font-size:11px;color:#64748b;">Punto de partida y cocina central</p>
+        </div>
+      `)
+
+    let resizeObserver: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize({ pan: false })
+      })
+      resizeObserver.observe(mapContainerRef.current)
+    }
+
+    const t1 = setTimeout(() => map.invalidateSize(), 100)
+    const t2 = setTimeout(() => map.invalidateSize(), 400)
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+      if (resizeObserver) resizeObserver.disconnect()
+      Object.values(abortControllersRef.current).forEach((ctrl) => ctrl.abort())
+      abortControllersRef.current = {}
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
+      markersRef.current = { cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} }
+      rutasGeometriaRef.current = {}
+      rutasFirmaRef.current = {}
+      indicesRutaRef.current = {}
+      animStatesRef.current = {}
+      ultimosUpdatesRef.current = {}
+      ultimoRenderCadetesRef.current = {}
+    }
+  }, [])
+
+
+  // â”€â”€ 2. Bucle Global de AnimaciÃ³n a 60 FPS (Gliding Multi-Cadete Optimizado) â”€â”€
+  useEffect(() => {
+    const loopAnimacion = (timestamp: number) => {
+      if (!estaVisibleRef.current) return
+
+      const states = animStatesRef.current
+      const cadetesList = cadetesDataRef.current
+      const focused = focusedIdRef.current
+      const map = mapInstanceRef.current
+
+      const ids = Object.keys(states)
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        const s = states[id]
+        const marker = markersRef.current.cadetes[id]
+        if (!s || !marker) continue
+
+        // Si ya completÃ³ la interpolaciÃ³n, no recalcular ni mutar el DOM innecesariamente
+        if (s.terminado) continue
+
+        const tiempoPasado = timestamp - s.startTime
+        const progresoCrudo = Math.min(tiempoPasado / s.duracion, 1)
+        const progreso = easeInOutSine(progresoCrudo)
+
+        // 1. Coordenadas interpoladas
+        const lat = s.latInicio + (s.latDestino - s.latInicio) * progreso
+        const lng = s.lngInicio + (s.lngDestino - s.lngInicio) * progreso
+
+        // 2. Rumbo interpolado
+        const deltaRumbo = calcularRumboMasCorto(s.rumboInicio, s.rumboDestino)
+        const rumbo = (s.rumboInicio + deltaRumbo * progreso + 360) % 360
+
+        s.latActual = lat
+        s.lngActual = lng
+        s.rumboActual = rumbo
+
+        // Mover marcador
+        marker.setLatLng([lat, lng])
+
+        // Rotar faro y moto
+        aplicarRotacionCadete(id, rumbo)
+
+        // 3. Acortar polilÃ­nea de entrega en tiempo real si tiene pedidos activos (con throttle por cadete)
+        const ultimoRender = ultimoRenderCadetesRef.current[id] || 0
+        if (timestamp - ultimoRender > 100) {
+          ultimoRenderCadetesRef.current[id] = timestamp
+          const cadeteInfo = cadetesList.find((c) => c.id === id)
+          const listaPedidos = (cadeteInfo?.pedidosActivos && cadeteInfo.pedidosActivos.length > 0)
+            ? cadeteInfo.pedidosActivos
+            : (cadeteInfo?.pedidoActivo ? [cadeteInfo.pedidoActivo] : [])
+
+          const paradasValidas = listaPedidos.filter(
+            (p) => p.coordenadas && p.coordenadas.latitud != null && p.coordenadas.longitud != null
+          )
+          const rutaKey = `ruta_${id}`
+
+          if (paradasValidas.length > 0) {
+            const geom = rutasGeometriaRef.current[id]
+            let puntosRuta: [number, number][]
+
+            if (geom && geom.length > 1) {
+              const ultimoIdx = indicesRutaRef.current[id] || 0
+              const nuevoIdx = encontrarIndiceMasCercano([lat, lng], geom, ultimoIdx)
+              indicesRutaRef.current[id] = nuevoIdx
+              const resto = geom.slice(nuevoIdx + 1)
+              puntosRuta = resto.length > 0
+                ? [[lat, lng], ...resto]
+                : [[lat, lng], geom[geom.length - 1]]
+            } else {
+              puntosRuta = [
+                [lat, lng],
+                ...paradasValidas.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
+              ]
+            }
+
+            if (markersRef.current.rutasBase[rutaKey]) {
+              markersRef.current.rutasBase[rutaKey].setLatLngs(puntosRuta)
+            }
+            if (markersRef.current.rutasDash[rutaKey]) {
+              markersRef.current.rutasDash[rutaKey].setLatLngs(puntosRuta)
+            }
+          }
+        }
+
+        // 4. Si es el cadete enfocado y la cÃ¡mara estÃ¡ en modo cadete, acompaÃ±ar suavemente
+        if (focused === id && modoCamaraRef.current === 'cadete' && map) {
+          map.panTo([lat, lng], { animate: false })
+        }
+
+        if (progresoCrudo >= 1) {
+          s.terminado = true
+        }
+      }
+
+      if (estaVisibleRef.current) {
+        animFrameRef.current = requestAnimationFrame(loopAnimacion)
+      }
+    }
+
+    const handleVisibilidad = () => {
+      const visible = !document.hidden
+      estaVisibleRef.current = visible
+      if (!visible) {
+        // Pausar animaciÃ³n y cancelar requests OSRM en vuelo para liberar 100% de CPU y red
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current)
+          animFrameRef.current = null
+        }
+        Object.values(abortControllersRef.current).forEach((ctrl) => ctrl.abort())
+        abortControllersRef.current = {}
+      } else {
+        // Reanudar timestamps para evitar saltos temporales bruscos
+        const ahora = performance.now()
+        Object.values(animStatesRef.current).forEach((s) => {
+          s.startTime = ahora
+        })
+        if (!animFrameRef.current) {
+          animFrameRef.current = requestAnimationFrame(loopAnimacion)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilidad)
+
+    if (estaVisibleRef.current) {
+      animFrameRef.current = requestAnimationFrame(loopAnimacion)
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilidad)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+    }
+  }, [aplicarRotacionCadete])
+
+  // â”€â”€ 3. SincronizaciÃ³n de Marcadores, Destinos y Rutas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+    const L = require('leaflet')
+    const map = mapInstanceRef.current
+    const ahora = performance.now()
+
+    const cadetesConUbicacion = cadetes.filter((c) => c.lat != null && c.lng != null && c.gps_activo)
+    const currentCadeteIds = new Set(cadetesConUbicacion.map((c) => c.id))
+
+    // Limpiar marcadores de cadetes que ya no estÃ¡n activos
+    Object.keys(markersRef.current.cadetes).forEach((id) => {
+      if (!currentCadeteIds.has(id)) {
+        markersRef.current.cadetes[id].remove()
+        delete markersRef.current.cadetes[id]
+        delete animStatesRef.current[id]
+        delete ultimosUpdatesRef.current[id]
+        delete ultimoRenderCadetesRef.current[id]
+
+        if (abortControllersRef.current[id]) {
+          abortControllersRef.current[id].abort()
+          delete abortControllersRef.current[id]
+        }
+        delete rutasGeometriaRef.current[id]
+        delete rutasFirmaRef.current[id]
+        delete indicesRutaRef.current[id]
+
+        const rutaKey = `ruta_${id}`
+        if (markersRef.current.rutasBase[rutaKey]) {
+          markersRef.current.rutasBase[rutaKey].remove()
+          delete markersRef.current.rutasBase[rutaKey]
+        }
+        if (markersRef.current.rutasDash[rutaKey]) {
+          markersRef.current.rutasDash[rutaKey].remove()
+          delete markersRef.current.rutasDash[rutaKey]
+        }
+      }
+    })
+
+    const activeClientOrderIds = new Set<string>()
+
+    cadetes.forEach((cadete) => {
+      const tieneGps = cadete.lat != null && cadete.lng != null && cadete.gps_activo
+      if (!tieneGps || cadete.lat == null || cadete.lng == null) return
+
+      const targetLat = cadete.lat
+      const targetLng = cadete.lng
+      const listaPedidos = (cadete.pedidosActivos && cadete.pedidosActivos.length > 0)
+        ? cadete.pedidosActivos
+        : (cadete.pedidoActivo ? [cadete.pedidoActivo] : [])
+      const esEnViaje = listaPedidos.length > 0
+
+      const colorBg = esEnViaje ? '#E11D48' : '#10B981'
+      const sombraColor = esEnViaje ? 'rgba(225,29,72,0.5)' : 'rgba(16,185,129,0.5)'
+
+      // Medir lapso entre updates para suavizado dinÃ¡mico
+      const ultimoT = ultimosUpdatesRef.current[cadete.id] || 0
+      const lapsoReal = ultimoT > 0 ? ahora - ultimoT : 4000
+      ultimosUpdatesRef.current[cadete.id] = ahora
+      const duracionAnim = Math.min(Math.max(lapsoReal * 1.05, 2500), 6000)
+
+      // Inicializar o actualizar estado de animaciÃ³n del cadete
+      const estadoActual = animStatesRef.current[cadete.id]
+      if (!estadoActual) {
+        animStatesRef.current[cadete.id] = {
+          latActual: targetLat,
+          lngActual: targetLng,
+          rumboActual: 0,
+          latInicio: targetLat,
+          lngInicio: targetLng,
+          rumboInicio: 0,
+          latDestino: targetLat,
+          lngDestino: targetLng,
+          rumboDestino: 0,
+          startTime: ahora,
+          duracion: duracionAnim,
+          terminado: true,
+        }
+      } else {
+        const distDelta = Math.sqrt(
+          Math.pow(targetLat - estadoActual.latActual, 2) +
+          Math.pow(targetLng - estadoActual.lngActual, 2)
+        )
+        if (distDelta > 0.00001) {
+          const targetHeading = Math.round(
+            calcularRumbo(estadoActual.latActual, estadoActual.lngActual, targetLat, targetLng)
+          )
+          estadoActual.latInicio = estadoActual.latActual
+          estadoActual.lngInicio = estadoActual.lngActual
+          estadoActual.rumboInicio = estadoActual.rumboActual
+          estadoActual.latDestino = targetLat
+          estadoActual.lngDestino = targetLng
+          estadoActual.rumboDestino = targetHeading
+          estadoActual.startTime = ahora
+          estadoActual.duracion = duracionAnim
+          estadoActual.terminado = false
+        }
+      }
+
+      const rumbo = animStatesRef.current[cadete.id]?.rumboActual || 0
+      const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
+      const esEnMovimiento = velKmH >= 4
+
+      let velBadgeBg = '#334155'
+      let velBadgeColor = '#94a3b8'
+      if (esEnMovimiento) {
+        if (velKmH > 60) {
+          velBadgeBg = '#dc2626'
+          velBadgeColor = '#ffffff'
+        } else if (velKmH > 40) {
+          velBadgeBg = '#d97706'
+          velBadgeColor = '#ffffff'
+        } else {
+          velBadgeBg = '#10b981'
+          velBadgeColor = '#ffffff'
+        }
+      }
+
+      const batBadge =
+        cadete.bateria != null
+          ? `<div style="position:absolute;top:-4px;right:-10px;background:${
+              cadete.bateria > 20 ? '#10B981' : '#EF4444'
+            };color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.25);z-index:25;">${Math.round(
+              cadete.bateria
+            )}%</div>`
+          : ''
+
+      const esOeste = rumbo > 180 && rumbo < 360
+
+      // A) Marcador del Cadete con Haz de Luz 360Â°, Moto que nunca se da vuelta y Nombre nÃ­tido
+      const cadeteHtml = `
+        <div class="cadete-marker-outer" style="position:relative; width:64px; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none;">
+          <!-- Contenedor del vehÃ­culo y faro de 44px -->
+          <div style="position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
+            <!-- Haz de luz delantero que apunta en 360Â° -->
+            <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>
+            <!-- Onda de radar -->
+            <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
+            <!-- Badge circular de la moto (siempre derecho, ruedas al suelo) -->
+            <div class="cadete-moto-badge" style="position:relative; width:44px; height:44px; background:${colorBg}; border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
+              <span class="cadete-moto-flip" style="display:flex; align-items:center; justify-content:center; transition:transform 0.15s ease-out; transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+              </span>
+            </div>
+            <!-- Flecha direccional en 360Â° -->
+            <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumbo}deg) translateY(-25px); font-size:12px; color:${colorBg}; font-weight:900; text-shadow:0 1px 3px #fff;">
+              â–²
+            </div>
+            <!-- Badge de baterÃ­a siempre derecho y legible -->
+            ${batBadge}
+          </div>
+
+          <!-- Etiqueta de Nombre del Cadete y Velocidad en Tiempo Real -->
+          <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:2px;">
+            <div style="background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
+              ${cadete.nombre}
+            </div>
+            <div style="background:${velBadgeBg}; color:${velBadgeColor}; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:9999px; box-shadow:0 2px 5px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.85); display:flex; align-items:center; gap:2px; letter-spacing:0.2px; z-index:21;">
+              <span>${velKmH} km/h</span>
+            </div>
+          </div>
+        </div>
+      `
+
+      const cadeteIcon = L.divIcon({
+        html: cadeteHtml,
+        className: 'custom-cadete-animated-marker',
+        iconSize: [120, 96],
+        iconAnchor: [60, 22],
+        popupAnchor: [0, -25],
+      })
+
+      const popupContent = `
+        <div style="min-width:190px;padding:4px;font-family:sans-serif;">
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:6px;">
+            <b style="font-size:14px;color:#0f172a;">${cadete.nombre}</b>
+            ${
+              cadete.bateria != null
+                ? `<span style="font-size:11px;font-weight:bold;color:${
+                    cadete.bateria > 20 ? '#16a34a' : '#dc2626'
+                  };background:${
+                    cadete.bateria > 20 ? '#dcfce7' : '#fee2e2'
+                  };padding:2px 6px;border-radius:6px;">${Math.round(cadete.bateria)}%</span>`
+                : ''
+            }
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:5px 8px;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Velocidad actual:</span>
+            <span style="font-size:12px;font-weight:900;color:${esEnMovimiento ? (velKmH > 60 ? '#dc2626' : '#16a34a') : '#64748b'};">
+              ${esEnMovimiento ? `${velKmH} km/h (En marcha)` : '0 km/h (Detenido)'}
+            </span>
+          </div>
+          <div style="font-size:12px;margin-bottom:6px;">
+            ${
+              listaPedidos.length > 0
+                ? `<span style="color:#e11d48;font-weight:bold;">EN REPARTO (${listaPedidos.length} ${listaPedidos.length === 1 ? 'pedido' : 'pedidos'})</span>
+                   ${listaPedidos.map((p, idx) => `
+                     <div style="color:#334155;font-size:11.5px;margin-top:4px;border-left:2px solid #e11d48;padding-left:5px;">
+                       <b>#${p.parada_num || idx + 1}: ${p.cliente}</b>
+                       ${p.direccion ? `<div style="color:#64748b;font-size:10.5px;">${esEnlaceOCoordenadas(p.direccion) ? 'UbicaciÃ³n en mapa' : p.direccion}</div>` : ''}
+                       ${p.total ? `<div style="color:#0f172a;font-weight:bold;font-size:10.5px;">${formatearPrecio(p.total)}</div>` : ''}
+                     </div>
+                   `).join('')}`
+                : `<span style="color:#16a34a;font-weight:bold;">DISPONIBLE</span>
+                   <div style="color:#64748b;font-size:11px;margin-top:2px;">En espera / Libre</div>`
+            }
+          </div>
+          <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:4px;">
+            Ãšltima seÃ±al: ${cadete.updated_at ? new Date(cadete.updated_at).toLocaleTimeString() : 'Hace instantes'}
+          </div>
+        </div>
+      `
+
+      if (markersRef.current.cadetes[cadete.id]) {
+        const existingMarker = markersRef.current.cadetes[cadete.id]
+        if ((existingMarker as any)._lastHtml !== cadeteHtml) {
+          existingMarker.setIcon(cadeteIcon)
+          ;(existingMarker as any)._lastHtml = cadeteHtml
+          const el = existingMarker.getElement()
+          if (el) delete (el as any)._rotCache
+        }
+        existingMarker.setPopupContent(popupContent)
+      } else {
+        const newMarker = L.marker([targetLat, targetLng], {
+          icon: cadeteIcon,
+          zIndexOffset: 300,
+        })
+          .addTo(map)
+          .bindPopup(popupContent)
+        ;(newMarker as any)._lastHtml = cadeteHtml
+        markersRef.current.cadetes[cadete.id] = newMarker
+      }
+
+      // B) Marcadores de Clientes de Entrega (Multi-Parada)
+      const pedidosConCoords = listaPedidos.filter(
+        (p) => p.coordenadas && p.coordenadas.latitud != null && p.coordenadas.longitud != null
+      )
+
+      pedidosConCoords.forEach((pedido, idx) => {
+        const clientKey = `cliente_${pedido.id}`
+        activeClientOrderIds.add(clientKey)
+
+        const clientLat = pedido.coordenadas!.latitud
+        const clientLng = pedido.coordenadas!.longitud
+        const numParada = pedido.parada_num || idx + 1
+        const totalParadas = pedidosConCoords.length
+
+        const paradaBadge = totalParadas > 1
+          ? `<span style="background:#f59e0b;color:#ffffff;font-size:9px;font-weight:900;padding:0px 4px;border-radius:4px;margin-right:3px;">#${numParada}</span>`
+          : ''
+
+        const clienteIcon = L.divIcon({
+          html: `
+            <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:${totalParadas > 1 && numParada === 1 ? '#059669' : '#2563EB'};border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                ${totalParadas > 1 ? `<div style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);">${numParada}</div>` : ''}
+              </div>
+              <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;display:flex;align-items:center;">
+                ${paradaBadge}${pedido.cliente}
+              </div>
+            </div>
+          `,
+          className: 'custom-cliente-icon',
+          iconSize: [110, 64],
+          iconAnchor: [55, 19],
+          popupAnchor: [0, -22],
+        })
+
+        const clientPopup = `
+          <div style="min-width:180px;padding:4px;font-family:sans-serif;">
+            <div style="border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:6px;">
+              <b style="font-size:13px;color:#1e40af;">Entrega: ${pedido.cliente}</b>
+              ${totalParadas > 1 ? `<span style="margin-left:6px;font-size:10px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:6px;font-weight:bold;">Parada ${numParada} de ${totalParadas}</span>` : ''}
+            </div>
+            ${pedido.direccion ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">${esEnlaceOCoordenadas(pedido.direccion) ? 'UbicaciÃ³n seleccionada en el mapa' : pedido.direccion}</div>` : ''}
+            <div style="font-size:11px;color:#64748b;">Cadete asignado: <b>${cadete.nombre}</b></div>
+            ${pedido.total ? `<div style="font-size:11px;font-weight:bold;color:#0f172a;margin-top:2px;">Total: ${formatearPrecio(pedido.total)}</div>` : ''}
+          </div>
+        `
+
+        if (markersRef.current.clientes[clientKey]) {
+          markersRef.current.clientes[clientKey].setLatLng([clientLat, clientLng])
+          markersRef.current.clientes[clientKey].setPopupContent(clientPopup)
+        } else {
+          markersRef.current.clientes[clientKey] = L.marker([clientLat, clientLng], {
+            icon: clienteIcon,
+            zIndexOffset: 200,
+          })
+            .addTo(map)
+            .bindPopup(clientPopup)
+        }
+      })
+
+      // C) PolilÃ­nea DinÃ¡mica Dual (Multi-Parada con trazado real por calles OSRM)
+      const rutaKey = `ruta_${cadete.id}`
+      if (pedidosConCoords.length > 0) {
+        const startPoint: [number, number] = [estadoActual?.latActual || targetLat, estadoActual?.lngActual || targetLng]
+
+        // Firma Ãºnica del itinerario de paradas para detectar altas, bajas o reordenamiento
+        const paradasSig = pedidosConCoords
+          .map((p, idx) => `${p.id || idx}_${p.coordenadas!.latitud.toFixed(4)}_${p.coordenadas!.longitud.toFixed(4)}`)
+          .join('|')
+        const firmaNueva = `${cadete.id}:${paradasSig}`
+
+        // Si la firma cambiÃ³ (nuevas paradas, entrega completada, reorden o inicio), calculamos OSRM
+        if (rutasFirmaRef.current[cadete.id] !== firmaNueva) {
+          rutasFirmaRef.current[cadete.id] = firmaNueva
+
+          // Cancelar cÃ¡lculo en vuelo previo para este cadete
+          if (abortControllersRef.current[cadete.id]) {
+            abortControllersRef.current[cadete.id].abort()
+          }
+
+          const abortCtrl = new AbortController()
+          abortControllersRef.current[cadete.id] = abortCtrl
+
+          const cadeteCoord: Coordenadas = {
+            latitud: estadoActual?.latActual || targetLat,
+            longitud: estadoActual?.lngActual || targetLng,
+          }
+          const paradasCoords: Coordenadas[] = pedidosConCoords.map((p) => ({
+            latitud: p.coordenadas!.latitud,
+            longitud: p.coordenadas!.longitud,
+          }))
+
+          const cadeteId = cadete.id
+          const ejecutarCalculoOSRM = async () => {
+            try {
+              let resultado: { puntos: [number, number][]; distanciaKm?: number } | null = null
+
+              if (paradasCoords.length === 1) {
+                resultado = await obtenerRutaConduccion(cadeteCoord, paradasCoords[0], abortCtrl.signal)
+              } else {
+                resultado = await obtenerRutaMultiParada([cadeteCoord, ...paradasCoords], abortCtrl.signal)
+              }
+
+              if (abortCtrl.signal.aborted) return
+
+              if (resultado && resultado.puntos && resultado.puntos.length > 1) {
+                rutasGeometriaRef.current[cadeteId] = resultado.puntos
+                indicesRutaRef.current[cadeteId] = 0
+
+                const rKey = `ruta_${cadeteId}`
+                if (markersRef.current.rutasBase[rKey]) {
+                  markersRef.current.rutasBase[rKey].setLatLngs(resultado.puntos)
+                }
+                if (markersRef.current.rutasDash[rKey]) {
+                  markersRef.current.rutasDash[rKey].setLatLngs(resultado.puntos)
+                }
+              }
+            } catch (err: any) {
+              if (err?.name !== 'AbortError') {
+                console.warn(`[TorreControl] Error al obtener ruta OSRM para ${cadete.nombre}:`, err)
+              }
+            }
+          }
+
+          ejecutarCalculoOSRM()
+        }
+
+        // Trazado visible en Leaflet (geometrÃ­a OSRM si ya la tenemos, o lÃ­nea recta de contingencia)
+        let rutaCoords: [number, number][]
+        const geometriaGuardada = rutasGeometriaRef.current[cadete.id]
+        if (geometriaGuardada && geometriaGuardada.length > 1) {
+          const ultimoIdx = indicesRutaRef.current[cadete.id] || 0
+          const nuevoIdx = encontrarIndiceMasCercano(startPoint, geometriaGuardada, ultimoIdx)
+          indicesRutaRef.current[cadete.id] = nuevoIdx
+
+          // Verificar si el cadete se desviÃ³ demasiado de la ruta calculada (> 350m)
+          const puntoGeom = geometriaGuardada[nuevoIdx]
+          if (puntoGeom) {
+            const desviacionKm = calcularDistanciaKm(
+              { latitud: startPoint[0], longitud: startPoint[1] },
+              { latitud: puntoGeom[0], longitud: puntoGeom[1] }
+            )
+            if (desviacionKm > 0.35) {
+              // DesvÃ­o detectado: invalidar firma para que el prÃ³ximo pulso recalcule la ruta OSRM
+              rutasFirmaRef.current[cadete.id] = ''
+            }
+          }
+
+          const resto = geometriaGuardada.slice(nuevoIdx + 1)
+          rutaCoords = resto.length > 0 ? [startPoint, ...resto] : [startPoint, geometriaGuardada[geometriaGuardada.length - 1]]
+        } else {
+          rutaCoords = [
+            startPoint,
+            ...pedidosConCoords.map((p) => [p.coordenadas!.latitud, p.coordenadas!.longitud] as [number, number])
+          ]
+        }
+
+        if (!markersRef.current.rutasBase[rutaKey]) {
+          markersRef.current.rutasBase[rutaKey] = L.polyline(rutaCoords, {
+            color: '#059669',
+            weight: 5,
+            opacity: 0.45,
+            lineCap: 'round',
+            lineJoin: 'round',
+            smoothFactor: 1.5,
+          }).addTo(map)
+
+          markersRef.current.rutasDash[rutaKey] = L.polyline(rutaCoords, {
+            color: '#10B981',
+            weight: 3,
+            dashArray: '8, 12',
+            className: 'animated-polyline-dash',
+            lineCap: 'round',
+            lineJoin: 'round',
+            smoothFactor: 1.5,
+          }).addTo(map)
+        } else {
+          markersRef.current.rutasBase[rutaKey].setLatLngs(rutaCoords)
+          markersRef.current.rutasDash[rutaKey].setLatLngs(rutaCoords)
+        }
+      } else {
+        // Cadete sin pedidos activos: limpiar polilÃ­neas y geometrÃ­as en memoria
+        if (abortControllersRef.current[cadete.id]) {
+          abortControllersRef.current[cadete.id].abort()
+          delete abortControllersRef.current[cadete.id]
+        }
+        delete rutasGeometriaRef.current[cadete.id]
+        delete rutasFirmaRef.current[cadete.id]
+        delete indicesRutaRef.current[cadete.id]
+
+        if (markersRef.current.rutasBase[rutaKey]) {
+          markersRef.current.rutasBase[rutaKey].remove()
+          delete markersRef.current.rutasBase[rutaKey]
+        }
+        if (markersRef.current.rutasDash[rutaKey]) {
+          markersRef.current.rutasDash[rutaKey].remove()
+          delete markersRef.current.rutasDash[rutaKey]
+        }
+      }
+    })
+
+    // Limpiar clientes que ya no tienen pedido activo
+    Object.keys(markersRef.current.clientes).forEach((key) => {
+      if (!activeClientOrderIds.has(key)) {
+        markersRef.current.clientes[key].remove()
+        delete markersRef.current.clientes[key]
+      }
+    })
+  }, [cadetes])
+
+  // â”€â”€ 4. Control de Enfoque desde la barra lateral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    if (!focusedId || !mapInstanceRef.current) return
+    const map = mapInstanceRef.current
+
+    const cadeteMarker = markersRef.current.cadetes[focusedId]
+    if (cadeteMarker) {
+      setModoCamara('cadete')
+      map.flyTo(cadeteMarker.getLatLng(), 16, { animate: true, duration: 0.8 })
+      cadeteMarker.openPopup()
+      return
+    }
+
+    const clientKey = `cliente_${focusedId}`
+    const clientMarker = markersRef.current.clientes[clientKey]
+    if (clientMarker) {
+      map.flyTo(clientMarker.getLatLng(), 16, { animate: true, duration: 0.8 })
+      clientMarker.openPopup()
+    }
+  }, [focusedId])
+
+  // â”€â”€ Acciones de CÃ¡mara HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const encuadrarTodaLaFlota = () => {
+    if (!mapInstanceRef.current) return
+    const L = require('leaflet')
+    setModoCamara('todo')
+    const bounds = L.latLngBounds([[LOCAL_LAT, LOCAL_LNG]])
+
+    cadetes.forEach((c) => {
+      if (c.lat != null && c.lng != null && c.gps_activo) {
+        bounds.extend([c.lat, c.lng])
+      }
+      const lista = (c.pedidosActivos && c.pedidosActivos.length > 0)
+        ? c.pedidosActivos
+        : (c.pedidoActivo ? [c.pedidoActivo] : [])
+      lista.forEach((p) => {
+        if (p.coordenadas?.latitud && p.coordenadas?.longitud) {
+          bounds.extend([p.coordenadas.latitud, p.coordenadas.longitud])
+        }
+      })
+    })
+
+    mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true, duration: 0.8 })
+  }
+
+  const centrarEnLocal = () => {
+    if (!mapInstanceRef.current) return
+    setModoCamara('manual')
+    mapInstanceRef.current.flyTo([LOCAL_LAT, LOCAL_LNG], 15, { duration: 0.8 })
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[400px] overflow-hidden z-0 bg-slate-100">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .cadete-headlight-cone {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 54px;
+          height: 64px;
+          margin-left: -27px;
+          margin-top: -64px;
+          background: radial-gradient(ellipse at 50% 100%, rgba(254, 240, 138, 0.6) 0%, rgba(253, 224, 71, 0.3) 45%, rgba(253, 224, 71, 0) 80%);
+          clip-path: polygon(50% 100%, 12% 0%, 88% 0%);
+          transform-origin: 50% 100%;
+          pointer-events: none;
+          filter: blur(1px);
+          z-index: 1;
+          will-change: transform;
+        }
+        .cadete-moto-badge {
+          position: relative;
+          z-index: 2;
+          transform-origin: center center;
+          will-change: transform;
+        }
+        .cadete-direction-arrow {
+          position: absolute;
+          z-index: 3;
+          transform-origin: 50% 27px;
+          will-change: transform;
+        }
+        .cadete-radar-pulse {
+          position: absolute;
+          inset: 4px;
+          border-radius: 50%;
+          border: 2px solid rgba(225, 29, 72, 0.6);
+          animation: cadete-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+          pointer-events: none;
+          z-index: 0;
+          will-change: transform, opacity;
+          transform: translateZ(0);
+        }
+        @keyframes cadete-pulse {
+          0% { transform: scale(0.7); opacity: 0.9; }
+          80%, 100% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes polyline-dash {
+          to { stroke-dashoffset: -44; }
+        }
+        .animated-polyline-dash {
+          animation: polyline-dash 1.8s linear infinite;
+        }
+        .leaflet-container {
+          width: 100% !important;
+          height: 100% !important;
+          background-color: #e2e8f0;
+        }
+      `,
+      }} />
+
+      {/* Contenedor del Mapa Leaflet */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full min-h-[260px]"
+        style={{ width: '100%', height: '100%' }}
+      />
+
+      {/* HUD de Botones de CÃ¡mara Inteligente en Torre de Control */}
+      <div className="absolute top-3.5 right-3.5 z-[400] flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 p-1 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+        {/* Ver toda la flota */}
+        <button
+          type="button"
+          onClick={encuadrarTodaLaFlota}
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+            modoCamara === 'todo'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+          title="Ver toda la flota en vivo"
+        >
+          <Compass size={18} />
+        </button>
+
+        {/* Local Chefsy */}
+        <button
+          type="button"
+          onClick={centrarEnLocal}
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          title="Centrar en Local Chefsy"
+        >
+          <Store size={18} />
+        </button>
+      </div>
+
+      {/* Widget Flotante: VelocÃ­metro y TelemetrÃ­a en Vivo */}
+      <div className="absolute top-3.5 left-3.5 z-[400] max-w-[200px] sm:max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 transition-all overflow-hidden">
+        <div
+          onClick={() => setMostrarPanelVelocidad(!mostrarPanelVelocidad)}
+          className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Gauge size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                  Velocidad en Vivo
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              </div>
+              <p className="text-[10px] text-slate-400 truncate">
+                {cadetesActivosConGps.length} cadete(s) transmitiendo
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+            title={mostrarPanelVelocidad ? 'Minimizar' : 'Expandir'}
+          >
+            {mostrarPanelVelocidad ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {mostrarPanelVelocidad && (
+          <div className="px-3 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800 space-y-2 max-h-[260px] overflow-y-auto">
+            {cadetesActivosConGps.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic py-2 text-center">
+                Sin cadetes con GPS activo en este momento.
+              </p>
+            ) : (
+              cadetesActivosConGps.map((c) => {
+                const vel = calcularVelocidadEnVivoKmH(c.speed)
+                const enMarcha = vel >= 4
+                const isSelected = focusedId === c.id
+
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      if (onSelectCadete) onSelectCadete(c.id)
+                      if (mapInstanceRef.current && c.lat != null && c.lng != null) {
+                        setModoCamara('cadete')
+                        mapInstanceRef.current.flyTo([c.lat, c.lng], 16, { duration: 0.6 })
+                      }
+                    }}
+                    className={`p-2 rounded-xl flex items-center justify-between gap-2 text-xs transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="min-w-0 flex items-center gap-2">
+                      <Bike className="w-4 h-4 text-slate-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {c.nombre}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {c.pedidoActivo ? `Pedido: ${c.pedidoActivo.cliente}` : 'Libre'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${
+                        enMarcha
+                          ? vel > 60
+                            ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:border-red-900/40'
+                            : vel > 40
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/40'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/40'
+                          : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                      }`}>
+                        {enMarcha && <Zap size={10} className="fill-current" />}
+                        <span>{vel} km/h</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
