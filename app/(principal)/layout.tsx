@@ -55,9 +55,9 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-chefsy-50 dark:bg-zinc-950 transition-colors">
-      {/* Sidebar Desktop */}
-      <div className="hidden md:flex shrink-0 h-full z-40">
-        <Sidebar className="h-full" />
+      {/* Sidebar Desktop (flotante tipo isla/dock) */}
+      <div className="hidden md:flex shrink-0 items-stretch h-full z-40">
+        <Sidebar />
       </div>
 
       {/* Sidebar Móvil (Drawer overlay) */}

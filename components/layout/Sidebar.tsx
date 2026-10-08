@@ -2,7 +2,8 @@
 
 // ─────────────────────────────────────────────────────
 // components/layout/Sidebar.tsx
-// Barra lateral de navegación re-diseñada, colapsable y premium.
+// Barra lateral de navegación colapsable estilo "isla/dock".
+// Portada desde flota-web y adaptada a los módulos + paleta emerald de Chefsy.
 // ─────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
@@ -12,27 +13,26 @@ import { cn } from '@/lib/utils'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
 import { setCache, getCache } from '@/lib/localCache'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
+import {
+  LogOut, Settings,
+  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
+  ChevronLeft, Radar
+} from 'lucide-react'
 
 // TTL de preferencias de UI del admin: 90 días
 const TTL_UI_HS = 90 * 24
-import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { 
-  Sun, Moon, LogOut, Settings, 
-  LayoutDashboard, ClipboardList, Bike, Wallet, UtensilsCrossed, Users, Store, Paintbrush, Package,
-  ChevronLeft, ChevronRight, Radar
-} from 'lucide-react'
 
-// Ítems de navegación principal (Configuración se movió al pie)
+// Ítems de navegación principal (Configuración va al pie, Tienda pública abajo aparte)
 const elementosNavegacion = [
-  { href: '/dashboard',     etiqueta: 'Dashboard',     icono: LayoutDashboard },
-  { href: '/pedidos',       etiqueta: 'Pedidos',       icono: ClipboardList },
-  { href: '/cadeteria',     etiqueta: 'Cadetería',     icono: Bike },
+  { href: '/dashboard',     etiqueta: 'Dashboard',       icono: LayoutDashboard },
+  { href: '/pedidos',       etiqueta: 'Pedidos',         icono: ClipboardList },
+  { href: '/cadeteria',     etiqueta: 'Cadetería',       icono: Bike },
   { href: '/torre-control', etiqueta: 'Torre de Control', icono: Radar },
-  { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: Wallet },
-  { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
-  { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
-  { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },
-  { href: '/',        etiqueta: 'Tienda',        icono: Store },
+  { href: '/cierre',        etiqueta: 'Cierre de Caja',  icono: Wallet },
+  { href: '/productos',     etiqueta: 'Productos',       icono: UtensilsCrossed },
+  { href: '/clientes',      etiqueta: 'Clientes',        icono: Users },
+  { href: '/dev-tools',     etiqueta: 'Tienda Diseño',   icono: Paintbrush },
 ]
 
 interface PropsSidebar {
@@ -42,13 +42,29 @@ interface PropsSidebar {
 
 export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   const rutaActual = usePathname()
-  const { modoOscuro, alternarModoOscuro, dbEstado } = usarPedidos()
+  const { dbEstado } = usarPedidos()
   const { usuarioActivo, cerrarSesion } = usarAuth()
+
+  // Reloj en vivo para el pie de la barra lateral
+  const [fechaHora, setFechaHora] = useState({ fecha: '', hora: '' })
+
+  useEffect(() => {
+    const actualizar = () => {
+      const ahora = new Date()
+      setFechaHora({
+        fecha: ahora.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }),
+        hora: ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      })
+    }
+    actualizar()
+    const timer = setInterval(actualizar, 30000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Determinar si estamos en la vista móvil
   const isMobile = !!onCloseMobile
 
-  // Estado local para colapsar en desktop
+  // Estado local para colapsar en desktop: colapsado activa el Modo Dock
   const [colapsado, setColapsado] = useState(false)
 
   // Persistir el estado colapsado (TTL 90 días)
@@ -73,62 +89,77 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
     return true
   })
 
-  const itemsPrincipales = elementosFiltrados.filter(item => item.href !== '/')
-  const itemTienda = elementosFiltrados.find(item => item.href === '/')
+  // ── MODO DOCK: cuando la barra lateral flotante se contrae en desktop ──
+  const esDock = !isMobile && colapsado
 
   return (
-    <aside 
+    <aside
       className={cn(
-        'bg-gradient-to-b from-chefsy to-chefsy-900 border-r border-chefsy-800 flex flex-col shrink-0 transition-all duration-300 relative z-50',
-        colapsado && !isMobile ? 'w-20' : 'w-64',
+        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,height]",
+        isMobile
+          ? "bg-white dark:bg-slate-900 border-r border-slate-200/70 dark:border-slate-800 flex flex-col h-full w-full"
+          : "m-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg flex flex-col items-center",
+        !isMobile && (
+          esDock
+            ? "w-16 min-h-[520px] h-[calc(100vh-1.75rem)] py-3.5 px-2"
+            : "w-64 h-[calc(100vh-1.75rem)] py-3.5 px-3"
+        ),
         className
       )}
     >
-      {/* Botón de colapsar (solo visible en desktop) */}
+      {/* Botón flotante para alternar entre Modo Isla y Modo Dock (solo desktop) */}
       {!isMobile && (
         <button
+          type="button"
           onClick={toggleColapsar}
-          className="absolute -right-3 top-8 bg-chefsy-800 text-white rounded-full p-1.5 border border-chefsy-600 shadow-md hover:bg-chefsy-700 transition-colors z-50 focus:outline-none"
-          title={colapsado ? "Expandir menú" : "Ocultar menú"}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-full p-1.5 border border-slate-200/70 dark:border-slate-700 shadow-xl hover:border-emerald-400/60 dark:hover:border-emerald-500/60 transition-all z-50 focus:outline-none cursor-pointer active:scale-90"
+          title={esDock ? "Expandir a Modo Isla" : "Contraer a Modo Dock"}
+          aria-label={esDock ? "Expandir a Modo Isla" : "Contraer a Modo Dock"}
         >
-          {colapsado ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          <ChevronLeft
+            size={13}
+            className={cn(
+              "transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+              esDock && "rotate-180"
+            )}
+          />
         </button>
       )}
 
-      {/* Marca y Estado */}
-      <div className={cn("px-4 py-5 border-b border-chefsy-800 flex flex-col items-center gap-2.5 transition-all", colapsado && !isMobile ? "px-2" : "")}>
-        <div className="relative group">
-          <img 
-            src="/logo.jpg" 
-            alt="Chefsy Logo" 
-            className={cn(
-              "object-contain bg-white shadow-lg transition-all duration-300 group-hover:scale-105",
-              colapsado && !isMobile ? "w-11 h-11 rounded-xl p-1" : "w-28 h-28 sm:w-32 sm:h-32 rounded-2xl p-1.5 border border-chefsy-600"
-            )} 
-          />
-        </div>
-        
-        {/* Supabase Status Indicator */}
+      {/* Marca: logo + indicador de estado Supabase */}
+      <div className={cn(
+        "w-full transition-all duration-300 flex flex-col items-center gap-2 pb-2.5",
+        !esDock && "border-b border-slate-200/70 dark:border-slate-800"
+      )}>
+        <img
+          src="/logo.jpg"
+          alt="Chefsy Logo"
+          className={cn(
+            "object-contain bg-white shadow-md rounded-xl transition-all duration-300",
+            esDock ? "w-9 h-9 p-0.5" : "w-16 h-16 sm:w-20 sm:h-20 p-1 border border-slate-200/70 dark:border-slate-700"
+          )}
+        />
+        {/* Indicador de estado Supabase */}
         <div className={cn(
-          "mt-2 flex items-center justify-center rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
-          (!colapsado || isMobile) ? "px-3 py-0.5 gap-1.5" : "w-6 h-6 p-0",
+          "flex items-center justify-center rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
+          esDock ? "w-6 h-6 p-0" : "px-2.5 py-0.5 gap-1.5",
           dbEstado === 'conectado'
-            ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40"
+            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/40"
             : dbEstado === 'desconectado'
-              ? "bg-red-950/40 text-red-400 border-red-900/40 animate-pulse"
-              : "bg-slate-800/40 text-slate-400 border-slate-700/30"
+              ? "bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 border-red-200/70 dark:border-red-900/40 animate-pulse"
+              : "bg-slate-100 dark:bg-slate-800/60 text-slate-400 border-slate-200/70 dark:border-slate-700/50"
         )}
-        title={dbEstado}
+          title={dbEstado}
         >
           <span className={cn(
             "h-1.5 w-1.5 rounded-full shrink-0",
             dbEstado === 'conectado'
-              ? "bg-emerald-400 animate-pulse shadow-[0_0_5px_#34d399]"
+              ? "bg-emerald-500 animate-pulse shadow-[0_0_5px_#10b981]"
               : dbEstado === 'desconectado'
                 ? "bg-red-500 animate-ping"
                 : "bg-slate-400"
           )} />
-          {(!colapsado || isMobile) && (
+          {!esDock && (
             <span>
               {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN CONEXIÓN' : 'CONECTANDO...'}
             </span>
@@ -137,134 +168,176 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
       </div>
 
       {/* Navegación */}
-      <nav className={cn("flex-1 overflow-y-auto overflow-x-hidden flex flex-col justify-between py-4", (!colapsado || isMobile) ? "px-3" : "px-2")}>
-        <div className="space-y-1">
-          {itemsPrincipales.map((item) => {
-            const estaActivo = rutaActual === item.href
-            const Icono = item.icono
-            return (
-               <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => onCloseMobile?.()}
-                title={colapsado && !isMobile ? item.etiqueta : undefined}
-                className={cn(
-                  'flex items-center rounded-xl font-medium transition-all duration-200 group relative',
-                  (!colapsado || isMobile) ? 'px-3 py-2.5 gap-3' : 'justify-center p-2.5 mx-auto w-11 h-11',
-                  estaActivo
-                    ? 'bg-white/10 text-white shadow-inner border border-white/5'
-                    : 'text-chefsy-200 hover:bg-white/5 hover:text-white'
-                )}
-              >
-                {/* Micro-animación de hover */}
-                {(!colapsado || isMobile) && !estaActivo && (
-                  <span className="absolute inset-0 rounded-xl bg-white/0 group-hover:bg-white/5 transition-colors" />
-                )}
-                {/* Línea indicadora activa */}
-                {estaActivo && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-[60%] bg-emerald-400 rounded-r-md shadow-[0_0_8px_#34d399]" />
-                )}
-                
-                <Icono 
-                  size={colapsado && !isMobile ? 22 : 18} 
-                  className={cn("shrink-0 transition-all", (!estaActivo && (!colapsado || isMobile)) ? "group-hover:translate-x-1" : "")} 
-                />
-                
-                {(!colapsado || isMobile) && (
-                  <span className={cn("text-sm tracking-wide transition-transform", !estaActivo ? "group-hover:translate-x-1" : "")}>
-                    {item.etiqueta}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-        </div>
+      <nav className={cn(
+        "flex-1 w-full flex flex-col overflow-x-hidden overflow-y-auto transition-all duration-300",
+        esDock ? "gap-1.5 py-1 items-center" : "gap-1 py-2 px-0.5"
+      )}>
+        {elementosFiltrados.map((item) => {
+          const estaActivo = rutaActual === item.href
+          const Icono = item.icono
 
-        {itemTienda && (
-          <div className="pt-3 border-t border-chefsy-800/60 mt-4 space-y-2">
-            {/* Link Tienda */}
-            {(() => {
-              const IconoTienda = itemTienda.icono
-              const estaActivo = rutaActual === itemTienda.href
-              return (
-                <Link
-                  href={itemTienda.href}
-                  title={colapsado && !isMobile ? itemTienda.etiqueta : undefined}
-                  onClick={() => onCloseMobile?.()}
-                  className={cn(
-                    'flex items-center rounded-xl font-medium transition-all duration-200 group relative',
-                    (!colapsado || isMobile) ? 'px-3 py-2.5 gap-3' : 'justify-center p-2.5 mx-auto w-11 h-11',
-                    estaActivo
-                      ? 'bg-white/10 text-white border border-white/5'
-                      : 'text-chefsy-200 hover:bg-white/5 hover:text-white'
-                  )}
-                >
-                  <IconoTienda 
-                    size={colapsado && !isMobile ? 22 : 18} 
-                    className={cn("shrink-0 transition-all", (!estaActivo && (!colapsado || isMobile)) ? "group-hover:translate-x-1" : "")} 
-                  />
-                  {(!colapsado || isMobile) && (
-                    <div className={cn("flex flex-col text-left transition-transform", !estaActivo ? "group-hover:translate-x-1" : "")}>
-                      <span className="text-sm tracking-wide leading-tight">{itemTienda.etiqueta}</span>
-                      <span className="text-[0.65rem] text-chefsy-300 font-medium opacity-80 leading-none mt-0.5">
-                        en construcción
-                      </span>
-                    </div>
-                  )}
-                </Link>
-              )
-            })()}
-          </div>
-        )}
-      </nav>
-
-      {/* Pie del sidebar */}
-      <div className={cn("px-4 py-4 border-t border-chefsy-800 flex flex-col gap-2 transition-all", colapsado && !isMobile ? "items-center px-2" : "")}>
-        <div className={cn("flex items-center", colapsado && !isMobile ? "flex-col gap-3" : "justify-between w-full")}>
-          {/* Si está expandido mostramos la versión */}
-          {(!colapsado || isMobile) && (
-            <p className="text-xs text-chefsy-400 font-medium tracking-wide ml-1">Chefsy v1.0</p>
-          )}
-
-          <div className={cn("flex items-center", colapsado && !isMobile ? "flex-col gap-3" : "gap-1")}>
-            {/* Configuración */}
+          return (
             <Link
-              href="/configuracion"
-              title="Configuración"
+              key={item.href}
+              href={item.href}
               onClick={() => onCloseMobile?.()}
               className={cn(
-                "p-2 rounded-xl transition-all focus:outline-none",
-                rutaActual === '/configuracion' 
-                  ? 'bg-white/20 text-white shadow-inner' 
-                  : 'text-chefsy-200 hover:text-white hover:bg-white/10 hover:scale-110'
+                "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs overflow-hidden",
+                esDock
+                  ? "w-11 h-11 justify-center shrink-0 p-0"
+                  : "w-full px-3 py-2.5 gap-3",
+                estaActivo
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/50 shadow-sm font-semibold"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100"
               )}
             >
-              <Settings size={16} />
+              <Icono
+                size={18}
+                className={cn(
+                  "shrink-0 transition-transform duration-200",
+                  !estaActivo && "group-hover:scale-105"
+                )}
+              />
+
+              {/* Etiqueta animada con fade y slide */}
+              <span
+                className={cn(
+                  "tracking-tight whitespace-nowrap transition-all duration-200 overflow-hidden",
+                  esDock
+                    ? "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+                    : "max-w-[140px] opacity-100 translate-x-0"
+                )}
+              >
+                {item.etiqueta}
+              </span>
+
+              {/* Tooltip flotante a la derecha (solo activo en modo Dock) */}
+              {esDock && (
+                <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
+                  {item.etiqueta}
+                </span>
+              )}
             </Link>
-            
-            {/* Tema Oscuro */}
-            <ThemeToggle />
-            
-            {/* Cerrar Sesión */}
-            <button
-              onClick={() => {
-                cerrarSesion()
-                onCloseMobile?.()
-              }}
-              className="p-2 rounded-xl text-chefsy-200 hover:text-red-400 hover:bg-red-950/40 transition-all focus:outline-none hover:scale-110"
-              title="Cerrar sesión"
-            >
-              <LogOut size={16} />
-            </button>
+          )
+        })}
+      </nav>
+
+      {/* Separador fino sobre el pie */}
+      <div className={cn(
+        "h-[1px] bg-slate-200/70 dark:bg-slate-800 transition-all duration-300 my-1 shrink-0",
+        esDock ? "w-8" : "w-full"
+      )} />
+
+      {/* Atajo a la tienda online (cara pública) — abre en pestaña nueva */}
+      <a
+        href="/"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Ver la tienda online como la ve el cliente"
+        onClick={() => onCloseMobile?.()}
+        className={cn(
+          "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs shrink-0",
+          "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
+          esDock
+            ? "w-11 h-11 justify-center self-center"
+            : "w-full px-3 py-2.5 gap-3"
+        )}
+      >
+        <Store
+          size={18}
+          className="shrink-0 transition-transform duration-200 group-hover:scale-105"
+        />
+        <span
+          className={cn(
+            "tracking-tight whitespace-nowrap transition-all duration-200 overflow-hidden",
+            esDock
+              ? "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+              : "max-w-[140px] opacity-100 translate-x-0"
+          )}
+        >
+          Tienda
+        </span>
+        {esDock && (
+          <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
+            Tienda
+          </span>
+        )}
+      </a>
+
+      {/* Pie del Sidebar */}
+      <div className="w-full transition-all duration-300 flex flex-col shrink-0 items-center">
+        {/* Fecha y Hora en tiempo real con transición de altura sin unmount */}
+        <div className={cn(
+          "flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium px-2 tracking-tight transition-all duration-300 overflow-hidden whitespace-nowrap w-full",
+          esDock
+            ? "max-h-0 opacity-0 my-0 py-0 pointer-events-none -translate-y-1"
+            : "max-h-8 opacity-100 my-1 py-1 translate-y-0"
+        )}>
+          <span className="capitalize text-slate-700 dark:text-slate-200">{fechaHora.fecha}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded text-[10px] tracking-wider border border-emerald-200/70 dark:border-emerald-800/50">{fechaHora.hora}</span>
+            <ThemeToggle className="h-8 w-8 rounded-lg" />
           </div>
         </div>
 
-        {/* Créditos */}
-        {(!colapsado || isMobile) && (
-          <p className="text-[9px] text-chefsy-500 font-semibold tracking-widest uppercase text-left pl-1 mt-1 opacity-70 hover:opacity-100 transition-opacity cursor-default">
-            designed by lauta
-          </p>
-        )}
+        {/* Acciones: Configuración y Cerrar Sesión */}
+        <div className="flex flex-col gap-1 w-full items-center pt-0.5">
+          {/* Configuración */}
+          <Link
+            href="/configuracion"
+            onClick={() => onCloseMobile?.()}
+            title={esDock ? undefined : "Configuración"}
+            className={cn(
+              "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs overflow-hidden",
+              esDock
+                ? "w-11 h-11 justify-center shrink-0 p-0 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                : "w-full px-3 py-2 gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
+              rutaActual === '/configuracion' && "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
+            )}
+          >
+            <Settings size={17} className="shrink-0 transition-transform duration-200 group-hover:rotate-45" />
+            <span className={cn(
+              "tracking-tight whitespace-nowrap transition-all duration-200 overflow-hidden",
+              esDock ? "max-w-0 opacity-0 -translate-x-2 pointer-events-none" : "max-w-[140px] opacity-100 translate-x-0"
+            )}>
+              Configuración
+            </span>
+            {esDock && (
+              <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
+                Configuración
+              </span>
+            )}
+          </Link>
+
+          {/* Cerrar Sesión */}
+          <button
+            type="button"
+            onClick={() => {
+              cerrarSesion()
+              onCloseMobile?.()
+            }}
+            className={cn(
+              "flex items-center rounded-xl font-medium transition-all duration-300 group relative cursor-pointer text-xs overflow-hidden",
+              esDock
+                ? "w-11 h-11 justify-center shrink-0 p-0 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                : "w-full px-3 py-2 gap-3 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
+            )}
+            title={esDock ? undefined : "Cerrar sesión"}
+          >
+            <LogOut size={17} className="shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <span className={cn(
+              "tracking-tight whitespace-nowrap transition-all duration-200 overflow-hidden",
+              esDock ? "max-w-0 opacity-0 -translate-x-2 pointer-events-none" : "max-w-[140px] opacity-100 translate-x-0"
+            )}>
+              Cerrar sesión
+            </span>
+            {esDock && (
+              <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
+                Cerrar sesión
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   )
