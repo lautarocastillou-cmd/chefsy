@@ -590,6 +590,44 @@ export default function EditorTienda() {
                             className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-white"
                           />
                         </div>
+
+                        {/* Imagen del Slide */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-black border border-white/10 shrink-0">
+                            {slide.imagen_url ? (
+                              <NextImage
+                                src={slide.imagen_url}
+                                alt={`Slide ${idx + 1}`}
+                                fill
+                                className="object-cover"
+                                sizes="40px"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-600 text-[10px]">Foto</div>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={slide.imagen_url || ''}
+                            onChange={(e) => actualizarSlide(slide.id, 'imagen_url', e.target.value)}
+                            placeholder="URL imagen..."
+                            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 font-mono truncate"
+                          />
+                          <label className="cursor-pointer text-emerald-400 hover:text-emerald-300 text-[10px] bg-emerald-950/60 border border-emerald-800/60 px-2 py-1.5 rounded-lg font-bold flex items-center gap-1 shrink-0">
+                            {subiendoImagen === `slide_img_${slide.id}` ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Upload size={12} />
+                            )}
+                            <span>Subir</span>
+                            <input
+                              type="file"
+                              accept="image/*,.heic,.heif,.hevc"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && subirArchivo(e.target.files[0], `slide_img_${slide.id}`)}
+                            />
+                          </label>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1376,7 +1414,7 @@ export default function EditorTienda() {
         imagenes={configLive.hero_loop_imagenes || IMAGENES_LOOP_DEFAULT}
         transicion={configLive.hero_loop_transicion || 'fade'}
         onCerrar={() => setModalLoopAbierto(false)}
-        onGuardar={(nuevas, transicionSeleccionada) => {
+        onGuardar={async (nuevas, transicionSeleccionada) => {
           if (!configLive) return
           const actualizada = {
             ...configLive,
@@ -1384,6 +1422,14 @@ export default function EditorTienda() {
             ...(transicionSeleccionada ? { hero_loop_transicion: transicionSeleccionada } : {})
           }
           registrarCambio(actualizada)
+          // Persistir inmediatamente a Supabase para evitar pérdida al actualizar o recargar
+          const guardadoOk = await actualizarConfiguracionTienda(actualizada)
+          if (guardadoOk) {
+            setToastGuardado(true)
+            setTimeout(() => setToastGuardado(false), 3500)
+          } else {
+            notificarError('No se pudo guardar la configuración del carrusel en el servidor.')
+          }
         }}
       />
 

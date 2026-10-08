@@ -1,4 +1,5 @@
 import { supabase, supabaseAnon } from '@/lib/supabase'
+import { setCache } from '@/lib/localCache'
 
 export interface CarruselSlide {
   id: string
@@ -149,18 +150,81 @@ export async function obtenerConfiguracionTienda(): Promise<ConfiguracionTienda>
     }
   }
 
+  if (data) {
+    if (!data.hero_loop_imagenes || !Array.isArray(data.hero_loop_imagenes) || data.hero_loop_imagenes.length === 0) {
+      data.hero_loop_imagenes = IMAGENES_LOOP_DEFAULT
+    }
+    if (!data.hero_carrusel_slides || !Array.isArray(data.hero_carrusel_slides) || data.hero_carrusel_slides.length === 0) {
+      data.hero_carrusel_slides = [
+        {
+          id: 'slide-1',
+          titulo: 'DOBLE SMASH BURGER',
+          subtitulo: '2x 120g de carne seleccionada + Doble Cheddar Fundido',
+          badge: 'MÁS PEDIDO',
+          imagen_url: '/burger-loca.webp',
+          boton_texto: 'Ver Hamburguesas',
+        },
+        {
+          id: 'slide-2',
+          titulo: 'MIÉRCOLES DE PROMO 2x1',
+          subtitulo: 'Aprovechá 2x1 en Lomos y Pizzas durante todo el turno',
+          badge: 'PROMO EXCLUSIVA',
+          imagen_url: '/burger-loca.webp',
+          boton_texto: 'Pedir Ahora',
+        }
+      ]
+    }
+  }
+
   return data
 }
 
 export async function actualizarConfiguracionTienda(config: Partial<ConfiguracionTienda>): Promise<boolean> {
-  const { error } = await supabase
+  // 1. Intentar actualizar a través del endpoint administrativo (service_role con permisos completos)
+  try {
+    const res = await fetch('/api/admin/configuracion-tienda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    })
+
+    if (res.ok) {
+      const respData = await res.json()
+      if (respData.ok && respData.data) {
+        if (typeof window !== 'undefined') {
+          setCache('chefsy_configuracion_cache', respData.data)
+          window.dispatchEvent(new CustomEvent('chefsy_configuracion_cambiada', { detail: respData.data }))
+          try {
+            const bc = new BroadcastChannel('chefsy_canal_configuracion')
+            bc.postMessage({ tipo: 'configuracion_actualizada', data: respData.data })
+            bc.close()
+          } catch {}
+        }
+        return true
+      }
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      console.warn('[Config] API devolvió error:', errData.error || res.statusText)
+    }
+  } catch (err) {
+    console.warn('[Config] Error al llamar API admin, intentando fallback directo:', err)
+  }
+
+  // 2. Fallback directo con supabase client (con .select() para validar que realmente se modificaron filas)
+  const { data, error } = await supabase
     .from('configuracion_tienda')
     .update({ ...config, updated_at: new Date().toISOString() })
     .eq('id', 1)
+    .select()
 
-  if (error) {
-    console.error('Error al actualizar configuración:', error)
+  if (error || !data || data.length === 0) {
+    console.error('Error al actualizar configuración en Supabase:', error || 'No se modificó ninguna fila (bloqueado por RLS)')
     return false
+  }
+
+  if (typeof window !== 'undefined' && data[0]) {
+    setCache('chefsy_configuracion_cache', data[0])
+    window.dispatchEvent(new CustomEvent('chefsy_configuracion_cambiada', { detail: data[0] }))
   }
 
   return true

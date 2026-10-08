@@ -51,6 +51,29 @@ export const ConfiguracionTiendaProvider = ({ children }: { children: React.Reac
       }
     }
     cargarConfiguracion()
+
+    // 2. Sincronizar en tiempo real si el editor guarda cambios
+    const handleCambio = (e: any) => {
+      if (e.detail) {
+        setConfiguracion(e.detail)
+      }
+    }
+    window.addEventListener('chefsy_configuracion_cambiada', handleCambio)
+
+    let bc: BroadcastChannel | null = null
+    try {
+      bc = new BroadcastChannel('chefsy_canal_configuracion')
+      bc.onmessage = (event) => {
+        if (event.data?.tipo === 'configuracion_actualizada' && event.data.data) {
+          setConfiguracion(event.data.data)
+        }
+      }
+    } catch {}
+
+    return () => {
+      window.removeEventListener('chefsy_configuracion_cambiada', handleCambio)
+      if (bc) bc.close()
+    }
   }, [])
 
   // Inyectar el color y guardar en caché local dinámicamente cuando cambia la configuración
