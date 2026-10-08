@@ -181,7 +181,7 @@ function ProductCard({
           : 'h-20 w-20 sm:h-24 sm:w-24 md:h-26 md:w-26 rounded-xl'
       )}>
         {(!tieneImagenValida || !optimizedSrc) ? (
-          /* Placeholder para productos sin imagen — mismo estilo que tienda-v2 */
+          /* Placeholder para productos sin imagen */
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center gap-1.5">
             <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
               <Utensils size={16} className="text-slate-500" />

@@ -39,7 +39,6 @@ import InfoEntregaPedido from './InfoEntregaPedido'
 import TimerPedido from './TimerPedido'
 import ModalAccionesPedidoMobile from './ModalAccionesPedidoMobile'
 import ModalVistaMapa from './ModalVistaMapa'
-import BadgeSmartBatch from './BadgeSmartBatch'
 import SelectorCadetePedido from './SelectorCadetePedido'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
 
@@ -451,7 +450,6 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
 
       {/* Tipo de entrega e info geográfica */}
       <InfoEntregaPedido pedido={pedido} />
-      {pedido.tipoEntrega === 'delivery' && <BadgeSmartBatch pedido={pedido} />}
 
       {/* Lista de productos (muy compacta) */}
       <div className="border-t border-slate-100 dark:border-[#3d3d3d] pt-2 space-y-0.5">

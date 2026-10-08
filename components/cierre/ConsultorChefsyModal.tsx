@@ -347,7 +347,7 @@ export default function ConsultorChefsyModal({
         >
           <input
             type="text"
-            placeholder="Preguntale lo que quieras (ej: ¿Qué hago con las empanadas?)..."
+            placeholder="Preguntale lo que quieras (ej: ¿Qué hago con las hamburguesas?)..."
             value={consultaTexto}
             onChange={e => setConsultaTexto(e.target.value)}
             className="flex-1 px-4 py-2.5 bg-white dark:bg-[#252525] rounded-xl border border-slate-200 dark:border-[#383838] text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"

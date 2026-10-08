@@ -7,11 +7,11 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { FilaProductoPedido, ProductoCatalogo } from '@/tipos/catalogo'
-import { calcularTotalFilas, esProductoEmpanada } from '@/lib/catalogo'
+import { calcularTotalFilas } from '@/lib/catalogo'
 import { formatearPrecio, generarIdProducto, cn, crearFilaProductoVacia } from '@/lib/utils'
 import FilaProductoPedidoComponente from './FilaProductoPedido'
 import SelectorCatalogoTactilMobile from './SelectorCatalogoTactilMobile'
-import ModalCoccionEmpanada from './ModalCoccionEmpanada'
+
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { Plus, Search, X, LayoutGrid, List } from 'lucide-react'
 
@@ -82,11 +82,8 @@ export default function SeccionProductosPedido({
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [mostrarBuscador])
 
-  const [filaCoccionPendiente, setFilaCoccionPendiente] = useState<{ id: string; nombre: string } | null>(null)
-
   const agregarProductoRapido = (producto: ProductoCatalogo) => {
     const cat = categorias.find((c) => c.id === producto.categoriaId)
-    const esEmpanada = esProductoEmpanada(producto.nombre, cat?.nombre, producto.categoriaId)
     let targetId = ''
 
     // Si la única fila existente está vacía, la reemplazamos
@@ -121,9 +118,6 @@ export default function SeccionProductosPedido({
     setBusqueda('')
     setMostrarBuscador(false)
 
-    if (esEmpanada) {
-      setFilaCoccionPendiente({ id: targetId, nombre: producto.nombre })
-    }
   }
 
   const productosFiltrados =
@@ -443,21 +437,6 @@ export default function SeccionProductosPedido({
         <span className="text-lg font-black text-chefsy-800 dark:text-white">{formatearPrecio(total)}</span>
       </div>
 
-      {/* Modal de selección de cocción para producto rápido */}
-      {filaCoccionPendiente && (
-        <ModalCoccionEmpanada
-          abierto={Boolean(filaCoccionPendiente)}
-          nombreProducto={filaCoccionPendiente.nombre}
-          onSeleccionar={(coccion) => {
-            const actualizadas = filas.map((f) =>
-              f.id === filaCoccionPendiente.id ? { ...f, coccion } : f
-            )
-            onFilasChange(actualizadas)
-            setFilaCoccionPendiente(null)
-          }}
-          onCerrar={() => setFilaCoccionPendiente(null)}
-        />
-      )}
     </section>
   )
 }

@@ -30,7 +30,6 @@ const elementosNavegacion = [
   { href: '/torre-control', etiqueta: 'Torre de Control', icono: Radar },
   { href: '/cierre',        etiqueta: 'Cierre de Caja', icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',     icono: UtensilsCrossed },
-  { href: '/configuracion/stock', etiqueta: 'Stock', icono: Package },
   { href: '/clientes',      etiqueta: 'Clientes',      icono: Users },
   { href: '/dev-tools',     etiqueta: 'Tienda Diseño', icono: Paintbrush },
   { href: '/',        etiqueta: 'Tienda',        icono: Store },

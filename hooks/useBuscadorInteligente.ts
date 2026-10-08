@@ -5,7 +5,7 @@ import Fuse from 'fuse.js'
 // Podés expandirlo con palabras comunes que use la gente.
 const CONCEPTOS_CLAVE = [
   "Hamburguesa", "Burger", "Cheddar", "Papas", "Fritas", 
-  "Milanesa", "Mila", "Lomito", "Lomo", "Pizza", "Empanada", 
+  "Milanesa", "Mila", "Lomito", "Lomo", "Pizza", 
   "Bebida", "Gaseosa", "Coca Cola", "Sprite", "Fanta", "Agua",
   "Promo", "Combo", "Doble", "Completo", "Zapping", "Americana"
 ]

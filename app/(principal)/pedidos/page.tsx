@@ -9,16 +9,14 @@ import { useState, useEffect, useMemo } from 'react'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import TarjetaPedidoErrorBoundary from '@/components/pedidos/TarjetaPedidoErrorBoundary'
-import VistaKanban from '@/components/pedidos/VistaKanban'
 import { EstadoPedido, TipoEntrega, Pedido } from '@/tipos'
 import { opcionesTipoEntrega } from '@/lib/entrega'
 import { cn } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
-import { Plus, X, Calendar, LayoutGrid, List, Grid, Columns, Zap } from 'lucide-react'
+import { Plus, X, Calendar, LayoutGrid, List, Grid, Zap } from 'lucide-react'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 import IconoTipoEntrega from '@/components/ui/IconoTipoEntrega'
-import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
 
 // Opciones del filtro de estado
 const opcionesFiltro: { valor: EstadoPedido | 'todos'; etiqueta: string }[] = [
@@ -36,8 +34,8 @@ export default function PaginaPedidos() {
   
   // Vistas: activos (no archivados, tiempo real) o historial (por fecha, incluye archivados)
   const [vista, setVista] = useState<'activos' | 'historial'>('activos')
-  // Modo de vista para activos: cuadricula, lista vertical o tablero
-  const [modoVista, setModoVista] = useState<'cuadricula' | 'lista_vertical' | 'tablero'>('cuadricula')
+  // Modo de vista para activos: cuadricula o lista vertical
+  const [modoVista, setModoVista] = useState<'cuadricula' | 'lista_vertical'>('cuadricula')
   
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => obtenerFechaNegocio())
   const [pedidosHistoricos, setPedidosHistoricos] = useState<Pedido[]>([])
@@ -169,18 +167,6 @@ export default function PaginaPedidos() {
               >
                 <List size={16} /> Lista
               </button>
-              <button
-                onClick={() => setModoVista('tablero')}
-                className={cn(
-                  "p-1.5 rounded-md flex items-center gap-1.5 text-xs font-semibold transition-all",
-                  modoVista === 'tablero'
-                    ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-                )}
-                title="Vista en Columnas"
-              >
-                <Columns size={16} /> Columnas
-              </button>
             </div>
           )}
 
@@ -198,10 +184,9 @@ export default function PaginaPedidos() {
         </div>
       </div>
 
-      {/* En vista Kanban, no mostramos los filtros porque las columnas actúan como filtros */}
-      {modoVista !== 'tablero' && (
+      {/* ── Barra de Filtros de Estado Móvil y Desktop ── */}
+      {(
         <>
-          {/* ── Barra de Filtros de Estado Móvil y Desktop ── */}
           <div className="space-y-2.5">
             {/* Carrusel Horizontal de Estados con Conteo y Badges */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none snap-x py-1 -mx-3 px-3 md:mx-0 md:px-0">
@@ -285,32 +270,10 @@ export default function PaginaPedidos() {
         </>
       )}
 
-      {/* ── Rutas y Grupos Inteligentes (Smart Batching) ── */}
-      {vista === 'activos' && <BannerSugerenciasRuta />}
-
       {/* ── Vista principal ── */}
       {vista === 'historial' && cargandoHistorial ? (
         <div className="text-center py-16 text-gray-400 text-sm animate-pulse">
           Cargando historial de pedidos...
-        </div>
-      ) : modoVista === 'tablero' ? (
-        <div className="animate-in fade-in duration-200 mt-2">
-          {/* Ocultamos el Kanban en mobile usando la directiva de Tailwind si se forzara (aunque no debería poder elegirse por no tener botón, por si acaso) */}
-          <div className="hidden md:block">
-            <VistaKanban 
-              pedidos={pedidosFiltrados} 
-              onEditarPedido={(pedido) => setPedidoAEditar(pedido)} 
-            />
-          </div>
-          <div className="md:hidden text-center py-10 bg-slate-50 dark:bg-slate-900 rounded-xl">
-            <p className="text-slate-500 font-medium">La vista en columnas no está disponible en móviles.</p>
-            <button 
-              onClick={() => setModoVista('cuadricula')}
-              className="mt-4 text-chefsy font-bold underline"
-            >
-              Volver a la cuadrícula
-            </button>
-          </div>
         </div>
       ) : pedidosFiltrados.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">

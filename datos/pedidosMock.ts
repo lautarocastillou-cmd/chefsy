@@ -31,7 +31,7 @@ export const pedidosMock: Pedido[] = [
     tipoEntrega: 'delivery',
     direccion: 'Sarmiento 1200, Capital',
     productos: [
-      { id: 'prod-3', nombre: 'Empanadas x6', cantidad: 1, precio: 1800 },
+      { id: 'prod-3', nombre: 'Burger Doble', cantidad: 1, precio: 1800 },
       { id: 'prod-4', nombre: 'Ensalada César', cantidad: 1, precio: 1200 },
     ],
     total: 3000,

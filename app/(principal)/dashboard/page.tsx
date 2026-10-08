@@ -11,7 +11,6 @@ import dynamic from 'next/dynamic'
 import TarjetaMetrica from '@/components/dashboard/TarjetaMetrica'
 import TarjetaPedido from '@/components/pedidos/TarjetaPedido'
 import TarjetaPedidoErrorBoundary from '@/components/pedidos/TarjetaPedidoErrorBoundary'
-import SeccionProblemas from '@/components/dashboard/SeccionProblemas'
 import Link from 'next/link'
 
 import { 
@@ -41,7 +40,7 @@ const FormularioPedido = dynamic(() => import('@/components/pedidos/FormularioPe
 import { formatearPrecio } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { esPedidoDelivery } from '@/lib/entrega'
-import BannerSugerenciasRuta from '@/components/pedidos/BannerSugerenciasRuta'
+
 
 export default function PaginaDashboard() {
   const { pedidos, cadetes, estadoTurno, abrirModalNuevoPedido } = usarPedidos()
@@ -132,8 +131,6 @@ export default function PaginaDashboard() {
         </div>
       </div>
 
-      {/* ── Sección Inteligente de Problemas Operativos ── */}
-      <SeccionProblemas alAbrirPedido={setPedidoSeleccionadoParaEditar} />
 
       {/* ── Métricas ── */}
       <section className="space-y-4">
@@ -189,9 +186,6 @@ export default function PaginaDashboard() {
           </TarjetaMetrica>
         </div>
       </section>
-
-      {/* ── Rutas y Grupos Inteligentes (Smart Batching) ── */}
-      <BannerSugerenciasRuta />
 
       {/* ── Accesos y Pedidos Recientes ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-8">
