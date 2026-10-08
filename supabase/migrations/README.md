@@ -23,7 +23,8 @@ Las migraciones son **idempotentes**: se pueden correr más de una vez.
 |---|---|---|
 | `001_rls_cierra_pagos_y_config.sql` | Cierra la lectura de `anon` sobre cierres de caja, stock, turnos, consumos, metadata, configuración interna y usuarios. | **Aplicada** (verificado 2026-09-29: las 10 tablas devuelven 0 filas a `anon`) |
 | `002_rls_pedidos.sql` | Cierra la lectura de `anon` sobre `pedidos`, la última tabla con PII de clientes abierta. | **Aplicada** (verificado 2026-09-29: `pedidos` devuelve 0 filas a `anon`) |
-| `003_indice_pedidos_telefono.sql` | Agrega el único índice que faltaba de los 6 que sugería la auditoría. | **Pendiente de aplicar** |
+| `003_indice_pedidos_telefono.sql` | Agrega el índice `idx_pedidos_telefono` para consultas por teléfono. | **Pendiente de verificar/aplicar** |
+| `004_rls_cadetes.sql` | Cierra la lectura de `anon` sobre `cadetes`, que contiene teléfonos y ubicación GPS. | **Escrita; pendiente de verificar/aplicar en producción** |
 
 ## `pedidos` ya no está abierto (migración 002)
 

@@ -1,308 +1,155 @@
-# Chefsy — Sistema de pedidos
+# Chefsy — Sistema de pedidos y operación gastronómica
 
-Aplicación de gestión de pedidos para un local gastronómico, con tienda online
-pública, panel de administración, reparto con seguimiento GPS en vivo y cierre
-de caja.
-
----
+Chefsy es una aplicación web para la operación de un local gastronómico o dark kitchen. Incluye tienda pública, gestión de pedidos, catálogo, cadetería con seguimiento GPS, clientes, cierre de caja e impresión de comandas.
 
 ## Stack
 
-- **Next.js 16.3.3** con App Router y Turbopack
-- **React 18** con Context API + `useReducer` (sin librería de estado externa)
-- **TypeScript 5** en `strict`
-- **Supabase** (Postgres + Auth + Realtime + Storage) como backend
-- **Tailwind CSS 3** para estilos
-- **Vercel** para despliegue
+- **Next.js 16.3.3** con App Router y `proxy.ts`.
+- **React 18** y TypeScript 5 con `strict: true`.
+- **Supabase**: PostgreSQL, Realtime, Storage y clientes de servidor/navegador.
+- **Tailwind CSS 3**, Radix UI, Lucide React.
+- **SWR** y Context API para datos remotos y estado compartido.
+- **Leaflet** para mapas operativos y **MapLibre GL** en vistas experimentales.
+- **Vercel** como destino de despliegue previsto.
 
-### Paquetes que mungkin no reconocés
+## Inicio rápido
 
-| Paquete | Para qué lo usa Chefsy |
-|---|---|
-| `jose` | Firma y verifica los tokens de sesión (JWT) |
-| `bcryptjs` | Hashea las contraseñas del panel |
-| `swr` | Cachea datos del servidor y los refresca solos |
-| `leaflet` | Los mapas de seguimiento de repartidores (5 componentes) |
-| `maplibre-gl` | El mapa 3D de prueba de `/maptest` |
-| `sharp` / `heic-convert` | Procesa las fotos de productos |
-| `fuse.js` | Búsqueda difusa de clientes por nombre |
-| `web-push` | Notificaciones push al cliente |
-| `recharts` | Gráficos de métricas |
-| `framer-motion` / `lenis` | Animaciones y scroll suave |
+### Requisitos
 
----
-
-## Cómo ejecutarlo
-
-### 1. Dependencias
+Node.js 20 o superior, npm y acceso a un proyecto Supabase.
 
 ```bash
 npm install
-```
-
-### 2. Variables de entorno
-
-```bash
 cp .env.example .env.local
-```
-
-Completar `.env.local` con los valores reales. Ver
-[`.env.example`](.env.example) para el detalle de cada variable.
-
-> **Ojo:** la tabla `usuarios` está vacía en producción, así que el login del
-> panel funciona con el plan B de variables de entorno
-> (`CHEFSY_ADMIN_PASS` / `CHEFSY_CADETE_PASS`). Si faltan esas dos, nadie
-> puede entrar.
-
-### 3. Desarrollo
-
-```bash
 npm run dev
 ```
 
-Queda en [http://localhost:3000](http://localhost:3000).
-
-### Scripts disponibles
-
-| Script | Qué hace |
-|---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Verifica el esquema y después compila |
-| `npm run start` | Corre el build |
-| `npm run typecheck` | `tsc --noEmit`, debe dar 0 errores |
-| `npm run verificar:esquema` | Cruza el código contra el esquema real de la base |
-| `npm run dev:limpio` | Borra `.next` y reinicia (Windows) |
-
-> **Todavía no hay linter, tests ni CI.** `next lint` está en el `package.json`
-> pero no hay configuración de ESLint. Cuando modifiques código, corré
-> `npm run typecheck` antes de pushear: hoy es lo único que detecta una
-> regresión.
-
----
-
-## Estructura
-
-```
-chefsy/
-├── app/
-│   ├── layout.tsx              # Layout raíz: envuelve todo en los providers
-│   ├── (principal)/            # Panel interno, con sidebar
-│   │   ├── layout.tsx
-│   │   ├── dashboard/          # Métricas del día
-│   │   ├── pedidos/            # Kanban de pedidos
-│   │   ├── cadeteria/          # Vista del repartidor
-│   │   ├── cierre/             # Cierre de caja
-│   │   ├── clientes/           # CRM de clientes
-│   │   ├── configuracion/      # Ajustes del local
-│   │   ├── productos/          # Catálogo
-│   │   └── torre-control/      # Mapa general de repartidores
-│   ├── tienda/                 # Tienda pública (clientes)
-│   ├── cadete-en-vivo/[id]/    # Tracking público del pedido
-│   ├── ubicacion/[id]/         # Tracking del repartidor
-│   ├── api/                    # 57 route handlers (ver abajo)
-│   └── maptest/                # Mapa 3D de prueba
-│
-├── components/                 # 130 componentes
-│   ├── tienda/ (28)            # Tienda pública
-│   ├── pedidos/ (16)           # Kanban y tarjetas
-│   ├── ui/ (13)                # Primitivas (Button, Card, Badge...)
-│   ├── cierre/ (12)            # Cierre de caja
-│   ├── cadeteria/ (8)          # Vista del repartidor y breadcrumbs
-│   └── ...
-│
-├── contexto/                   # Estado global (Context API)
-│   ├── PedidosContexto.tsx     # El principal: pedidos, cadetes, turnos
-│   ├── CatalogoContexto.tsx    # Productos, categorías, modificadores
-│   ├── CarritoContexto.tsx     # Carrito de la tienda
-│   ├── AuthContexto.tsx        # Sesión del staff
-│   ├── ClienteAuthContexto.tsx # Sesión del cliente
-│   └── TemaNotificacionContexto.tsx
-│
-├── servicios/supabase/         # Única capa que habla con la base
-│   ├── pedidos.ts
-│   ├── catalogo.ts
-│   ├── configuracion.ts
-│   └── stock.ts
-│
-├── hooks/                      # 12 hooks
-│   ├── usePedidosRealtime.ts   # Carga de pedidos + señal de cambios
-│   ├── useCadetes.ts
-│   ├── useAgendaClientes.ts
-│   └── useSincronizacionOffline.ts
-│
-├── lib/                        # Utilidades y lógica de negocio
-│   ├── auth-server.ts          # Validación de credenciales del staff
-│   ├── auth-cliente-server.ts  # Tokens de clientes (namespaceados)
-│   ├── supabase-admin.ts       # Cliente service_role (solo servidor)
-│   ├── rate-limit.ts           # Rate limiting por IP
-│   ├── api-error.ts            # Respuestas de error seguras
-│   ├── pedidos-broadcast.ts    # Señal de "cambió algo" en pedidos
-│   ├── motor-clientes.ts       # Detección de clientes duplicados
-│   ├── stock-motor.ts          # Kardex de insumos
-│   └── ubicacion.ts            # Geocodificación y rutas
-│
-├── tipos/                      # Tipos TypeScript
-├── datos/productos.ts          # Catálogo hardcodeado de respaldo
-├── proxy.ts                    # Control de acceso por rol (antes "middleware")
-├── supabase/migrations/        # Migraciones SQL (fuente de verdad del esquema)
-└── schema.sql                  # ⚠️ DESACTUALIZADO, ver más abajo
-```
-
-### Los 57 endpoints de `app/api/`
-
-| Grupo | Cantidad | Quién puede llamarlos |
-|---|---|---|
-| `/api/admin/*` | 29 | Staff, según el rol (lo define `proxy.ts`) |
-| `/api/public/*` | 7 | Cualquiera |
-| `/api/clientes/*` | 5 | Cliente con sesión |
-| `/api/auth/*` | 4 | Login, logout, verificación |
-| `/api/webpush/*` | 3 | Notificaciones push |
-| `/api/tienda/*` | 2 | Tienda pública |
-| `/api/cadeteria/*` | 2 | Cadete |
-| Otros | 5 | `/api/health`, `/api/streetview`, etc. |
-
----
-
-## Estados de un pedido
-
-```
-Nuevo → En Cocina → Listo → En Camino → Entregado
-   ↓         ↓        ↓         ↓
- Cancelado (desde cualquier estado activo)
-```
-
-`cancelado` y `entregado` son terminales. `archivado` es una bandera aparte:
-marca el pedido como cerrado sin borrar el historial.
-
----
-
-## Rutas
-
-### Panel interno (requiere sesión de staff)
-
-| Ruta | Qué es |
-|---|---|
-| `/dashboard` | Métricas del día y pedidos recientes |
-| `/pedidos` | Kanban de pedidos |
-| `/nuevo-pedido` | Crear pedido |
-| `/cadeteria` | Vista del repartidor |
-| `/torre-control` | Mapa general de todos los repartidores |
-| `/cierre` | Cierre de caja |
-| `/clientes` | CRM con detección de duplicados |
-| `/productos` | Catálogo |
-| `/configuracion` | Ajustes del local |
-| `/dev-tools` | Herramientas de diagnóstico (**solo admin**) |
-| `/maptest` | Mapa 3D de prueba |
-
-### Público (sin sesión)
-
-| Ruta | Qué es |
-|---|---|
-| `/tienda` | Tienda online |
-| `/cadete-en-vivo/[id]` | Seguimiento de un pedido |
-| `/ubicacion/[id]` | Seguimiento del repartidor |
-| `/privacidad`, `/terminos`, `/sobre-nosotros` | Legales |
-
----
-
-## Seguridad
-
-Estas son las reglas que hay que respetar al tocar el código. Están todas
-aplicadas; no son sugerencias.
-
-### La base no se lee desde el navegador
-
-La `anon key` (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) viaja dentro del bundle: es
-pública por diseño. **Ninguna tabla con datos de negocio se lee con ella.**
-
-`pedidos`, `cierres_diarios`, `stock_*`, `turnos`, `consumos_personal`,
-`tienda_metadata`, `configuracion_operativa`, `usuarios`, `clientes` y
-`push_subscriptions` están cerradas a `anon` por RLS. Solo el menú público
-(`categorias`, `productos`, `modificadores`, `catalogo`) se lee desde el
-navegador, a propósito.
-
-Para leer datos de negocio: **route handler con `obtenerSupabaseAdmin()`**, que
-valida la sesión primero. Hay dos helpers para no olvidarse:
-
-```ts
-// Mal: la key viaja al bundle
-const { data } = await supabaseAnon.from('pedidos').select('*')
-
-// Bien: pasa por el servidor, que valida la sesión
-const { data } = await obtenerSupabaseAdmin().from('pedidos').select('id')
-```
-
-### Los errores no se filtran al cliente
-
-`error.message` de Supabase trae nombres de tabla, columna y constraints. Va
-al log del servidor, nunca a la respuesta. Usar el helper:
-
-```ts
-import { responderError, ErrorApi } from '@/lib/api-error'
-
-// Error interno: el cliente ve un mensaje genérico
-return responderError(error, { contexto: '[API Stock]' })
-
-// Error que sí es para el usuario (decisión consciente)
-throw new ErrorApi('El archivo supera los 5 MB.', 413)
-```
-
-Única excepción: `/api/admin/debug`, que existe justamente para mostrar qué
-tablas fallan.
-
-### Roles
-
-`proxy.ts` (antes `middleware`) controla el acceso por prefijo de ruta. Next 16
-renombró middleware a proxy; si buscás esa palabra en la documentación
-vieja, es esto.
-
----
-
-## Base de datos
-
-La fuente de verdad del esquema es [`supabase/migrations/`](supabase/migrations/),
-no `schema.sql`. Para ver las migraciones aplicadas y su estado de seguridad:
+En Windows también está disponible:
 
 ```bash
-# Verificar que una tabla cerrada sigue cerrada
-curl "$URL/rest/v1/pedidos?select=*" -H "apikey: $ANON"
-# debe devolver 0 filas
+npm run dev:limpio
 ```
 
-> **⚠️ `schema.sql` está desactualizado.** Nombra columnas y tablas que no
-> coinciden con el código (`usuarios.username` vs `usuario`,
-> `clientes_cuentas` vs `clientes`, `password_hash` vs `clave_hash`) y le
-> faltan ~10 tablas que sí existen. **No usarlo para armar una base desde
-> cero**: produce una app rota. Ver el issue pendiente de regenerarlo.
+La aplicación queda disponible en `http://localhost:3000`.
 
----
+### Variables de entorno
 
-## Verificación automática
+Completar `.env.local` a partir de [`.env.example`](.env.example). En producción son especialmente importantes:
 
-`npm run build` corre primero `verificar:esquema`, que cruza todas las
-columnas que el código le pide a la base contra el esquema real verificado
-(ver [`datos/esquema-verificado.md`](datos/esquema-verificado.md)). Si el
-código pide una columna que no existe, **el build falla y no se despliega**.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` — solo servidor; nunca debe exponerse al navegador.
+- `CHEFSY_JWT_SECRET`
+- `CHEFSY_ADMIN_PASS` y `CHEFSY_CADETE_PASS` si se utiliza el fallback de autenticación.
 
-Existe porque ya pasó tres veces: `viaje_numero` y `clientes.puntos` hicieron
-que consultas enteras devolvieran `42703` en producción, en bloques que
-capturaban el error y seguían, así que morían en silencio. `tsc` no lo detecta,
-porque TypeScript no sabe contra qué base se corre el proyecto.
+Las integraciones opcionales de Web Push, mapas y WhatsApp requieren las variables correspondientes. No commitear `.env.local` ni secretos.
 
-Antes de compilar, también conviene:
+## Comandos
 
-```bash
-npm run typecheck    # 0 errores
+| Comando | Función |
+|---|---|
+| `npm run dev` | Servidor de desarrollo. |
+| `npm run dev:limpio` | Elimina `.next` y reinicia el desarrollo en Windows. |
+| `npm run typecheck` | Ejecuta TypeScript sin emitir archivos. |
+| `npm run lint` | Ejecuta ESLint. |
+| `npm run verificar:esquema` | Contrasta referencias de columnas con `datos/esquema-verificado.json`. |
+| `npm run build` | Ejecuta el verificador de esquema y luego compila Next.js. |
+| `npm run start` | Ejecuta el build de producción. |
+
+Actualmente no hay una suite de tests automatizados ni workflows de CI versionados. Antes de enviar cambios, ejecutar al menos `typecheck`, `lint` y `verificar:esquema`; para validar el despliegue, ejecutar `build`.
+
+## Estructura principal
+
+```text
+app/
+├── page.tsx                    # Entrada de la tienda pública
+├── tienda/                     # Tienda pública alternativa/enlace
+├── (principal)/                # Panel protegido: pedidos, dashboard, productos, etc.
+├── cadete-en-vivo/[id]/        # Tracking público de un pedido
+├── ubicacion/[id]/             # Vista pública de ubicación
+├── imprimir/[id]/              # Comanda/ticket para iframe de impresión
+├── maptest/                    # Vistas experimentales de mapas
+└── api/                        # Route Handlers de auth, pedidos, catálogo y operaciones
+
+components/                     # UI organizada por dominio
+contexto/                       # Providers de pedidos, catálogo, carrito y sesiones
+hooks/                          # Hooks de datos y sincronización
+servicios/supabase/             # Acceso de dominio a Supabase
+tipos/                          # Tipos compartidos
+datos/productos.ts              # Respaldo estático del catálogo
+lib/                            # Auth, Supabase, cachés y utilidades
+proxy.ts                        # Control de acceso por ruta y rol
+supabase/migrations/            # Migraciones SQL versionadas
 ```
 
-## Cosas que faltan
+La documentación detallada está en [`docs/`](docs/):
 
-- **Tests.** No hay ninguno. El typecheck y el verificador de esquema son las
-  dos únicas redes.
-- **CI.** No hay `.github/workflows`. La verificación pasa por el build de
-  Vercel, pero nadie lo corre hasta que alguien pushea.
-- **Lint.** El script existe pero no hay config de ESLint.
-- **Catálogo en la base.** `datos/productos.ts` (1.576 líneas) es la fuente
-  real del menú; la tabla `productos` está vacía. Agregar un producto hoy
-  implica editar código y redesplegar.
-- **Dos tiendas.** `/tienda` y `/tienda-v2` conviven.
+- [Arquitectura](docs/arquitectura.md)
+- [Seguridad](docs/seguridad.md)
+- [Base de datos](docs/base-de-datos.md)
+- [Despliegue](docs/despliegue.md)
+- [Guía de contribución](CONTRIBUTING.md)
+- [Desarrollo y mantenimiento](docs/mantenimiento/desarrollo.md)
+- [Operaciones](docs/operaciones/)
+
+## Módulos y rutas
+
+### Panel interno
+
+El grupo `app/(principal)` contiene las rutas protegidas por `proxy.ts`:
+
+- `/dashboard`: métricas y resumen operativo.
+- `/pedidos`: gestión de pedidos (vista de cuadrícula predeterminada o lista vertical).
+- `/nuevo-pedido`: carga manual.
+- `/cadeteria`: despacho y operación de repartidores.
+- `/torre-control`: mapa global de cadetes.
+- `/cierre`: cierre y arqueo de caja.
+- `/clientes`: gestión de clientes.
+- `/productos`: catálogo interno.
+- `/configuracion`: configuración general (módulo de stock dormido y retirado de la navegación principal).
+
+`/dev-tools` es una herramienta de diagnóstico administrativa. `/maptest` contiene vistas experimentales y no forma parte del flujo operativo principal.
+
+### Tienda y tracking
+
+- `/` y `/tienda`: tienda pública.
+- `/cadete-en-vivo/[id]`: tracking público del pedido.
+- `/ubicacion/[id]`: vista pública de ubicación.
+- `/imprimir/[id]`: render del ticket/comanda.
+
+## Pedido y sincronización
+
+El flujo operativo principal es:
+
+```text
+nuevo → en_cocina → listo → en_camino → entregado
+  └──────────────────────────────────────→ cancelado
+```
+
+`entregado` y `cancelado` son estados terminales. `archivado` es una bandera independiente para ocultar pedidos antiguos sin eliminar su historial.
+
+Los datos administrativos se consultan mediante Route Handlers autenticados. Para actualizar la interfaz, Supabase Realtime se utiliza como señal `broadcast` mínima y el cliente vuelve a pedir los datos mediante la API autenticada; el broadcast no debe transportar PII.
+
+Los pings GPS actualizan la ubicación del cadete, no la fila de `pedidos`. La estructura de `pedido.productos` debe mantenerse compatible con [`app/imprimir/[id]/page.tsx`](app/imprimir/[id]/page.tsx).
+
+## Seguridad y base de datos
+
+- La `anon key` es pública y solo debe usarse para operaciones expresamente públicas.
+- Los datos de negocio deben pasar por Route Handlers con sesión validada y `obtenerSupabaseAdmin()`.
+- Los errores internos no deben devolverse sin sanitizar; usar `responderError`.
+- Las migraciones en [`supabase/migrations/`](supabase/migrations/) son la referencia para cambios SQL y políticas RLS.
+- [`datos/esquema-verificado.md`](datos/esquema-verificado.md) explica la snapshot usada por el verificador.
+- `schema.sql` es un archivo legacy y no debe utilizarse para reconstruir producción sin revisarlo.
+
+Consulta [docs/seguridad.md](docs/seguridad.md) y [supabase/migrations/README.md](supabase/migrations/README.md) antes de modificar acceso a datos.
+
+## Limitaciones conocidas
+
+- No hay tests automatizados ni CI versionado.
+- La snapshot del esquema debe regenerarse después de cambios en Supabase.
+- El catálogo tiene una ruta estática de respaldo en `datos/productos.ts`; confirmar la fuente de verdad antes de modificar productos.
+- Los endpoints de tracking público tienen requisitos de privacidad propios; revisar su flujo antes de endurecerlos.
+
+## Documentación histórica
+
+La auditoría técnica de septiembre de 2026 se conserva en [`docs/historico/auditoria-2026-09-29.md`](docs/historico/auditoria-2026-09-29.md). Es un registro histórico, no una descripción automática del estado actual.
