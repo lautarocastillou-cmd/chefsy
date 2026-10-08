@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { X, Plus, Trash2, Upload, Loader2, Sparkles, Clock, Check, RefreshCw, Image as ImageIcon } from 'lucide-react'
+import { X, Plus, Trash2, Upload, Loader2, Sparkles, Clock, Check, RefreshCw, Image as ImageIcon, Images } from 'lucide-react'
 import { ImagenLoopHero, IMAGENES_LOOP_DEFAULT, TransicionLoopHero, OPCIONES_TRANSICION_LOOP } from '@/servicios/supabase/configuracion'
-import { cn } from '@/lib/utils'
+import BancoFotosLoopModal from './BancoFotosLoopModal'
 
 interface Props {
   abierto: boolean
@@ -25,6 +25,7 @@ export default function ModalConfiguracionLoop({
   const [transicionSeleccionada, setTransicionSeleccionada] = useState<TransicionLoopHero>('fade')
   const [subiendoIndex, setSubiendoIndex] = useState<number | null>(null)
   const [errorSubida, setErrorSubida] = useState<string | null>(null)
+  const [slotBancoAbierto, setSlotBancoAbierto] = useState<number | null>(null)
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({})
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function ModalConfiguracionLoop({
       }
       setTransicionSeleccionada(transicion || 'fade')
       setErrorSubida(null)
+      setSlotBancoAbierto(null)
     }
   }, [abierto, imagenes, transicion])
 
@@ -64,6 +66,21 @@ export default function ModalConfiguracionLoop({
     setLista(prev => prev.map((item, i) => i === index ? { ...item, duracionSegundos } : item))
   }
 
+  const handleSeleccionarDelBanco = (url: string) => {
+    if (slotBancoAbierto === null) return
+    handleActualizarUrl(slotBancoAbierto, url)
+    setSlotBancoAbierto(null)
+  }
+
+  const handleAgregarDesdeBanco = (url: string) => {
+    if (lista.length >= 4) return
+    setLista((prev) => [
+      ...prev,
+      { id: `loop-${Date.now()}-${prev.length + 1}`, url, duracionSegundos: 4 },
+    ])
+    setSlotBancoAbierto(null)
+  }
+
   const handleSubirArchivo = async (file: File, index: number) => {
     try {
       setSubiendoIndex(index)
@@ -83,9 +100,9 @@ export default function ModalConfiguracionLoop({
       if (urlSubida) {
         handleActualizarUrl(index, urlSubida)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      setErrorSubida(err.message || 'Error al subir la imagen.')
+      setErrorSubida(err instanceof Error ? err.message : 'Error al subir la imagen.')
     } finally {
       setSubiendoIndex(null)
     }
@@ -241,7 +258,7 @@ export default function ModalConfiguracionLoop({
                       className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-emerald-500 transition-colors"
                     />
 
-                    {/* Botón Subir Archivo */}
+                    {/* Botones de origen de imagen */}
                     <input
                       ref={(el) => { fileInputRefs.current[index] = el }}
                       type="file"
@@ -262,6 +279,15 @@ export default function ModalConfiguracionLoop({
                     >
                       {estaSubiendo ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                       <span className="hidden sm:inline">Subir</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSlotBancoAbierto(index)}
+                      className="px-3 py-2 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/60 text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      title="Elegir una imagen del banco de fotos"
+                    >
+                      <Images size={13} />
+                      <span className="hidden sm:inline">Banco</span>
                     </button>
                   </div>
 
@@ -306,14 +332,22 @@ export default function ModalConfiguracionLoop({
 
           {/* Botón para agregar imagen hasta 4 */}
           {lista.length < 4 && (
-            <button
-              type="button"
-              onClick={handleAgregarSlot}
-              className="w-full py-3 border-2 border-dashed border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-950/20 text-slate-400 hover:text-emerald-300 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Plus size={16} />
-              <span>Agregar Imagen ({lista.length}/4)</span>
-            </button>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleAgregarSlot}
+                className="w-full rounded-2xl border-2 border-dashed border-slate-800 py-3 text-xs font-bold text-slate-400 transition-all hover:border-emerald-500/50 hover:bg-emerald-950/20 hover:text-emerald-300"
+              >
+                <span className="flex items-center justify-center gap-2"><Plus size={16} />Agregar imagen vacía ({lista.length}/4)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlotBancoAbierto(lista.length)}
+                className="w-full rounded-2xl border-2 border-dashed border-indigo-800/70 py-3 text-xs font-bold text-indigo-300 transition-all hover:border-indigo-400 hover:bg-indigo-950/30"
+              >
+                <span className="flex items-center justify-center gap-2"><Images size={16} />Agregar desde el banco ({lista.length}/4)</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -349,6 +383,16 @@ export default function ModalConfiguracionLoop({
           </div>
         </div>
       </div>
+      <BancoFotosLoopModal
+        abierto={slotBancoAbierto !== null}
+        urlActual={slotBancoAbierto !== null && slotBancoAbierto < lista.length ? lista[slotBancoAbierto]?.url : undefined}
+        onCerrar={() => setSlotBancoAbierto(null)}
+        onSeleccionar={(url) => {
+          if (slotBancoAbierto === null) return
+          if (slotBancoAbierto < lista.length) handleSeleccionarDelBanco(url)
+          else handleAgregarDesdeBanco(url)
+        }}
+      />
     </div>
   )
 }
