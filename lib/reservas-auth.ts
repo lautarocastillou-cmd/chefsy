@@ -12,9 +12,10 @@ function secret() {
 }
 
 export function validarPin(pin: unknown): boolean {
-  const expected = process.env.RESERVAS_PIN
-  if (!expected || typeof pin !== 'string' || !/^\d{6}$/.test(expected) || !/^\d{6}$/.test(pin)) return false
-  return timingSafeEqual(Buffer.from(pin), Buffer.from(expected))
+  const expected = process.env.RESERVAS_PIN?.trim()
+  const received = typeof pin === 'string' ? pin.trim() : ''
+  if (!expected || !/^\d{6}$/.test(expected) || !/^\d{6}$/.test(received)) return false
+  return timingSafeEqual(Buffer.from(received), Buffer.from(expected))
 }
 
 export async function crearTokenReservas() {
