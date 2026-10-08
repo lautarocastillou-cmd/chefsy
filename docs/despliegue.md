@@ -49,6 +49,10 @@ Asegurarse de tener configuradas las siguientes variables en el panel de Vercel 
 |---|---|---|
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Público | Clave pública VAPID para notificaciones WebPush. |
 | `VAPID_PRIVATE_KEY` | Privado | Clave privada VAPID para envío de pushes. |
+| `RESERVAS_PIN` | Privado (Solo Servidor) | PIN de seis dígitos para la PWA independiente de reservas. No guardar el valor en el repositorio. |
+| `RESERVAS_SESSION_SECRET` | Privado (Solo Servidor) | Secreto aleatorio de al menos 32 caracteres para firmar sesiones exclusivas de reservas. |
+| `RESERVAS_ALLOWED_ORIGIN` | Público | Origen HTTPS exacto de la PWA independiente, por ejemplo `https://reservas.malu.com`. |
+| `RESERVAS_APP_URL` | Público | URL pública de la PWA para el enlace de notificaciones. |
 | `GOOGLE_MAPS_API_KEY` | Privado | Clave usada por el proxy de Street View; revisar autenticación y rate limit de `/api/streetview` antes de exponerlo públicamente. |
 
 ---

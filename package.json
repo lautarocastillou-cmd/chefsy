@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "verificar:esquema": "node scripts/verificar-esquema.mjs"
+    "verificar:esquema": "node scripts/verificar-esquema.mjs",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
