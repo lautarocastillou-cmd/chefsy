@@ -29,6 +29,7 @@ import {
   PlusCircle, 
   FileText 
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { usarTemaNotificacion } from '@/contexto/TemaNotificacionContexto'
 
 const GeneradorQrCadete = dynamic(() => import('@/components/dashboard/GeneradorQrCadete'), { ssr: false })
@@ -120,13 +121,13 @@ export default function PaginaDashboard() {
 
           <div className="shrink-0 flex flex-wrap items-center gap-3">
             <ImpresorTicketsPromocionales botonVariante="banner" />
-            <button
+            <Button
               onClick={handleAbrirNuevoPedido}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black px-6 py-3.5 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-98 cursor-pointer border border-emerald-400/30"
+              className="w-full sm:w-auto h-auto gap-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black px-6 py-3.5 rounded-2xl text-sm shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] border border-emerald-400/30"
             >
               <Plus size={18} strokeWidth={3} />
-              <span>Nuevo Pedido</span>
-            </button>
+              Nuevo Pedido
+            </Button>
           </div>
         </div>
       </div>
@@ -195,13 +196,12 @@ export default function PaginaDashboard() {
               <Clock3 size={18} className="text-emerald-600 dark:text-emerald-400" />
               <span>Pedidos Recientes</span>
             </h2>
-            <Link
-              href="/pedidos"
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-1 transition-colors"
-            >
-              <span>Ver todos</span>
-              <ArrowUpRight size={14} />
-            </Link>
+            <Button asChild variant="link" className="h-auto p-0 text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 gap-1 no-underline">
+              <Link href="/pedidos">
+                Ver todos
+                <ArrowUpRight size={14} />
+              </Link>
+            </Button>
           </div>
 
           {pedidosRecientes.length === 0 ? (
@@ -236,37 +236,35 @@ export default function PaginaDashboard() {
           </h2>
           
           <div className="space-y-3">
-            <Link
-              href="/cadeteria"
-              className="group flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                  <Users size={20} />
+            <Button asChild variant="outline" className="group w-full h-auto justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+              <Link href="/cadeteria">
+                <div className="flex items-center gap-3.5">
+                  <div className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                    <Users size={20} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Cadetería</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Gestión de repartidores</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Cadetería</p>
-                  <p className="text-[11px] text-slate-400 font-medium">Gestión de repartidores</p>
-                </div>
-              </div>
-              <ArrowUpRight size={16} className="text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-            </Link>
+                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              </Link>
+            </Button>
             
-            <Link
-              href="/pedidos"
-              className="group flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 hover:border-sky-300 dark:hover:border-sky-800 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 p-3 rounded-2xl text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
-                  <Clock size={20} />
+            <Button asChild variant="outline" className="group w-full h-auto justify-between p-4 rounded-3xl bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 hover:border-sky-300 dark:hover:border-sky-800 hover:bg-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+              <Link href="/pedidos">
+                <div className="flex items-center gap-3.5">
+                  <div className="bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 p-3 rounded-2xl text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
+                    <Clock size={20} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Historial</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Todos los pedidos y filtros</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Historial</p>
-                  <p className="text-[11px] text-slate-400 font-medium">Todos los pedidos y filtros</p>
-                </div>
-              </div>
-              <ArrowUpRight size={16} className="text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-            </Link>
+                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              </Link>
+            </Button>
           </div>
 
           <div className="pt-2 space-y-3">
@@ -277,13 +275,13 @@ export default function PaginaDashboard() {
       </div>
 
       {/* ── Botón Flotante para Crear Pedido ── */}
-      <button
+      <Button
         onClick={handleAbrirNuevoPedido}
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black py-3.5 px-6 rounded-full shadow-xl shadow-emerald-950/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all text-sm cursor-pointer border border-emerald-400/30"
+        className="fixed bottom-6 right-6 z-40 h-auto gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black py-3.5 px-6 rounded-full shadow-xl shadow-emerald-950/30 hover:scale-105 active:scale-[0.95] text-sm border border-emerald-400/30"
       >
         <Plus size={18} strokeWidth={3} />
-        <span>Crear Pedido</span>
-      </button>
+        Crear Pedido
+      </Button>
 
       {/* ── Modal de Editar Pedido (Alertas Operativas) ── */}
       {pedidoSeleccionadoParaEditar && (
@@ -311,12 +309,14 @@ export default function PaginaDashboard() {
                   <p className="text-xs text-slate-400 font-medium">Modificar los datos de la orden</p>
                 </div>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setPedidoSeleccionadoParaEditar(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X size={20} />
-              </button>
+              </Button>
             </div>
             {/* Contenido del Modal */}
             <div className="px-6 pb-6">

@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { QrCode, X, Copy, Check, Sparkles, Smartphone, ArrowRight, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import toast from 'react-hot-toast'
 
@@ -81,23 +82,23 @@ export default function GeneradorQrCadete() {
             ))}
           </select>
           
-          <button
+          <Button
             onClick={handleGenerarQR}
             disabled={!cadeteSeleccionado || cargando}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            className="w-full h-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-2xl text-xs shadow-sm shadow-emerald-600/20 gap-2 active:scale-[0.95]"
           >
             {cargando ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                <span>Generando...</span>
+                Generando...
               </>
             ) : (
               <>
                 <QrCode size={14} />
-                <span>Generar Código QR</span>
+                Generar Código QR
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -111,12 +112,14 @@ export default function GeneradorQrCadete() {
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => { setModalAbierto(false); setQrUrl('') }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              className="absolute top-4 right-4 h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X size={20} />
-            </button>
+            </Button>
             
             <div className="mb-5 mt-1">
               <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3">
@@ -133,22 +136,23 @@ export default function GeneradorQrCadete() {
             </div>
 
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={copiarEnlace}
-                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full h-auto bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 px-4 rounded-2xl text-xs shadow-sm gap-2"
               >
                 {copiado ? (
                   <>
                     <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
-                    <span>¡Enlace Copiado!</span>
+                    ¡Enlace Copiado!
                   </>
                 ) : (
                   <>
                     <Copy size={15} />
-                    <span>Copiar Enlace Directo</span>
+                    Copiar Enlace Directo
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

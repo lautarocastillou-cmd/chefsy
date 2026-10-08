@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface PlantillaPromo {
   id: string
@@ -494,12 +495,14 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
               </h2>
             </div>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="h-9 w-9 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X size={20} />
-          </button>
+          </Button>
         </div>
 
         {/* Editor + Preview */}
@@ -897,15 +900,15 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
 
             {/* Botón Imprimir */}
             <div className="space-y-2 pt-2">
-              <button
+              <Button
                 type="button"
                 onClick={imprimirTicket}
                 disabled={imprimiendo}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs sm:text-sm transition-colors shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                className="w-full h-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-600/25 gap-2 active:scale-[0.98]"
               >
                 <Printer size={16} />
-                <span>{imprimiendo ? 'Imprimiendo...' : `Imprimir ${copias > 1 ? `(${copias} Copias)` : 'Ticket'}`}</span>
-              </button>
+                {imprimiendo ? 'Imprimiendo...' : `Imprimir ${copias > 1 ? `(${copias} Copias)` : 'Ticket'}`}
+              </Button>
               <p className="text-[10px] text-slate-400 text-center font-medium">
                 Se enviará a la impresora térmica seleccionada
               </p>
@@ -938,13 +941,13 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
   return (
     <>
       {botonVariante === 'banner' && (
-        <button
+        <Button
           onClick={() => setModalAbierto(true)}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold px-4 py-3.5 rounded-2xl text-xs sm:text-sm transition-colors border border-emerald-400/30 active:scale-98 cursor-pointer shadow-sm"
+          className="w-full sm:w-auto h-auto gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold px-4 py-3.5 rounded-2xl text-xs sm:text-sm border border-emerald-400/30 active:scale-[0.98] shadow-sm"
         >
           <Sparkles size={16} className="text-amber-300" />
-          <span>Imprimir Promo / QR</span>
-        </button>
+          Imprimir Promo / QR
+        </Button>
       )}
 
       {botonVariante === 'sidebar' && (
@@ -963,13 +966,13 @@ export default function ImpresorTicketsPromocionales({ botonVariante = 'sidebar'
             Imprimí en tu comandera tickets con promociones, tu Instagram, QR de WhatsApp directo o reseñas de Google para tus clientes.
           </p>
 
-          <button
+          <Button
             onClick={() => setModalAbierto(true)}
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors shadow-sm shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            className="w-full h-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-2.5 px-4 rounded-2xl text-xs shadow-sm shadow-amber-500/20 gap-2 active:scale-[0.95]"
           >
             <Sparkles size={14} className="text-amber-200" />
-            <span>Crear Ticket Promocional</span>
-          </button>
+            Crear Ticket Promocional
+          </Button>
         </div>
       )}
 
