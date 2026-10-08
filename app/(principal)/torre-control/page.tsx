@@ -1,14 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { CadeteData } from '@/components/torre-control/MapaGlobal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign } from 'lucide-react'
-import { formatearPrecio } from '@/lib/utils'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown } from 'lucide-react'
+import { formatearPrecio, cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { usarPedidos } from '@/contexto/PedidosContexto'
+import { esPedidoDelivery } from '@/lib/entrega'
+import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
+import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import { notificarError } from '@/lib/notificaciones'
@@ -24,6 +29,68 @@ const ModalBreadcrumbTrail = dynamic(
   { ssr: false }
 )
 
+// ─────────────────────────────────────────────────────
+// SeccionDesplegable: bloque colapsable para la info operativa
+// migrada desde /cadeteria (GPS, recorridos, diagnóstico).
+// ─────────────────────────────────────────────────────
+function SeccionDesplegable({
+  titulo,
+  icono,
+  insignia,
+  abiertoPorDefecto = false,
+  children,
+}: {
+  titulo: string
+  icono: ReactNode
+  insignia?: ReactNode
+  abiertoPorDefecto?: boolean
+  children: ReactNode
+}) {
+  const [abierto, setAbierto] = useState(false)
+  useEffect(() => {
+    setAbierto(abiertoPorDefecto)
+  }, [abiertoPorDefecto])
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => setAbierto((v) => !v)}
+        className="w-full h-auto p-4 flex items-center justify-between gap-2 rounded-none hover:bg-gray-50 dark:hover:bg-slate-800/60"
+        aria-expanded={abierto}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            {icono}
+          </span>
+          <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider truncate">
+            {titulo}
+          </span>
+          {insignia}
+        </span>
+        <ChevronDown
+          size={16}
+          className={cn(
+            "shrink-0 text-slate-400 transition-transform duration-300",
+            abierto && "rotate-180"
+          )}
+        />
+      </Button>
+      <div
+        className={cn(
+          "grid transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          abierto ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="p-4 pt-0">{children}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TorreControlPage() {
   const [cadetes, setCadetes] = useState<CadeteData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -36,6 +103,39 @@ export default function TorreControlPage() {
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
   const [vistaMobile, setVistaMobile] = useState<'mapa' | 'cadetes'>('mapa')
   const [mostrarReferenciasMobile, setMostrarReferenciasMobile] = useState(false)
+
+  // ── Fase 1 unificación /cadeteria → torre: tabs superiores ──
+  const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
+  const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
+  const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: any[] } | null>(null)
+  const { pedidos } = usarPedidos()
+
+  // Estado GPS derivado de los datos que ya trae la torre (sin fetch extra)
+  const estadoGps = cadetes.map((c) => {
+    const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
+    const segundos = Math.floor((Date.now() - updatedAt) / 1000)
+    const hace = segundos < 60 ? `${segundos}s` : segundos < 3600 ? `${Math.floor(segundos / 60)}min` : '+1h'
+    return { id: c.id, nombre: c.nombre, activo: c.gps_activo, hace }
+  })
+  const gpsActivosCount = estadoGps.filter((e) => e.activo).length
+
+  // Recorridos multi-pedido (2+ simultáneos) desde el contexto de pedidos
+  const pedidosDeliveryActivos = pedidos.filter(
+    (p) =>
+      esPedidoDelivery(p) &&
+      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino')
+  )
+  const recorridosMulti = (() => {
+    const mapa = new Map<string, { id: string; nombre: string; pedidos: typeof pedidosDeliveryActivos }>()
+    for (const p of pedidosDeliveryActivos) {
+      if (!p.cadete_id) continue
+      const cid = p.cadete_id.toLowerCase()
+      const actual = mapa.get(cid) || { id: p.cadete_id, nombre: p.cadete_nombre || p.cadete_id, pedidos: [] as typeof pedidosDeliveryActivos }
+      actual.pedidos.push(p)
+      mapa.set(cid, actual)
+    }
+    return Array.from(mapa.values()).filter((c) => c.pedidos.length >= 2)
+  })()
 
   // Disparar resize para que Leaflet recalcule tiles al alternar a la pestaña Mapa
   useEffect(() => {
@@ -137,6 +237,43 @@ export default function TorreControlPage() {
 
   return (
     <div className="flex flex-col w-full h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-7rem)] min-h-[460px]">
+      {/* ── Tabs superiores: unificación /cadeteria → torre (Fase 1) ── */}
+      <div className="flex items-end gap-1 border-b border-gray-200 dark:border-slate-800 mb-2 shrink-0 overflow-x-auto scrollbar-none">
+        {(
+          [
+            { valor: 'mapa', etiqueta: 'Mapa en Vivo', icono: <Navigation className="w-3.5 h-3.5 text-emerald-600" /> },
+            { valor: 'repartos', etiqueta: 'Repartos', icono: <ClipboardList className="w-3.5 h-3.5 text-slate-500" /> },
+            { valor: 'gps', etiqueta: 'GPS y Recorridos', icono: <Radio className="w-3.5 h-3.5 text-slate-500" /> },
+            { valor: 'rendimiento', etiqueta: 'Rendimiento', icono: <Activity className="w-3.5 h-3.5 text-slate-500" /> },
+          ] as const
+        ).map((tab) => (
+          <Button
+            key={tab.valor}
+            type="button"
+            variant="ghost"
+            onClick={() => setTabSuperior(tab.valor)}
+            className={cn(
+              "h-auto p-0 px-4 pt-2 pb-1.5 mb-[-1px] font-semibold text-sm transition-all border-b-2 rounded-none inline-flex items-center gap-1.5 leading-none shrink-0",
+              tabSuperior === tab.valor
+                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-transparent hover:bg-transparent"
+                : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+            )}
+          >
+            {tab.icono} {tab.etiqueta}
+            {tab.valor === 'gps' && estadoGps.length > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                {gpsActivosCount}/{estadoGps.length}
+              </span>
+            )}
+            {tab.valor === 'gps' && recorridosMulti.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title={`${recorridosMulti.length} recorrido(s) multi-pedido`} />
+            )}
+          </Button>
+        ))}
+      </div>
+
+      {tabSuperior === 'mapa' && (
+        <>
       {/* Selector de Pestañas Móvil */}
       <div className="md:hidden flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 mb-2 shrink-0">
         <button
@@ -472,6 +609,140 @@ export default function TorreControlPage() {
         </div>
       </div>
     </div>
+        </>
+      )}
+
+      {/* ── Tab GPS y Recorridos: info migrada desde /cadeteria (Fase 1) ── */}
+      {tabSuperior === 'gps' && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-3xl mx-auto w-full space-y-3 p-1">
+            <SeccionDesplegable
+              titulo="Estado GPS Cadetes"
+              icono={<Radio size={15} />}
+              abiertoPorDefecto
+              insignia={
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                  {gpsActivosCount}/{estadoGps.length} activos
+                </span>
+              }
+            >
+              {estadoGps.length === 0 ? (
+                <p className="text-xs text-gray-500">No hay cadetes registrados en el sistema.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {estadoGps.map((e) => (
+                    <div
+                      key={e.id}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                        e.activo
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
+                          : "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30"
+                      )}
+                    >
+                      <span className={cn(
+                        "h-2 w-2 rounded-full shrink-0",
+                        e.activo ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                      )} />
+                      <span>{e.nombre}</span>
+                      <span className="opacity-60 text-[10px]">
+                        {e.activo ? `hace ${e.hace}` : `Sin señal (${e.hace})`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SeccionDesplegable>
+
+            <SeccionDesplegable
+              titulo="Recorridos Activos (Multi-Pedidos)"
+              icono={<ListOrdered size={15} />}
+              abiertoPorDefecto={recorridosMulti.length > 0}
+              insignia={
+                recorridosMulti.length > 0 ? (
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
+                    {recorridosMulti.length} cadete(s)
+                  </span>
+                ) : undefined
+              }
+            >
+              {recorridosMulti.length === 0 ? (
+                <p className="text-xs text-gray-500">Ningún cadete lleva 2 o más pedidos simultáneos ahora mismo.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recorridosMulti.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Bike size={16} className="text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {c.nombre}
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {c.pedidos.length} pedidos simultáneos en curso
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setCadeteParaOrganizar(c)
+                          setModalOrganizarAbierto(true)
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs shrink-0"
+                      >
+                        <ListOrdered size={13} />
+                        <span>Acomodar turno</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SeccionDesplegable>
+
+            <SeccionDesplegable
+              titulo="Diagnóstico GPS Detallado"
+              icono={<Activity size={15} />}
+            >
+              <PanelDiagnosticoGPS />
+            </SeccionDesplegable>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tabs Repartos / Rendimiento: se migran en la Fase 2 ── */}
+      {(tabSuperior === 'repartos' || tabSuperior === 'rendimiento') && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-3xl mx-auto w-full p-1">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm p-8 text-center">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                {tabSuperior === 'repartos' ? 'Repartos Activos' : 'Informe de Rendimiento'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Esta sección se migra desde /cadeteria en la Fase 2. Por ahora sigue disponible en su página original.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Organizar / Acomodar Recorrido de Cadete (migrado desde /cadeteria) */}
+      {cadeteParaOrganizar && (
+        <ModalOrganizarRecorridoCadete
+          abierto={modalOrganizarAbierto}
+          onCerrar={() => {
+            setModalOrganizarAbierto(false)
+            setCadeteParaOrganizar(null)
+          }}
+          cadeteId={cadeteParaOrganizar.id}
+          cadeteNombre={cadeteParaOrganizar.nombre}
+          pedidos={cadeteParaOrganizar.pedidos}
+        />
+      )}
 
       {/* Modal Interactivo de Repetición de Ruta (Breadcrumb Trail) */}
       {pedidoParaBreadcrumb && (
