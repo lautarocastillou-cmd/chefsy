@@ -11,8 +11,11 @@ import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gaug
 import { formatearPrecio, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
+import { usarAuth } from '@/contexto/AuthContexto'
 import { esPedidoDelivery } from '@/lib/entrega'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
+import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
@@ -108,7 +111,9 @@ export default function TorreControlPage() {
   const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
   const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
   const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: any[] } | null>(null)
-  const { pedidos } = usarPedidos()
+  const { pedidos, cambiarEstado } = usarPedidos()
+  const { usuarioActivo } = usarAuth()
+  const esAdmin = usuarioActivo?.rol === 'admin'
 
   // Estado GPS derivado de los datos que ya trae la torre (sin fetch extra)
   const estadoGps = cadetes.map((c) => {
@@ -119,13 +124,13 @@ export default function TorreControlPage() {
   })
   const gpsActivosCount = estadoGps.filter((e) => e.activo).length
 
-  // Recorridos multi-pedido (2+ simultáneos) desde el contexto de pedidos
+  // Agrupar pedidos delivery activos por cadete (base para Repartos y Recorridos)
   const pedidosDeliveryActivos = pedidos.filter(
     (p) =>
       esPedidoDelivery(p) &&
       (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino')
   )
-  const recorridosMulti = (() => {
+  const pedidosPorCadete = (() => {
     const mapa = new Map<string, { id: string; nombre: string; pedidos: typeof pedidosDeliveryActivos }>()
     for (const p of pedidosDeliveryActivos) {
       if (!p.cadete_id) continue
@@ -134,8 +139,10 @@ export default function TorreControlPage() {
       actual.pedidos.push(p)
       mapa.set(cid, actual)
     }
-    return Array.from(mapa.values()).filter((c) => c.pedidos.length >= 2)
+    return Array.from(mapa.values())
   })()
+  // Recorridos multi-pedido (2+ simultáneos)
+  const recorridosMulti = pedidosPorCadete.filter((c) => c.pedidos.length >= 2)
 
   // Disparar resize para que Leaflet recalcule tiles al alternar a la pestaña Mapa
   useEffect(() => {
@@ -260,6 +267,11 @@ export default function TorreControlPage() {
             )}
           >
             {tab.icono} {tab.etiqueta}
+            {tab.valor === 'repartos' && pedidosDeliveryActivos.length > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                {pedidosDeliveryActivos.length}
+              </span>
+            )}
             {tab.valor === 'gps' && estadoGps.length > 0 && (
               <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
                 {gpsActivosCount}/{estadoGps.length}
@@ -714,16 +726,70 @@ export default function TorreControlPage() {
         </div>
       )}
 
-      {/* ── Tabs Repartos / Rendimiento: se migran en la Fase 2 ── */}
-      {(tabSuperior === 'repartos' || tabSuperior === 'rendimiento') && (
+      {/* ── Tab Repartos: lista migrada desde /cadeteria (Fase 2) ── */}
+      {tabSuperior === 'repartos' && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-xl mx-auto w-full space-y-4 p-1">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                <Bike size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight">
+                  Repartos Activos ({pedidosDeliveryActivos.length})
+                </h2>
+                <p className="text-[11px] text-gray-400 dark:text-slate-400">
+                  Pedidos delivery asignados y listos para reparto
+                </p>
+              </div>
+            </div>
+            {pedidosDeliveryActivos.length === 0 ? (
+              <div className="text-center py-20 text-gray-400 text-sm">
+                No hay pedidos delivery para repartir en este momento.
+              </div>
+            ) : (
+              pedidosDeliveryActivos.map((pedido) => {
+                const infoCadete = pedido.cadete_id
+                  ? pedidosPorCadete.find(c => c.id.toLowerCase() === pedido.cadete_id?.toLowerCase())
+                  : null
+                const ordenadosCadete = infoCadete ? ordenarPedidosPorCercaniaOManual(infoCadete.pedidos) : []
+                const pos = ordenadosCadete.findIndex(p => p.id === pedido.id) + 1
+                const dist = pedido.coordenadas ? calcularDistanciaKm(UBICACION_LOCAL, pedido.coordenadas) : null
+                const distTxt = dist !== null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : undefined
+
+                return (
+                  <TarjetaPedidoCadete
+                    key={pedido.id}
+                    pedido={pedido}
+                    cambiarEstado={cambiarEstado}
+                    esAdmin={esAdmin}
+                    posicionParada={pos > 0 ? pos : undefined}
+                    totalParadas={ordenadosCadete.length > 1 ? ordenadosCadete.length : undefined}
+                    distanciaLocalTexto={distTxt}
+                    onAbrirOrganizar={() => {
+                      if (infoCadete) {
+                        setCadeteParaOrganizar(infoCadete)
+                        setModalOrganizarAbierto(true)
+                      }
+                    }}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab Rendimiento: se migra en la Fase 3 ── */}
+      {tabSuperior === 'rendimiento' && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full p-1">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm p-8 text-center">
               <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                {tabSuperior === 'repartos' ? 'Repartos Activos' : 'Informe de Rendimiento'}
+                Informe de Rendimiento
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Esta sección se migra desde /cadeteria en la Fase 2. Por ahora sigue disponible en su página original.
+                Esta sección se migra desde /cadeteria en la Fase 3. Por ahora sigue disponible en su página original.
               </p>
             </div>
           </div>
