@@ -104,7 +104,10 @@ input,
   animation: none;
 }
 ::view-transition-new(root) {
-  animation: barridoTemaVT 1.4s both;
+  /* El !important es intencional: el navegador apaga las View Transitions
+     con prefers-reduced-motion por encima del CSS normal; así la ola se ve
+     siempre, incluso en PCs con animaciones desactivadas. */
+  animation: barridoTemaVT 1.4s both !important;
   will-change: clip-path;
 }
 /* Resorte real: la ola cae con gravedad y oscila 3 veces cada vez más chico
@@ -134,7 +137,7 @@ input,
    de la View Transition: empieza junto con la ola y no contamina el botón
    que aparece en el tema nuevo. */
 ::view-transition-old(theme-toggle-pressed) {
-  animation: tembleque-desaparece 1.4s ease-in-out both;
+  animation: tembleque-desaparece 1.4s ease-in-out both !important;
   transform-origin: center bottom;
 }
 ::view-transition-new(theme-toggle-pressed) {
