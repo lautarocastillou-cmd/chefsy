@@ -21,6 +21,7 @@ const ESTILOS_MAPA = {
 const WORKER_URL = '/lib/maplibre/maplibre-gl-worker.mjs'
 const SOURCE_RUTAS = 'ruta-source'
 const LAYER_RUTAS = 'ruta-line'
+const CAPA_TRANSITO = 'poi_transit'
 
 type ModoCamara = 'flota' | 'cadete' | 'manual' | 'local'
 type EstiloMapa = keyof typeof ESTILOS_MAPA
@@ -46,6 +47,27 @@ function instalarCapaRutas(
   }
   const source = mapa.getSource(SOURCE_RUTAS) as maplibregl.GeoJSONSource | undefined
   source?.setData({ type: 'FeatureCollection', features: Object.values(features) })
+}
+
+/**
+ * El estilo claro (OpenFreeMap Liberty) incluye paradas de colectivo en la
+ * capa `poi_transit` (airport/bus/rail). En modo claro se excluye la clase
+ * `bus` y se conservan aeropuerto/tren; en oscuro se restaura el filtro
+ * original. Se reaplica en cada carga de estilo porque `setStyle` resetea
+ * los filtros personalizados.
+ */
+function aplicarFiltrosEstilo(mapa: maplibregl.Map, estilo: EstiloMapa) {
+  try {
+    if (!mapa.getLayer(CAPA_TRANSITO)) return
+    mapa.setFilter(
+      CAPA_TRANSITO,
+      estilo === 'claro'
+        ? ['match', ['get', 'class'], ['airport', 'rail'], true, false]
+        : ['match', ['get', 'class'], ['airport', 'bus', 'rail'], true, false]
+    )
+  } catch {
+    // Si el estilo aún no está listo, se reintenta en la sincronización.
+  }
 }
 
 interface Props extends MapaGlobalProps {
@@ -280,6 +302,7 @@ export default function MapaGlobalMapLibre({
         if (cancelado) return
         window.clearTimeout(temporizador)
         instalarCapaRutas(mapa, featuresRutaRef.current)
+        aplicarFiltrosEstilo(mapa, estiloAplicadoRef.current)
         setEstado('listo')
         mapa.resize()
         marcadorLocalRef.current = new maplibregl.Marker({
@@ -468,7 +491,8 @@ export default function MapaGlobalMapLibre({
     }
 
     instalarCapaRutas(mapa, featuresRutaRef.current)
-  }, [cadetes, estado, focusedId, onSelectCadete, versionEstilo])
+    aplicarFiltrosEstilo(mapa, estiloMapa)
+  }, [cadetes, estado, focusedId, onSelectCadete, versionEstilo, estiloMapa])
 
   useEffect(() => {
     if (!focusedId) return
@@ -504,6 +528,7 @@ export default function MapaGlobalMapLibre({
     estiloAplicadoRef.current = estiloMapa
     const reinstalarRutas = () => {
       instalarCapaRutas(mapa, featuresRutaRef.current)
+      aplicarFiltrosEstilo(mapa, estiloMapa)
       setVersionEstilo((version) => version + 1)
     }
     mapa.on('style.load', reinstalarRutas)
