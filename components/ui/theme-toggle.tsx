@@ -26,14 +26,11 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const manejarToggle = () => {
     if (enCursoRef.current) return
     const documento = document as DocumentoConVT
-    const movimientoReducido =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-    // Sin animación si el usuario prefiere movimiento reducido, la pestaña
-    // está oculta o el navegador no soporta View Transitions: cambio directo.
+    // Sin animación si la pestaña está oculta o el navegador no soporta View
+    // Transitions: cambio directo. La preferencia de movimiento reducido del
+    // sistema se ignora a propósito para que la ola siempre se vea.
     if (
-      movimientoReducido ||
       document.hidden ||
       typeof documento.startViewTransition !== "function"
     ) {

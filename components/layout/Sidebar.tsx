@@ -95,7 +95,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   return (
     <aside
       className={cn(
-        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
         esDock && "delay-[1000ms]",
         isMobile
           ? "bg-white dark:bg-slate-900 border-r border-slate-200/70 dark:border-slate-800 flex flex-col h-full w-full"
@@ -170,7 +170,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
       {/* Navegación (con contención de layout: el recálculo de la animación no se propaga afuera) */}
       <nav className={cn(
-        "flex-1 w-full flex flex-col items-center overflow-x-hidden overflow-y-auto transition-[padding,gap] duration-300 [contain:layout_style] motion-reduce:transition-none",
+        "flex-1 w-full flex flex-col items-center overflow-x-hidden overflow-y-auto transition-[padding,gap] duration-300 [contain:layout_style]",
         esDock ? "gap-1.5 py-1" : "gap-1 py-2 px-0.5"
       )}>
         {/* Espaciador superior: centra el grupo en dock y colapsa al expandir,
@@ -178,7 +178,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         <div
           aria-hidden
           className={cn(
-            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
             esDock ? "flex-1 delay-[1000ms]" : "flex-none h-0"
           )}
         />
@@ -192,7 +192,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
               href={item.href}
               onClick={() => onCloseMobile?.()}
               className={cn(
-                "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color,border-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
+                "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color,border-color] duration-700 group relative cursor-pointer text-xs overflow-hidden",
                 esDock
                   ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms]"
                   : "w-full items-center h-11 px-3 gap-3",
@@ -218,7 +218,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
                   transitionDelay: `${120 + idx * 50}ms`,
                 }}
                 className={cn(
-                  "tracking-tight whitespace-nowrap transition-[max-width,opacity,transform] overflow-hidden motion-reduce:transition-none",
+                  "tracking-tight whitespace-nowrap transition-[max-width,opacity,transform] overflow-hidden",
                   esDock
                     ? "max-w-0 opacity-0 -translate-x-4 pointer-events-none duration-600"
                     : "max-w-[140px] opacity-100 translate-x-0 duration-600"
@@ -240,7 +240,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         <div
           aria-hidden
           className={cn(
-            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            "w-full overflow-hidden transition-[flex-grow,height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
             esDock ? "flex-1 delay-[1000ms]" : "flex-none h-0"
           )}
         />
@@ -260,7 +260,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         title="Ver la tienda online como la ve el cliente"
         onClick={() => onCloseMobile?.()}
         className={cn(
-          "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs shrink-0 motion-reduce:transition-none",
+          "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs shrink-0",
           "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
           esDock
             ? "w-11 h-11 items-center self-center px-[13px] delay-[1000ms]"
@@ -313,7 +313,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
             onClick={() => onCloseMobile?.()}
             title={esDock ? undefined : "Configuración"}
             className={cn(
-              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
+              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden",
               esDock
                 ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60"
                 : "w-full items-center h-11 px-3 gap-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
@@ -343,7 +343,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
               onCloseMobile?.()
             }}
             className={cn(
-              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden motion-reduce:transition-none",
+              "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs overflow-hidden",
               esDock
                 ? "w-11 h-11 items-center shrink-0 px-[13px] delay-[1000ms] text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                 : "w-full items-center h-11 px-3 gap-3 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400",
