@@ -6,16 +6,17 @@
 // Incluye Sidebar + Header responsivo + área de contenido.
 // ─────────────────────────────────────────────────────
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import BottomNavMobile from '@/components/layout/BottomNavMobile'
 import { Menu, X, FlaskConical } from 'lucide-react'
 import { usarAuth } from '@/contexto/AuthContexto'
 import VerificadorLogin from '@/components/auth/VerificadorLogin'
+import LoginPage from '@/components/auth/LoginPage'
 import NotificadorAccesos from '@/components/auth/NotificadorAccesos'
 import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import FormularioPedido from '@/components/pedidos/FormularioPedido'
 import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
@@ -182,6 +183,25 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Excepción temporal para probar el renderer experimental de MapLibre.
+ *
+ * El verificador de acceso muestra un 404 falso y espera aprobación del
+ * administrador, lo que impide abrir el login en esta única dirección. Con el
+ * parámetro `mapa=maplibre` en Torre de Control se muestra el login real para
+ * poder iniciar sesión con una cuenta de administrador.
+ *
+ * Retirar esta excepción cuando MapLibre deje de ser experimental.
+ */
+function AccesoSinSesionExperimental() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const esPruebaMapLibre =
+    pathname === '/torre-control' && searchParams.get('mapa') === 'maplibre'
+
+  return esPruebaMapLibre ? <LoginPage /> : <VerificadorLogin />
+}
+
 export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
   const { usuarioActivo, estaListoAuth } = usarAuth()
 
@@ -194,7 +214,17 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
   }
 
   if (!usuarioActivo) {
-    return <VerificadorLogin />
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-chefsy-50 dark:bg-zinc-950">
+            <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <AccesoSinSesionExperimental />
+      </Suspense>
+    )
   }
 
   return <ContenidoPrincipal>{children}</ContenidoPrincipal>
