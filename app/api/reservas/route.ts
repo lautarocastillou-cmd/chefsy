@@ -14,6 +14,14 @@ function fail(message: string, status: number, headers: Headers) {
   return NextResponse.json({ error: message }, { status, headers })
 }
 
+function activityValue(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value.slice(0, 50).filter((entry) => entry && typeof entry === 'object' && typeof (entry as { label?: unknown }).label === 'string').map((entry) => {
+    const item = entry as { type?: unknown; label: string; at?: unknown }
+    return { type: typeof item.type === 'string' ? item.type.slice(0, 40) : 'update', label: item.label.slice(0, 120), at: typeof item.at === 'string' ? item.at : new Date().toISOString() }
+  })
+}
+
 export async function GET(request: Request) {
   const headers = corsHeaders(request.headers.get('origin'))
   if (!await autorizarReservas(request)) return fail('Sesión vencida. Volvé a ingresar el PIN.', 401, headers)
@@ -45,6 +53,7 @@ export async function POST(request: Request) {
       recordatorio_at: recordatorio?.toISOString() ?? null,
       estado: ESTADOS.includes(body.status) ? body.status : 'active',
       notificado_at: null,
+      actividad: activityValue(body.activity),
       updated_at: new Date().toISOString(),
     }
     const payload: Record<string, unknown> = body.id ? { ...row, id: body.id } : row
@@ -79,6 +88,7 @@ export async function PATCH(request: Request) {
     }
     if (body.phone !== undefined) update.telefono = String(body.phone).trim().slice(0, 60)
     if (body.notes !== undefined) update.notas = String(body.notes).trim().slice(0, 300)
+    if (body.activity !== undefined) update.actividad = activityValue(body.activity)
     if (body.reminderAt !== undefined) {
       const date = body.reminderAt ? new Date(body.reminderAt) : null
       if (body.reminderAt && (!date || Number.isNaN(date.getTime()))) return fail('La fecha del recordatorio no es válida.', 400, headers)
