@@ -322,6 +322,17 @@ input,
   }
 }
 
+/* Estas dos piezas son deliberadamente una excepción a reduced-motion:
+   el producto debe mostrar la transición de tema y el movimiento de la
+   sidebar incluso cuando el sistema desactiva las animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  .chefsy-sidebar-animada,
+  .chefsy-sidebar-animada * {
+    transition-duration: 700ms !important;
+    transition-property: all !important;
+  }
+}
+
 /* ─── Lenis Smooth Scroll Premium ──────────────────────────── */
 html.lenis, html.lenis body {
   height: auto;

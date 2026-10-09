@@ -95,7 +95,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   return (
     <aside
       className={cn(
-        "relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "chefsy-sidebar-animada relative z-50 text-slate-800 dark:text-slate-100 shrink-0 transition-[width,height,padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
         esDock && "delay-[1000ms]",
         isMobile
           ? "bg-white dark:bg-slate-900 border-r border-slate-200/70 dark:border-slate-800 flex flex-col h-full w-full"
