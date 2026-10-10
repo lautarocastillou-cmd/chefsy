@@ -33,7 +33,7 @@ El módulo de cadetería coordina el despacho de pedidos de delivery desde el lo
 > [!IMPORTANT]
 > **Aislamiento de la tabla `pedidos`**:  
 > Los pings de geolocalización enviados por los cadetes actualizan **únicamente** la tabla `cadetes` (`lat`, `lng`, `accuracy`, `heading`, `speed`, `gps_activo`, `bateria`, `updated_at`).  
-> **Está prohibido actualizar la tabla `pedidos` en cada ping de GPS**, dado que detonaría refetches continuos en el tablero Kanban y saturaría el consumo de base de datos.
+> **Está prohibido actualizar la tabla `pedidos` en cada ping de GPS**, dado que detonaría refetches continuos en el tablero de pedidos y saturaría el consumo de base de datos.
 
 ---
 
