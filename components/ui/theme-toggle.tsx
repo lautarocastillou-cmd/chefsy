@@ -41,8 +41,8 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
 
     const animacion = cubierta.animate(
       [
+        { clipPath: "inset(100% 0 0 0)" },
         { clipPath: "inset(0 0 0 0)" },
-        { clipPath: "inset(0 0 100% 0)" },
       ],
       { duration: 1400, easing: "cubic-bezier(0.2, 0.9, 0.3, 1)", fill: "forwards" }
     )
