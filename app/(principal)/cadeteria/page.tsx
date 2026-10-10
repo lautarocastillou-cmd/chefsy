@@ -3,10 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { CadeteData } from '@/components/torre-control/MapaGlobal'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { RefreshCw, MapPin, Zap, Navigation, PowerOff, Bike, Plus, DollarSign, Radio, ClipboardList, Activity, ChevronDown, Download, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
+import { Bike, Navigation, Radio, ClipboardList, Activity, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
@@ -14,6 +12,7 @@ import { esPedidoDelivery } from '@/lib/entrega'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import { notificarError } from '@/lib/notificaciones'
+import PanelCadetesOperativo from '@/components/cadeteria/PanelCadetesOperativo'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
 const MapaGlobal = dynamic(
@@ -124,7 +123,6 @@ export default function TorreControlPage() {
 
   // Tabs de la Cadetería unificada.
   const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
-  const [pedidoArrastrado, setPedidoArrastrado] = useState<{ cadeteId: string; pedidoId: string } | null>(null)
   const [guardandoOrdenCadete, setGuardandoOrdenCadete] = useState<string | null>(null)
   const [modoBajoConsumo, setModoBajoConsumo] = useState(false)
   const firmaCadetesRef = useRef('')
@@ -255,7 +253,7 @@ export default function TorreControlPage() {
     }
   }, [fetchTorreData, modoBajoConsumo])
 
-  const handleApagarGps = async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {
+  const handleApagarGps = useCallback(async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {
     e.stopPropagation()
     const confirmar = window.confirm(`¿Estás seguro de que querés apagarle el GPS a ${cadeteNombre}? El cadete figurará desconectado de inmediato.`)
     if (!confirmar) return
@@ -280,9 +278,9 @@ export default function TorreControlPage() {
     } finally {
       setApagandoId(null)
     }
-  }
+  }, [fetchTorreData])
 
-  const guardarOrden = async (cadeteId: string, pedidosOrdenados: typeof pedidosDeliveryActivos) => {
+  const guardarOrden = useCallback(async (cadeteId: string, pedidosOrdenados: typeof pedidosDeliveryActivos) => {
     setGuardandoOrdenCadete(cadeteId)
     try {
       await reordenarPedidosCadete(cadeteId, pedidosOrdenados.map((pedido, indice) => ({
@@ -292,23 +290,21 @@ export default function TorreControlPage() {
     } finally {
       setGuardandoOrdenCadete(null)
     }
-  }
+  }, [reordenarPedidosCadete])
 
-  const moverPedidoEnRuta = (cadeteId: string, pedidosRuta: typeof pedidosDeliveryActivos, indice: number, destino: number) => {
-    if (destino < 0 || destino >= pedidosRuta.length) return
-    const nuevaLista = [...pedidosRuta]
-    const [movido] = nuevaLista.splice(indice, 1)
-    nuevaLista.splice(destino, 0, movido)
-    void guardarOrden(cadeteId, nuevaLista)
-  }
-
-  const soltarPedidoEnRuta = (cadeteId: string, pedidosRuta: typeof pedidosDeliveryActivos, pedidoDestinoId: string) => {
-    if (!pedidoArrastrado || pedidoArrastrado.cadeteId !== cadeteId || pedidoArrastrado.pedidoId === pedidoDestinoId) return
-    const origen = pedidosRuta.findIndex((pedido) => pedido.id === pedidoArrastrado.pedidoId)
-    const destino = pedidosRuta.findIndex((pedido) => pedido.id === pedidoDestinoId)
-    if (origen >= 0 && destino >= 0) moverPedidoEnRuta(cadeteId, pedidosRuta, origen, destino)
-    setPedidoArrastrado(null)
-  }
+  const seleccionarCadete = useCallback((cadeteId: string) => {
+    setFocusedId(cadeteId)
+    if (typeof window !== 'undefined' && window.innerWidth < 768) setVistaMobile('mapa')
+  }, [])
+  const abrirPagoExtra = useCallback((cadeteId: string | null) => {
+    setCadeteParaPagoExtra(cadeteId)
+    setModalPagoExtraAbierto(true)
+  }, [])
+  const abrirCompartirUbicacion = useCallback(() => setModalCompartirUbicacionAbierto(true), [])
+  const actualizarTorre = useCallback(() => void fetchTorreData(true), [fetchTorreData])
+  const guardarOrdenDesdePanel = useCallback((cadeteId: string, pedidosOrdenados: typeof pedidosDeliveryActivos) => {
+    void guardarOrden(cadeteId, pedidosOrdenados)
+  }, [guardarOrden])
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
@@ -395,213 +391,23 @@ export default function TorreControlPage() {
 
       {/* Contenedor Principal (Lado a lado en Desktop, Pestaña activa en Móvil) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Sidebar: Lista de Cadetes */}
-        <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:left-24 md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
-          <div className="border-b border-slate-200 bg-white px-3 py-3 shrink-0 dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <h1 className="flex items-center gap-1.5 text-base font-black text-slate-900 dark:text-slate-100">
-                  <Zap className="h-4 w-4 shrink-0 text-emerald-500" />
-                  Cadetería
-                </h1>
-                <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                  {cadetes.length} cadetes · {pedidosDeliveryActivos.length} pedidos activos
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setCadeteParaPagoExtra(null)
-                  setModalPagoExtraAbierto(true)
-                }}
-                className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-[10px] font-extrabold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-95 cursor-pointer"
-                title="Registrar viaje a la carnicería, insumos o pago extra"
-              >
-                <Plus size={14} />
-                <span>Pago extra</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalCompartirUbicacionAbierto(true)}
-                className="rounded-lg p-1.5 text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
-                title="Compartir ubicación en vivo de un cadete sin necesidad de login"
-              >
-                <Radio size={16} className="animate-pulse" />
-              </button>
-              <a
-                href="/api/cadeteria/descargar-apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Descargar última versión APK de Cadetería"
-              >
-                <Download size={16} />
-              </a>
-              <button
-                onClick={() => void fetchTorreData(true)}
-                disabled={isRefreshing}
-                className={`rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
-                  isRefreshing ? 'animate-spin' : ''
-                }`}
-                title="Actualizar ahora"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-              </div>
-            </div>
-          </div>
-
-        <ScrollArea className="flex-1 p-3 min-h-0">
-          <div className="space-y-3">
-            {isLoading && cadetes.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm animate-pulse">
-                Cargando estado de cadetes...
-              </div>
-            ) : cadetes.length === 0 ? (
-              <div className="text-center py-8">
-                <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No hay cadetes registrados en el sistema.</p>
-              </div>
-            ) : (
-              cadetes.map((cadete) => {
-                const isSelected = focusedId === cadete.id
-                const pedidosRuta = pedidosOrdenadosPorCadete.get(cadete.id.toLowerCase()) ?? []
-                const puedeEditarRuta = pedidosRuta.length > 1
-                return (
-                  <Card
-                    key={cadete.id}
-                    onClick={() => {
-                      setFocusedId(cadete.id)
-                      if (typeof window !== 'undefined' && window.innerWidth < 768) setVistaMobile('mapa')
-                    }}
-                    className={cn(
-                      'overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md dark:bg-slate-950',
-                      isSelected ? 'border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950' : 'border-slate-200 dark:border-slate-800'
-                    )}
-                  >
-                    <div className={cn('h-1', pedidosRuta.length > 0 ? 'bg-orange-500' : 'bg-emerald-500')} />
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <Bike className="h-4 w-4 shrink-0 text-slate-500" />
-                          <span className="truncate text-sm font-extrabold text-slate-900 dark:text-slate-100">{cadete.nombre}</span>
-                        </div>
-                        <Badge variant="secondary" className={cn('shrink-0 px-1.5 py-0 text-[9px] font-black uppercase tracking-wide', cadete.gps_activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400')}>
-                          {cadete.gps_activo ? 'Online' : 'Offline'}
-                        </Badge>
-                      </div>
-
-                      {pedidosRuta.length > 0 ? (
-                        <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50/70 p-2 dark:border-orange-900/50 dark:bg-orange-950/20">
-                          <div className="mb-1.5 flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-orange-700 dark:text-orange-300">
-                              {pedidosRuta.length} {pedidosRuta.length === 1 ? 'entrega' : 'entregas'} en ruta
-                            </span>
-                            {puedeEditarRuta && guardandoOrdenCadete === cadete.id && (
-                              <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300">Guardando…</span>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            {pedidosRuta.map((pedido, idx) => (
-                              <div
-                                key={pedido.id}
-                                draggable={puedeEditarRuta}
-                                onDragStart={() => setPedidoArrastrado({ cadeteId: cadete.id, pedidoId: pedido.id })}
-                                onDragEnd={() => setPedidoArrastrado(null)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={() => soltarPedidoEnRuta(cadete.id, pedidosRuta, pedido.id)}
-                                className={cn(
-                                  'group flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-200',
-                                  puedeEditarRuta && 'cursor-grab active:cursor-grabbing',
-                                  pedidoArrastrado?.pedidoId === pedido.id && 'opacity-40'
-                                )}
-                              >
-                                <GripVertical className="h-3.5 w-3.5 shrink-0 text-orange-300 opacity-0 transition-opacity group-hover:opacity-100" />
-                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-orange-700 shadow-sm dark:bg-slate-900 dark:text-orange-300">{idx + 1}</span>
-                                <span className="min-w-0 flex-1 truncate font-semibold">{pedido.cliente}</span>
-                                {puedeEditarRuta && (
-                                  <span className="flex shrink-0 items-center gap-0.5 opacity-70">
-                                    <button
-                                      type="button"
-                                      aria-label={`Subir ${pedido.cliente}`}
-                                      disabled={idx === 0 || guardandoOrdenCadete === cadete.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        moverPedidoEnRuta(cadete.id, pedidosRuta, idx, idx - 1)
-                                      }}
-                                      className="rounded p-0.5 text-orange-700 hover:bg-orange-200 disabled:opacity-20 dark:text-orange-300 dark:hover:bg-orange-900/50"
-                                    >
-                                      <ArrowUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      aria-label={`Bajar ${pedido.cliente}`}
-                                      disabled={idx === pedidosRuta.length - 1 || guardandoOrdenCadete === cadete.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        moverPedidoEnRuta(cadete.id, pedidosRuta, idx, idx + 1)
-                                      }}
-                                      className="rounded p-0.5 text-orange-700 hover:bg-orange-200 disabled:opacity-20 dark:text-orange-300 dark:hover:bg-orange-900/50"
-                                    >
-                                      <ArrowDown className="h-3 w-3" />
-                                    </button>
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/70 px-2.5 py-2 text-[10px] dark:border-emerald-900/50 dark:bg-emerald-950/20">
-                          <span className="font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Disponible</span>
-                          <span className="text-slate-500 dark:text-slate-400">Sin entregas</span>
-                        </div>
-                      )}
-
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setFocusedId(cadete.id)
-                            setVistaMobile('mapa')
-                          }}
-                          className="flex-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[10px] font-extrabold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
-                        >
-                          <Navigation className="mr-1 inline h-3 w-3" /> Ver mapa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCadeteParaPagoExtra(cadete.id)
-                            setModalPagoExtraAbierto(true)
-                          }}
-                          className="flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] font-extrabold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        >
-                          <DollarSign className="mr-1 inline h-3 w-3" /> Extra
-                        </button>
-                        {cadete.gps_activo && (
-                          <button
-                            type="button"
-                            disabled={apagandoId === cadete.id}
-                            onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
-                            className="rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[10px] font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
-                            title="Apagar GPS"
-                          >
-                            <PowerOff className={cn('h-3 w-3', apagandoId === cadete.id && 'animate-spin')} />
-                          </button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+         <PanelCadetesOperativo
+           cadetes={cadetes}
+           pedidosActivosCount={pedidosDeliveryActivos.length}
+           pedidosOrdenadosPorCadete={pedidosOrdenadosPorCadete}
+           focusedId={focusedId}
+           isLoading={isLoading}
+           isRefreshing={isRefreshing}
+           apagandoId={apagandoId}
+           guardandoOrdenCadete={guardandoOrdenCadete}
+           vistaMobile={vistaMobile}
+           onSelectCadete={seleccionarCadete}
+           onAbrirPagoExtra={abrirPagoExtra}
+           onAbrirCompartirUbicacion={abrirCompartirUbicacion}
+           onActualizar={actualizarTorre}
+           onApagarGps={handleApagarGps}
+           onGuardarOrden={guardarOrdenDesdePanel}
+         />
 
       {/* Main Area: Mapa */}
       <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} pointer-events-auto absolute inset-0 z-0 flex-col`}>
