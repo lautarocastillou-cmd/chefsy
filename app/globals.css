@@ -113,13 +113,13 @@ input,
 /* Resorte real: la ola cae con gravedad y oscila 3 veces cada vez más chico
    hasta plantarse. Cada franja muestra el tema viejo (color contrario). */
 @keyframes barridoTemaVT {
-  0%   { clip-path: inset(100% 0 0 0); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.4); }
-  40%  { clip-path: inset(0% 0 0 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
-  55%  { clip-path: inset(8% 0 0 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
-  68%  { clip-path: inset(1% 0 0 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
-  80%  { clip-path: inset(4% 0 0 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
-  90%  { clip-path: inset(0.5% 0 0 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
-  100% { clip-path: inset(0% 0 0 0); }
+  0%   { clip-path: inset(0 0 100% 0); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.4); }
+  40%  { clip-path: inset(0 0 0% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  55%  { clip-path: inset(0 0 8% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  68%  { clip-path: inset(0 0 1% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  80%  { clip-path: inset(0 0 4% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  90%  { clip-path: inset(0 0 0.5% 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  100% { clip-path: inset(0 0 0% 0); }
 }
 
 /* Durante el barrido los componentes cambian al instante por debajo del wipe.

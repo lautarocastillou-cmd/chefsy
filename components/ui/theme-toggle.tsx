@@ -23,45 +23,19 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const enCursoRef = useRef(false)
   const botonRef = useRef<HTMLButtonElement>(null)
 
-  const animarCambioTemaFallback = () => {
-    const raiz = document.documentElement
-    const eraOscuro = raiz.classList.contains("dark")
-    const cubierta = document.createElement("div")
-    cubierta.setAttribute("aria-hidden", "true")
-    Object.assign(cubierta.style, {
-      position: "fixed",
-      inset: "0",
-      zIndex: "2147483646",
-      pointerEvents: "none",
-      background: eraOscuro ? "#f8fafc" : "#020617",
-      clipPath: "inset(0 0 0 0)",
-    })
-    document.body.appendChild(cubierta)
-    alternarModoOscuro()
-
-    const animacion = cubierta.animate(
-      [
-        { clipPath: "inset(100% 0 0 0)" },
-        { clipPath: "inset(0 0 0 0)" },
-      ],
-      { duration: 1400, easing: "cubic-bezier(0.2, 0.9, 0.3, 1)", fill: "forwards" }
-    )
-    animacion.finished.then(() => cubierta.remove()).catch(() => cubierta.remove())
-  }
-
   const manejarToggle = () => {
     if (enCursoRef.current) return
     const documento = document as DocumentoConVT
-    const movimientoReducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-    // Con movimiento reducido usamos una cubierta animada por Web Animations
-    // API: no depende de las pseudo-capas que Chrome/Edge puede suprimir.
+    // Si la pestaña está oculta o el navegador no tiene View Transitions no
+    // hay snapshot que animar; en ese caso el cambio directo es el fallback
+    // seguro. Cuando la API existe, se fuerza la ola aunque el sistema tenga
+    // activado el movimiento reducido.
     if (
       document.hidden ||
-      movimientoReducido ||
       typeof documento.startViewTransition !== "function"
     ) {
-      animarCambioTemaFallback()
+      alternarModoOscuro()
       return
     }
 
