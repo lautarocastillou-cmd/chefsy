@@ -30,29 +30,31 @@ export async function GET(request: Request) {
 
     const supabase = obtenerSupabaseAdmin()
 
-    // 1. Obtener cadetes con su ubicación
-    const { data: cadetesData, error: cadetesError } = await supabase
-      .from('cadetes')
-      .select('id, lat, lng, gps_activo, bateria, updated_at, speed, heading')
+    // Las tres consultas son independientes. Ejecutarlas en paralelo reduce la
+    // latencia total del polling al tiempo de la consulta más lenta, en lugar
+    // de sumar las tres latencias.
+    const [cadetesResult, usuariosResult, pedidosResult] = await Promise.all([
+      supabase
+        .from('cadetes')
+        .select('id, lat, lng, gps_activo, bateria, updated_at, speed, heading'),
+      supabase
+        .from('usuarios')
+        .select('usuario, nombre, rol')
+        .eq('rol', 'cadete'),
+      supabase
+        .from('pedidos')
+        .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, created_at, orden_entrega')
+        .in('estado', ['listo', 'en_camino'])
+        .eq('archivado', false),
+    ])
 
-    if (cadetesError) throw cadetesError
+    if (cadetesResult.error) throw cadetesResult.error
+    if (usuariosResult.error) throw usuariosResult.error
+    if (pedidosResult.error) throw pedidosResult.error
 
-    // 2. Obtener usuarios para cruzar nombres
-    const { data: usuariosData, error: usuariosError } = await supabase
-      .from('usuarios')
-      .select('usuario, nombre, rol')
-      .eq('rol', 'cadete')
-      
-    if (usuariosError) throw usuariosError
-
-    // 3. Obtener pedidos activos para saber en qué andan y ubicar a los clientes en el mapa
-    const { data: pedidosData, error: pedidosError } = await supabase
-      .from('pedidos')
-      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, created_at, orden_entrega')
-      .in('estado', ['listo', 'en_camino'])
-      .eq('archivado', false)
-
-    if (pedidosError) throw pedidosError
+    const cadetesData = cadetesResult.data
+    const usuariosData = usuariosResult.data
+    const pedidosData = pedidosResult.data
 
     // 4. Combinar datos: Todos los usuarios cadetes + cualquier registro en tabla cadetes
     const cadetesMap = new Map<string, any>()
@@ -67,6 +69,19 @@ export async function GET(request: Request) {
       const pedidos = pedidosPorCadete.get(idCadete) || []
       pedidos.push(pedido)
       pedidosPorCadete.set(idCadete, pedidos)
+    }
+
+    // Cada grupo se ordena una sola vez antes de construir la respuesta.
+    // Además de ser más explícito, evita ordenar dentro del map de cadetes.
+    for (const pedidos of pedidosPorCadete.values()) {
+      pedidos.sort((a: any, b: any) => {
+        const ordenA = a.orden_entrega != null ? Number(a.orden_entrega) : null
+        const ordenB = b.orden_entrega != null ? Number(b.orden_entrega) : null
+        if (ordenA !== null && ordenB !== null) return ordenA - ordenB
+        if (ordenA !== null) return -1
+        if (ordenB !== null) return 1
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      })
     }
 
     // Agregar todos los usuarios con rol cadete
@@ -98,19 +113,14 @@ export async function GET(request: Request) {
       // Buscar todos los pedidos activos asignados al cadete
       const pedidosCadete = pedidosPorCadete.get(idLower) || []
 
-      // Ordenar por orden_entrega manual o por fecha de creación
-      pedidosCadete.sort((a: any, b: any) => {
-        const ordA = a.orden_entrega != null ? Number(a.orden_entrega) : null
-        const ordB = b.orden_entrega != null ? Number(b.orden_entrega) : null
-        if (ordA !== null && ordB !== null) return ordA - ordB
-        if (ordA !== null) return -1
-        if (ordB !== null) return 1
-        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
-      })
-
       const pedidosActivos = pedidosCadete.map((p: any, idx: number) => {
         let coords: { latitud: number; longitud: number } | null = null
-        if (p.coordenadas && typeof p.coordenadas === 'object' && p.coordenadas.latitud && p.coordenadas.longitud) {
+        if (
+          p.coordenadas &&
+          typeof p.coordenadas === 'object' &&
+          Number.isFinite(Number(p.coordenadas.latitud)) &&
+          Number.isFinite(Number(p.coordenadas.longitud))
+        ) {
           coords = {
             latitud: Number(p.coordenadas.latitud),
             longitud: Number(p.coordenadas.longitud),
