@@ -74,3 +74,4 @@ next-env.d.ts
 /test2.js
 /test_insert.js
 /check_cadetes.js
+/.agents/mcp_config.json
