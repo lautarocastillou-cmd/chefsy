@@ -205,6 +205,7 @@ export default function MapaGlobalMapLibre({
   focusedId,
   onSelectCadete,
   onFatalError,
+  bajoConsumo = false,
 }: Props) {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const mapaRef = useRef<maplibregl.Map | null>(null)
@@ -268,7 +269,7 @@ export default function MapaGlobalMapLibre({
         pitch: 0,
         attributionControl: false,
         fadeDuration: 0,
-        maxTileCacheSize: 120,
+        maxTileCacheSize: bajoConsumo ? 60 : 120,
         canvasContextAttributes: {
           antialias: false,
           powerPreference: 'low-power',
@@ -400,7 +401,9 @@ export default function MapaGlobalMapLibre({
         marcador.getPopup()?.setDOMContent(contenidoPopupCadete(cadete))
       }
 
+      const mostrarDetallesRuta = !bajoConsumo || cadete.id === focusedId
       const paradas = pedidos.filter((pedido) =>
+        mostrarDetallesRuta &&
         pedido.coordenadas &&
         Number.isFinite(pedido.coordenadas.latitud) &&
         Number.isFinite(pedido.coordenadas.longitud)

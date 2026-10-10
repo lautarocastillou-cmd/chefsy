@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { CadeteData } from '@/components/torre-control/MapaGlobal'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,15 +10,9 @@ import { RefreshCw, MapPin, Zap, Navigation, PowerOff, Bike, Plus, DollarSign, R
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { usarAuth } from '@/contexto/AuthContexto'
 import { esPedidoDelivery } from '@/lib/entrega'
 import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
-import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
-import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
-import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
-import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
 import { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
-import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import { notificarError } from '@/lib/notificaciones'
 
 // Cargar el mapa dinámicamente para evitar errores de SSR
@@ -26,6 +20,13 @@ const MapaGlobal = dynamic(
   () => import('@/components/torre-control/MapaGlobal'),
   { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center text-sm text-gray-500 font-medium">Cargando mapa en vivo...</div> }
 )
+const MapaGlobalMemo = memo(MapaGlobal)
+
+const PanelDiagnosticoGPS = dynamic(() => import('@/components/cadeteria/PanelDiagnosticoGPS'), { ssr: false })
+const InformeRendimientoCadetes = dynamic(() => import('@/components/cadeteria/InformeRendimientoCadetes'), { ssr: false })
+const ModalCompartirUbicacion = dynamic(() => import('@/components/cadeteria/ModalCompartirUbicacion'), { ssr: false })
+const ModalPagoExtraCadete = dynamic(() => import('@/components/cadeteria/ModalPagoExtraCadete'), { ssr: false })
+const TarjetaPedidoCadete = dynamic(() => import('@/components/cadeteria/TarjetaPedidoCadete'), { ssr: false })
 
 const ModalBreadcrumbTrail = dynamic(
   () => import('@/components/cadeteria/ModalBreadcrumbTrail'),
@@ -94,6 +95,21 @@ function SeccionDesplegable({
   )
 }
 
+function firmarCadetes(cadetes: CadeteData[]) {
+  return cadetes.map((cadete) => [
+    cadete.id,
+    cadete.lat,
+    cadete.lng,
+    cadete.speed,
+    cadete.heading,
+    cadete.gps_activo,
+    cadete.bateria,
+    cadete.updated_at,
+    cadete.pedidoActivo?.id,
+    cadete.pedidosActivos?.map((pedido) => `${pedido.id}:${pedido.parada_num ?? ''}:${pedido.orden_entrega ?? ''}`).join(','),
+  ].join(':')).join('|')
+}
+
 export default function TorreControlPage() {
   const [cadetes, setCadetes] = useState<CadeteData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -110,30 +126,40 @@ export default function TorreControlPage() {
   const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
   const [pedidoArrastrado, setPedidoArrastrado] = useState<{ cadeteId: string; pedidoId: string } | null>(null)
   const [guardandoOrdenCadete, setGuardandoOrdenCadete] = useState<string | null>(null)
+  const [modoBajoConsumo, setModoBajoConsumo] = useState(false)
+  const firmaCadetesRef = useRef('')
+  const consultaEnCursoRef = useRef(false)
   const { pedidos, cambiarEstado, reordenarPedidosCadete } = usarPedidos()
-  const { usuarioActivo } = usarAuth()
-  const esAdmin = usuarioActivo?.rol === 'admin'
 
   // Estado GPS derivado de los datos que ya trae la torre (sin fetch extra)
-  const estadoGps = cadetes.map((c) => {
+  useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search)
+    const memoria = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+    const lento = parametros.get('rendimiento') === 'extremo' ||
+      navigator.hardwareConcurrency <= 2 ||
+      (memoria != null && memoria <= 2) ||
+      Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData)
+    setModoBajoConsumo(lento)
+  }, [])
+
+  const estadoGps = useMemo(() => cadetes.map((c) => {
     const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
     const segundos = Math.floor((Date.now() - updatedAt) / 1000)
     const hace = segundos < 60 ? `${segundos}s` : segundos < 3600 ? `${Math.floor(segundos / 60)}min` : '+1h'
     return { id: c.id, nombre: c.nombre, activo: c.gps_activo, hace }
-  })
-  const gpsActivosCount = estadoGps.filter((e) => e.activo).length
+  }), [cadetes])
+  const gpsActivosCount = useMemo(() => estadoGps.filter((e) => e.activo).length, [estadoGps])
   // Mismo formato que /cadeteria le pasaba al informe (sin fetch extra)
-  const estadoGpsRecord: Record<string, { activo: boolean; hace: string }> = Object.fromEntries(
-    estadoGps.map((e) => [e.id, { activo: e.activo, hace: e.hace }])
+  const estadoGpsRecord: Record<string, { activo: boolean; hace: string }> = useMemo(
+    () => Object.fromEntries(estadoGps.map((e) => [e.id, { activo: e.activo, hace: e.hace }])),
+    [estadoGps]
   )
 
   // Agrupar pedidos delivery activos por cadete (base para Repartos y Recorridos)
-  const pedidosDeliveryActivos = pedidos.filter(
-    (p) =>
-      esPedidoDelivery(p) &&
-      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino')
-  )
-  const pedidosPorCadete = (() => {
+  const pedidosDeliveryActivos = useMemo(() => pedidos.filter(
+    (p) => esPedidoDelivery(p) && (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino')
+  ), [pedidos])
+  const pedidosPorCadete = useMemo(() => {
     const mapa = new Map<string, { id: string; nombre: string; pedidos: typeof pedidosDeliveryActivos }>()
     for (const p of pedidosDeliveryActivos) {
       if (!p.cadete_id) continue
@@ -143,9 +169,13 @@ export default function TorreControlPage() {
       mapa.set(cid, actual)
     }
     return Array.from(mapa.values())
-  })()
+  }, [pedidosDeliveryActivos])
   // Recorridos multi-pedido (2+ simultáneos)
-  const recorridosMulti = pedidosPorCadete.filter((c) => c.pedidos.length >= 2)
+  const recorridosMulti = useMemo(() => pedidosPorCadete.filter((c) => c.pedidos.length >= 2), [pedidosPorCadete])
+  const pedidosOrdenadosPorCadete = useMemo(
+    () => new Map(pedidosPorCadete.map((grupo) => [grupo.id.toLowerCase(), ordenarPedidosPorCercaniaOManual(grupo.pedidos)])),
+    [pedidosPorCadete]
+  )
 
   // Disparar resize para que Leaflet recalcule tiles al alternar a la pestaña Mapa
   useEffect(() => {
@@ -157,34 +187,42 @@ export default function TorreControlPage() {
     }
   }, [vistaMobile])
 
-  const cadetesActivosConGpsCount = cadetes.filter(
-    (c) => c.gps_activo && c.lat != null && c.lng != null
-  ).length
+  const cadetesActivosConGpsCount = useMemo(
+    () => cadetes.filter((c) => c.gps_activo && c.lat != null && c.lng != null).length,
+    [cadetes]
+  )
 
-  const fetchTorreData = async () => {
-    setIsRefreshing(true)
+  const fetchTorreData = useCallback(async (mostrarCarga = false) => {
+    if (consultaEnCursoRef.current) return
+    consultaEnCursoRef.current = true
+    if (mostrarCarga) setIsRefreshing(true)
     try {
-      const res = await fetch('/api/admin/torre-control')
+      const res = await fetch('/api/admin/torre-control', { cache: 'no-store' })
       if (res.ok) {
-        const data = await res.json()
-        setCadetes(data)
+        const data = await res.json() as CadeteData[]
+        const firma = firmarCadetes(data)
+        if (firma !== firmaCadetesRef.current) {
+          firmaCadetesRef.current = firma
+          setCadetes(data)
+        }
       }
     } catch (error) {
       console.error('Error fetching torre control data:', error)
     } finally {
+      consultaEnCursoRef.current = false
       setIsLoading(false)
-      setIsRefreshing(false)
+      if (mostrarCarga) setIsRefreshing(false)
     }
-  }
+  }, [])
 
   // Polling cada 6 segundos con suspensión inteligente en segundo plano
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null
 
-    const iniciarPolling = () => {
-      if (intervalId) clearInterval(intervalId)
-      fetchTorreData()
-      intervalId = setInterval(fetchTorreData, 6000)
+      const iniciarPolling = () => {
+        if (intervalId) clearInterval(intervalId)
+        void fetchTorreData()
+        intervalId = setInterval(() => void fetchTorreData(), modoBajoConsumo ? 15000 : 6000)
     }
 
     const detenerPolling = () => {
@@ -215,7 +253,7 @@ export default function TorreControlPage() {
         document.removeEventListener('visibilitychange', handleVisibilidad)
       }
     }
-  }, [])
+  }, [fetchTorreData, modoBajoConsumo])
 
   const handleApagarGps = async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {
     e.stopPropagation()
@@ -401,7 +439,7 @@ export default function TorreControlPage() {
                 <Download size={16} />
               </a>
               <button
-                onClick={fetchTorreData}
+                onClick={() => void fetchTorreData(true)}
                 disabled={isRefreshing}
                 className={`rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
                   isRefreshing ? 'animate-spin' : ''
@@ -428,9 +466,7 @@ export default function TorreControlPage() {
             ) : (
               cadetes.map((cadete) => {
                 const isSelected = focusedId === cadete.id
-                const pedidosRuta = ordenarPedidosPorCercaniaOManual(
-                  pedidosPorCadete.find((grupo) => grupo.id.toLowerCase() === cadete.id.toLowerCase())?.pedidos ?? []
-                )
+                const pedidosRuta = pedidosOrdenadosPorCadete.get(cadete.id.toLowerCase()) ?? []
                 const puedeEditarRuta = pedidosRuta.length > 1
                 return (
                   <Card
@@ -569,7 +605,12 @@ export default function TorreControlPage() {
 
       {/* Main Area: Mapa */}
       <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} pointer-events-auto absolute inset-0 z-0 flex-col`}>
-        <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
+        <MapaGlobalMemo
+          cadetes={cadetes}
+          focusedId={focusedId}
+          onSelectCadete={setFocusedId}
+          bajoConsumo={modoBajoConsumo}
+        />
 
       </div>
     </div>
@@ -654,7 +695,7 @@ export default function TorreControlPage() {
                 const infoCadete = pedido.cadete_id
                   ? pedidosPorCadete.find(c => c.id.toLowerCase() === pedido.cadete_id?.toLowerCase())
                   : null
-                const ordenadosCadete = infoCadete ? ordenarPedidosPorCercaniaOManual(infoCadete.pedidos) : []
+                const ordenadosCadete = infoCadete ? pedidosOrdenadosPorCadete.get(infoCadete.id.toLowerCase()) ?? [] : []
                 const pos = ordenadosCadete.findIndex(p => p.id === pedido.id) + 1
                 const dist = pedido.coordenadas ? calcularDistanciaKm(UBICACION_LOCAL, pedido.coordenadas) : null
                 const distTxt = dist !== null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : undefined

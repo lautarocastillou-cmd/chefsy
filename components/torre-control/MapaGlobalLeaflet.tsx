@@ -57,6 +57,8 @@ export interface MapaGlobalProps {
   cadetes: CadeteData[]
   focusedId?: string | null
   onSelectCadete?: (id: string) => void
+  /** Desactiva interpolación y efectos caros en equipos con pocos recursos. */
+  bajoConsumo?: boolean
 }
 
 // Helper: Calcular Ã¡ngulo de rumbo geogrÃ¡fico (0Â° a 360Â°)
@@ -97,7 +99,7 @@ interface CadeteAnimState {
   terminado?: boolean
 }
 
-export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaGlobalProps) {
+export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoConsumo = false }: MapaGlobalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<{
@@ -266,6 +268,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
   // â”€â”€ 2. Bucle Global de AnimaciÃ³n a 60 FPS (Gliding Multi-Cadete Optimizado) â”€â”€
   useEffect(() => {
     const loopAnimacion = (timestamp: number) => {
+      if (bajoConsumo) return
       if (!estaVisibleRef.current) return
 
       const states = animStatesRef.current
@@ -379,7 +382,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         Object.values(animStatesRef.current).forEach((s) => {
           s.startTime = ahora
         })
-        if (!animFrameRef.current) {
+        if (!bajoConsumo && !animFrameRef.current) {
           animFrameRef.current = requestAnimationFrame(loopAnimacion)
         }
       }
@@ -387,7 +390,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
 
     document.addEventListener('visibilitychange', handleVisibilidad)
 
-    if (estaVisibleRef.current) {
+    if (!bajoConsumo && estaVisibleRef.current) {
       animFrameRef.current = requestAnimationFrame(loopAnimacion)
     }
 
@@ -398,7 +401,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         animFrameRef.current = null
       }
     }
-  }, [aplicarRotacionCadete])
+  }, [aplicarRotacionCadete, bajoConsumo])
 
   // â”€â”€ 3. SincronizaciÃ³n de Marcadores, Destinos y Rutas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
@@ -615,6 +618,14 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
 
       if (markersRef.current.cadetes[cadete.id]) {
         const existingMarker = markersRef.current.cadetes[cadete.id]
+        if (bajoConsumo) {
+          existingMarker.setLatLng([targetLat, targetLng])
+          if (estadoActual) {
+            estadoActual.latActual = targetLat
+            estadoActual.lngActual = targetLng
+            estadoActual.terminado = true
+          }
+        }
         if ((existingMarker as any)._lastHtml !== cadeteHtml) {
           existingMarker.setIcon(cadeteIcon)
           ;(existingMarker as any)._lastHtml = cadeteHtml
@@ -634,9 +645,11 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
       }
 
       // B) Marcadores de Clientes de Entrega (Multi-Parada)
-      const pedidosConCoords = listaPedidos.filter(
+      const todosLosPedidosConCoords = listaPedidos.filter(
         (p) => p.coordenadas && p.coordenadas.latitud != null && p.coordenadas.longitud != null
       )
+      const mostrarDetallesRuta = !bajoConsumo || cadete.id === focusedId
+      const pedidosConCoords = mostrarDetallesRuta ? todosLosPedidosConCoords : []
 
       pedidosConCoords.forEach((pedido, idx) => {
         const clientKey = `cliente_${pedido.id}`
@@ -696,7 +709,17 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
 
       // C) PolilÃ­nea DinÃ¡mica Dual (Multi-Parada con trazado real por calles OSRM)
       const rutaKey = `ruta_${cadete.id}`
-      if (pedidosConCoords.length > 0) {
+      if (!mostrarDetallesRuta) {
+        abortControllersRef.current[cadete.id]?.abort()
+        delete abortControllersRef.current[cadete.id]
+        delete rutasGeometriaRef.current[cadete.id]
+        delete rutasFirmaRef.current[cadete.id]
+        delete indicesRutaRef.current[cadete.id]
+        markersRef.current.rutasBase[rutaKey]?.remove()
+        markersRef.current.rutasDash[rutaKey]?.remove()
+        delete markersRef.current.rutasBase[rutaKey]
+        delete markersRef.current.rutasDash[rutaKey]
+      } else if (pedidosConCoords.length > 0) {
         const startPoint: [number, number] = [estadoActual?.latActual || targetLat, estadoActual?.lngActual || targetLng]
 
         // Firma Ãºnica del itinerario de paradas para detectar altas, bajas o reordenamiento
@@ -801,7 +824,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
             smoothFactor: 1.5,
           }).addTo(map)
 
-          markersRef.current.rutasDash[rutaKey] = L.polyline(rutaCoords, {
+          if (!bajoConsumo) markersRef.current.rutasDash[rutaKey] = L.polyline(rutaCoords, {
             color: '#10B981',
             weight: 3,
             dashArray: '8, 12',
@@ -812,9 +835,9 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
           }).addTo(map)
         } else {
           markersRef.current.rutasBase[rutaKey].setLatLngs(rutaCoords)
-          markersRef.current.rutasDash[rutaKey].setLatLngs(rutaCoords)
+          if (!bajoConsumo) markersRef.current.rutasDash[rutaKey]?.setLatLngs(rutaCoords)
         }
-      } else {
+      } else if (todosLosPedidosConCoords.length === 0) {
         // Cadete sin pedidos activos: limpiar polilÃ­neas y geometrÃ­as en memoria
         if (abortControllersRef.current[cadete.id]) {
           abortControllersRef.current[cadete.id].abort()
@@ -842,7 +865,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete }: MapaG
         delete markersRef.current.clientes[key]
       }
     })
-  }, [cadetes])
+  }, [cadetes, bajoConsumo, focusedId])
 
   // â”€â”€ 4. Control de Enfoque desde la barra lateral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {

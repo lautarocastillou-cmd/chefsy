@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import MapaGlobalLeaflet, {
   type CadeteData,
   type MapaGlobalProps,
@@ -21,7 +21,7 @@ export type { CadeteData, MapaGlobalProps }
  * aislada, abrir /cadeteria?mapa=maplibre. Cualquier fallo fatal vuelve a
  * Leaflet; retirar el experimento no requiere cambiar la página ni su API.
  */
-export default function MapaGlobal(props: MapaGlobalProps) {
+function MapaGlobal(props: MapaGlobalProps) {
   const [probarMapLibre, setProbarMapLibre] = useState(() =>
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('mapa') === 'maplibre'
@@ -49,3 +49,5 @@ export default function MapaGlobal(props: MapaGlobalProps) {
     />
   )
 }
+
+export default memo(MapaGlobal)
