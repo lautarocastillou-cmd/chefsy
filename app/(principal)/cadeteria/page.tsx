@@ -248,10 +248,10 @@ export default function TorreControlPage() {
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
       {/* ── Tabs superiores de Cadetería ── */}
       <div className={cn(
-        'z-30 flex items-end gap-1 overflow-x-auto scrollbar-none',
+        'z-30 flex items-end justify-center gap-1 overflow-x-auto scrollbar-none',
         tabSuperior === 'mapa'
           ? 'absolute left-1/2 top-3 max-w-[calc(100%-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200/80 bg-white/95 px-1 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95'
-          : 'relative shrink-0 border-b border-gray-200 bg-white/90 px-1 dark:border-slate-800 dark:bg-slate-950/90'
+          : 'relative w-full shrink-0 border-b border-gray-200 bg-white/90 px-1 dark:border-slate-800 dark:bg-slate-950/90'
       )}>
         {(
           [
