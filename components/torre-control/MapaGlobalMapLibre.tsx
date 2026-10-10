@@ -217,9 +217,14 @@ export default function MapaGlobalMapLibre({
   const marcadorLocalRef = useRef<maplibregl.Marker | null>(null)
   const marcadoresCadeteRef = useRef<Record<string, maplibregl.Marker>>({})
   const marcadoresClienteRef = useRef<Record<string, maplibregl.Marker>>({})
+  const firmasMarcadorCadeteRef = useRef<Record<string, string>>({})
+  const firmasPopupCadeteRef = useRef<Record<string, string>>({})
+  const firmasMarcadorClienteRef = useRef<Record<string, string>>({})
+  const posicionesCadeteRef = useRef<Record<string, string>>({})
   const firmasRutaRef = useRef<Record<string, string>>({})
   const geometriaRutaRef = useRef<Record<string, [number, number][]>>({})
   const featuresRutaRef = useRef<Record<string, GeoJSON.Feature<GeoJSON.LineString>>>({})
+  const firmaCapaRutasRef = useRef('')
   const abortRutasRef = useRef<Record<string, AbortController>>({})
   const ultimasSolicitudesRutaRef = useRef<Record<string, { lat: number; lng: number; at: number }>>({})
   const cadetesRef = useRef(cadetes)
@@ -347,6 +352,7 @@ export default function MapaGlobalMapLibre({
       abortRutasRef.current = {}
       ultimasSolicitudesRutaRef.current = {}
       featuresRutaRef.current = {}
+      firmaCapaRutasRef.current = ''
       Object.values(marcadoresCadeteRef.current).forEach((marcador) => marcador.remove())
       marcadoresCadeteRef.current = {}
       Object.values(marcadoresClienteRef.current).forEach((marcador) => marcador.remove())
@@ -369,7 +375,11 @@ export default function MapaGlobalMapLibre({
       Object.values(marcadoresCadeteRef.current).forEach((marcador) => marcador.remove())
       Object.values(marcadoresClienteRef.current).forEach((marcador) => marcador.remove())
       marcadoresCadeteRef.current = {}
+      firmasMarcadorCadeteRef.current = {}
+      firmasPopupCadeteRef.current = {}
       marcadoresClienteRef.current = {}
+      firmasMarcadorClienteRef.current = {}
+      posicionesCadeteRef.current = {}
       modoBajoConsumoRef.current = bajoConsumo
     }
 
@@ -389,6 +399,9 @@ export default function MapaGlobalMapLibre({
         delete geometriaRutaRef.current[id]
         delete featuresRutaRef.current[id]
         delete ultimasSolicitudesRutaRef.current[id]
+        delete firmasMarcadorCadeteRef.current[id]
+        delete firmasPopupCadeteRef.current[id]
+        delete posicionesCadeteRef.current[id]
       }
     }
 
@@ -398,6 +411,21 @@ export default function MapaGlobalMapLibre({
       const pedidos = obtenerPedidos(cadete)
       let marcador = marcadoresCadeteRef.current[cadete.id]
 
+      const firmaMarcadorCadete = [
+        cadete.nombre,
+        cadete.gps_activo,
+        cadete.bateria == null ? '' : Math.round(cadete.bateria),
+        cadete.pedidoActivo?.id ?? '',
+        cadete.pedidosActivos?.map((pedido) => `${pedido.id}:${pedido.parada_num ?? ''}:${pedido.orden_entrega ?? ''}`).join(',') ?? '',
+        cadete.id === focusedId,
+        bajoConsumo,
+      ].join('|')
+      const firmaPopupCadete = [
+        firmaMarcadorCadete,
+        cadete.updated_at ? Math.floor(new Date(cadete.updated_at).getTime() / 30000) : '',
+        pedidos.map((pedido) => `${pedido.id}:${pedido.cliente}:${pedido.direccion ?? ''}:${pedido.total ?? ''}:${pedido.parada_num ?? ''}`).join('|'),
+      ].join('::')
+
       if (!marcador) {
         const elemento = crearIconoCadete(cadete, cadete.id === focusedId, bajoConsumo)
         elemento.addEventListener('click', () => onSelectCadete?.(cadete.id))
@@ -406,19 +434,34 @@ export default function MapaGlobalMapLibre({
           .addTo(mapa)
           .setPopup(new maplibregl.Popup({ offset: 28, maxWidth: '320px' }).setDOMContent(contenidoPopupCadete(cadete)))
         marcadoresCadeteRef.current[cadete.id] = marcador
+        firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
+        firmasPopupCadeteRef.current[cadete.id] = firmaPopupCadete
+        posicionesCadeteRef.current[cadete.id] = `${cadete.lng.toFixed(6)},${cadete.lat.toFixed(6)}`
       } else {
         const nueva: [number, number] = [cadete.lng, cadete.lat]
-        marcador.setLngLat(nueva)
-        const elemento = marcador.getElement()
-        elemento.style.background = cadete.pedidoActivo || (cadete.pedidosActivos?.length ?? 0) > 0
-          ? '#e11d48'
-          : '#10b981'
-        const seleccionado = cadete.id === focusedId
-        elemento.style.boxShadow = seleccionado ? '0 2px 10px #0006,0 0 0 3px #ffffffaa' : '0 2px 10px #0006'
-        elemento.setAttribute('aria-label', `Seleccionar cadete ${cadete.nombre}`)
-        const etiqueta = elemento.querySelector('span')
-        if (etiqueta) etiqueta.textContent = cadete.nombre
-        marcador.getPopup()?.setDOMContent(contenidoPopupCadete(cadete))
+        const posicionCadete = `${cadete.lng.toFixed(6)},${cadete.lat.toFixed(6)}`
+        if (posicionesCadeteRef.current[cadete.id] !== posicionCadete) {
+          marcador.setLngLat(nueva)
+          posicionesCadeteRef.current[cadete.id] = posicionCadete
+        }
+        if (firmasMarcadorCadeteRef.current[cadete.id] !== firmaMarcadorCadete) {
+          const elemento = marcador.getElement()
+          elemento.style.background = cadete.pedidoActivo || (cadete.pedidosActivos?.length ?? 0) > 0
+            ? '#e11d48'
+            : '#10b981'
+          const seleccionado = cadete.id === focusedId
+          elemento.style.boxShadow = bajoConsumo
+            ? 'none'
+            : seleccionado ? '0 2px 10px #0006,0 0 0 3px #ffffffaa' : '0 2px 10px #0006'
+          elemento.setAttribute('aria-label', `Seleccionar cadete ${cadete.nombre}`)
+          const etiqueta = elemento.querySelector('span')
+          if (etiqueta) etiqueta.textContent = cadete.nombre
+          firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
+        }
+        if (firmasPopupCadeteRef.current[cadete.id] !== firmaPopupCadete) {
+          marcador.getPopup()?.setDOMContent(contenidoPopupCadete(cadete))
+          firmasPopupCadeteRef.current[cadete.id] = firmaPopupCadete
+        }
       }
 
       const mostrarDetallesRuta = !bajoConsumo || cadete.id === focusedId
@@ -432,6 +475,17 @@ export default function MapaGlobalMapLibre({
         const key = pedido.id
         idsClientesActivos.add(key)
         const parada = pedido.parada_num || indice + 1
+        const firmaMarcadorCliente = [
+          pedido.coordenadas!.latitud,
+          pedido.coordenadas!.longitud,
+          pedido.cliente,
+          pedido.direccion ?? '',
+          pedido.total ?? '',
+          parada,
+          paradas.length,
+          cadete.id,
+          bajoConsumo,
+        ].join('|')
         let markerCliente = marcadoresClienteRef.current[key]
         if (!markerCliente) {
           markerCliente = new maplibregl.Marker({
@@ -445,9 +499,13 @@ export default function MapaGlobalMapLibre({
             .addTo(mapa)
           marcadoresClienteRef.current[key] = markerCliente
         } else {
-          markerCliente.setLngLat([pedido.coordenadas!.longitud, pedido.coordenadas!.latitud])
-          markerCliente.getPopup()?.setDOMContent(contenidoPopupCliente(cadete, pedido, parada, paradas.length))
+          if (firmasMarcadorClienteRef.current[key] !== firmaMarcadorCliente) {
+            markerCliente.setLngLat([pedido.coordenadas!.longitud, pedido.coordenadas!.latitud])
+            markerCliente.getPopup()?.setDOMContent(contenidoPopupCliente(cadete, pedido, parada, paradas.length))
+            firmasMarcadorClienteRef.current[key] = firmaMarcadorCliente
+          }
         }
+        if (!firmasMarcadorClienteRef.current[key]) firmasMarcadorClienteRef.current[key] = firmaMarcadorCliente
       })
 
       if (paradas.length) {
@@ -509,6 +567,7 @@ export default function MapaGlobalMapLibre({
               geometry: { type: 'LineString', coordinates: geometriaRutaRef.current[cadeteId] },
             }
             instalarCapaRutas(mapa, featuresRutaRef.current)
+            firmaCapaRutasRef.current = ''
           }).catch((error: unknown) => {
             if (!controller.signal.aborted) console.warn(`[TorreControl] Error al obtener ruta para ${nombre}:`, error)
           }).finally(() => {
@@ -531,10 +590,18 @@ export default function MapaGlobalMapLibre({
       if (!idsClientesActivos.has(id)) {
         marker.remove()
         delete marcadoresClienteRef.current[id]
+        delete firmasMarcadorClienteRef.current[id]
       }
     }
 
-    instalarCapaRutas(mapa, featuresRutaRef.current)
+    const firmaCapaRutas = Object.entries(featuresRutaRef.current)
+      .map(([id, feature]) => `${id}:${feature.geometry.coordinates.map((p) => `${p[0]},${p[1]}`).join(';')}`)
+      .sort()
+      .join('|')
+    if (firmaCapaRutasRef.current !== firmaCapaRutas) {
+      instalarCapaRutas(mapa, featuresRutaRef.current)
+      firmaCapaRutasRef.current = firmaCapaRutas
+    }
     aplicarFiltrosEstilo(mapa, estiloMapa)
   }, [cadetes, estado, focusedId, onSelectCadete, versionEstilo, estiloMapa, bajoConsumo])
 

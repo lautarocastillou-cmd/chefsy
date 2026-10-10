@@ -109,6 +109,9 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
     rutasBase: Record<string, any>
     rutasDash: Record<string, any>
   }>({ cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} })
+  const firmasMarcadorCadeteRef = useRef<Record<string, string>>({})
+  const firmasPopupCadeteRef = useRef<Record<string, string>>({})
+  const firmasMarcadorClienteRef = useRef<Record<string, string>>({})
 
   // â”€â”€ Referencias del Motor de InterpolaciÃ³n Multi-Cadete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const animStatesRef = useRef<Record<string, CadeteAnimState>>({})
@@ -263,6 +266,9 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       animStatesRef.current = {}
       ultimosUpdatesRef.current = {}
       ultimoRenderCadetesRef.current = {}
+      firmasMarcadorCadeteRef.current = {}
+      firmasPopupCadeteRef.current = {}
+      firmasMarcadorClienteRef.current = {}
     }
   }, [])
 
@@ -423,6 +429,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         delete animStatesRef.current[id]
         delete ultimosUpdatesRef.current[id]
         delete ultimoRenderCadetesRef.current[id]
+        delete firmasMarcadorCadeteRef.current[id]
+        delete firmasPopupCadeteRef.current[id]
 
         if (abortControllersRef.current[id]) {
           abortControllersRef.current[id].abort()
@@ -536,6 +544,21 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       const esOeste = rumbo > 180 && rumbo < 360
 
       // A) Marcador del Cadete con Haz de Luz 360Â°, Moto que nunca se da vuelta y Nombre nÃ­tido
+      const firmaMarcadorCadete = [
+        cadete.nombre,
+        cadete.gps_activo,
+        cadete.bateria == null ? '' : Math.round(cadete.bateria),
+        velKmH,
+        esEnViaje,
+        Math.round(rumbo),
+        bajoConsumo,
+      ].join('|')
+      const firmaPopupCadete = [
+        firmaMarcadorCadete,
+        cadete.updated_at ? Math.floor(new Date(cadete.updated_at).getTime() / 30000) : '',
+        listaPedidos.map((pedido) => `${pedido.id}:${pedido.cliente}:${pedido.direccion ?? ''}:${pedido.total ?? ''}:${pedido.parada_num ?? ''}`).join('|'),
+      ].join('::')
+
       const cadeteHtml = `
         <div class="cadete-marker-outer" style="position:relative; width:64px; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none;">
           <!-- Contenedor del vehÃ­culo y faro de 44px -->
@@ -629,13 +652,16 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
             estadoActual.terminado = true
           }
         }
-        if ((existingMarker as any)._lastHtml !== cadeteHtml) {
+        if (firmasMarcadorCadeteRef.current[cadete.id] !== firmaMarcadorCadete) {
           existingMarker.setIcon(cadeteIcon)
-          ;(existingMarker as any)._lastHtml = cadeteHtml
+          firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
           const el = existingMarker.getElement()
           if (el) delete (el as any)._rotCache
         }
-        existingMarker.setPopupContent(popupContent)
+        if (firmasPopupCadeteRef.current[cadete.id] !== firmaPopupCadete) {
+          existingMarker.setPopupContent(popupContent)
+          firmasPopupCadeteRef.current[cadete.id] = firmaPopupCadete
+        }
       } else {
         const newMarker = L.marker([targetLat, targetLng], {
           icon: cadeteIcon,
@@ -643,7 +669,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         })
           .addTo(map)
           .bindPopup(popupContent)
-        ;(newMarker as any)._lastHtml = cadeteHtml
+        firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
+        firmasPopupCadeteRef.current[cadete.id] = firmaPopupCadete
         markersRef.current.cadetes[cadete.id] = newMarker
       }
 
@@ -662,6 +689,17 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         const clientLng = pedido.coordenadas!.longitud
         const numParada = pedido.parada_num || idx + 1
         const totalParadas = pedidosConCoords.length
+        const firmaMarcadorCliente = [
+          clientLat,
+          clientLng,
+          pedido.cliente,
+          pedido.direccion ?? '',
+          pedido.total ?? '',
+          pedido.parada_num ?? idx + 1,
+          totalParadas,
+          cadete.id,
+          bajoConsumo,
+        ].join('|')
 
         const paradaBadge = totalParadas > 1
           ? `<span style="background:#f59e0b;color:#ffffff;font-size:9px;font-weight:900;padding:0px 4px;border-radius:4px;margin-right:3px;">#${numParada}</span>`
@@ -698,8 +736,12 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         `
 
         if (markersRef.current.clientes[clientKey]) {
-          markersRef.current.clientes[clientKey].setLatLng([clientLat, clientLng])
-          markersRef.current.clientes[clientKey].setPopupContent(clientPopup)
+          if (firmasMarcadorClienteRef.current[clientKey] !== firmaMarcadorCliente) {
+            markersRef.current.clientes[clientKey].setIcon(clienteIcon)
+            markersRef.current.clientes[clientKey].setLatLng([clientLat, clientLng])
+            markersRef.current.clientes[clientKey].setPopupContent(clientPopup)
+            firmasMarcadorClienteRef.current[clientKey] = firmaMarcadorCliente
+          }
         } else {
           markersRef.current.clientes[clientKey] = L.marker([clientLat, clientLng], {
             icon: clienteIcon,
@@ -707,6 +749,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           })
             .addTo(map)
             .bindPopup(clientPopup)
+          firmasMarcadorClienteRef.current[clientKey] = firmaMarcadorCliente
         }
       })
 
@@ -898,6 +941,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       if (!activeClientOrderIds.has(key)) {
         markersRef.current.clientes[key].remove()
         delete markersRef.current.clientes[key]
+        delete firmasMarcadorClienteRef.current[key]
       }
     })
   }, [cadetes, bajoConsumo, focusedId])
