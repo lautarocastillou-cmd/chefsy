@@ -1,0 +1,42 @@
+name: Cron Recordatorios de Reservas (Malú)
+
+on:
+  schedule:
+    # Se ejecuta cada 5 minutos (frecuencia mínima permitida en GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions para probar
+
+concurrency:
+  group: cron-reservas-malu
+  cancel-in-progress: false
+
+jobs:
+  disparar-recordatorios:
+    name: Consultar y enviar Web Push de reservas
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Llamar a /api/cron/reservas
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ secrets.CHEFSY_URL || 'https://chefsy.xyz' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Falta configurar el secret CRON_SECRET en GitHub (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            "${BASE_URL}/api/cron/reservas")
+
+          HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+
+          echo "Respuesta ($HTTP_STATUS): $HTTP_BODY"
+
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::El endpoint devolvió HTTP $HTTP_STATUS"
+            exit 1
+          fi
