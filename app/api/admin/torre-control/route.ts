@@ -5,11 +5,23 @@
 // ─────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerSesion } from '@/lib/auth-server'
 import { responderError } from '@/lib/api-error'
 
-export async function GET() {
+function crearEtag(torreData: unknown[]) {
+  // segundos_offline cambia aunque la base no haya cambiado. Se excluye del
+  // fingerprint para que el polling pueda responder 304 de forma estable.
+  const estable = torreData.map((cadete: any) => ({
+    ...cadete,
+    segundos_offline: undefined,
+  }))
+  const hash = createHash('sha1').update(JSON.stringify(estable)).digest('hex')
+  return `"${hash}"`
+}
+
+export async function GET(request: Request) {
   try {
     const sesion = await obtenerSesion()
     if (!sesion || sesion.rol !== 'admin') {
@@ -29,13 +41,14 @@ export async function GET() {
     const { data: usuariosData, error: usuariosError } = await supabase
       .from('usuarios')
       .select('usuario, nombre, rol')
+      .eq('rol', 'cadete')
       
     if (usuariosError) throw usuariosError
 
     // 3. Obtener pedidos activos para saber en qué andan y ubicar a los clientes en el mapa
     const { data: pedidosData, error: pedidosError } = await supabase
       .from('pedidos')
-      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, ruta_historial, en_camino_at, created_at, entregado_at, productos, tipoEntrega, telefono, metodoPago, hora, fecha, orden_entrega')
+      .select('id, cliente, direccion, coordenadas, estado, total, cadete_id, cadete_nombre, created_at, orden_entrega')
       .in('estado', ['listo', 'en_camino'])
       .eq('archivado', false)
 
@@ -43,22 +56,32 @@ export async function GET() {
 
     // 4. Combinar datos: Todos los usuarios cadetes + cualquier registro en tabla cadetes
     const cadetesMap = new Map<string, any>()
+    const usuariosPorId = new Map(
+      (usuariosData || []).map((usuario: any) => [String(usuario.usuario || '').toLowerCase(), usuario])
+    )
+    const pedidosPorCadete = new Map<string, any[]>()
+
+    for (const pedido of pedidosData || []) {
+      const idCadete = String(pedido.cadete_id || '').toLowerCase()
+      if (!idCadete) continue
+      const pedidos = pedidosPorCadete.get(idCadete) || []
+      pedidos.push(pedido)
+      pedidosPorCadete.set(idCadete, pedidos)
+    }
 
     // Agregar todos los usuarios con rol cadete
     for (const u of usuariosData || []) {
-      if (u.rol === 'cadete') {
-        const idLower = String(u.usuario || '').toLowerCase()
-        cadetesMap.set(idLower, {
-          id: u.usuario,
-          nombre: u.nombre || u.usuario,
-        })
-      }
+      const idLower = String(u.usuario || '').toLowerCase()
+      cadetesMap.set(idLower, {
+        id: u.usuario,
+        nombre: u.nombre || u.usuario,
+      })
     }
 
     // Agregar o enriquecer con todos los registros de la tabla cadetes
     for (const c of (cadetesData || []) as any[]) {
       const idLower = String(c.id || '').toLowerCase()
-      const u = (usuariosData || []).find((usr: any) => String(usr.usuario || '').toLowerCase() === idLower)
+      const u = usuariosPorId.get(idLower)
       const entry = cadetesMap.get(idLower) || {
         id: c.id,
         nombre: u?.nombre || c.nombre || c.id,
@@ -73,9 +96,7 @@ export async function GET() {
       const idLower = String(entry.id || '').toLowerCase()
       
       // Buscar todos los pedidos activos asignados al cadete
-      const pedidosCadete = (pedidosData || []).filter((p: any) => 
-        String(p.cadete_id || '').toLowerCase() === idLower
-      )
+      const pedidosCadete = pedidosPorCadete.get(idLower) || []
 
       // Ordenar por orden_entrega manual o por fecha de creación
       pedidosCadete.sort((a: any, b: any) => {
@@ -135,7 +156,19 @@ export async function GET() {
       return dateB - dateA
     })
 
-    return NextResponse.json(torreData)
+    const etag = crearEtag(torreData)
+    const headers = {
+      ETag: etag,
+      // La respuesta sigue siendo validada en cada polling, pero un 304 evita
+      // transferir y parsear el JSON completo cuando no hubo novedades.
+      'Cache-Control': 'private, no-cache, max-age=0',
+    }
+
+    if (request.headers.get('if-none-match') === etag) {
+      return new NextResponse(null, { status: 304, headers })
+    }
+
+    return NextResponse.json(torreData, { headers })
   } catch (error) {
     console.error('[API Torre Control] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

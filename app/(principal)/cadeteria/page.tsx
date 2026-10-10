@@ -126,6 +126,7 @@ export default function TorreControlPage() {
   const [guardandoOrdenCadete, setGuardandoOrdenCadete] = useState<string | null>(null)
   const [modoBajoConsumo, setModoBajoConsumo] = useState(false)
   const firmaCadetesRef = useRef('')
+  const etagTorreRef = useRef<string | null>(null)
   const consultaEnCursoRef = useRef(false)
   const { pedidos, cambiarEstado, reordenarPedidosCadete } = usarPedidos()
 
@@ -195,8 +196,14 @@ export default function TorreControlPage() {
     consultaEnCursoRef.current = true
     if (mostrarCarga) setIsRefreshing(true)
     try {
-      const res = await fetch('/api/admin/torre-control', { cache: 'no-store' })
+      const headers: HeadersInit = etagTorreRef.current
+        ? { 'If-None-Match': etagTorreRef.current }
+        : {}
+      const res = await fetch('/api/admin/torre-control', { cache: 'no-store', headers })
+      if (res.status === 304) return
       if (res.ok) {
+        const etag = res.headers.get('etag')
+        if (etag) etagTorreRef.current = etag
         const data = await res.json() as CadeteData[]
         const firma = firmarCadetes(data)
         if (firma !== firmaCadetesRef.current) {
