@@ -541,12 +541,12 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           <!-- Contenedor del vehÃ­culo y faro de 44px -->
           <div style="position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
             <!-- Haz de luz delantero que apunta en 360Â° -->
-            <div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>
+            ${bajoConsumo ? '' : `<div class="cadete-headlight-cone cadete-rotatable" style="transform: rotate(${rumbo}deg);"></div>`}
             <!-- Onda de radar -->
-            <div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>
+            ${bajoConsumo ? '' : `<div class="cadete-radar-pulse" style="border-color:${colorBg};"></div>`}
             <!-- Badge circular de la moto (siempre derecho, ruedas al suelo) -->
             <div class="cadete-moto-badge" style="position:relative; width:44px; height:44px; background:${colorBg}; border:2.5px solid #fff; border-radius:50%; box-shadow:0 4px 14px ${sombraColor}; display:flex; align-items:center; justify-content:center;">
-              <span class="cadete-moto-flip" style="display:flex; align-items:center; justify-content:center; transition:transform 0.15s ease-out; transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
+              <span class="cadete-moto-flip" style="display:flex; align-items:center; justify-content:center;${bajoConsumo ? '' : ' transition:transform 0.15s ease-out;'} transform:${esOeste ? 'scaleX(-1)' : 'scaleX(1)'};">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
               </span>
             </div>
@@ -560,10 +560,10 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
           <!-- Etiqueta de Nombre del Cadete y Velocidad en Tiempo Real -->
           <div style="margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:2px;">
-            <div style="background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; box-shadow:0 3px 8px rgba(0,0,0,0.45); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
+            <div class="cadete-name-label" style="background:#0f172a; color:#ffffff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px;${bajoConsumo ? '' : ' box-shadow:0 3px 8px rgba(0,0,0,0.45);'} white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; border:1.5px solid rgba(255,255,255,0.85); letter-spacing:0.3px; z-index:20;">
               ${cadete.nombre}
             </div>
-            <div style="background:${velBadgeBg}; color:${velBadgeColor}; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:9999px; box-shadow:0 2px 5px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.85); display:flex; align-items:center; gap:2px; letter-spacing:0.2px; z-index:21;">
+            <div class="cadete-speed-label" style="background:${velBadgeBg}; color:${velBadgeColor}; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:9999px;${bajoConsumo ? '' : ' box-shadow:0 2px 5px rgba(0,0,0,0.3);'} border:1px solid rgba(255,255,255,0.85); display:flex; align-items:center; gap:2px; letter-spacing:0.2px; z-index:21;">
               <span>${velKmH} km/h</span>
             </div>
           </div>
@@ -670,11 +670,11 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         const clienteIcon = L.divIcon({
           html: `
             <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
-              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:${totalParadas > 1 && numParada === 1 ? '#059669' : '#2563EB'};border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 10px rgba(37,99,235,0.4);">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:${totalParadas > 1 && numParada === 1 ? '#059669' : '#2563EB'};border:2.5px solid #fff;border-radius:50%;${bajoConsumo ? '' : 'box-shadow:0 4px 10px rgba(37,99,235,0.4);'}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                ${totalParadas > 1 ? `<div style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);">${numParada}</div>` : ''}
+                ${totalParadas > 1 ? `<div style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;${bajoConsumo ? '' : 'box-shadow:0 2px 4px rgba(0,0,0,0.3);'}">${numParada}</div>` : ''}
               </div>
-              <div style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;display:flex;align-items:center;">
+              <div class="cliente-name-label" style="margin-top:2px;background:#1e40af;color:#ffffff;font-size:10px;font-weight:900;padding:1px 6px;border-radius:8px;${bajoConsumo ? '' : 'box-shadow:0 2px 6px rgba(0,0,0,0.3);'}white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff;letter-spacing:0.2px;display:flex;align-items:center;">
                 ${paradaBadge}${pedido.cliente}
               </div>
             </div>
@@ -954,7 +954,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
   }
 
   return (
-    <div className="relative w-full h-full min-h-[400px] overflow-hidden z-0 bg-slate-100">
+    <div className={`mapa-bajo-consumo-${bajoConsumo ? 'si' : 'no'} relative w-full h-full min-h-[400px] overflow-hidden z-0 bg-slate-100`}>
       <style dangerouslySetInnerHTML={{
         __html: `
         .cadete-headlight-cone {
@@ -1005,6 +1005,18 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         }
         .animated-polyline-dash {
           animation: polyline-dash 1.8s linear infinite;
+        }
+        .mapa-bajo-consumo-si .cadete-headlight-cone,
+        .mapa-bajo-consumo-si .cadete-radar-pulse,
+        .mapa-bajo-consumo-si .cadete-speed-label {
+          display: none !important;
+        }
+        .mapa-bajo-consumo-si .cadete-moto-badge,
+        .mapa-bajo-consumo-si .cadete-direction-arrow {
+          will-change: auto;
+        }
+        .mapa-bajo-consumo-si .animated-polyline-dash {
+          animation: none !important;
         }
         .leaflet-container {
           width: 100% !important;

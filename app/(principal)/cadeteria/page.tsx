@@ -314,7 +314,10 @@ export default function TorreControlPage() {
   }, [guardarOrden])
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
+    <div className={cn(
+      'relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 dark:bg-slate-950',
+      modoBajoConsumo && 'modo-bajo-consumo'
+    )}>
       {/* ── Tabs superiores de Cadetería ── */}
       <div className={cn(
         'z-30 flex items-end justify-center gap-1 overflow-x-auto scrollbar-none',
@@ -354,7 +357,7 @@ export default function TorreControlPage() {
               </span>
             )}
             {tab.valor === 'gps' && recorridosMulti.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title={`${recorridosMulti.length} recorrido(s) multi-pedido`} />
+              <span className={cn('w-2 h-2 rounded-full bg-amber-500', !modoBajoConsumo && 'animate-pulse')} title={`${recorridosMulti.length} recorrido(s) multi-pedido`} />
             )}
           </Button>
         ))}
@@ -376,7 +379,7 @@ export default function TorreControlPage() {
           <Navigation className="w-3.5 h-3.5 text-emerald-600" />
           <span>Mapa en Vivo</span>
           {cadetesActivosConGpsCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className={cn('w-2 h-2 rounded-full bg-emerald-500', !modoBajoConsumo && 'animate-pulse')} />
           )}
         </button>
         <button
@@ -460,7 +463,7 @@ export default function TorreControlPage() {
                     >
                       <span className={cn(
                         "h-2 w-2 rounded-full shrink-0",
-                        e.activo ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                         e.activo ? cn("bg-emerald-500", !modoBajoConsumo && "animate-pulse") : "bg-red-500"
                       )} />
                       <span>{e.nombre}</span>
                       <span className="opacity-60 text-[10px]">

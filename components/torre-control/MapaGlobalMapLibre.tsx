@@ -93,7 +93,7 @@ function crearIconoLocal() {
   return elemento
 }
 
-function crearIconoCadete(cadete: CadeteData, seleccionado: boolean) {
+function crearIconoCadete(cadete: CadeteData, seleccionado: boolean, bajoConsumo: boolean) {
   const elemento = document.createElement('button')
   elemento.type = 'button'
   elemento.setAttribute('aria-label', `Seleccionar cadete ${cadete.nombre}`)
@@ -102,14 +102,16 @@ function crearIconoCadete(cadete: CadeteData, seleccionado: boolean) {
     'width:38px', 'height:38px', 'display:grid', 'place-items:center',
     'border:2px solid white', 'border-radius:50%',
     `background:${cadete.pedidoActivo || (cadete.pedidosActivos?.length ?? 0) > 0 ? '#e11d48' : '#10b981'}`,
-    `box-shadow:0 2px 10px #0006${seleccionado ? ',0 0 0 3px #ffffffaa' : ''}`,
+    `box-shadow:${bajoConsumo ? 'none' : `0 2px 10px #0006${seleccionado ? ',0 0 0 3px #ffffffaa' : ''}`}`,
     'color:white', 'font:700 11px system-ui', 'cursor:pointer',
   ].join(';')
   elemento.innerHTML = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>'
   const nombre = document.createElement('span')
   nombre.textContent = cadete.nombre
-  nombre.style.cssText = 'position:absolute;top:42px;left:50%;transform:translateX(-50%);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#0f172a;color:white;padding:2px 8px;border-radius:9999px;font:800 11px system-ui;border:1px solid white'
-  elemento.appendChild(nombre)
+  if (!bajoConsumo) {
+    nombre.style.cssText = 'position:absolute;top:42px;left:50%;transform:translateX(-50%);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#0f172a;color:white;padding:2px 8px;border-radius:9999px;font:800 11px system-ui;border:1px solid white'
+    elemento.appendChild(nombre)
+  }
   return elemento
 }
 
@@ -117,15 +119,17 @@ function obtenerPedidos(cadete: CadeteData) {
   return cadete.pedidosActivos?.length ? cadete.pedidosActivos : cadete.pedidoActivo ? [cadete.pedidoActivo] : []
 }
 
-function crearIconoCliente(nombre: string, parada: number, totalParadas: number) {
+function crearIconoCliente(nombre: string, parada: number, totalParadas: number, bajoConsumo: boolean) {
   const elemento = document.createElement('div')
   elemento.setAttribute('aria-label', `Entrega ${parada}: ${nombre}`)
-  elemento.style.cssText = `position:relative;width:38px;height:38px;display:grid;place-items:center;border:2px solid white;border-radius:50%;background:${totalParadas > 1 && parada === 1 ? '#059669' : '#2563eb'};box-shadow:0 4px 10px #2563eb66;color:white;font:900 12px system-ui`
+  elemento.style.cssText = `position:relative;width:38px;height:38px;display:grid;place-items:center;border:2px solid white;border-radius:50%;background:${totalParadas > 1 && parada === 1 ? '#059669' : '#2563eb'};${bajoConsumo ? '' : 'box-shadow:0 4px 10px #2563eb66;'}color:white;font:900 12px system-ui`
   elemento.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
-  const etiqueta = document.createElement('span')
-  etiqueta.textContent = totalParadas > 1 ? `#${parada} ${nombre}` : nombre
-  etiqueta.style.cssText = 'position:absolute;top:40px;left:50%;transform:translateX(-50%);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#1e40af;color:white;padding:2px 7px;border-radius:9999px;font:800 10px system-ui;border:1px solid white'
-  elemento.appendChild(etiqueta)
+  if (!bajoConsumo) {
+    const etiqueta = document.createElement('span')
+    etiqueta.textContent = totalParadas > 1 ? `#${parada} ${nombre}` : nombre
+    etiqueta.style.cssText = 'position:absolute;top:40px;left:50%;transform:translateX(-50%);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#1e40af;color:white;padding:2px 7px;border-radius:9999px;font:800 10px system-ui;border:1px solid white'
+    elemento.appendChild(etiqueta)
+  }
   return elemento
 }
 
@@ -222,6 +226,7 @@ export default function MapaGlobalMapLibre({
   const onFatalErrorRef = useRef(onFatalError)
   const estiloAplicadoRef = useRef<EstiloMapa>('oscuro')
   const fatalRef = useRef(false)
+  const modoBajoConsumoRef = useRef(bajoConsumo)
   const modoCamaraRef = useRef<ModoCamara>('flota')
   const [modoCamara, setModoCamara] = useState<ModoCamara>('flota')
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando')
@@ -357,6 +362,17 @@ export default function MapaGlobalMapLibre({
     const mapa = mapaRef.current
     if (!mapa || estado !== 'listo' || !mapa.isStyleLoaded()) return
 
+    // El modo de rendimiento se detecta justo después del montaje. Si cambia
+    // en ese primer render, reconstruimos solo los marcadores DOM para aplicar
+    // la variante liviana sin reiniciar MapLibre ni volver a cargar tiles.
+    if (modoBajoConsumoRef.current !== bajoConsumo) {
+      Object.values(marcadoresCadeteRef.current).forEach((marcador) => marcador.remove())
+      Object.values(marcadoresClienteRef.current).forEach((marcador) => marcador.remove())
+      marcadoresCadeteRef.current = {}
+      marcadoresClienteRef.current = {}
+      modoBajoConsumoRef.current = bajoConsumo
+    }
+
     const idsValidos = new Set(
       cadetes
         .filter((cadete) => cadete.gps_activo && cadete.lat != null && cadete.lng != null)
@@ -383,7 +399,7 @@ export default function MapaGlobalMapLibre({
       let marcador = marcadoresCadeteRef.current[cadete.id]
 
       if (!marcador) {
-        const elemento = crearIconoCadete(cadete, cadete.id === focusedId)
+        const elemento = crearIconoCadete(cadete, cadete.id === focusedId, bajoConsumo)
         elemento.addEventListener('click', () => onSelectCadete?.(cadete.id))
         marcador = new maplibregl.Marker({ element: elemento, anchor: 'center' })
           .setLngLat([cadete.lng, cadete.lat])
@@ -419,7 +435,7 @@ export default function MapaGlobalMapLibre({
         let markerCliente = marcadoresClienteRef.current[key]
         if (!markerCliente) {
           markerCliente = new maplibregl.Marker({
-            element: crearIconoCliente(pedido.cliente, parada, paradas.length),
+            element: crearIconoCliente(pedido.cliente, parada, paradas.length, bajoConsumo),
             anchor: 'top',
           })
             .setLngLat([pedido.coordenadas!.longitud, pedido.coordenadas!.latitud])
@@ -520,7 +536,7 @@ export default function MapaGlobalMapLibre({
 
     instalarCapaRutas(mapa, featuresRutaRef.current)
     aplicarFiltrosEstilo(mapa, estiloMapa)
-  }, [cadetes, estado, focusedId, onSelectCadete, versionEstilo, estiloMapa])
+  }, [cadetes, estado, focusedId, onSelectCadete, versionEstilo, estiloMapa, bajoConsumo])
 
   useEffect(() => {
     if (!focusedId) return
@@ -606,7 +622,7 @@ export default function MapaGlobalMapLibre({
   }
 
   return (
-    <div className="relative z-0 h-full min-h-[400px] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
+    <div className={`mapa-bajo-consumo-${bajoConsumo ? 'si' : 'no'} relative z-0 h-full min-h-[400px] w-full overflow-hidden bg-slate-100 dark:bg-slate-900`}>
       <div ref={contenedorRef} className="absolute inset-0" />
       <div className="absolute right-3 top-3 z-10 flex gap-1 rounded-xl border border-white/15 bg-slate-950/85 p-1 shadow-lg backdrop-blur" aria-label="Controles del mapa">
         {([
@@ -627,7 +643,7 @@ export default function MapaGlobalMapLibre({
             {icono === 'flota' ? <Compass size={17} /> : icono === 'cadete' ? <Bike size={17} /> : icono === 'local' ? <Store size={17} /> : 'Libre'}
           </button>
         ))}
-        <button
+        {!bajoConsumo && <button
           type="button"
           onClick={alternarVista}
           aria-pressed={vista3D}
@@ -636,7 +652,7 @@ export default function MapaGlobalMapLibre({
           className="flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-slate-200 transition-colors hover:bg-white/10"
         >
           {vista3D ? <MapIcon size={17} /> : <Box size={17} />}
-        </button>
+        </button>}
         <div className="mx-0.5 w-px bg-white/15" aria-hidden="true" />
         {(['oscuro', 'claro'] as const).map((estilo) => (
           <button
