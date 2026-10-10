@@ -616,6 +616,49 @@ export default function TorreControlPage() {
       <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} pointer-events-auto absolute inset-0 z-0 flex-col`}>
         <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
 
+        {/* Acceso rápido: ordenar el recorrido sin salir del mapa. */}
+        {recorridosMulti.length > 0 && (
+          <div className="absolute right-3 top-16 z-[20] w-[min(19rem,calc(100%-1.5rem))] rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-amber-900/60 dark:bg-slate-950/95">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  Recorridos activos
+                </p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Ordená las paradas antes de que salgan
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                {recorridosMulti.length}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {recorridosMulti.map((recorrido) => (
+                <div key={recorrido.id} className="flex items-center justify-between gap-2 rounded-xl bg-amber-50/80 px-2.5 py-2 dark:bg-amber-950/30">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
+                      {recorrido.nombre}
+                    </p>
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                      {recorrido.pedidos.length} pedidos en ruta
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCadeteParaOrganizar(recorrido)
+                      setModalOrganizarAbierto(true)
+                    }}
+                    className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-amber-600 active:scale-95"
+                  >
+                    Acomodar turno
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Botón flotante para alternar referencias en móvil */}
         <button
           type="button"
