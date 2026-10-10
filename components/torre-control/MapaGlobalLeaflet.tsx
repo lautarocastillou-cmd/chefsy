@@ -117,6 +117,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
   const ultimoRenderCadetesRef = useRef<Record<string, number>>({})
   const rutasGeometriaRef = useRef<Record<string, [number, number][]>>({})
   const rutasFirmaRef = useRef<Record<string, string>>({})
+  const ultimasSolicitudesRutaRef = useRef<Record<string, { lat: number; lng: number; at: number }>>({})
   const indicesRutaRef = useRef<Record<string, number>>({})
   const abortControllersRef = useRef<Record<string, AbortController>>({})
   const estaVisibleRef = useRef<boolean>(true)
@@ -257,6 +258,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       markersRef.current = { cadetes: {}, clientes: {}, rutasBase: {}, rutasDash: {} }
       rutasGeometriaRef.current = {}
       rutasFirmaRef.current = {}
+      ultimasSolicitudesRutaRef.current = {}
       indicesRutaRef.current = {}
       animStatesRef.current = {}
       ultimosUpdatesRef.current = {}
@@ -428,6 +430,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         }
         delete rutasGeometriaRef.current[id]
         delete rutasFirmaRef.current[id]
+        delete ultimasSolicitudesRutaRef.current[id]
         delete indicesRutaRef.current[id]
 
         const rutaKey = `ruta_${id}`
@@ -715,6 +718,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         delete rutasGeometriaRef.current[cadete.id]
         delete rutasFirmaRef.current[cadete.id]
         delete indicesRutaRef.current[cadete.id]
+        delete ultimasSolicitudesRutaRef.current[cadete.id]
         markersRef.current.rutasBase[rutaKey]?.remove()
         markersRef.current.rutasDash[rutaKey]?.remove()
         delete markersRef.current.rutasBase[rutaKey]
@@ -722,28 +726,53 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       } else if (pedidosConCoords.length > 0) {
         const startPoint: [number, number] = [estadoActual?.latActual || targetLat, estadoActual?.lngActual || targetLng]
 
-        // Firma Ãºnica del itinerario de paradas para detectar altas, bajas o reordenamiento
+        // Firma única del itinerario de paradas para detectar altas, bajas o reordenamiento.
+        // El origen no forma parte de esta firma: pequeñas variaciones del GPS no
+        // deben pedir otra ruta por calles.
         const paradasSig = pedidosConCoords
           .map((p, idx) => `${p.id || idx}_${p.coordenadas!.latitud.toFixed(4)}_${p.coordenadas!.longitud.toFixed(4)}`)
           .join('|')
         const firmaNueva = `${cadete.id}:${paradasSig}`
+        const solicitudAnterior = ultimasSolicitudesRutaRef.current[cadete.id]
+        const puntoActual: Coordenadas = {
+          latitud: estadoActual?.latActual || targetLat,
+          longitud: estadoActual?.lngActual || targetLng,
+        }
+        const metrosDesdeUltimaSolicitud = solicitudAnterior
+          ? calcularDistanciaKm(
+            { latitud: solicitudAnterior.lat, longitud: solicitudAnterior.lng },
+            puntoActual
+          ) * 1000
+          : Infinity
+        const puedeRecalcularPorDesvio = metrosDesdeUltimaSolicitud >= 250 &&
+          (!solicitudAnterior || ahora - solicitudAnterior.at >= 30000)
+        const hayGeometria = Boolean(rutasGeometriaRef.current[cadete.id]?.length)
+        const haySolicitudEnCurso = Boolean(abortControllersRef.current[cadete.id])
 
-        // Si la firma cambiÃ³ (nuevas paradas, entrega completada, reorden o inicio), calculamos OSRM
-        if (rutasFirmaRef.current[cadete.id] !== firmaNueva) {
+        // Recalcular solo por cambio de itinerario, primera carga o un movimiento
+        // significativo sostenido. Esto evita golpear OSRM en cada pulso de GPS.
+        if (
+          rutasFirmaRef.current[cadete.id] !== firmaNueva ||
+          (!hayGeometria && !haySolicitudEnCurso) ||
+          (puedeRecalcularPorDesvio && !haySolicitudEnCurso)
+        ) {
+          const itinerarioCambio = rutasFirmaRef.current[cadete.id] !== firmaNueva
           rutasFirmaRef.current[cadete.id] = firmaNueva
+          ultimasSolicitudesRutaRef.current[cadete.id] = {
+            lat: puntoActual.latitud,
+            lng: puntoActual.longitud,
+            at: ahora,
+          }
 
           // Cancelar cÃ¡lculo en vuelo previo para este cadete
-          if (abortControllersRef.current[cadete.id]) {
+          if (itinerarioCambio && abortControllersRef.current[cadete.id]) {
             abortControllersRef.current[cadete.id].abort()
           }
 
           const abortCtrl = new AbortController()
           abortControllersRef.current[cadete.id] = abortCtrl
 
-          const cadeteCoord: Coordenadas = {
-            latitud: estadoActual?.latActual || targetLat,
-            longitud: estadoActual?.lngActual || targetLng,
-          }
+           const cadeteCoord = puntoActual
           const paradasCoords: Coordenadas[] = pedidosConCoords.map((p) => ({
             latitud: p.coordenadas!.latitud,
             longitud: p.coordenadas!.longitud,
@@ -781,7 +810,11 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
             }
           }
 
-          ejecutarCalculoOSRM()
+           void ejecutarCalculoOSRM().finally(() => {
+             if (abortControllersRef.current[cadeteId] === abortCtrl) {
+               delete abortControllersRef.current[cadeteId]
+             }
+           })
         }
 
         // Trazado visible en Leaflet (geometrÃ­a OSRM si ya la tenemos, o lÃ­nea recta de contingencia)
@@ -800,8 +833,9 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
               { latitud: puntoGeom[0], longitud: puntoGeom[1] }
             )
             if (desviacionKm > 0.35) {
-              // DesvÃ­o detectado: invalidar firma para que el prÃ³ximo pulso recalcule la ruta OSRM
-              rutasFirmaRef.current[cadete.id] = ''
+              // El desvío se evalúa junto con el enfriamiento de solicitudes más
+              // arriba; no invalidamos la firma en cada pulso porque eso
+              // convertiría un desvío persistente en una tormenta de requests.
             }
           }
 
@@ -846,6 +880,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         delete rutasGeometriaRef.current[cadete.id]
         delete rutasFirmaRef.current[cadete.id]
         delete indicesRutaRef.current[cadete.id]
+        delete ultimasSolicitudesRutaRef.current[cadete.id]
 
         if (markersRef.current.rutasBase[rutaKey]) {
           markersRef.current.rutasBase[rutaKey].remove()

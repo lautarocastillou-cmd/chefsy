@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { Bike, Compass, Store, Box, Map as MapIcon } from 'lucide-react'
 import {
   UBICACION_LOCAL,
+  calcularDistanciaKm,
   obtenerRutaConduccion,
   obtenerRutaMultiParada,
   type Coordenadas,
@@ -216,6 +217,7 @@ export default function MapaGlobalMapLibre({
   const geometriaRutaRef = useRef<Record<string, [number, number][]>>({})
   const featuresRutaRef = useRef<Record<string, GeoJSON.Feature<GeoJSON.LineString>>>({})
   const abortRutasRef = useRef<Record<string, AbortController>>({})
+  const ultimasSolicitudesRutaRef = useRef<Record<string, { lat: number; lng: number; at: number }>>({})
   const cadetesRef = useRef(cadetes)
   const onFatalErrorRef = useRef(onFatalError)
   const estiloAplicadoRef = useRef<EstiloMapa>('oscuro')
@@ -338,6 +340,7 @@ export default function MapaGlobalMapLibre({
       observador?.disconnect()
       Object.values(abortRutasRef.current).forEach((controller) => controller.abort())
       abortRutasRef.current = {}
+      ultimasSolicitudesRutaRef.current = {}
       featuresRutaRef.current = {}
       Object.values(marcadoresCadeteRef.current).forEach((marcador) => marcador.remove())
       marcadoresCadeteRef.current = {}
@@ -369,6 +372,7 @@ export default function MapaGlobalMapLibre({
         delete firmasRutaRef.current[id]
         delete geometriaRutaRef.current[id]
         delete featuresRutaRef.current[id]
+        delete ultimasSolicitudesRutaRef.current[id]
       }
     }
 
@@ -446,11 +450,29 @@ export default function MapaGlobalMapLibre({
           geometry: { type: 'LineString', coordinates: coordenadasRuta },
         }
 
-        if (firmasRutaRef.current[cadete.id] !== firma) {
+        const solicitudAnterior = ultimasSolicitudesRutaRef.current[cadete.id]
+        const distanciaDesdeUltimaSolicitud = solicitudAnterior
+          ? calcularDistanciaKm(
+            { latitud: solicitudAnterior.lat, longitud: solicitudAnterior.lng },
+            { latitud: cadete.lat, longitud: cadete.lng }
+          ) * 1000
+          : Infinity
+        const puedeRecalcularPorAvance = distanciaDesdeUltimaSolicitud >= 250 &&
+          (!solicitudAnterior || performance.now() - solicitudAnterior.at >= 30000)
+        const itinerarioCambio = firmasRutaRef.current[cadete.id] !== firma
+        const haySolicitudEnCurso = Boolean(abortRutasRef.current[cadete.id])
+        const tieneGeometria = Boolean(geometriaRutaRef.current[cadete.id]?.length)
+
+        if (itinerarioCambio || (!tieneGeometria && !haySolicitudEnCurso) || (puedeRecalcularPorAvance && !haySolicitudEnCurso)) {
           firmasRutaRef.current[cadete.id] = firma
-          abortRutasRef.current[cadete.id]?.abort()
+          if (itinerarioCambio) abortRutasRef.current[cadete.id]?.abort()
           const controller = new AbortController()
           abortRutasRef.current[cadete.id] = controller
+          ultimasSolicitudesRutaRef.current[cadete.id] = {
+            lat: cadete.lat,
+            lng: cadete.lng,
+            at: performance.now(),
+          }
           const origen: Coordenadas = { latitud: cadete.lat, longitud: cadete.lng }
           const destinos: Coordenadas[] = paradas.map((pedido) => ({
             latitud: pedido.coordenadas!.latitud,
@@ -473,6 +495,10 @@ export default function MapaGlobalMapLibre({
             instalarCapaRutas(mapa, featuresRutaRef.current)
           }).catch((error: unknown) => {
             if (!controller.signal.aborted) console.warn(`[TorreControl] Error al obtener ruta para ${nombre}:`, error)
+          }).finally(() => {
+            if (abortRutasRef.current[cadeteId] === controller) {
+              delete abortRutasRef.current[cadeteId]
+            }
           })
         }
       } else {
@@ -481,6 +507,7 @@ export default function MapaGlobalMapLibre({
         delete firmasRutaRef.current[cadete.id]
         delete geometriaRutaRef.current[cadete.id]
         delete featuresRutaRef.current[cadete.id]
+        delete ultimasSolicitudesRutaRef.current[cadete.id]
       }
     })
 

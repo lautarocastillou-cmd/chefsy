@@ -145,8 +145,118 @@ export function simplificarPolilinea(
   return rdp(puntos)
 }
 
-// Caché en memoria para evitar llamadas de red duplicadas o recálculos OSRM idénticos
+// Caché y coordinador en memoria para evitar llamadas duplicadas al proxy de mapas.
+// La caché se comparte entre Leaflet y MapLibre durante la vida de la pestaña.
 const cacheRutasOSRM = new Map<string, RutaConGeometria>()
+const rutasEnCurso = new Map<string, Promise<RutaConGeometria | null>>()
+const colaSolicitudesRuta: Array<{
+  ejecutar: (signal: AbortSignal) => Promise<RutaConGeometria | null>
+  resolver: (ruta: RutaConGeometria | null) => void
+  rechazar: (error: unknown) => void
+  timeoutMs: number
+}> = []
+let solicitudesRutaActivas = 0
+const MAX_SOLICITUDES_RUTA_SIMULTANEAS = 2
+const MAX_RUTAS_CACHEADAS = 50
+
+function procesarColaSolicitudesRuta() {
+  while (
+    solicitudesRutaActivas < MAX_SOLICITUDES_RUTA_SIMULTANEAS &&
+    colaSolicitudesRuta.length > 0
+  ) {
+    const solicitud = colaSolicitudesRuta.shift()!
+    solicitudesRutaActivas += 1
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), solicitud.timeoutMs)
+
+    solicitud.ejecutar(controller.signal)
+      .then(solicitud.resolver, solicitud.rechazar)
+      .finally(() => {
+        clearTimeout(timeout)
+        solicitudesRutaActivas -= 1
+        procesarColaSolicitudesRuta()
+      })
+  }
+}
+
+function ejecutarSolicitudRuta(
+  ejecutar: (signal: AbortSignal) => Promise<RutaConGeometria | null>,
+  timeoutMs: number
+) {
+  return new Promise<RutaConGeometria | null>((resolver, rechazar) => {
+    colaSolicitudesRuta.push({ ejecutar, resolver, rechazar, timeoutMs })
+    procesarColaSolicitudesRuta()
+  })
+}
+
+function esperarRutaConCancelacion(
+  promesa: Promise<RutaConGeometria | null>,
+  signal?: AbortSignal
+) {
+  if (!signal) return promesa
+  if (signal.aborted) return Promise.reject(new DOMException('Ruta cancelada', 'AbortError'))
+
+  return new Promise<RutaConGeometria | null>((resolve, reject) => {
+    const cancelar = () => {
+      signal.removeEventListener('abort', cancelar)
+      reject(new DOMException('Ruta cancelada', 'AbortError'))
+    }
+    signal.addEventListener('abort', cancelar, { once: true })
+    promesa.then(
+      (ruta) => {
+        signal.removeEventListener('abort', cancelar)
+        resolve(ruta)
+      },
+      (error) => {
+        signal.removeEventListener('abort', cancelar)
+        reject(error)
+      }
+    )
+  })
+}
+
+function leerRutaCacheada(cacheKey: string) {
+  const ruta = cacheRutasOSRM.get(cacheKey)
+  if (ruta) {
+    // LRU simple: una ruta usada recientemente se mueve al final del Map.
+    cacheRutasOSRM.delete(cacheKey)
+    cacheRutasOSRM.set(cacheKey, ruta)
+  }
+  return ruta
+}
+
+function guardarRutaCacheada(cacheKey: string, ruta: RutaConGeometria) {
+  cacheRutasOSRM.delete(cacheKey)
+  cacheRutasOSRM.set(cacheKey, ruta)
+  while (cacheRutasOSRM.size > MAX_RUTAS_CACHEADAS) {
+    const primeraClave = cacheRutasOSRM.keys().next().value
+    if (!primeraClave) break
+    cacheRutasOSRM.delete(primeraClave)
+  }
+}
+
+async function obtenerRutaCoordinada(
+  cacheKey: string,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+  ejecutar: (signal: AbortSignal) => Promise<RutaConGeometria | null>
+) {
+  const cacheada = leerRutaCacheada(cacheKey)
+  if (cacheada) return cacheada
+
+  let promesa = rutasEnCurso.get(cacheKey)
+  if (!promesa) {
+    promesa = ejecutarSolicitudRuta(ejecutar, timeoutMs).then((ruta) => {
+      if (ruta) guardarRutaCacheada(cacheKey, ruta)
+      return ruta
+    }).finally(() => {
+      if (rutasEnCurso.get(cacheKey) === promesa) rutasEnCurso.delete(cacheKey)
+    })
+    rutasEnCurso.set(cacheKey, promesa)
+  }
+
+  return esperarRutaConCancelacion(promesa, signal)
+}
 
 /**
  * Obtiene el trazado real por calles mediante el proxy OSRM (/api/resolve-maps)
@@ -160,51 +270,34 @@ export async function obtenerRutaConduccion(
 ): Promise<RutaConGeometria | null> {
   // Clave de caché a 4 decimales (~11m de resolución espacial)
   const cacheKey = `${coord1.latitud.toFixed(4)},${coord1.longitud.toFixed(4)}->${coord2.latitud.toFixed(4)},${coord2.longitud.toFixed(4)}`
-  if (cacheRutasOSRM.has(cacheKey)) {
-    return cacheRutasOSRM.get(cacheKey)!
-  }
-
-  try {
-    const params = new URLSearchParams({
-      origenLon: coord1.longitud.toString(),
-      origenLat: coord1.latitud.toString(),
-      destinoLon: coord2.longitud.toString(),
-      destinoLat: coord2.latitud.toString(),
-      geometria: 'true'
-    })
-
-    const fetchSignal = signal || AbortSignal.timeout(5000)
-    const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
-    if (res.ok) {
-      const data = await res.json()
-      if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
-        // En GeoJSON es [lon, lat] -> En Leaflet se usa [lat, lon]
-        const puntosCrudos: [number, number][] = data.coordinates.map(
-          ([lon, lat]: [number, number]) => [lat, lon]
-        )
-        // Reducir vértices redundantes conservando esquinas y trazado 100% fiel
-        const puntos = simplificarPolilinea(puntosCrudos, 4.5)
-
-        const resultado: RutaConGeometria = {
-          distanciaKm: typeof data.distance === 'number' ? data.distance : calcularDistanciaKm(coord1, coord2),
-          puntos
+  return obtenerRutaCoordinada(cacheKey, signal, 5000, async (fetchSignal) => {
+    try {
+      const params = new URLSearchParams({
+        origenLon: coord1.longitud.toString(),
+        origenLat: coord1.latitud.toString(),
+        destinoLon: coord2.longitud.toString(),
+        destinoLat: coord2.latitud.toString(),
+        geometria: 'true'
+      })
+      const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
+      if (res.ok) {
+        const data = await res.json()
+        if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+          const puntosCrudos: [number, number][] = data.coordinates.map(
+            ([lon, lat]: [number, number]) => [lat, lon]
+          )
+          const puntos = simplificarPolilinea(puntosCrudos, 4.5)
+          return {
+            distanciaKm: typeof data.distance === 'number' ? data.distance : calcularDistanciaKm(coord1, coord2),
+            puntos,
+          }
         }
-
-        if (cacheRutasOSRM.size > 50) {
-          const firstKey = cacheRutasOSRM.keys().next().value
-          if (firstKey) cacheRutasOSRM.delete(firstKey)
-        }
-        cacheRutasOSRM.set(cacheKey, resultado)
-
-        return resultado
       }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') console.warn('Proxy OSRM falló al obtener una ruta.')
     }
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
-      return null // Cancelación intencional y normal
-    }
-  }
-  return null
+    return null
+  })
 }
 
 /**
@@ -233,53 +326,35 @@ export async function obtenerRutaMultiParada(
     .map((w) => `${w.latitud.toFixed(4)},${w.longitud.toFixed(4)}`)
     .join('->')
 
-  if (cacheRutasOSRM.has(cacheKey)) {
-    return cacheRutasOSRM.get(cacheKey)!
-  }
-
-  try {
-    const cadenaPuntos = filtrados
-      .map((w) => `${w.longitud},${w.latitud}`)
-      .join(';')
-
-    const params = new URLSearchParams({
-      puntos: cadenaPuntos,
-      geometria: 'true'
-    })
-
-    const fetchSignal = signal || AbortSignal.timeout(6000)
-    const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
-    if (res.ok) {
-      const data = await res.json()
-      if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
-        const puntosCrudos: [number, number][] = data.coordinates.map(
-          ([lon, lat]: [number, number]) => [lat, lon]
-        )
-        const puntos = simplificarPolilinea(puntosCrudos, 4.5)
-
-        let distanciaFallback = 0
-        for (let i = 0; i < filtrados.length - 1; i++) {
-          distanciaFallback += calcularDistanciaKm(filtrados[i], filtrados[i + 1])
+  return obtenerRutaCoordinada(cacheKey, signal, 6000, async (fetchSignal) => {
+    try {
+      const cadenaPuntos = filtrados
+        .map((w) => `${w.longitud},${w.latitud}`)
+        .join(';')
+      const params = new URLSearchParams({ puntos: cadenaPuntos, geometria: 'true' })
+      const res = await fetch(`/api/resolve-maps?${params}`, { signal: fetchSignal })
+      if (res.ok) {
+        const data = await res.json()
+        if (data && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+          const puntosCrudos: [number, number][] = data.coordinates.map(
+            ([lon, lat]: [number, number]) => [lat, lon]
+          )
+          const puntos = simplificarPolilinea(puntosCrudos, 4.5)
+          let distanciaFallback = 0
+          for (let i = 0; i < filtrados.length - 1; i++) {
+            distanciaFallback += calcularDistanciaKm(filtrados[i], filtrados[i + 1])
+          }
+          return {
+            distanciaKm: typeof data.distance === 'number' ? data.distance : distanciaFallback,
+            puntos,
+          }
         }
-
-        const resultado: RutaConGeometria = {
-          distanciaKm: typeof data.distance === 'number' ? data.distance : distanciaFallback,
-          puntos
-        }
-
-        if (cacheRutasOSRM.size > 50) {
-          const firstKey = cacheRutasOSRM.keys().next().value
-          if (firstKey) cacheRutasOSRM.delete(firstKey)
-        }
-        cacheRutasOSRM.set(cacheKey, resultado)
-
-        return resultado
       }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') console.warn('Proxy OSRM falló al obtener una ruta multi-parada.')
     }
-  } catch (err: any) {
-    if (err?.name === 'AbortError') return null
-  }
-  return null
+    return null
+  })
 }
 
 export function encontrarIndiceMasCercano(
