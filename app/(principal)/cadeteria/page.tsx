@@ -6,9 +6,8 @@ import { CadeteData } from '@/components/torre-control/MapaGlobal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown, Download } from 'lucide-react'
-import { formatearPrecio, cn } from '@/lib/utils'
+import { RefreshCw, MapPin, Zap, Navigation, PowerOff, Bike, Plus, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown, Download } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
@@ -19,7 +18,6 @@ import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
 import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
 import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
-import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import { notificarError } from '@/lib/notificaciones'
 
@@ -99,7 +97,6 @@ function SeccionDesplegable({
 export default function TorreControlPage() {
   const [cadetes, setCadetes] = useState<CadeteData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [apagandoId, setApagandoId] = useState<string | null>(null)
@@ -171,7 +168,6 @@ export default function TorreControlPage() {
       if (res.ok) {
         const data = await res.json()
         setCadetes(data)
-        setLastUpdate(new Date())
       }
     } catch (error) {
       console.error('Error fetching torre control data:', error)
@@ -335,29 +331,34 @@ export default function TorreControlPage() {
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {/* Sidebar: Lista de Cadetes */}
         <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:left-24 md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
-          <div className="p-4 border-b border-gray-200 bg-white shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <Zap className="h-5 w-5 text-emerald-500" />
-              Cadetería
-            </h1>
-            <div className="flex items-center gap-1.5">
+          <div className="border-b border-slate-200 bg-white px-3 py-3 shrink-0 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h1 className="flex items-center gap-1.5 text-base font-black text-slate-900 dark:text-slate-100">
+                  <Zap className="h-4 w-4 shrink-0 text-emerald-500" />
+                  Cadetería
+                </h1>
+                <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                  {cadetes.length} cadetes · {pedidosDeliveryActivos.length} pedidos activos
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => {
                   setCadeteParaPagoExtra(null)
                   setModalPagoExtraAbierto(true)
                 }}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all active:scale-95 cursor-pointer"
+                className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-[10px] font-extrabold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-95 cursor-pointer"
                 title="Registrar viaje a la carnicería, insumos o pago extra"
               >
                 <Plus size={14} />
-                <span>+ Pago Extra</span>
+                <span>Pago extra</span>
               </button>
               <button
                 type="button"
                 onClick={() => setModalCompartirUbicacionAbierto(true)}
-                className="p-2 text-sky-600 hover:text-sky-700 rounded-full hover:bg-sky-50 transition-colors"
+                className="rounded-lg p-1.5 text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
                 title="Compartir ubicación en vivo de un cadete sin necesidad de login"
               >
                 <Radio size={16} className="animate-pulse" />
@@ -366,7 +367,7 @@ export default function TorreControlPage() {
                 href="/api/cadeteria/descargar-apk"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 title="Descargar última versión APK de Cadetería"
               >
                 <Download size={16} />
@@ -374,20 +375,16 @@ export default function TorreControlPage() {
               <button
                 onClick={fetchTorreData}
                 disabled={isRefreshing}
-                className={`p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors ${
+                className={`rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
                   isRefreshing ? 'animate-spin' : ''
                 }`}
                 title="Actualizar ahora"
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
+              </div>
             </div>
           </div>
-          <p className="text-xs text-gray-500">
-            Monitoreo en vivo de cadetes y entregas. Actualizado:{' '}
-            <span className="font-semibold text-gray-700">{lastUpdate.toLocaleTimeString()}</span>
-          </p>
-        </div>
 
         <ScrollArea className="flex-1 p-3 min-h-0">
           <div className="space-y-3">
@@ -403,179 +400,82 @@ export default function TorreControlPage() {
             ) : (
               cadetes.map((cadete) => {
                 const isSelected = focusedId === cadete.id
-                const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
+                const pedidosRuta = cadete.pedidosActivos ?? (cadete.pedidoActivo ? [cadete.pedidoActivo] : [])
+                const pedidosParaOrdenar = pedidosPorCadete.find((grupo) => grupo.id.toLowerCase() === cadete.id.toLowerCase())
+                const puedeEditarRuta = pedidosRuta.length > 1 && pedidosParaOrdenar
                 return (
                   <Card
                     key={cadete.id}
                     onClick={() => {
                       setFocusedId(cadete.id)
-                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
-                        setVistaMobile('mapa')
-                      }
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) setVistaMobile('mapa')
                     }}
-                    className={`overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer border ${
-                      isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/20' : 'border-gray-200 bg-white'
-                    }`}
+                    className={cn(
+                      'overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md dark:bg-slate-950',
+                      isSelected ? 'border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950' : 'border-slate-200 dark:border-slate-800'
+                    )}
                   >
-                    <div className={`h-1.5 w-full ${cadete.pedidoActivo ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-                    <CardContent className="p-3.5">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-bold text-gray-900 text-sm line-clamp-1 flex-1 pr-2 flex items-center gap-1.5">
-                          <Bike className="w-4 h-4 text-slate-500 shrink-0" />
-                          <span>{cadete.nombre}</span>
+                    <div className={cn('h-1', pedidosRuta.length > 0 ? 'bg-orange-500' : 'bg-emerald-500')} />
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <Bike className="h-4 w-4 shrink-0 text-slate-500" />
+                          <span className="truncate text-sm font-extrabold text-slate-900 dark:text-slate-100">{cadete.nombre}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                          {cadete.gps_activo && (
-                            <Badge
-                              variant="secondary"
-                              className={`flex items-center gap-1 text-[10px] px-1.5 py-0 font-bold ${
-                                velKmH >= 4
-                                  ? velKmH > 60
-                                    ? 'bg-red-100 text-red-800'
-                                    : velKmH > 40
-                                      ? 'bg-amber-100 text-amber-800'
-                                      : 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-slate-100 text-slate-700'
-                              }`}
-                            >
-                              <Gauge className="h-3 w-3" />
-                              {velKmH} km/h
-                            </Badge>
-                          )}
-                          {cadete.bateria != null && (
-                            <Badge
-                              variant="secondary"
-                              className={`flex items-center gap-1 text-[10px] px-1.5 py-0 font-bold ${
-                                cadete.bateria > 20 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              <Battery className="h-3 w-3" />
-                              {Math.round(cadete.bateria)}%
-                            </Badge>
-                          )}
-                          <Badge
-                            variant="secondary"
-                            className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0 ${
-                              cadete.gps_activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                            }`}
-                          >
-                            {cadete.gps_activo ? 'Online' : 'Offline'}
-                          </Badge>
-                        </div>
+                        <Badge variant="secondary" className={cn('shrink-0 px-1.5 py-0 text-[9px] font-black uppercase tracking-wide', cadete.gps_activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400')}>
+                          {cadete.gps_activo ? 'Online' : 'Offline'}
+                        </Badge>
                       </div>
 
-                      <div className="text-xs">
-                        {(cadete.pedidosActivos && cadete.pedidosActivos.length > 0) ? (
-                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-2">
-                            <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
-                              <span>EN VIAJE ({cadete.pedidosActivos.length} {cadete.pedidosActivos.length === 1 ? 'PEDIDO' : 'PEDIDOS'})</span>
-                              <span className="text-gray-900 font-black">
-                                {formatearPrecio(cadete.pedidosActivos.reduce((acc, p) => acc + (p.total || 0), 0))}
-                              </span>
-                            </div>
-                            <div className="space-y-1.5 divide-y divide-orange-100">
-                              {cadete.pedidosActivos.map((p, idx) => (
-                                <div key={p.id} className={idx > 0 ? 'pt-1.5' : ''}>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-gray-800 font-medium text-xs">
-                                      <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded-md mr-1">
-                                        #{p.parada_num || idx + 1}
-                                      </span>
-                                      <span className="font-bold">{p.cliente}</span>
-                                    </p>
-                                    <span className="text-[10px] font-black uppercase text-orange-600">
-                                      {p.estado}
-                                    </span>
-                                  </div>
-                                  {p.direccion ? (
-                                    <p className="text-gray-600 text-[11px] flex items-start gap-1 mt-0.5">
-                                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                                      <span className="line-clamp-1">{p.direccion}</span>
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setPedidoParaBreadcrumb({
-                                  ...cadete.pedidosActivos![0],
-                                  cadete_nombre: cadete.nombre,
-                                  cadete_id: cadete.id,
-                                })
-                              }}
-                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                            >
-                              <Bike className="h-3.5 w-3.5 text-purple-700" />
-                              <span>Ver Trayectoria (Breadcrumb)</span>
-                            </button>
+                      {pedidosRuta.length > 0 ? (
+                        <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50/70 p-2 dark:border-orange-900/50 dark:bg-orange-950/20">
+                          <div className="mb-1.5 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-orange-700 dark:text-orange-300">
+                              {pedidosRuta.length} {pedidosRuta.length === 1 ? 'entrega' : 'entregas'} en ruta
+                            </span>
+                            {puedeEditarRuta && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCadeteParaOrganizar(pedidosParaOrdenar)
+                                  setModalOrganizarAbierto(true)
+                                }}
+                                className="inline-flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-[10px] font-extrabold text-white transition-colors hover:bg-orange-600"
+                              >
+                                <ListOrdered size={11} /> Ordenar
+                              </button>
+                            )}
                           </div>
-                        ) : cadete.pedidoActivo ? (
-                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-1">
-                            <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
-                              <span>EN VIAJE ({cadete.pedidoActivo.estado.toUpperCase()})</span>
-                              {cadete.pedidoActivo.total ? (
-                                <span className="text-gray-900 font-black">{formatearPrecio(cadete.pedidoActivo.total)}</span>
-                              ) : null}
-                            </div>
-                            <p className="text-gray-800 font-medium text-xs">
-                              Cliente: <span className="font-bold">{cadete.pedidoActivo.cliente}</span>
-                            </p>
-                            {cadete.pedidoActivo.direccion ? (
-                              <p className="text-gray-600 text-[11px] flex items-start gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                                <span className="line-clamp-2">{cadete.pedidoActivo.direccion}</span>
-                              </p>
-                            ) : null}
-
-                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setPedidoParaBreadcrumb({
-                                  ...cadete.pedidoActivo,
-                                  cadete_nombre: cadete.nombre,
-                                  cadete_id: cadete.id,
-                                })
-                              }}
-                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                            >
-                              <Bike className="h-3.5 w-3.5 text-purple-700" />
-                              <span>Ver Trayectoria (Breadcrumb)</span>
-                            </button>
+                          <div className="space-y-1">
+                            {pedidosRuta.slice(0, 3).map((pedido, idx) => (
+                              <div key={pedido.id} className="flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-slate-200">
+                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-orange-700 shadow-sm dark:bg-slate-900 dark:text-orange-300">{pedido.parada_num || idx + 1}</span>
+                                <span className="truncate font-semibold">{pedido.cliente}</span>
+                              </div>
+                            ))}
+                            {pedidosRuta.length > 3 && <p className="pl-6 text-[10px] font-semibold text-orange-700 dark:text-orange-300">+ {pedidosRuta.length - 3} entregas más</p>}
                           </div>
-                        ) : (
-                          <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 flex items-center justify-between text-emerald-700">
-                            <span className="font-bold text-[11px]">DISPONIBLE</span>
-                            <span className="text-[11px] text-gray-500">En espera</span>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/70 px-2.5 py-2 text-[10px] dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                          <span className="font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Disponible</span>
+                          <span className="text-slate-500 dark:text-slate-400">Sin entregas</span>
+                        </div>
+                      )}
 
-                      <Separator className="my-2.5" />
-
-                      <div className="flex justify-between items-center text-[10px] text-gray-400">
-                        <span>Señal: {cadete.updated_at ? new Date(cadete.updated_at).toLocaleTimeString() : 'Sin señal'}</span>
+                      <div className="mt-2 flex items-center gap-1.5">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation()
                             setFocusedId(cadete.id)
                             setVistaMobile('mapa')
                           }}
-                          className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                          className="flex-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[10px] font-extrabold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
                         >
-                          <Navigation className="h-3 w-3" />
-                          <span>Ver en mapa</span>
+                          <Navigation className="mr-1 inline h-3 w-3" /> Ver mapa
                         </button>
-                      </div>
-
-                      {/* Botones de acción del Cadete */}
-                      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -583,22 +483,19 @@ export default function TorreControlPage() {
                             setCadeteParaPagoExtra(cadete.id)
                             setModalPagoExtraAbierto(true)
                           }}
-                          className="flex-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+                          className="flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] font-extrabold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
                         >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          <span>Viaje Extra</span>
+                          <DollarSign className="mr-1 inline h-3 w-3" /> Extra
                         </button>
-
                         {cadete.gps_activo && (
                           <button
                             type="button"
                             disabled={apagandoId === cadete.id}
                             onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
-                            className="py-1.5 px-2.5 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50 cursor-pointer shadow-xs shrink-0"
-                            title="Apagar GPS manualmente"
+                            className="rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[10px] font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+                            title="Apagar GPS"
                           >
-                            <PowerOff className={`h-3 w-3 ${apagandoId === cadete.id ? 'animate-spin' : ''}`} />
-                            <span>{apagandoId === cadete.id ? 'Apagando...' : 'Apagar GPS'}</span>
+                            <PowerOff className={cn('h-3 w-3', apagandoId === cadete.id && 'animate-spin')} />
                           </button>
                         )}
                       </div>
@@ -614,49 +511,6 @@ export default function TorreControlPage() {
       {/* Main Area: Mapa */}
       <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} pointer-events-auto absolute inset-0 z-0 flex-col`}>
         <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
-
-        {/* Acceso rápido: ordenar el recorrido sin salir del mapa. */}
-        {recorridosMulti.length > 0 && (
-          <div className="absolute right-3 top-16 z-[20] w-[min(19rem,calc(100%-1.5rem))] rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-amber-900/60 dark:bg-slate-950/95">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                  Recorridos activos
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  Ordená las paradas antes de que salgan
-                </p>
-              </div>
-              <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                {recorridosMulti.length}
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              {recorridosMulti.map((recorrido) => (
-                <div key={recorrido.id} className="flex items-center justify-between gap-2 rounded-xl bg-amber-50/80 px-2.5 py-2 dark:bg-amber-950/30">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
-                      {recorrido.nombre}
-                    </p>
-                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                      {recorrido.pedidos.length} pedidos en ruta
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCadeteParaOrganizar(recorrido)
-                      setModalOrganizarAbierto(true)
-                    }}
-                    className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-amber-600 active:scale-95"
-                  >
-                    Acomodar turno
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
       </div>
     </div>
@@ -699,56 +553,6 @@ export default function TorreControlPage() {
                       <span className="opacity-60 text-[10px]">
                         {e.activo ? `hace ${e.hace}` : `Sin señal (${e.hace})`}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </SeccionDesplegable>
-
-            <SeccionDesplegable
-              titulo="Recorridos Activos (Multi-Pedidos)"
-              icono={<ListOrdered size={15} />}
-              abiertoPorDefecto={recorridosMulti.length > 0}
-              insignia={
-                recorridosMulti.length > 0 ? (
-                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
-                    {recorridosMulti.length} cadete(s)
-                  </span>
-                ) : undefined
-              }
-            >
-              {recorridosMulti.length === 0 ? (
-                <p className="text-xs text-gray-500">Ningún cadete lleva 2 o más pedidos simultáneos ahora mismo.</p>
-              ) : (
-                <div className="space-y-2">
-                  {recorridosMulti.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Bike size={16} className="text-emerald-600 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                            {c.nombre}
-                          </p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {c.pedidos.length} pedidos simultáneos en curso
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          setCadeteParaOrganizar(c)
-                          setModalOrganizarAbierto(true)
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs shrink-0"
-                      >
-                        <ListOrdered size={13} />
-                        <span>Acomodar turno</span>
-                      </Button>
                     </div>
                   ))}
                 </div>
