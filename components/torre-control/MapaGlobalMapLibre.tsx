@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { Bike, Compass, Gauge, Store, Zap, Box, Map as MapIcon } from 'lucide-react'
+import { Bike, Compass, Store, Box, Map as MapIcon } from 'lucide-react'
 import {
   UBICACION_LOCAL,
   obtenerRutaConduccion,
@@ -11,7 +11,6 @@ import {
   type Coordenadas,
 } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
-import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
 import type { CadeteData, MapaGlobalProps } from './MapaGlobalLeaflet'
 
 const ESTILOS_MAPA = {
@@ -223,7 +222,6 @@ export default function MapaGlobalMapLibre({
   const modoCamaraRef = useRef<ModoCamara>('flota')
   const [modoCamara, setModoCamara] = useState<ModoCamara>('flota')
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando')
-  const [mostrarTelemetria, setMostrarTelemetria] = useState(true)
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>('oscuro')
   const [versionEstilo, setVersionEstilo] = useState(0)
   const [vista3D, setVista3D] = useState(false)
@@ -624,48 +622,6 @@ export default function MapaGlobalMapLibre({
           </button>
         ))}
       </div>
-      <section className="absolute left-3 top-3 z-10 w-[min(250px,calc(100%-5.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-950/95" aria-label="Telemetría de cadetes">
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/70"
-          aria-expanded={mostrarTelemetria}
-          onClick={() => setMostrarTelemetria((mostrar) => !mostrar)}
-        >
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><Gauge size={17} /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-black text-slate-800 dark:text-slate-100">Velocidad en vivo</span>
-            <span className="block truncate text-[10px] text-slate-500">{cadetes.filter((cadete) => cadete.gps_activo && cadete.lat != null && cadete.lng != null).length} cadete(s) transmitiendo</span>
-          </span>
-          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500" />
-        </button>
-        {mostrarTelemetria && (
-          <div className="max-h-56 space-y-1.5 overflow-y-auto border-t border-slate-100 p-2 dark:border-slate-800">
-            {cadetes.filter((cadete) => cadete.gps_activo && cadete.lat != null && cadete.lng != null).length === 0 ? (
-              <p className="py-3 text-center text-[11px] italic text-slate-500">Sin cadetes con GPS activo.</p>
-            ) : cadetes.filter((cadete) => cadete.gps_activo && cadete.lat != null && cadete.lng != null).map((cadete) => {
-              const velocidad = calcularVelocidadEnVivoKmH(cadete.speed)
-              const seleccionado = focusedId === cadete.id
-              return (
-                <button
-                  key={cadete.id}
-                  type="button"
-                  onClick={() => onSelectCadete?.(cadete.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left ${seleccionado ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40' : 'border-slate-100 bg-slate-50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900'}`}
-                >
-                  <Bike size={15} className="shrink-0 text-slate-500" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-bold text-slate-800 dark:text-slate-100">{cadete.nombre}</span>
-                    <span className="block truncate text-[10px] text-slate-500">{obtenerPedidos(cadete)[0]?.cliente ?? 'Libre'}{cadete.bateria != null ? ` · Batería ${Math.round(cadete.bateria)}%` : ''}</span>
-                  </span>
-                  <span className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${velocidad >= 4 ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800'}`}>
-                    {velocidad >= 4 && <Zap size={10} className="fill-current" />}{velocidad} km/h
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </section>
       {estado === 'cargando' && (
         <div className="absolute inset-0 z-10 grid place-items-center bg-slate-100 text-sm font-medium text-slate-500 dark:bg-slate-900 dark:text-slate-400">
           Cargando mapa experimental…

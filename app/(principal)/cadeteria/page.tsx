@@ -108,7 +108,6 @@ export default function TorreControlPage() {
   const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
   const [modalCompartirUbicacionAbierto, setModalCompartirUbicacionAbierto] = useState(false)
   const [vistaMobile, setVistaMobile] = useState<'mapa' | 'cadetes'>('mapa')
-  const [mostrarReferenciasMobile, setMostrarReferenciasMobile] = useState(false)
 
   // Tabs de la Cadetería unificada.
   const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
@@ -335,7 +334,7 @@ export default function TorreControlPage() {
       {/* Contenedor Principal (Lado a lado en Desktop, Pestaña activa en Móvil) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {/* Sidebar: Lista de Cadetes */}
-        <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
+        <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:left-24 md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
           <div className="p-4 border-b border-gray-200 bg-white shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
@@ -659,38 +658,6 @@ export default function TorreControlPage() {
           </div>
         )}
 
-        {/* Botón flotante para alternar referencias en móvil */}
-        <button
-          type="button"
-          onClick={() => setMostrarReferenciasMobile(!mostrarReferenciasMobile)}
-          className="sm:hidden absolute bottom-4 left-4 z-[500] px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-gray-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
-        >
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>{mostrarReferenciasMobile ? 'Ocultar Referencias' : 'Referencias'}</span>
-        </button>
-
-        {/* Overlay Legend */}
-        <div className={`${mostrarReferenciasMobile ? 'block' : 'hidden sm:block'} absolute bottom-14 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[500] bg-white dark:bg-slate-900 p-3 rounded-xl shadow-xl border border-gray-200 dark:border-slate-800 text-xs space-y-2 pointer-events-auto sm:pointer-events-none transition-all`}>
-          <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1 border-b pb-1">
-            Referencias en Mapa
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium text-[11px]">Cadete Disponible</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm"></div>
-            <span className="text-gray-700 font-medium text-[11px]">Cadete en Viaje</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium text-[11px]">Destino Cliente</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-sm"></div>
-            <span className="text-gray-700 font-medium text-[11px]">Local Chefsy</span>
-          </div>
-        </div>
       </div>
     </div>
         </>
