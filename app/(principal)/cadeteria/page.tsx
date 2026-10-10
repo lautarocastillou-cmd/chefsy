@@ -6,7 +6,7 @@ import { CadeteData } from '@/components/torre-control/MapaGlobal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { RefreshCw, MapPin, Zap, Navigation, PowerOff, Bike, Plus, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown, Download } from 'lucide-react'
+import { RefreshCw, MapPin, Zap, Navigation, PowerOff, Bike, Plus, DollarSign, Radio, ClipboardList, Activity, ChevronDown, Download, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { usarPedidos } from '@/contexto/PedidosContexto'
@@ -17,7 +17,7 @@ import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
 import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
 import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
-import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
+import { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
 import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import { notificarError } from '@/lib/notificaciones'
 
@@ -108,9 +108,9 @@ export default function TorreControlPage() {
 
   // Tabs de la Cadetería unificada.
   const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
-  const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
-  const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: any[] } | null>(null)
-  const { pedidos, cambiarEstado } = usarPedidos()
+  const [pedidoArrastrado, setPedidoArrastrado] = useState<{ cadeteId: string; pedidoId: string } | null>(null)
+  const [guardandoOrdenCadete, setGuardandoOrdenCadete] = useState<string | null>(null)
+  const { pedidos, cambiarEstado, reordenarPedidosCadete } = usarPedidos()
   const { usuarioActivo } = usarAuth()
   const esAdmin = usuarioActivo?.rol === 'admin'
 
@@ -242,6 +242,34 @@ export default function TorreControlPage() {
     } finally {
       setApagandoId(null)
     }
+  }
+
+  const guardarOrden = async (cadeteId: string, pedidosOrdenados: typeof pedidosDeliveryActivos) => {
+    setGuardandoOrdenCadete(cadeteId)
+    try {
+      await reordenarPedidosCadete(cadeteId, pedidosOrdenados.map((pedido, indice) => ({
+        id: pedido.id,
+        orden_entrega: indice + 1,
+      })))
+    } finally {
+      setGuardandoOrdenCadete(null)
+    }
+  }
+
+  const moverPedidoEnRuta = (cadeteId: string, pedidosRuta: typeof pedidosDeliveryActivos, indice: number, destino: number) => {
+    if (destino < 0 || destino >= pedidosRuta.length) return
+    const nuevaLista = [...pedidosRuta]
+    const [movido] = nuevaLista.splice(indice, 1)
+    nuevaLista.splice(destino, 0, movido)
+    void guardarOrden(cadeteId, nuevaLista)
+  }
+
+  const soltarPedidoEnRuta = (cadeteId: string, pedidosRuta: typeof pedidosDeliveryActivos, pedidoDestinoId: string) => {
+    if (!pedidoArrastrado || pedidoArrastrado.cadeteId !== cadeteId || pedidoArrastrado.pedidoId === pedidoDestinoId) return
+    const origen = pedidosRuta.findIndex((pedido) => pedido.id === pedidoArrastrado.pedidoId)
+    const destino = pedidosRuta.findIndex((pedido) => pedido.id === pedidoDestinoId)
+    if (origen >= 0 && destino >= 0) moverPedidoEnRuta(cadeteId, pedidosRuta, origen, destino)
+    setPedidoArrastrado(null)
   }
 
   return (
@@ -400,9 +428,10 @@ export default function TorreControlPage() {
             ) : (
               cadetes.map((cadete) => {
                 const isSelected = focusedId === cadete.id
-                const pedidosRuta = cadete.pedidosActivos ?? (cadete.pedidoActivo ? [cadete.pedidoActivo] : [])
-                const pedidosParaOrdenar = pedidosPorCadete.find((grupo) => grupo.id.toLowerCase() === cadete.id.toLowerCase())
-                const puedeEditarRuta = pedidosRuta.length > 1 && pedidosParaOrdenar
+                const pedidosRuta = ordenarPedidosPorCercaniaOManual(
+                  pedidosPorCadete.find((grupo) => grupo.id.toLowerCase() === cadete.id.toLowerCase())?.pedidos ?? []
+                )
+                const puedeEditarRuta = pedidosRuta.length > 1
                 return (
                   <Card
                     key={cadete.id}
@@ -433,28 +462,58 @@ export default function TorreControlPage() {
                             <span className="text-[10px] font-black uppercase tracking-wide text-orange-700 dark:text-orange-300">
                               {pedidosRuta.length} {pedidosRuta.length === 1 ? 'entrega' : 'entregas'} en ruta
                             </span>
-                            {puedeEditarRuta && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCadeteParaOrganizar(pedidosParaOrdenar)
-                                  setModalOrganizarAbierto(true)
-                                }}
-                                className="inline-flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-[10px] font-extrabold text-white transition-colors hover:bg-orange-600"
-                              >
-                                <ListOrdered size={11} /> Ordenar
-                              </button>
+                            {puedeEditarRuta && guardandoOrdenCadete === cadete.id && (
+                              <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300">Guardando…</span>
                             )}
                           </div>
                           <div className="space-y-1">
-                            {pedidosRuta.slice(0, 3).map((pedido, idx) => (
-                              <div key={pedido.id} className="flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-slate-200">
-                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-orange-700 shadow-sm dark:bg-slate-900 dark:text-orange-300">{pedido.parada_num || idx + 1}</span>
-                                <span className="truncate font-semibold">{pedido.cliente}</span>
+                            {pedidosRuta.map((pedido, idx) => (
+                              <div
+                                key={pedido.id}
+                                draggable={puedeEditarRuta}
+                                onDragStart={() => setPedidoArrastrado({ cadeteId: cadete.id, pedidoId: pedido.id })}
+                                onDragEnd={() => setPedidoArrastrado(null)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={() => soltarPedidoEnRuta(cadete.id, pedidosRuta, pedido.id)}
+                                className={cn(
+                                  'group flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-200',
+                                  puedeEditarRuta && 'cursor-grab active:cursor-grabbing',
+                                  pedidoArrastrado?.pedidoId === pedido.id && 'opacity-40'
+                                )}
+                              >
+                                <GripVertical className="h-3.5 w-3.5 shrink-0 text-orange-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-orange-700 shadow-sm dark:bg-slate-900 dark:text-orange-300">{idx + 1}</span>
+                                <span className="min-w-0 flex-1 truncate font-semibold">{pedido.cliente}</span>
+                                {puedeEditarRuta && (
+                                  <span className="flex shrink-0 items-center gap-0.5 opacity-70">
+                                    <button
+                                      type="button"
+                                      aria-label={`Subir ${pedido.cliente}`}
+                                      disabled={idx === 0 || guardandoOrdenCadete === cadete.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        moverPedidoEnRuta(cadete.id, pedidosRuta, idx, idx - 1)
+                                      }}
+                                      className="rounded p-0.5 text-orange-700 hover:bg-orange-200 disabled:opacity-20 dark:text-orange-300 dark:hover:bg-orange-900/50"
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Bajar ${pedido.cliente}`}
+                                      disabled={idx === pedidosRuta.length - 1 || guardandoOrdenCadete === cadete.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        moverPedidoEnRuta(cadete.id, pedidosRuta, idx, idx + 1)
+                                      }}
+                                      className="rounded p-0.5 text-orange-700 hover:bg-orange-200 disabled:opacity-20 dark:text-orange-300 dark:hover:bg-orange-900/50"
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </button>
+                                  </span>
+                                )}
                               </div>
                             ))}
-                            {pedidosRuta.length > 3 && <p className="pl-6 text-[10px] font-semibold text-orange-700 dark:text-orange-300">+ {pedidosRuta.length - 3} entregas más</p>}
                           </div>
                         </div>
                       ) : (
@@ -605,16 +664,9 @@ export default function TorreControlPage() {
                     key={pedido.id}
                     pedido={pedido}
                     cambiarEstado={cambiarEstado}
-                    esAdmin={esAdmin}
                     posicionParada={pos > 0 ? pos : undefined}
                     totalParadas={ordenadosCadete.length > 1 ? ordenadosCadete.length : undefined}
                     distanciaLocalTexto={distTxt}
-                    onAbrirOrganizar={() => {
-                      if (infoCadete) {
-                        setCadeteParaOrganizar(infoCadete)
-                        setModalOrganizarAbierto(true)
-                      }
-                    }}
                   />
                 )
               })
@@ -640,20 +692,6 @@ export default function TorreControlPage() {
         abierto={modalCompartirUbicacionAbierto}
         onClose={() => setModalCompartirUbicacionAbierto(false)}
       />
-
-      {/* Modal Organizar / Acomodar Recorrido de Cadete (migrado desde /cadeteria) */}
-      {cadeteParaOrganizar && (
-        <ModalOrganizarRecorridoCadete
-          abierto={modalOrganizarAbierto}
-          onCerrar={() => {
-            setModalOrganizarAbierto(false)
-            setCadeteParaOrganizar(null)
-          }}
-          cadeteId={cadeteParaOrganizar.id}
-          cadeteNombre={cadeteParaOrganizar.nombre}
-          pedidos={cadeteParaOrganizar.pedidos}
-        />
-      )}
 
       {/* Modal Interactivo de Repetición de Ruta (Breadcrumb Trail) */}
       {pedidoParaBreadcrumb && (

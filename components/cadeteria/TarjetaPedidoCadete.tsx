@@ -44,21 +44,17 @@ function redireccionarWhatsApp(telefono: string, cliente: string) {
 export interface PropsTarjetaPedidoCadete {
   pedido: Pedido
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
-  esAdmin?: boolean
   posicionParada?: number
   totalParadas?: number
   distanciaLocalTexto?: string
-  onAbrirOrganizar?: () => void
 }
 
 export default function TarjetaPedidoCadete({
   pedido,
   cambiarEstado,
-  esAdmin,
   posicionParada,
   totalParadas,
   distanciaLocalTexto,
-  onAbrirOrganizar,
 }: PropsTarjetaPedidoCadete) {
   const [metodoOriginal, setMetodoOriginal] = useState<string | null>(null)
   const [mostrarFachada, setMostrarFachada] = useState(false)
@@ -162,15 +158,6 @@ export default function TarjetaPedidoCadete({
             </div>
           </div>
 
-          {esAdmin && onAbrirOrganizar && (
-            <button
-              type="button"
-              onClick={onAbrirOrganizar}
-              className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors shadow-2xs shrink-0 cursor-pointer"
-            >
-              Cambiar turno
-            </button>
-          )}
         </div>
       )}
 
