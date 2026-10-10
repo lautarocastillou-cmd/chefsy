@@ -6,7 +6,7 @@
 // Portada desde flota-web y adaptada a los módulos + paleta emerald de Chefsy.
 // ─────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -24,11 +24,11 @@ import {
 const TTL_UI_HS = 90 * 24
 
 // Ítems de navegación principal (Configuración va al pie, Tienda pública abajo aparte)
-// Cadetería se unificó dentro de Torre de Control (tabs Mapa/Repartos/GPS/Rendimiento).
+// Cadetería unificada: mapa, repartos, GPS y rendimiento.
 const elementosNavegacion = [
   { href: '/dashboard',     etiqueta: 'Dashboard',       icono: LayoutDashboard },
   { href: '/pedidos',       etiqueta: 'Pedidos',         icono: ClipboardList },
-  { href: '/torre-control', etiqueta: 'Torre de Control', icono: Radar },
+  { href: '/cadeteria', etiqueta: 'Cadetería', icono: Radar },
   { href: '/cierre',        etiqueta: 'Cierre de Caja',  icono: Wallet },
   { href: '/productos',     etiqueta: 'Productos',       icono: UtensilsCrossed },
   { href: '/clientes',      etiqueta: 'Clientes',        icono: Users },
@@ -66,13 +66,22 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
 
   // Estado local para colapsar en desktop: colapsado activa el Modo Dock
   const [colapsado, setColapsado] = useState(false)
+  const estabaEnCadeteriaRef = useRef(rutaActual === '/cadeteria')
 
   // Persistir el estado colapsado (TTL 90 días)
   useEffect(() => {
-    if (getCache<boolean>('chefsy_sidebar_colapsado', TTL_UI_HS)) {
+    const esCadeteria = rutaActual === '/cadeteria'
+    if (esCadeteria) {
       setColapsado(true)
+    } else if (estabaEnCadeteriaRef.current) {
+      // Al salir de Cadetería vuelve a Isla, independientemente del último
+      // estado visual forzado para el mapa.
+      setColapsado(false)
+    } else {
+      setColapsado(getCache<boolean>('chefsy_sidebar_colapsado', TTL_UI_HS) ?? false)
     }
-  }, [])
+    estabaEnCadeteriaRef.current = esCadeteria
+  }, [rutaActual])
 
   const toggleColapsar = () => {
     const nuevoEstado = !colapsado
@@ -90,7 +99,7 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
   })
 
   // ── MODO DOCK: cuando la barra lateral flotante se contrae en desktop ──
-  const esDock = !isMobile && colapsado
+  const esDock = !isMobile && (rutaActual === '/cadeteria' || colapsado)
 
   return (
     <aside

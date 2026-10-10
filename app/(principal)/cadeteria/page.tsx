@@ -1,856 +1,833 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { Pedido, EstadoPedido, Coordenadas } from '@/tipos'
-import { usarPedidos } from '@/contexto/PedidosContexto'
-import BadgeEstado from '@/components/pedidos/BadgeEstado'
-import InfoEntregaPedido from '@/components/pedidos/InfoEntregaPedido'
-import { esPedidoDelivery } from '@/lib/entrega'
+import { useEffect, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
+import { CadeteData } from '@/components/torre-control/MapaGlobal'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { RefreshCw, Battery, MapPin, Zap, Navigation, PowerOff, Bike, Plus, Gauge, DollarSign, Radio, ListOrdered, ClipboardList, Activity, ChevronDown, Download } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
-import Link from 'next/link'
-import { MessageCircle, MapPin, Bike, Phone, RefreshCw, Download, Smartphone, Plus, Lock, AlertTriangle, AlertOctagon, Radio, Camera } from 'lucide-react'
-import StreetViewFachada from '@/components/ubicacion/StreetViewFachada'
-import { mutate } from 'swr'
-import { crearEnlaceGoogleMaps, calcularDistanciaKm, esEnlaceOCoordenadas } from '@/lib/ubicacion'
+import { Button } from '@/components/ui/button'
+import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarAuth } from '@/contexto/AuthContexto'
-import LoginPage from '@/components/auth/LoginPage'
-import TimerPedido from '@/components/pedidos/TimerPedido'
-import { obtenerFechaNegocio } from '@/lib/tiempo'
-import CalculadoraSutil from '@/components/herramientas/CalculadoraSutil'
-import SwipeToConfirm from '@/components/ui/SwipeToConfirm'
-import BotonNotificaciones from '@/components/cadeteria/BotonNotificaciones'
+import { esPedidoDelivery } from '@/lib/entrega'
+import { UBICACION_LOCAL, calcularDistanciaKm } from '@/lib/ubicacion'
 import PanelDiagnosticoGPS from '@/components/cadeteria/PanelDiagnosticoGPS'
-import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
-import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
-import { UBICACION_LOCAL } from '@/lib/ubicacion'
-import { ListOrdered, Activity } from 'lucide-react'
+import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 import InformeRendimientoCadetes from '@/components/cadeteria/InformeRendimientoCadetes'
 import ModalCompartirUbicacion from '@/components/cadeteria/ModalCompartirUbicacion'
+import ModalOrganizarRecorridoCadete, { ordenarPedidosPorCercaniaOManual } from '@/components/cadeteria/ModalOrganizarRecorridoCadete'
+import { calcularVelocidadEnVivoKmH } from '@/lib/telemetriaCadetes'
+import ModalPagoExtraCadete from '@/components/cadeteria/ModalPagoExtraCadete'
 import { notificarError } from '@/lib/notificaciones'
-import TarjetaPedidoCadete from '@/components/cadeteria/TarjetaPedidoCadete'
 
+// Cargar el mapa dinámicamente para evitar errores de SSR
+const MapaGlobal = dynamic(
+  () => import('@/components/torre-control/MapaGlobal'),
+  { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center text-sm text-gray-500 font-medium">Cargando mapa en vivo...</div> }
+)
 
+const ModalBreadcrumbTrail = dynamic(
+  () => import('@/components/cadeteria/ModalBreadcrumbTrail'),
+  { ssr: false }
+)
 
-export default function PaginaCadeteria() {
-  const router = useRouter()
-  const { pedidos, cambiarEstado, dbEstado, configuracionOperativa, cadetes } = usarPedidos()
-  const { usuarioActivo, estaListoAuth, cerrarSesion } = usarAuth()
-  const [errorGps, setErrorGps] = useState<string | null>(null)
-  const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
-  const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
-  const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
-  const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: Pedido[] } | null>(null)
-  const [tabAdmin, setTabAdmin] = useState<'pedidos' | 'rendimiento'>('pedidos')
-  const [modalCompartirUbicacionAbierto, setModalCompartirUbicacionAbierto] = useState(false)
-
-  // Estado GPS de los cadetes activos (para el admin)
-  const [estadoGpsCadetes, setEstadoGpsCadetes] = useState<Record<string, { activo: boolean; hace: string }>>({})
-
-  // Polling del estado GPS de cadetes activos (solo para admin)
+// ─────────────────────────────────────────────────────
+// SeccionDesplegable: bloque colapsable para la info operativa
+// migrada desde /cadeteria (GPS, recorridos, diagnóstico).
+// ─────────────────────────────────────────────────────
+function SeccionDesplegable({
+  titulo,
+  icono,
+  insignia,
+  abiertoPorDefecto = false,
+  children,
+}: {
+  titulo: string
+  icono: ReactNode
+  insignia?: ReactNode
+  abiertoPorDefecto?: boolean
+  children: ReactNode
+}) {
+  const [abierto, setAbierto] = useState(false)
   useEffect(() => {
-    if (!usuarioActivo || usuarioActivo.rol !== 'admin') return
+    setAbierto(abiertoPorDefecto)
+  }, [abiertoPorDefecto])
 
-    const consultarEstadoGps = async () => {
-      try {
-        // Va por la API y no por Supabase directo: la tabla `cadetes` esta
-        // cerrada a anon por RLS (ubicacion en vivo + telefono de repartidores).
-        const res = await fetch('/api/admin/cadetes')
-        if (!res.ok) return
-        const res2: Array<{ id: string; updated_at: string | null; gps_activo: boolean }> =
-          await res.json()
-        if (res2) {
-          const ahora = Date.now()
-          const nuevoEstado: Record<string, { activo: boolean; hace: string }> = {}
-
-          for (const c of res2) {
-            const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
-            const segundos = Math.floor((ahora - updatedAt) / 1000)
-            const gpsActivo = c.gps_activo !== false && segundos < 120 // más de 2min = sin señal
-
-            let hace = ''
-            if (segundos < 60) hace = `${segundos}s`
-            else if (segundos < 3600) hace = `${Math.floor(segundos / 60)}min`
-            else hace = `+1h`
-
-            nuevoEstado[c.id] = { activo: gpsActivo, hace }
-          }
-          setEstadoGpsCadetes(nuevoEstado)
-        }
-      } catch (_) {}
-    }
-
-    consultarEstadoGps()
-    const intervalo = setInterval(consultarEstadoGps, 15000) // cada 15s
-    return () => clearInterval(intervalo)
-  }, [usuarioActivo])
-
-  // Guardar última ubicación y marca de tiempo para el control/throttling de GPS
-  const ultimasCoordenadasRef = useRef<Coordenadas | null>(null)
-  const ultimaActualizacionGpsRef = useRef<number>(0)
-  const bufferPuntosOfflineRef = useRef<Array<{ lat: number; lng: number; t: string; speed?: number }>>([])
-  const enviandoGpsRef = useRef<boolean>(false)
-
-  // Cadetería: solo pedidos delivery listos o en preparación de este cadete (o todos si es admin)
-  const pedidosCadeteria = pedidos.filter(
-    (p) =>
-      esPedidoDelivery(p) &&
-      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino') &&
-      (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
-  )
-
-  // Agrupar pedidos activos por cadete para detectar multi-batching (2 o más pedidos simultáneos)
-  const pedidosPorCadete = useMemo(() => {
-    const mapa = new Map<string, { id: string; nombre: string; pedidos: Pedido[] }>()
-    for (const p of pedidosCadeteria) {
-      if (p.cadete_id) {
-        const cid = p.cadete_id.toLowerCase()
-        const actual = mapa.get(cid) || {
-          id: p.cadete_id,
-          nombre: p.cadete_nombre || p.cadete_id,
-          pedidos: []
-        }
-        actual.pedidos.push(p)
-        mapa.set(cid, actual)
-      }
-    }
-    return Array.from(mapa.values())
-  }, [pedidosCadeteria])
-
-  const pedidosListos = pedidosCadeteria.filter(p => p.estado === 'listo' || p.estado === 'en_camino')
-  const hayPedidosListos = pedidosListos.length > 0
-  const [pestaña, setPestaña] = useState<'activos' | 'historial'>('activos')
-  const [alertaVisibility, setAlertaVisibility] = useState(false)
-
-  const pedidosListosRef = useRef<Pedido[]>([])
-
-  useEffect(() => {
-    pedidosListosRef.current = pedidosListos
-  }, [pedidosListos])
-
-  // Mantener la pantalla encendida (WakeLock) durante el reparto
-  useEffect(() => {
-    let wakeLock: any = null
-
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator && hayPedidosListos) {
-          wakeLock = await (navigator as any).wakeLock.request('screen')
-        }
-      } catch (err) {
-        console.error('Error al pedir WakeLock:', err)
-      }
-    }
-
-    if (hayPedidosListos && usuarioActivo && usuarioActivo.rol !== 'admin') {
-      requestWakeLock()
-    } else if (wakeLock) {
-      wakeLock.release().catch(console.error)
-      wakeLock = null
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && hayPedidosListos) {
-        requestWakeLock()
-        setAlertaVisibility(false)
-      } else if (document.visibilityState === 'hidden' && hayPedidosListos) {
-        // Mostrar alerta si minimiza la app en pleno reparto
-        setAlertaVisibility(true)
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([200, 100, 200, 100, 500])
-        }
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (wakeLock !== null) {
-        wakeLock.release().catch(console.error)
-      }
-    }
-  }, [hayPedidosListos, usuarioActivo])
-
-  // Seguimiento GPS en tiempo real
-  useEffect(() => {
-    // Si no es el cadete o no hay pedidos listos, no rastrear
-    if (!usuarioActivo || usuarioActivo.rol === 'admin' || !hayPedidosListos) {
-      setErrorGps(null)
-      // Detección de App Nativa (Expo) para detener
-      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
-        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'STOP_TRACKING' }));
-      }
-      // Resetear referencias al detener el rastreo
-      ultimasCoordenadasRef.current = null
-      ultimaActualizacionGpsRef.current = 0
-      return
-    }
-
-    // Forzar actualización inmediata en el primer tick del nuevo rastreo
-    ultimasCoordenadasRef.current = null
-    ultimaActualizacionGpsRef.current = 0
-
-    let watchId: number
-
-    const iniciarRastreo = async () => {
-      // Detección de App Nativa (Expo) para iniciar rastreo
-      if (typeof window !== 'undefined' && (window as any).isNativeApp && (window as any).ReactNativeWebView) {
-        console.log('App Nativa Detectada: Delegando el rastreo a Expo (Segundo Plano)')
-        ;(window as any).ReactNativeWebView.postMessage(JSON.stringify({ 
-          type: 'START_TRACKING', 
-          cadeteId: usuarioActivo.usuario 
-        }));
-        return; // La cáscara nativa se encarga
-      }
-
-      if (!('geolocation' in navigator)) {
-        setErrorGps('La geolocalización no está soportada en este navegador.')
-        return
-      }
-
-      watchId = navigator.geolocation.watchPosition(
-        async (position) => {
-          // Filtro Anti-Saltos: Ignorar lecturas con precisión peor a 40 metros
-          if (position.coords.accuracy > 40) {
-            console.log('Lectura GPS ignorada por baja precisión:', position.coords.accuracy)
-            return
-          }
-
-          setErrorGps(null)
-          const coords = {
-            latitud: position.coords.latitude,
-            longitud: position.coords.longitude,
-          }
-
-          const ahora = Date.now()
-          const tiempoTranscurrido = ahora - ultimaActualizacionGpsRef.current
-
-          // 1. Throttling de tiempo: límite máximo de una actualización cada 8 segundos
-          if (tiempoTranscurrido < 8000) {
-            return
-          }
-
-          // 2. Filtro de distancia: solo actualizar si se movió más de 10 metros (0.01 km)
-          if (ultimasCoordenadasRef.current) {
-            const distanciaKm = calcularDistanciaKm(ultimasCoordenadasRef.current, coords)
-            if (distanciaKm < 0.01) {
-              return
-            }
-          }
-
-          // 1. Encolar punto actual en el buffer local offline
-          const puntoCapturado = {
-            lat: coords.latitud,
-            lng: coords.longitud,
-            t: new Date().toISOString(),
-            speed: position.coords.speed != null && position.coords.speed >= 0 ? position.coords.speed : undefined,
-          }
-
-          const buf = bufferPuntosOfflineRef.current
-          const ultimoBuf = buf[buf.length - 1]
-          if (
-            !ultimoBuf ||
-            Math.abs(ultimoBuf.lat - puntoCapturado.lat) > 0.00005 ||
-            Math.abs(ultimoBuf.lng - puntoCapturado.lng) > 0.00005
-          ) {
-            buf.push(puntoCapturado)
-            if (buf.length > 50) buf.shift()
-          }
-
-          // Guardar referencias del último registro
-          ultimasCoordenadasRef.current = coords
-          ultimaActualizacionGpsRef.current = ahora
-
-          if (enviandoGpsRef.current) {
-            return
-          }
-          enviandoGpsRef.current = true
-
-          const rafagaAEnviar = [...buf]
-
-          try {
-            const respuesta = await fetch('/api/admin/cadetes', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                lat: coords.latitud,
-                lng: coords.longitud,
-                gps_activo: true,
-                bufferPuntos: rafagaAEnviar,
-              })
-            })
-
-            if (!respuesta.ok) {
-              const errorData = await respuesta.json().catch(() => ({}))
-              throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
-            }
-
-            // Entrega exitosa: remover únicamente los puntos que se enviaron en esta ráfaga
-            // para preservar cualquier punto nuevo ingresado al buffer durante la petición en vuelo
-            if (bufferPuntosOfflineRef.current.length >= rafagaAEnviar.length) {
-              bufferPuntosOfflineRef.current.splice(0, rafagaAEnviar.length)
-            } else {
-              bufferPuntosOfflineRef.current = []
-            }
-          } catch (e) {
-            // Si no hay internet o falla la red, el buffer queda intacto para reintentar en el próximo tick
-            console.warn('Conexión de red interrumpida: punto guardado en buffer offline local.', e)
-          } finally {
-            enviandoGpsRef.current = false
-          }
-        },
-        (error) => {
-          console.error('Error obteniendo ubicación', error)
-          const mensajes: Record<number, string> = {
-            1: 'Debes encender la ubicación para poder entrar en servicio.',
-            2: 'Debes encender la ubicación para poder entrar en servicio.',
-            3: 'Tiempo de espera agotado al buscar señal GPS. Reintentando...',
-          }
-          setErrorGps(mensajes[error.code] || 'Error al obtener la ubicación.')
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
-      )
-    }
-
-    iniciarRastreo()
-
-    return () => {
-      if (watchId !== undefined) {
-        navigator.geolocation.clearWatch(watchId)
-      }
-    }
-  }, [usuarioActivo, hayPedidosListos])
-
-  // Recaudación y conteo del cadete (entregados hoy)
-  const hoy = obtenerFechaNegocio()
-  const pedidosEntregadosHoy = pedidos.filter(
-    (p) =>
-      esPedidoDelivery(p) &&
-      p.estado === 'entregado' &&
-      p.fecha === hoy &&
-      (usuarioActivo?.rol === 'admin' || p.cadete_id === usuarioActivo?.usuario)
-  )
-  const cantidadEnvios = pedidosEntregadosHoy.length
-  const recaudacionEnvios = pedidosEntregadosHoy.reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0)
-  const montoBaseCadete = (configuracionOperativa as any)?.montoBaseCadete ?? 4000
-  const totalConBase = recaudacionEnvios + montoBaseCadete
-
-  if (!estaListoAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-chefsy-50">
-        <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!usuarioActivo) {
-    return <LoginPage />
-  }
-
-  const esAdmin = usuarioActivo.rol === 'admin'
-
-  // Unificación con Torre de Control (Fase 3): el admin opera desde /torre-control.
-  // Los no-admin conservan esta página (bloqueo + APK) porque la App de Cadetes
-  // la usa para el rastreo GPS en segundo plano.
-  useEffect(() => {
-    if (estaListoAuth && esAdmin) {
-      router.replace('/torre-control')
-    }
-  }, [estaListoAuth, esAdmin, router])
-
-  if (esAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-chefsy-50">
-        <div className="w-10 h-10 border-4 border-chefsy border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  // Acceso EXCLUSIVO para Administradores.
-  // Cadetes, empleados y usuarios generales tienen el acceso web bloqueado.
-  // Deben gestionar repartos exclusivamente desde la App Móvil oficial (APK).
-  if (!esAdmin) {
-    return (
-      <div className="min-h-screen bg-chefsy-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-inner">
-            <Lock className="w-7 h-7" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
-              Acceso Exclusivo para Administrador
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              El portal web de cadetería está reservado exclusivamente para la administración de Chefsy. Los repartos y pedidos deben gestionarse desde la <strong>App Oficial de Cadetes</strong>.
-            </p>
-          </div>
-          <div className="pt-2 flex flex-col gap-2.5">
-            <a
-              href="/api/cadeteria/descargar-apk"
-              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-950/20 active:scale-95 cursor-pointer"
-            >
-              <Download size={16} />
-              <span>Descargar App de Cadete (APK)</span>
-            </a>
-            <button
-              onClick={() => cerrarSesion()}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 py-2 cursor-pointer font-medium"
-            >
-              Cerrar Sesión / Ingresar como Admin
-            </button>
-          </div>
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => setAbierto((v) => !v)}
+        className="w-full h-auto p-4 flex items-center justify-between gap-2 rounded-none hover:bg-gray-50 dark:hover:bg-slate-800/60"
+        aria-expanded={abierto}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            {icono}
+          </span>
+          <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider truncate">
+            {titulo}
+          </span>
+          {insignia}
+        </span>
+        <ChevronDown
+          size={16}
+          className={cn(
+            "shrink-0 text-slate-400 transition-transform duration-300",
+            abierto && "rotate-180"
+          )}
+        />
+      </Button>
+      <div
+        className={cn(
+          "grid transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          abierto ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="p-4 pt-0">{children}</div>
         </div>
       </div>
-    )
+    </div>
+  )
+}
+
+export default function TorreControlPage() {
+  const [cadetes, setCadetes] = useState<CadeteData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [apagandoId, setApagandoId] = useState<string | null>(null)
+  const [pedidoParaBreadcrumb, setPedidoParaBreadcrumb] = useState<any | null>(null)
+  const [modalPagoExtraAbierto, setModalPagoExtraAbierto] = useState(false)
+  const [cadeteParaPagoExtra, setCadeteParaPagoExtra] = useState<string | null>(null)
+  const [modalCompartirUbicacionAbierto, setModalCompartirUbicacionAbierto] = useState(false)
+  const [vistaMobile, setVistaMobile] = useState<'mapa' | 'cadetes'>('mapa')
+  const [mostrarReferenciasMobile, setMostrarReferenciasMobile] = useState(false)
+
+  // Tabs de la Cadetería unificada.
+  const [tabSuperior, setTabSuperior] = useState<'mapa' | 'repartos' | 'gps' | 'rendimiento'>('mapa')
+  const [modalOrganizarAbierto, setModalOrganizarAbierto] = useState(false)
+  const [cadeteParaOrganizar, setCadeteParaOrganizar] = useState<{ id: string; nombre: string; pedidos: any[] } | null>(null)
+  const { pedidos, cambiarEstado } = usarPedidos()
+  const { usuarioActivo } = usarAuth()
+  const esAdmin = usuarioActivo?.rol === 'admin'
+
+  // Estado GPS derivado de los datos que ya trae la torre (sin fetch extra)
+  const estadoGps = cadetes.map((c) => {
+    const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : 0
+    const segundos = Math.floor((Date.now() - updatedAt) / 1000)
+    const hace = segundos < 60 ? `${segundos}s` : segundos < 3600 ? `${Math.floor(segundos / 60)}min` : '+1h'
+    return { id: c.id, nombre: c.nombre, activo: c.gps_activo, hace }
+  })
+  const gpsActivosCount = estadoGps.filter((e) => e.activo).length
+  // Mismo formato que /cadeteria le pasaba al informe (sin fetch extra)
+  const estadoGpsRecord: Record<string, { activo: boolean; hace: string }> = Object.fromEntries(
+    estadoGps.map((e) => [e.id, { activo: e.activo, hace: e.hace }])
+  )
+
+  // Agrupar pedidos delivery activos por cadete (base para Repartos y Recorridos)
+  const pedidosDeliveryActivos = pedidos.filter(
+    (p) =>
+      esPedidoDelivery(p) &&
+      (p.estado === 'en_cocina' || p.estado === 'listo' || p.estado === 'en_camino')
+  )
+  const pedidosPorCadete = (() => {
+    const mapa = new Map<string, { id: string; nombre: string; pedidos: typeof pedidosDeliveryActivos }>()
+    for (const p of pedidosDeliveryActivos) {
+      if (!p.cadete_id) continue
+      const cid = p.cadete_id.toLowerCase()
+      const actual = mapa.get(cid) || { id: p.cadete_id, nombre: p.cadete_nombre || p.cadete_id, pedidos: [] as typeof pedidosDeliveryActivos }
+      actual.pedidos.push(p)
+      mapa.set(cid, actual)
+    }
+    return Array.from(mapa.values())
+  })()
+  // Recorridos multi-pedido (2+ simultáneos)
+  const recorridosMulti = pedidosPorCadete.filter((c) => c.pedidos.length >= 2)
+
+  // Disparar resize para que Leaflet recalcule tiles al alternar a la pestaña Mapa
+  useEffect(() => {
+    if (vistaMobile === 'mapa') {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [vistaMobile])
+
+  const cadetesActivosConGpsCount = cadetes.filter(
+    (c) => c.gps_activo && c.lat != null && c.lng != null
+  ).length
+
+  const fetchTorreData = async () => {
+    setIsRefreshing(true)
+    try {
+      const res = await fetch('/api/admin/torre-control')
+      if (res.ok) {
+        const data = await res.json()
+        setCadetes(data)
+        setLastUpdate(new Date())
+      }
+    } catch (error) {
+      console.error('Error fetching torre control data:', error)
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  // Polling cada 6 segundos con suspensión inteligente en segundo plano
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null
+
+    const iniciarPolling = () => {
+      if (intervalId) clearInterval(intervalId)
+      fetchTorreData()
+      intervalId = setInterval(fetchTorreData, 6000)
+    }
+
+    const detenerPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+
+    const handleVisibilidad = () => {
+      if (document.hidden) {
+        detenerPolling()
+      } else {
+        iniciarPolling()
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      if (!document.hidden) {
+        iniciarPolling()
+      }
+      document.addEventListener('visibilitychange', handleVisibilidad)
+    }
+
+    return () => {
+      detenerPolling()
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilidad)
+      }
+    }
+  }, [])
+
+  const handleApagarGps = async (e: React.MouseEvent, cadeteId: string, cadeteNombre: string) => {
+    e.stopPropagation()
+    const confirmar = window.confirm(`¿Estás seguro de que querés apagarle el GPS a ${cadeteNombre}? El cadete figurará desconectado de inmediato.`)
+    if (!confirmar) return
+
+    setApagandoId(cadeteId)
+    try {
+      const res = await fetch('/api/admin/torre-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cadeteId, accion: 'apagar_gps' })
+      })
+      if (res.ok) {
+        setCadetes(prev => prev.map(c => c.id === cadeteId ? { ...c, gps_activo: false } : c))
+        await fetchTorreData()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        notificarError(err.error || 'No se pudo apagar el GPS.')
+      }
+    } catch (error) {
+      console.error('Error apagando GPS:', error)
+      notificarError('Error de red al intentar apagar el GPS')
+    } finally {
+      setApagandoId(null)
+    }
   }
 
   return (
-    <div className={esAdmin ? "min-h-full pb-8" : "min-h-screen bg-chefsy-50"}>
-      {esAdmin ? (
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-4 mb-6 transition-colors">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
-                <Bike size={22} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100 leading-tight">Cadetería</h1>
-                <p className="text-xs text-gray-400 dark:text-slate-400">
-                  {tabAdmin === 'pedidos' 
-                    ? 'Pedidos asignados y listos para reparto (Solo Delivery)'
-                    : 'Informe de rendimiento, velocidad física y rutas de cadetes'}
-                </p>
-              </div>
-              <div className={cn(
-                "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
-                dbEstado === 'conectado'
-                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
-                  : dbEstado === 'desconectado'
-                    ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 animate-pulse"
-                    : "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30"
-              )}>
-                <span className={cn(
-                  "h-1.5 w-1.5 rounded-full shrink-0",
-                  dbEstado === 'conectado'
-                    ? "bg-emerald-500 animate-pulse"
-                    : dbEstado === 'desconectado'
-                      ? "bg-red-500"
-                      : "bg-slate-400"
-                )} />
-                <span>
-                  {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE DE DATOS' : 'CONECTANDO...'}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setModalCompartirUbicacionAbierto(true)}
-                className="text-xs bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-sky-500/30 shrink-0 cursor-pointer"
-                title="Compartir ubicación en vivo de un cadete sin necesidad de login"
-              >
-                <Radio size={14} className="animate-pulse" />
-                <span className="hidden sm:inline">Compartir Ubicación</span>
-                <span className="sm:hidden">Ubicación</span>
-              </button>
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
+      {/* ── Tabs superiores de Cadetería ── */}
+      <div className={cn(
+        'z-30 flex items-end gap-1 overflow-x-auto scrollbar-none',
+        tabSuperior === 'mapa'
+          ? 'absolute left-1/2 top-3 max-w-[calc(100%-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200/80 bg-white/95 px-1 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95'
+          : 'relative shrink-0 border-b border-gray-200 bg-white/90 px-1 dark:border-slate-800 dark:bg-slate-950/90'
+      )}>
+        {(
+          [
+            { valor: 'mapa', etiqueta: 'Mapa en Vivo', icono: <Navigation className="w-3.5 h-3.5 text-emerald-600" /> },
+            { valor: 'repartos', etiqueta: 'Repartos', icono: <ClipboardList className="w-3.5 h-3.5 text-slate-500" /> },
+            { valor: 'gps', etiqueta: 'GPS y Recorridos', icono: <Radio className="w-3.5 h-3.5 text-slate-500" /> },
+            { valor: 'rendimiento', etiqueta: 'Rendimiento', icono: <Activity className="w-3.5 h-3.5 text-slate-500" /> },
+          ] as const
+        ).map((tab) => (
+          <Button
+            key={tab.valor}
+            type="button"
+            variant="ghost"
+            onClick={() => setTabSuperior(tab.valor)}
+            className={cn(
+              "h-auto p-0 px-4 pt-2 pb-1.5 mb-[-1px] font-semibold text-sm transition-all border-b-2 rounded-none inline-flex items-center gap-1.5 leading-none shrink-0",
+              tabSuperior === tab.valor
+                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-transparent hover:bg-transparent"
+                : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+            )}
+          >
+            {tab.icono} {tab.etiqueta}
+            {tab.valor === 'repartos' && pedidosDeliveryActivos.length > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                {pedidosDeliveryActivos.length}
+              </span>
+            )}
+            {tab.valor === 'gps' && estadoGps.length > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                {gpsActivosCount}/{estadoGps.length}
+              </span>
+            )}
+            {tab.valor === 'gps' && recorridosMulti.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title={`${recorridosMulti.length} recorrido(s) multi-pedido`} />
+            )}
+          </Button>
+        ))}
+      </div>
 
+      {tabSuperior === 'mapa' && (
+        <>
+      {/* Selector de Pestañas Móvil */}
+      <div className="absolute left-1/2 top-[3.7rem] z-30 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center rounded-xl border border-gray-200 bg-white/95 p-1 shadow-lg backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95">
+        <button
+          type="button"
+          onClick={() => setVistaMobile('mapa')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            vistaMobile === 'mapa'
+              ? 'bg-white text-gray-900 shadow-xs'
+              : 'text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Mapa en Vivo</span>
+          {cadetesActivosConGpsCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setVistaMobile('cadetes')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            vistaMobile === 'cadetes'
+              ? 'bg-white text-gray-900 shadow-xs'
+              : 'text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <Bike className="w-3.5 h-3.5 text-slate-600" />
+          <span>Cadetes</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-bold ml-1">
+            {cadetes.length}
+          </Badge>
+        </button>
+      </div>
+
+      {/* Contenedor Principal (Lado a lado en Desktop, Pestaña activa en Móvil) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Sidebar: Lista de Cadetes */}
+        <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
+          <div className="p-4 border-b border-gray-200 bg-white shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-emerald-500" />
+              Cadetería
+            </h1>
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => {
                   setCadeteParaPagoExtra(null)
                   setModalPagoExtraAbierto(true)
                 }}
-                className="text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-emerald-500/30 shrink-0 cursor-pointer"
-                title="Registrar viaje a la carnicería o pago extra al cadete"
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all active:scale-95 cursor-pointer"
+                title="Registrar viaje a la carnicería, insumos o pago extra"
               >
                 <Plus size={14} />
-                <span>+ Viaje / Pago Extra</span>
+                <span>+ Pago Extra</span>
               </button>
-
+              <button
+                type="button"
+                onClick={() => setModalCompartirUbicacionAbierto(true)}
+                className="p-2 text-sky-600 hover:text-sky-700 rounded-full hover:bg-sky-50 transition-colors"
+                title="Compartir ubicación en vivo de un cadete sin necesidad de login"
+              >
+                <Radio size={16} className="animate-pulse" />
+              </button>
               <a
                 href="/api/cadeteria/descargar-apk"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shadow-sm border border-slate-700 shrink-0"
-                title="Descargar última versión APK compilada por GitHub Actions"
+                className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+                title="Descargar última versión APK de Cadetería"
               >
-                <Download size={14} />
-                <span>Descargar APK Cadete</span>
+                <Download size={16} />
               </a>
+              <button
+                onClick={fetchTorreData}
+                disabled={isRefreshing}
+                className={`p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors ${
+                  isRefreshing ? 'animate-spin' : ''
+                }`}
+                title="Actualizar ahora"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
             </div>
           </div>
+          <p className="text-xs text-gray-500">
+            Monitoreo en vivo de cadetes y entregas. Actualizado:{' '}
+            <span className="font-semibold text-gray-700">{lastUpdate.toLocaleTimeString()}</span>
+          </p>
+        </div>
 
-          {/* Selector de pestañas para Administrador */}
-          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto self-start border border-slate-200/60 dark:border-slate-700/60">
-            <button
-              type="button"
-              onClick={() => setTabAdmin('pedidos')}
-              className={cn(
-                "px-4 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center gap-2 cursor-pointer",
-                tabAdmin === 'pedidos'
-                  ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              )}
-            >
-              <Bike size={15} />
-              <span>Repartos Activos</span>
-              {pedidosCadeteria.length > 0 && (
-                <span className={cn(
-                  "px-1.5 py-0.2 rounded-full text-[10px] font-black",
-                  tabAdmin === 'pedidos'
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                )}>
-                  {pedidosCadeteria.length}
-                </span>
-              )}
-            </button>
+        <ScrollArea className="flex-1 p-3 min-h-0">
+          <div className="space-y-3">
+            {isLoading && cadetes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm animate-pulse">
+                Cargando estado de cadetes...
+              </div>
+            ) : cadetes.length === 0 ? (
+              <div className="text-center py-8">
+                <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No hay cadetes registrados en el sistema.</p>
+              </div>
+            ) : (
+              cadetes.map((cadete) => {
+                const isSelected = focusedId === cadete.id
+                const velKmH = cadete.gps_activo ? calcularVelocidadEnVivoKmH(cadete.speed) : 0
+                return (
+                  <Card
+                    key={cadete.id}
+                    onClick={() => {
+                      setFocusedId(cadete.id)
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                        setVistaMobile('mapa')
+                      }
+                    }}
+                    className={`overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer border ${
+                      isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/20' : 'border-gray-200 bg-white'
+                    }`}
+                  >
+                    <div className={`h-1.5 w-full ${cadete.pedidoActivo ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                    <CardContent className="p-3.5">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-bold text-gray-900 text-sm line-clamp-1 flex-1 pr-2 flex items-center gap-1.5">
+                          <Bike className="w-4 h-4 text-slate-500 shrink-0" />
+                          <span>{cadete.nombre}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                          {cadete.gps_activo && (
+                            <Badge
+                              variant="secondary"
+                              className={`flex items-center gap-1 text-[10px] px-1.5 py-0 font-bold ${
+                                velKmH >= 4
+                                  ? velKmH > 60
+                                    ? 'bg-red-100 text-red-800'
+                                    : velKmH > 40
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              <Gauge className="h-3 w-3" />
+                              {velKmH} km/h
+                            </Badge>
+                          )}
+                          {cadete.bateria != null && (
+                            <Badge
+                              variant="secondary"
+                              className={`flex items-center gap-1 text-[10px] px-1.5 py-0 font-bold ${
+                                cadete.bateria > 20 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              <Battery className="h-3 w-3" />
+                              {Math.round(cadete.bateria)}%
+                            </Badge>
+                          )}
+                          <Badge
+                            variant="secondary"
+                            className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0 ${
+                              cadete.gps_activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {cadete.gps_activo ? 'Online' : 'Offline'}
+                          </Badge>
+                        </div>
+                      </div>
 
-            <button
-              type="button"
-              onClick={() => setTabAdmin('rendimiento')}
-              className={cn(
-                "px-4 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center gap-2 cursor-pointer",
-                tabAdmin === 'rendimiento'
-                  ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              )}
-            >
-              <Activity size={15} />
-              <span>Informe de Rendimiento & Velocidad</span>
-            </button>
+                      <div className="text-xs">
+                        {(cadete.pedidosActivos && cadete.pedidosActivos.length > 0) ? (
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-2">
+                            <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
+                              <span>EN VIAJE ({cadete.pedidosActivos.length} {cadete.pedidosActivos.length === 1 ? 'PEDIDO' : 'PEDIDOS'})</span>
+                              <span className="text-gray-900 font-black">
+                                {formatearPrecio(cadete.pedidosActivos.reduce((acc, p) => acc + (p.total || 0), 0))}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 divide-y divide-orange-100">
+                              {cadete.pedidosActivos.map((p, idx) => (
+                                <div key={p.id} className={idx > 0 ? 'pt-1.5' : ''}>
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-gray-800 font-medium text-xs">
+                                      <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded-md mr-1">
+                                        #{p.parada_num || idx + 1}
+                                      </span>
+                                      <span className="font-bold">{p.cliente}</span>
+                                    </p>
+                                    <span className="text-[10px] font-black uppercase text-orange-600">
+                                      {p.estado}
+                                    </span>
+                                  </div>
+                                  {p.direccion ? (
+                                    <p className="text-gray-600 text-[11px] flex items-start gap-1 mt-0.5">
+                                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                                      <span className="line-clamp-1">{p.direccion}</span>
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPedidoParaBreadcrumb({
+                                  ...cadete.pedidosActivos![0],
+                                  cadete_nombre: cadete.nombre,
+                                  cadete_id: cadete.id,
+                                })
+                              }}
+                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            >
+                              <Bike className="h-3.5 w-3.5 text-purple-700" />
+                              <span>Ver Trayectoria (Breadcrumb)</span>
+                            </button>
+                          </div>
+                        ) : cadete.pedidoActivo ? (
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 space-y-1">
+                            <div className="text-orange-700 font-black text-[11px] flex items-center justify-between">
+                              <span>EN VIAJE ({cadete.pedidoActivo.estado.toUpperCase()})</span>
+                              {cadete.pedidoActivo.total ? (
+                                <span className="text-gray-900 font-black">{formatearPrecio(cadete.pedidoActivo.total)}</span>
+                              ) : null}
+                            </div>
+                            <p className="text-gray-800 font-medium text-xs">
+                              Cliente: <span className="font-bold">{cadete.pedidoActivo.cliente}</span>
+                            </p>
+                            {cadete.pedidoActivo.direccion ? (
+                              <p className="text-gray-600 text-[11px] flex items-start gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                                <span className="line-clamp-2">{cadete.pedidoActivo.direccion}</span>
+                              </p>
+                            ) : null}
+
+                            {/* Botón de Breadcrumb Trail (Repetición de Ruta) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPedidoParaBreadcrumb({
+                                  ...cadete.pedidoActivo,
+                                  cadete_nombre: cadete.nombre,
+                                  cadete_id: cadete.id,
+                                })
+                              }}
+                              className="w-full mt-2 py-1.5 px-3 bg-purple-100/80 hover:bg-purple-200/90 active:bg-purple-300 text-purple-900 border border-purple-300 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            >
+                              <Bike className="h-3.5 w-3.5 text-purple-700" />
+                              <span>Ver Trayectoria (Breadcrumb)</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-2 flex items-center justify-between text-emerald-700">
+                            <span className="font-bold text-[11px]">DISPONIBLE</span>
+                            <span className="text-[11px] text-gray-500">En espera</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator className="my-2.5" />
+
+                      <div className="flex justify-between items-center text-[10px] text-gray-400">
+                        <span>Señal: {cadete.updated_at ? new Date(cadete.updated_at).toLocaleTimeString() : 'Sin señal'}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFocusedId(cadete.id)
+                            setVistaMobile('mapa')
+                          }}
+                          className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Navigation className="h-3 w-3" />
+                          <span>Ver en mapa</span>
+                        </button>
+                      </div>
+
+                      {/* Botones de acción del Cadete */}
+                      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCadeteParaPagoExtra(cadete.id)
+                            setModalPagoExtraAbierto(true)
+                          }}
+                          className="flex-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <span>Viaje Extra</span>
+                        </button>
+
+                        {cadete.gps_activo && (
+                          <button
+                            type="button"
+                            disabled={apagandoId === cadete.id}
+                            onClick={(e) => handleApagarGps(e, cadete.id, cadete.nombre)}
+                            className="py-1.5 px-2.5 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50 cursor-pointer shadow-xs shrink-0"
+                            title="Apagar GPS manualmente"
+                          >
+                            <PowerOff className={`h-3 w-3 ${apagandoId === cadete.id ? 'animate-spin' : ''}`} />
+                            <span>{apagandoId === cadete.id ? 'Apagando...' : 'Apagar GPS'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Main Area: Mapa */}
+      <div className={`${vistaMobile === 'mapa' ? 'flex' : 'hidden'} pointer-events-auto absolute inset-0 z-0 flex-col`}>
+        <MapaGlobal cadetes={cadetes} focusedId={focusedId} onSelectCadete={setFocusedId} />
+
+        {/* Botón flotante para alternar referencias en móvil */}
+        <button
+          type="button"
+          onClick={() => setMostrarReferenciasMobile(!mostrarReferenciasMobile)}
+          className="sm:hidden absolute bottom-4 left-4 z-[500] px-2.5 py-1.5 bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-gray-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+        >
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>{mostrarReferenciasMobile ? 'Ocultar Referencias' : 'Referencias'}</span>
+        </button>
+
+        {/* Overlay Legend */}
+        <div className={`${mostrarReferenciasMobile ? 'block' : 'hidden sm:block'} absolute bottom-14 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[500] bg-white dark:bg-slate-900 p-3 rounded-xl shadow-xl border border-gray-200 dark:border-slate-800 text-xs space-y-2 pointer-events-auto sm:pointer-events-none transition-all`}>
+          <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1 border-b pb-1">
+            Referencias en Mapa
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Cadete Disponible</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Cadete en Viaje</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Destino Cliente</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-sm"></div>
+            <span className="text-gray-700 font-medium text-[11px]">Local Chefsy</span>
           </div>
         </div>
-      ) : (
-        <header className="bg-chefsy border-b border-chefsy-700 px-4 py-4 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 text-white rounded-xl">
-              <Bike size={20} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white leading-tight">Cadetería</h1>
-              <p className="text-xs text-chefsy-200">Solo delivery</p>
-            </div>
-            <div className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider select-none border transition-all duration-300",
-              dbEstado === 'conectado'
-                ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40"
-                : dbEstado === 'desconectado'
-                  ? "bg-red-950/40 text-red-400 border-red-900/40 animate-pulse"
-                  : "bg-slate-850/40 text-slate-400 border-slate-700/40"
-            )}>
-              <span className={cn(
-                "h-1.5 w-1.5 rounded-full shrink-0",
-                dbEstado === 'conectado'
-                  ? "bg-emerald-400 animate-pulse"
-                  : dbEstado === 'desconectado'
-                    ? "bg-red-500"
-                    : "bg-slate-400"
-              )} />
-              <span>
-                {dbEstado === 'conectado' ? 'ONLINE' : dbEstado === 'desconectado' ? 'SIN BASE' : 'CONECTANDO'}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="/api/cadeteria/descargar-apk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 shadow-sm border border-emerald-500/30"
-              title="Descargar última versión APK de Cadetería"
-            >
-              <Download size={14} />
-              <span className="hidden sm:inline">Descargar</span> APK
-            </a>
-            <button
-              onClick={() => mutate('pedidosActivos')}
-              className="text-xs bg-chefsy-600 hover:bg-chefsy-500 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-            >
-              <RefreshCw size={14} />
-              Actualizar
-            </button>
-            {usuarioActivo?.rol !== 'admin' && <BotonNotificaciones />}
-            <button
-              onClick={cerrarSesion}
-              className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
-        </header>
+      </div>
+    </div>
+        </>
       )}
 
-      <main className={esAdmin ? (tabAdmin === 'rendimiento' ? "max-w-5xl mx-auto space-y-4 px-2 sm:px-4" : "max-w-xl mx-auto space-y-4") : "max-w-md mx-auto p-4 space-y-4"}>
-        {alertaVisibility && (
-          <div className="bg-red-600 text-white p-4 rounded-2xl text-sm font-bold flex items-start gap-2.5 shadow-xl animate-bounce">
-            <AlertOctagon className="w-6 h-6 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-lg">¡CUIDADO!</p>
-              <p className="mt-1 font-medium text-red-100">Minimizaste la app. El GPS del cliente se detuvo. Por favor, mantené esta pantalla abierta mientras estés en camino para no fallarle al cliente.</p>
-            </div>
-          </div>
-        )}
-        
-        {errorGps && (
-          <div className="bg-slate-900/90 border border-slate-700/60 text-slate-200 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm">
-            <MapPin className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-slate-100">Ubicación requerida</p>
-              <p className="mt-0.5 leading-relaxed text-slate-300">{errorGps}</p>
-            </div>
-          </div>
-        )}
-
-        {esAdmin && tabAdmin === 'rendimiento' ? (
-          <InformeRendimientoCadetes
-            pedidosEnVivo={pedidos}
-            estadoGpsCadetes={estadoGpsCadetes}
-          />
-        ) : (
-          <>
-            {!esAdmin && (
-          <>
-            <div className="bg-gradient-to-r from-chefsy-800 to-chefsy-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden mb-3 animate-[slideIn_0.25s_ease-out]">
-              <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
-                <Bike size={120} />
-              </div>
-              <div className="relative z-10">
-                <h2 className="text-lg font-bold">
-                  {usuarioActivo.usuario === 'paulo' ? '¡Hola, Paulo!' : `¡Hola, ${usuarioActivo.nombre}!`}
-                </h2>
-                <p className="text-xs text-chefsy-100 mt-1">Recordá, nunca te cortes solo!.</p>
-                {pedidosListos.length > 0 && (
-                  <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 px-2 py-1 rounded text-[10px] font-bold tracking-wide">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    MANTENIENDO PANTALLA ACTIVA PARA GPS
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Cartel de Recaudación, Base Fija y Envíos Hechos */}
-            <div className="grid grid-cols-2 gap-3 mb-4 animate-[slideIn_0.25s_ease-out]">
-              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Viajes Entregados</span>
-                <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">{cantidadEnvios} {cantidadEnvios === 1 ? 'viaje' : 'viajes'}</span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-500">Entregas hechas hoy</span>
-              </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recaudado Viajes</span>
-                <span className="text-base font-extrabold text-slate-700 dark:text-slate-300">{formatearPrecio(recaudacionEnvios)}</span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-500">Por costo de envíos</span>
-              </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Base Cadete</span>
-                <span className="text-base font-extrabold text-amber-600 dark:text-amber-400">{formatearPrecio(montoBaseCadete)}</span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-500">Base fija configurada</span>
-              </div>
-              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-3.5 rounded-2xl shadow-sm flex flex-col gap-0.5 transition-colors">
-                <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Total a Cobrar</span>
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-300">{formatearPrecio(totalConBase)}</span>
-                <span className="text-[9px] text-emerald-700 dark:text-emerald-500 font-medium">Viajes + Base</span>
-              </div>
-            </div>
-            {/* Tabs para Cadete */}
-            <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl mb-4 animate-[slideIn_0.25s_ease-out]">
-              <button
-                onClick={() => setPestaña('activos')}
-                className={cn(
-                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
-                  pestaña === 'activos' 
-                    ? "bg-white dark:bg-slate-700 text-chefsy-800 dark:text-white shadow-sm" 
-                    : "text-slate-500 hover:text-slate-700"
-                )}
-              >
-                Activos ({pedidosCadeteria.length})
-              </button>
-              <button
-                onClick={() => setPestaña('historial')}
-                className={cn(
-                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
-                  pestaña === 'historial' 
-                    ? "bg-white dark:bg-slate-700 text-chefsy-800 dark:text-white shadow-sm" 
-                    : "text-slate-500 hover:text-slate-700"
-                )}
-              >
-                Entregados ({pedidosEntregadosHoy.length})
-              </button>
-            </div>
-          </>
-        )}
-
-        {esAdmin && Object.keys(estadoGpsCadetes).length > 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <Radio size={12} className="text-emerald-500" />
-              <span>Estado GPS Cadetes</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(estadoGpsCadetes).map(([id, estado]) => (
-                <div
-                  key={id}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                    estado.activo
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
-                      : "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30"
-                  )}
-                >
-                  <span className={cn(
-                    "h-2 w-2 rounded-full shrink-0",
-                    estado.activo ? "bg-emerald-500 animate-pulse" : "bg-red-500"
-                  )} />
-                  <span>{id}</span>
-                  <span className="opacity-60 text-[10px]">
-                    {estado.activo ? `hace ${estado.hace}` : `Sin señal (${estado.hace})`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Panel de Diagnóstico GPS Detallado — solo para admins */}
-        {esAdmin && <PanelDiagnosticoGPS />}
-
-        {/* Banner de multi-pedidos / Organización de Recorrido */}
-        {esAdmin && pedidosPorCadete.some(c => c.pedidos.length >= 2) && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-2 mb-3 animate-[slideIn_0.2s_ease-out]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <ListOrdered size={15} />
-                </div>
-                <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Recorridos Activos (Multi-Pedidos)
+      {/* ── Tab GPS y Recorridos: info migrada desde /cadeteria (Fase 1) ── */}
+      {tabSuperior === 'gps' && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-3xl mx-auto w-full space-y-3 p-1">
+            <SeccionDesplegable
+              titulo="Estado GPS Cadetes"
+              icono={<Radio size={15} />}
+              abiertoPorDefecto
+              insignia={
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                  {gpsActivosCount}/{estadoGps.length} activos
                 </span>
-              </div>
-              <span className="text-[10px] text-slate-400 font-medium">Por cercanía al local</span>
-            </div>
-            
-            <div className="space-y-2 pt-1">
-              {pedidosPorCadete.filter(c => c.pedidos.length >= 2).map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Bike size={16} className="text-emerald-600 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                        {c.nombre}
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                        {c.pedidos.length} pedidos simultáneos en curso
-                      </p>
+              }
+            >
+              {estadoGps.length === 0 ? (
+                <p className="text-xs text-gray-500">No hay cadetes registrados en el sistema.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {estadoGps.map((e) => (
+                    <div
+                      key={e.id}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                        e.activo
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
+                          : "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30"
+                      )}
+                    >
+                      <span className={cn(
+                        "h-2 w-2 rounded-full shrink-0",
+                        e.activo ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+                      )} />
+                      <span>{e.nombre}</span>
+                      <span className="opacity-60 text-[10px]">
+                        {e.activo ? `hace ${e.hace}` : `Sin señal (${e.hace})`}
+                      </span>
                     </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCadeteParaOrganizar(c)
-                      setModalOrganizarAbierto(true)
-                    }}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <ListOrdered size={13} />
-                    <span>Acomodar turno</span>
-                  </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </SeccionDesplegable>
+
+            <SeccionDesplegable
+              titulo="Recorridos Activos (Multi-Pedidos)"
+              icono={<ListOrdered size={15} />}
+              abiertoPorDefecto={recorridosMulti.length > 0}
+              insignia={
+                recorridosMulti.length > 0 ? (
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
+                    {recorridosMulti.length} cadete(s)
+                  </span>
+                ) : undefined
+              }
+            >
+              {recorridosMulti.length === 0 ? (
+                <p className="text-xs text-gray-500">Ningún cadete lleva 2 o más pedidos simultáneos ahora mismo.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recorridosMulti.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Bike size={16} className="text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {c.nombre}
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {c.pedidos.length} pedidos simultáneos en curso
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setCadeteParaOrganizar(c)
+                          setModalOrganizarAbierto(true)
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs shrink-0"
+                      >
+                        <ListOrdered size={13} />
+                        <span>Acomodar turno</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SeccionDesplegable>
+
+            <SeccionDesplegable
+              titulo="Diagnóstico GPS Detallado"
+              icono={<Activity size={15} />}
+            >
+              <PanelDiagnosticoGPS />
+            </SeccionDesplegable>
           </div>
-        )}
+        </div>
+      )}
 
-        {esAdmin || pestaña === 'activos' ? (
-          pedidosCadeteria.length === 0 ? (
-            <div className="text-center py-20 text-gray-400 text-sm">
-              No hay pedidos delivery para repartir en este momento.
+      {/* ── Tab Repartos: lista migrada desde /cadeteria (Fase 2) ── */}
+      {tabSuperior === 'repartos' && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-xl mx-auto w-full space-y-4 p-1">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                <Bike size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight">
+                  Repartos Activos ({pedidosDeliveryActivos.length})
+                </h2>
+                <p className="text-[11px] text-gray-400 dark:text-slate-400">
+                  Pedidos delivery asignados y listos para reparto
+                </p>
+              </div>
             </div>
-          ) : (
-            pedidosCadeteria.map((pedido) => {
-              const infoCadete = pedido.cadete_id
-                ? pedidosPorCadete.find(c => c.id.toLowerCase() === pedido.cadete_id?.toLowerCase())
-                : null
-              const ordenadosCadete = infoCadete ? ordenarPedidosPorCercaniaOManual(infoCadete.pedidos) : []
-              const pos = ordenadosCadete.findIndex(p => p.id === pedido.id) + 1
-              const dist = pedido.coordenadas ? calcularDistanciaKm(UBICACION_LOCAL, pedido.coordenadas) : null
-              const distTxt = dist !== null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : undefined
+            {pedidosDeliveryActivos.length === 0 ? (
+              <div className="text-center py-20 text-gray-400 text-sm">
+                No hay pedidos delivery para repartir en este momento.
+              </div>
+            ) : (
+              pedidosDeliveryActivos.map((pedido) => {
+                const infoCadete = pedido.cadete_id
+                  ? pedidosPorCadete.find(c => c.id.toLowerCase() === pedido.cadete_id?.toLowerCase())
+                  : null
+                const ordenadosCadete = infoCadete ? ordenarPedidosPorCercaniaOManual(infoCadete.pedidos) : []
+                const pos = ordenadosCadete.findIndex(p => p.id === pedido.id) + 1
+                const dist = pedido.coordenadas ? calcularDistanciaKm(UBICACION_LOCAL, pedido.coordenadas) : null
+                const distTxt = dist !== null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : undefined
 
-              return (
-                <TarjetaPedidoCadete
-                  key={pedido.id}
-                  pedido={pedido}
-                  cambiarEstado={cambiarEstado}
-                  esAdmin={esAdmin}
-                  posicionParada={pos > 0 ? pos : undefined}
-                  totalParadas={ordenadosCadete.length > 1 ? ordenadosCadete.length : undefined}
-                  distanciaLocalTexto={distTxt}
-                  onAbrirOrganizar={() => {
-                    if (infoCadete) {
-                      setCadeteParaOrganizar(infoCadete)
-                      setModalOrganizarAbierto(true)
-                    }
-                  }}
-                />
-              )
-            })
-          )
-        ) : null}
+                return (
+                  <TarjetaPedidoCadete
+                    key={pedido.id}
+                    pedido={pedido}
+                    cambiarEstado={cambiarEstado}
+                    esAdmin={esAdmin}
+                    posicionParada={pos > 0 ? pos : undefined}
+                    totalParadas={ordenadosCadete.length > 1 ? ordenadosCadete.length : undefined}
+                    distanciaLocalTexto={distTxt}
+                    onAbrirOrganizar={() => {
+                      if (infoCadete) {
+                        setCadeteParaOrganizar(infoCadete)
+                        setModalOrganizarAbierto(true)
+                      }
+                    }}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
 
-        {!esAdmin && pestaña === 'historial' && (
-          pedidosEntregadosHoy.length === 0 ? (
-            <div className="text-center py-20 text-gray-400 text-sm">
-              Aún no tenés pedidos entregados hoy.
-            </div>
-          ) : (
-            <div className="space-y-3 animate-[slideIn_0.15s_ease-out]">
-              {pedidosEntregadosHoy.map(p => (
-                <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between shadow-sm">
-                  <div className="min-w-0 pr-2">
-                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{p.cliente}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{p.direccion}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 truncate italic">
-                      {p.productos.map(prod => `${prod.cantidad}x ${prod.nombre}`).join(', ')}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-slate-800 dark:text-slate-200">{formatearPrecio(p.total)}</p>
-                    <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded mt-0.5 inline-block">
-                      Envío: {formatearPrecio(p.costoEnvio || 0)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-          </>
-        )}
-      </main>
-      <CalculadoraSutil />
+      {/* ── Tab Rendimiento: informe migrado desde /cadeteria (Fase 3) ── */}
+      {tabSuperior === 'rendimiento' && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-5xl mx-auto w-full space-y-4 p-1 sm:px-3">
+            <InformeRendimientoCadetes
+              pedidosEnVivo={pedidos}
+              estadoGpsCadetes={estadoGpsRecord}
+            />
+          </div>
+        </div>
+      )}
 
-      {/* Modal Sumar Dinero / Viaje Extra al Cadete */}
-      <ModalPagoExtraCadete
-        abierto={modalPagoExtraAbierto}
-        onCerrar={() => {
-          setModalPagoExtraAbierto(false)
-          setCadeteParaPagoExtra(null)
-        }}
-        cadetesDisponibles={
-          cadetes && cadetes.length > 0
-            ? cadetes.map(c => ({ id: c.id, nombre: c.nombre }))
-            : Object.keys(estadoGpsCadetes).map(id => ({ id, nombre: id }))
-        }
-        cadetePreseleccionadoId={cadeteParaPagoExtra}
+      {/* Modal Compartir Ubicación en Vivo (migrado desde /cadeteria) */}
+      <ModalCompartirUbicacion
+        abierto={modalCompartirUbicacionAbierto}
+        onClose={() => setModalCompartirUbicacionAbierto(false)}
       />
 
-      {/* Modal Organizar / Acomodar Recorrido de Cadete */}
+      {/* Modal Organizar / Acomodar Recorrido de Cadete (migrado desde /cadeteria) */}
       {cadeteParaOrganizar && (
         <ModalOrganizarRecorridoCadete
           abierto={modalOrganizarAbierto}
@@ -864,10 +841,26 @@ export default function PaginaCadeteria() {
         />
       )}
 
-      {/* Modal Compartir Ubicación en Vivo */}
-      <ModalCompartirUbicacion
-        abierto={modalCompartirUbicacionAbierto}
-        onClose={() => setModalCompartirUbicacionAbierto(false)}
+      {/* Modal Interactivo de Repetición de Ruta (Breadcrumb Trail) */}
+      {pedidoParaBreadcrumb && (
+        <ModalBreadcrumbTrail
+          pedido={pedidoParaBreadcrumb}
+          onCerrar={() => setPedidoParaBreadcrumb(null)}
+        />
+      )}
+
+      {/* Modal Sumar Dinero / Viaje Extra al Cadete */}
+      <ModalPagoExtraCadete
+        abierto={modalPagoExtraAbierto}
+        onCerrar={() => {
+          setModalPagoExtraAbierto(false)
+          setCadeteParaPagoExtra(null)
+        }}
+        cadetesDisponibles={cadetes.map(c => ({ id: c.id, nombre: c.nombre }))}
+        cadetePreseleccionadoId={cadeteParaPagoExtra}
+        onGuardado={() => {
+          fetchTorreData()
+        }}
       />
     </div>
   )

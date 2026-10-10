@@ -116,7 +116,6 @@ export default function BottomNavMobile({
     { label: 'Cierre de Caja', href: '/cierre', icon: DollarSign, color: 'text-emerald-400 bg-emerald-500/10' },
     { label: 'Agenda Clientes', href: '/clientes', icon: Users, color: 'text-sky-400 bg-sky-500/10' },
     { label: 'Carta y Productos', href: '/productos', icon: Store, color: 'text-amber-400 bg-amber-500/10' },
-    { label: 'Torre de Control', href: '/torre-control', icon: Radio, color: 'text-purple-400 bg-purple-500/10' },
     { label: 'Configuración', href: '/configuracion', icon: Settings, color: 'text-slate-400 bg-slate-500/10' },
   ]
 

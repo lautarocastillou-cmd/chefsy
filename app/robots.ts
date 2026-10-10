@@ -15,7 +15,6 @@ export default function robots(): MetadataRoute.Robots {
           '/api/',
           '/dashboard',
           '/pedidos',
-          '/torre-control',
           '/cierre',
           '/cadeteria',
           '/nuevo-pedido',

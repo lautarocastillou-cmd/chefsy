@@ -5,7 +5,7 @@
 // Tarjeta de pedido para el flujo de cadetería (contacto, navegación,
 // tiempos, cobro y cambios de estado por swipe).
 // Extraída de app/(principal)/cadeteria/page.tsx para reutilizarla
-// en /torre-control durante la unificación (Fase 2).
+// en la Cadetería unificada.
 // ─────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'

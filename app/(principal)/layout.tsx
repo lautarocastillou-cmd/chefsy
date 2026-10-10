@@ -52,6 +52,21 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
+  // La vista de mapa necesita todo el espacio y usa overlays propios.
+  // Conserva la sidebar (en modo Dock) pero elimina chrome/padding global.
+  if (pathname === '/cadeteria') {
+    return (
+      <div className="relative h-dvh w-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-40 hidden md:flex items-stretch">
+          <Sidebar className="pointer-events-auto" />
+        </div>
+        <main className="absolute inset-0 min-w-0 min-h-0 overflow-hidden">
+          {children}
+        </main>
+      </div>
+    )
+  }
+
   const tienePermiso = !esCadete || pathname === '/cadeteria'
 
   return (
@@ -188,7 +203,7 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
  *
  * El verificador de acceso muestra un 404 falso y espera aprobación del
  * administrador, lo que impide abrir el login en esta única dirección. Con el
- * parámetro `mapa=maplibre` en Torre de Control se muestra el login real para
+ * parámetro `mapa=maplibre` en Cadetería se muestra el login real para
  * poder iniciar sesión con una cuenta de administrador.
  *
  * Retirar esta excepción cuando MapLibre deje de ser experimental.
@@ -197,7 +212,7 @@ function AccesoSinSesionExperimental() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const esPruebaMapLibre =
-    pathname === '/torre-control' && searchParams.get('mapa') === 'maplibre'
+    pathname === '/cadeteria' && searchParams.get('mapa') === 'maplibre'
 
   return esPruebaMapLibre ? <LoginPage /> : <VerificadorLogin />
 }

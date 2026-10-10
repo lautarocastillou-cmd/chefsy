@@ -18,7 +18,7 @@ export type { CadeteData, MapaGlobalProps }
  * Fachada estable del mapa de Torre de Control.
  *
  * Leaflet sigue siendo el motor por defecto. Para probar MapLibre en forma
- * aislada, abrir /torre-control?mapa=maplibre. Cualquier fallo fatal vuelve a
+ * aislada, abrir /cadeteria?mapa=maplibre. Cualquier fallo fatal vuelve a
  * Leaflet; retirar el experimento no requiere cambiar la página ni su API.
  */
 export default function MapaGlobal(props: MapaGlobalProps) {
