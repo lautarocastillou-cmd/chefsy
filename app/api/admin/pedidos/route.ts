@@ -209,7 +209,10 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    return NextResponse.json({ pedidos: data || [] })
+    return NextResponse.json(
+      { pedidos: data || [] },
+      { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
+    )
   } catch (error) {
     console.error('[API Pedidos GET] Error:', error)
     // No se filtra error.message al cliente: puede traer nombres de tabla,

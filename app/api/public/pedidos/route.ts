@@ -90,12 +90,15 @@ export async function GET(request: Request) {
     const tieneActividad = (data && data.length > 0) || (extrasData && extrasData.length > 0)
     const montoBaseEfectivo = (turnoActivo || tieneActividad) ? montoBaseConfigurado : 0
 
-    return NextResponse.json({
-      pedidos: data || [],
-      pagos_extras: extrasData || [],
-      monto_base: montoBaseEfectivo,
-      turno_activo: turnoActivo,
-    })
+    return NextResponse.json(
+      {
+        pedidos: data || [],
+        pagos_extras: extrasData || [],
+        monto_base: montoBaseEfectivo,
+        turno_activo: turnoActivo,
+      },
+      { headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
+    )
   } catch (error) {
     console.error('[API Pública Pedidos GET] Error:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

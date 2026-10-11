@@ -32,6 +32,7 @@ const fetcher = async () => {
 
 export function usePedidosRealtime({
   despachar,
+  cambiosLocalesRef,
   eliminadosLocalesRef,
   habilitado = true,
 }: UsePedidosRealtimeProps) {
@@ -84,17 +85,49 @@ export function usePedidosRealtime({
 
       const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
 
+      // Una mutación optimista puede terminar después de que arranque el
+      // polling o el refetch disparado por broadcast. Durante esa ventana el
+      // servidor todavía puede devolver el estado anterior. No pisar el
+      // cambio local reciente evita que una tarjeta desaparezca, retroceda de
+      // estado o vuelva a mostrar el cadete anterior durante unos segundos.
+      const cambiosLocales = cambiosLocalesRef?.current || {}
+      const pedidosConCambiosLocales = pedidosSWRFiltrados.map((pedido) => {
+        const cambioLocalAt = cambiosLocales[pedido.id] || 0
+        if (cambioLocalAt > 0 && ahora - cambioLocalAt < 5000) {
+          const pedidoLocal = swrPrevRef.current.find((p) => p.id === pedido.id)
+          if (pedidoLocal) return pedidoLocal
+        }
+        return pedido
+      })
+
+      // Un pedido creado o editado de forma optimista puede no aparecer aún
+      // en una respuesta que comenzó antes de terminar el POST. Conservarlo
+      // temporalmente también cuando falta por completo en el array evita que
+      // desaparezca de /pedidos durante ese intervalo.
+      const idsRecibidos = new Set(pedidosConCambiosLocales.map((p) => p.id))
+      for (const pedidoLocal of swrPrevRef.current) {
+        const cambioLocalAt = cambiosLocales[pedidoLocal.id] || 0
+        if (
+          !idsRecibidos.has(pedidoLocal.id) &&
+          !idsEliminados.has(pedidoLocal.id) &&
+          cambioLocalAt > 0 &&
+          ahora - cambioLocalAt < 5000
+        ) {
+          pedidosConCambiosLocales.push(pedidoLocal)
+        }
+      }
+
       // Evitar bucle infinito de re-render si los pedidos no cambiaron
       const prev = swrPrevRef.current
-      const sonIguales = prev.length === pedidosSWRFiltrados.length &&
+      const sonIguales = prev.length === pedidosConCambiosLocales.length &&
         prev.every((p, i) => {
-          const s = pedidosSWRFiltrados[i]
+          const s = pedidosConCambiosLocales[i]
           return s && p.id === s.id && p.estado === s.estado && p.hora === s.hora && p.cadete_id === s.cadete_id
         })
 
       if (!sonIguales) {
-        swrPrevRef.current = pedidosSWRFiltrados
-        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
+        swrPrevRef.current = pedidosConCambiosLocales
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosConCambiosLocales })
       }
       setDbEstado('conectado')
       setEstaListo(true)
