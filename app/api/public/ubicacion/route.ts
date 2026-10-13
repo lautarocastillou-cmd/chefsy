@@ -112,12 +112,19 @@ export async function POST(request: Request) {
     const distanciaDesdeUltimoPunto = coordenadaAnteriorValida
       ? distanciaMetros(Number((cadeteExistente as any).lat), Number((cadeteExistente as any).lng), numLat, numLng)
       : Number.POSITIVE_INFINITY
-    const bufferTienePuntosValidos = Array.isArray(bufferPuntos) && bufferPuntos.some(
-      (p: any) => esCoordenadaValida(p?.lat, p?.lng)
-    )
+    const bufferTieneMovimiento = Array.isArray(bufferPuntos) && bufferPuntos.some((p: any) => {
+      if (!esCoordenadaValida(p?.lat, p?.lng)) return false
+      if (!coordenadaAnteriorValida) return true
+      return distanciaMetros(
+        Number((cadeteExistente as any).lat),
+        Number((cadeteExistente as any).lng),
+        Number(p.lat),
+        Number(p.lng)
+      ) >= DISTANCIA_MINIMA_MOVIMIENTO_METROS
+    })
     const hayMovimientoSignificativo = !cadeteExistente ||
       distanciaDesdeUltimoPunto >= DISTANCIA_MINIMA_MOVIMIENTO_METROS ||
-      bufferTienePuntosValidos
+      bufferTieneMovimiento
     const cambioEstadoGps = cadeteExistente?.gps_activo !== estadoGpsFinal
 
     // Un heartbeat quieto solo conserva presencia, GPS y batería. La posición
