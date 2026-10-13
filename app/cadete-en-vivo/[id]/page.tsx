@@ -286,8 +286,9 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       })
       .subscribe()
 
-    // Polling inteligente cada 4 segundos
-    const intervalo = setInterval(fetchPrincipal, 4000)
+    // El broadcast despierta la vista ante cambios de pedidos. El polling es
+    // solo respaldo para la posición GPS y no debe consultar Supabase cada 4s.
+    const intervalo = setInterval(fetchPrincipal, 8000)
     intervaloRef.current = intervalo
 
     const onReconectar = () => fetchPrincipal()

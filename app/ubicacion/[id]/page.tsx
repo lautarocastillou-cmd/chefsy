@@ -157,10 +157,12 @@ export default function PaginaUbicacionPublica({ params }: { params: Promise<{ i
       )
       .subscribe()
 
-    // Polling de respaldo cada 3.5 segundos para máxima confiabilidad
+    // Realtime entrega los cambios al instante. Este polling solo es respaldo
+    // ante una reconexión o una señal perdida, por eso no necesita competir
+    // con el heartbeat del GPS.
     const intervalPolling = setInterval(() => {
       cargarDatos(true)
-    }, 3500)
+    }, 10000)
 
     return () => {
       supabaseAnon.removeChannel(canal)

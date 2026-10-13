@@ -4,12 +4,25 @@ import { verificarTokenFlutter } from '@/lib/auth-flutter'
 import { obtenerSesion } from '@/lib/auth-server'
 import { notificarCambioCadete } from '@/lib/cadetes-broadcast'
 
+const DISTANCIA_MINIMA_MOVIMIENTO_METROS = 8
+
 function esCoordenadaValida(lat: any, lng: any): boolean {
   if (lat === null || lat === undefined || lat === '' || typeof lat === 'boolean') return false
   if (lng === null || lng === undefined || lng === '' || typeof lng === 'boolean') return false
   const nLat = Number(lat)
   const nLng = Number(lng)
   return Number.isFinite(nLat) && Number.isFinite(nLng) && nLat >= -90 && nLat <= 90 && nLng >= -180 && nLng <= 180
+}
+
+function distanciaMetros(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const radioTierra = 6371000
+  const aLat = (lat2 - lat1) * Math.PI / 180
+  const aLng = (lng2 - lng1) * Math.PI / 180
+  const origenLat = lat1 * Math.PI / 180
+  const destinoLat = lat2 * Math.PI / 180
+  const a = Math.sin(aLat / 2) ** 2 +
+    Math.cos(origenLat) * Math.cos(destinoLat) * Math.sin(aLng / 2) ** 2
+  return 2 * radioTierra * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 export async function POST(request: Request) {
@@ -56,7 +69,7 @@ export async function POST(request: Request) {
     // 1. Verificar estado actual en tabla cadetes
     const { data: cadeteExistente } = await adminClient
       .from('cadetes')
-      .select('id, gps_activo, apagado_por_admin, updated_at')
+      .select('id, lat, lng, gps_activo, apagado_por_admin, updated_at')
       .ilike('id', idNormalizado)
       .maybeSingle()
 
@@ -92,15 +105,36 @@ export async function POST(request: Request) {
 
     const estadoGpsFinal = gps_activo === false ? false : true
 
+    const coordenadaAnteriorValida = esCoordenadaValida(
+      (cadeteExistente as any)?.lat,
+      (cadeteExistente as any)?.lng
+    )
+    const distanciaDesdeUltimoPunto = coordenadaAnteriorValida
+      ? distanciaMetros(Number((cadeteExistente as any).lat), Number((cadeteExistente as any).lng), numLat, numLng)
+      : Number.POSITIVE_INFINITY
+    const bufferTienePuntosValidos = Array.isArray(bufferPuntos) && bufferPuntos.some(
+      (p: any) => esCoordenadaValida(p?.lat, p?.lng)
+    )
+    const hayMovimientoSignificativo = !cadeteExistente ||
+      distanciaDesdeUltimoPunto >= DISTANCIA_MINIMA_MOVIMIENTO_METROS ||
+      bufferTienePuntosValidos
+    const cambioEstadoGps = cadeteExistente?.gps_activo !== estadoGpsFinal
+
+    // Un heartbeat quieto solo conserva presencia, GPS y batería. La posición
+    // se escribe cuando hubo movimiento real, evitando actualizar coordenadas,
+    // breadcrumbs y Realtime varias veces por minuto en el mismo lugar.
     const camposActualizar: any = {
-      lat: numLat,
-      lng: numLng,
-      accuracy: accuracy !== undefined && accuracy !== null && Number.isFinite(Number(accuracy)) ? Number(accuracy) : null,
-      heading: heading !== undefined && heading !== null && Number.isFinite(Number(heading)) ? Number(heading) : null,
-      speed: speed !== undefined && speed !== null && Number.isFinite(Number(speed)) ? Number(speed) : null,
       gps_activo: estadoGpsFinal,
       apagado_por_admin: false,
       updated_at: new Date().toISOString()
+    }
+
+    if (hayMovimientoSignificativo) {
+      camposActualizar.lat = numLat
+      camposActualizar.lng = numLng
+      camposActualizar.accuracy = accuracy !== undefined && accuracy !== null && Number.isFinite(Number(accuracy)) ? Number(accuracy) : null
+      camposActualizar.heading = heading !== undefined && heading !== null && Number.isFinite(Number(heading)) ? Number(heading) : null
+      camposActualizar.speed = speed !== undefined && speed !== null && Number.isFinite(Number(speed)) ? Number(speed) : null
     }
 
     if (batteryLevel !== undefined && batteryLevel !== null) {
@@ -131,13 +165,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Avisar al panel que hubo movimiento. Fire-and-forget: los pings llegan
-    // cada pocos segundos, así que no tiene sentido esperar la respuesta ni
-    // dejar que un fallo de la señal corte el guardado de la posición.
-    void notificarCambioCadete(idNormalizado, 'gps')
+    // Avisar solo por movimiento o cambio de estado. Los heartbeats quietos
+    // siguen actualizando updated_at para presencia, pero no despiertan a todos
+    // los paneles conectados mediante Realtime.
+    if (hayMovimientoSignificativo || cambioEstadoGps) {
+      void notificarCambioCadete(idNormalizado, 'gps')
+    }
 
     // 2. Grabar Breadcrumb Trail en pedidos activos en viaje (en_camino) solo si GPS está activo
-    if (estadoGpsFinal) {
+    if (estadoGpsFinal && hayMovimientoSignificativo) {
       try {
         const { data: pedidosEnCamino } = await adminClient
           .from('pedidos')
