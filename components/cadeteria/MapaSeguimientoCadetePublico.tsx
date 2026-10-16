@@ -140,8 +140,10 @@ export default function MapaSeguimientoCadetePublico({
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
             </span>
           </div>
-          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-25px); font-size:12px; color:#E11D48; font-weight:900; text-shadow:0 1px 2px #fff;">
-            ▲
+          <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(0deg) translateY(-25px); display:flex; align-items:center; justify-content:center; color:#E11D48; filter:drop-shadow(0 1px 2px rgba(255,255,255,0.9));">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L3 21h18L12 2z"/>
+            </svg>
           </div>
         </div>
       `,
