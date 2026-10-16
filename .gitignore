@@ -75,3 +75,10 @@ next-env.d.ts
 /test_insert.js
 /check_cadetes.js
 /.agents/mcp_config.json
+
+# ─────────────────────────────────────────────────────
+# Backups de Base de Datos y Scripts de Extracción (PII)
+# ─────────────────────────────────────────────────────
+backup_*.sql
+backup_*.json
+/scripts/compilar-backup.mjs

@@ -22,6 +22,7 @@ async function pedirJson<T>(url: string, etiqueta: string): Promise<T> {
     // Las credenciales de sesión viajan en la cookie httpOnly que emite
     // /api/auth/login; sin esto el route handler la vería anónima.
     credentials: 'same-origin',
+    cache: 'no-store',
   })
 
   if (!res.ok) {

@@ -700,6 +700,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         await enviarAccionPedido({ accion: 'asignar_cadete', id, cadete_id, cadete_nombre })
       } catch (e: any) {
         console.error('[Servidor/Supabase] Error al asignar cadete', e)
+        delete cambiosLocalesRef.current[id]
         despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoAnterior })
         mutateSWR((current) => {
           if (!current) return [pedidoAnterior]
@@ -718,6 +719,7 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[id] = Date.now()
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido) {
+      const pedidoAnterior = { ...pedido }
       const pedidoActualizado = { 
         ...pedido, 
         metodoPago: metodoPago as any,
@@ -740,8 +742,14 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
           metodoPago,
           ...(montos || {})
         })
-      } catch (e) {
+      } catch (e: any) {
         console.error('[Servidor/Supabase] Error al cambiar método de pago', e)
+        delete cambiosLocalesRef.current[id]
+        despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoAnterior })
+        mutateSWR((current) => {
+          if (!current) return [pedidoAnterior]
+          return current.map((p) => (p.id === id ? pedidoAnterior : p))
+        }, false)
         agregarNotificacion('Error al actualizar el método de pago en el servidor.', 'warning')
       }
     }

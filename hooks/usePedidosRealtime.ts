@@ -16,13 +16,52 @@ export type AccionDespachar =
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
   prevPedidosRef?: MutableRefObject<Pedido[]>
-  // `cambiosLocalesRef` ya no se usa acá: servía para descartar el eco del
-  // canal postgres_changes, que entregaba el pedido completo. Con el canal
-  // broadcast el refetch reemplaza todo el estado, así que no hay eco que
-  // filtrar. Se mantiene en la firma para no romper al llamador.
   cambiosLocalesRef?: MutableRefObject<Record<string, number>>
   eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
   habilitado?: boolean
+}
+
+function sonPedidosIguales(a: Pedido[], b: Pedido[]): boolean {
+  if (a === b) return true
+  if (!a || !b || a.length !== b.length) return false
+
+  const mapB = new Map<string, Pedido>()
+  for (let i = 0; i < b.length; i++) {
+    mapB.set(b[i].id, b[i])
+  }
+
+  for (let i = 0; i < a.length; i++) {
+    const pA = a[i]
+    const pB = mapB.get(pA.id)
+    if (!pB) return false
+
+    if (
+      pA.estado !== pB.estado ||
+      pA.cadete_id !== pB.cadete_id ||
+      pA.cadete_nombre !== pB.cadete_nombre ||
+      pA.metodoPago !== pB.metodoPago ||
+      pA.pago_confirmado !== pB.pago_confirmado ||
+      pA.montoEfectivo !== pB.montoEfectivo ||
+      pA.montoTransferencia !== pB.montoTransferencia ||
+      pA.montoTarjeta !== pB.montoTarjeta ||
+      pA.orden_entrega !== pB.orden_entrega ||
+      pA.total !== pB.total ||
+      pA.hora !== pB.hora ||
+      pA.fecha !== pB.fecha ||
+      pA.observaciones !== pB.observaciones ||
+      pA.direccion !== pB.direccion ||
+      pA.tipoEntrega !== pB.tipoEntrega ||
+      pA.cocina_at !== pB.cocina_at ||
+      pA.listo_at !== pB.listo_at ||
+      pA.en_camino_at !== pB.en_camino_at ||
+      pA.entregado_at !== pB.entregado_at ||
+      pA.productos?.length !== pB.productos?.length
+    ) {
+      return false
+    }
+  }
+
+  return true
 }
 
 const fetcher = async () => {
@@ -32,6 +71,7 @@ const fetcher = async () => {
 
 export function usePedidosRealtime({
   despachar,
+  prevPedidosRef,
   cambiosLocalesRef,
   eliminadosLocalesRef,
   habilitado = true,
@@ -51,13 +91,8 @@ export function usePedidosRealtime({
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      // Red de contención: si el broadcast se pierde, el panel se actualiza
-      // igual. Bajado de 10s a 6s porque ahora cada refresh es un route
-      // handler con service_role (más caro que el select directo que había
-      // antes), pero a la vez la respuesta trae los datos ya filtrados por
-      // servidor. Es el punto de equilibrio entre frescura y carga.
       refreshInterval: 6000,
-      dedupingInterval: 3000,
+      dedupingInterval: 1000,
       fallbackData: [],
     }
   )
@@ -83,56 +118,84 @@ export function usePedidosRealtime({
           .map(([id]) => id)
       )
 
-      const pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
+      let pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
 
-      // Una mutación optimista puede terminar después de que arranque el
-      // polling o el refetch disparado por broadcast. Durante esa ventana el
-      // servidor todavía puede devolver el estado anterior. No pisar el
-      // cambio local reciente evita que una tarjeta desaparezca, retroceda de
-      // estado o vuelva a mostrar el cadete anterior durante unos segundos.
-      const cambiosLocales = cambiosLocalesRef?.current || {}
-      const pedidosConCambiosLocales = pedidosSWRFiltrados.map((pedido) => {
-        const cambioLocalAt = cambiosLocales[pedido.id] || 0
-        if (cambioLocalAt > 0 && ahora - cambioLocalAt < 5000) {
-          const pedidoLocal = swrPrevRef.current.find((p) => p.id === pedido.id)
-          if (pedidoLocal) return pedidoLocal
+      // ── Ventana de protección de mutaciones locales recientes (Optimistic Lock) ──
+      // Si el usuario modificó recientemente un pedido (hace menos de 5s) y el servidor
+      // responde antes de que la DB haya completado la réplica o sirvió caché HTTP,
+      // protegemos el cambio local del usuario para no parpadear ni revertir su acción.
+      const cambiosMap = cambiosLocalesRef?.current || {}
+      const pedidosLocalesActuales = prevPedidosRef?.current || []
+      const mapaLocales = new Map(pedidosLocalesActuales.map(p => [p.id, p]))
+
+      pedidosSWRFiltrados = pedidosSWRFiltrados.map((pServidor) => {
+        const tsCambio = cambiosMap[pServidor.id]
+        if (!tsCambio || ahora - tsCambio >= 5000) {
+          return pServidor
         }
-        return pedido
+
+        const pLocal = mapaLocales.get(pServidor.id)
+        if (!pLocal) return pServidor
+
+        let preservado = { ...pServidor }
+        let huboDiferencia = false
+
+        if (pLocal.cadete_id !== pServidor.cadete_id || pLocal.cadete_nombre !== pServidor.cadete_nombre) {
+          preservado.cadete_id = pLocal.cadete_id
+          preservado.cadete_nombre = pLocal.cadete_nombre
+          huboDiferencia = true
+        }
+
+        if (pLocal.metodoPago !== pServidor.metodoPago) {
+          preservado.metodoPago = pLocal.metodoPago
+          preservado.montoEfectivo = pLocal.montoEfectivo
+          preservado.montoTransferencia = pLocal.montoTransferencia
+          preservado.montoTarjeta = pLocal.montoTarjeta
+          huboDiferencia = true
+        }
+
+        if (pLocal.pago_confirmado !== pServidor.pago_confirmado) {
+          preservado.pago_confirmado = pLocal.pago_confirmado
+          huboDiferencia = true
+        }
+
+        // Si el servidor ya tiene exactamente los mismos valores, liberamos el lock local
+        if (!huboDiferencia) {
+          delete cambiosMap[pServidor.id]
+        }
+
+        return preservado
       })
 
-      // Un pedido creado o editado de forma optimista puede no aparecer aún
-      // en una respuesta que comenzó antes de terminar el POST. Conservarlo
-      // temporalmente también cuando falta por completo en el array evita que
-      // desaparezca de /pedidos durante ese intervalo.
-      const idsRecibidos = new Set(pedidosConCambiosLocales.map((p) => p.id))
-      for (const pedidoLocal of swrPrevRef.current) {
-        const cambioLocalAt = cambiosLocales[pedidoLocal.id] || 0
+      // Un pedido recién creado o editado de forma optimista puede no aparecer aún
+      // en una respuesta del servidor que comenzó antes de terminar el POST. Conservarlo
+      // temporalmente evita que desaparezca de la pantalla durante ese intervalo.
+      const idsRecibidos = new Set(pedidosSWRFiltrados.map((p) => p.id))
+      const pedidosLocalesParaAgregar = prevPedidosRef?.current || swrPrevRef.current
+      for (const pedidoLocal of pedidosLocalesParaAgregar) {
+        const cambioLocalAt = cambiosMap[pedidoLocal.id] || 0
         if (
           !idsRecibidos.has(pedidoLocal.id) &&
           !idsEliminados.has(pedidoLocal.id) &&
           cambioLocalAt > 0 &&
           ahora - cambioLocalAt < 5000
         ) {
-          pedidosConCambiosLocales.push(pedidoLocal)
+          pedidosSWRFiltrados.push(pedidoLocal)
         }
       }
 
       // Evitar bucle infinito de re-render si los pedidos no cambiaron
       const prev = swrPrevRef.current
-      const sonIguales = prev.length === pedidosConCambiosLocales.length &&
-        prev.every((p, i) => {
-          const s = pedidosConCambiosLocales[i]
-          return s && p.id === s.id && p.estado === s.estado && p.hora === s.hora && p.cadete_id === s.cadete_id
-        })
+      const sonIguales = sonPedidosIguales(prev, pedidosSWRFiltrados)
 
       if (!sonIguales) {
-        swrPrevRef.current = pedidosConCambiosLocales
-        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosConCambiosLocales })
+        swrPrevRef.current = pedidosSWRFiltrados
+        despachar({ tipo: 'CARGAR_PEDIDOS', pedidos: pedidosSWRFiltrados })
       }
       setDbEstado('conectado')
       setEstaListo(true)
     }
-  }, [pedidosSWR, error, despachar, eliminadosLocalesRef, habilitado])
+  }, [pedidosSWR, error, despachar, eliminadosLocalesRef, prevPedidosRef, cambiosLocalesRef, habilitado])
 
   // 2) Señal de cambio en vivo (canal broadcast) + poll de SWR como respaldo
   //
