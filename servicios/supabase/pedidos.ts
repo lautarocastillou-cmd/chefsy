@@ -18,7 +18,6 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 async function pedirJson<T>(url: string, etiqueta: string): Promise<T> {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
     // Las credenciales de sesión viajan en la cookie httpOnly que emite
     // /api/auth/login; sin esto el route handler la vería anónima.
     credentials: 'same-origin',
