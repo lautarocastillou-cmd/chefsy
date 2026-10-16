@@ -379,6 +379,102 @@ export function encontrarIndiceMasCercano(
   return mejorIndice
 }
 
+/**
+ * Map Matching: calcula la distancia mínima en METROS del punto a cualquier segmento de la polilínea.
+ * Si cae perpendicularmente sobre un tramo, toma esa distancia. Si cae fuera, la distancia al vértice.
+ */
+export function distanciaMinAPolilinea(
+  pos: [number, number],
+  ruta: [number, number][],
+  desdeIndice: number = 0
+): number {
+  if (!ruta || ruta.length < 2) return Infinity
+  const cosLat = Math.cos((pos[0] * Math.PI) / 180)
+  const M = 111320
+
+  let minDist = Infinity
+  const inicio = Math.max(0, desdeIndice - 2)
+
+  for (let i = inicio; i < ruta.length - 1; i++) {
+    const ax = (ruta[i][0] - pos[0]) * M
+    const ay = (ruta[i][1] - pos[1]) * M * cosLat
+    const bx = (ruta[i + 1][0] - ruta[i][0]) * M
+    const by = (ruta[i + 1][1] - ruta[i][1]) * M * cosLat
+    const segLenCuad = bx * bx + by * by
+
+    let distSeg: number
+    if (segLenCuad < 1e-10) {
+      distSeg = Math.sqrt(ax * ax + ay * ay)
+    } else {
+      const t = Math.max(0, Math.min(1, -(ax * bx + ay * by) / segLenCuad))
+      const px = ax + t * bx
+      const py = ay + t * by
+      distSeg = Math.sqrt(px * px + py * py)
+    }
+    if (distSeg < minDist) minDist = distSeg
+  }
+  return minDist
+}
+
+/**
+ * Proyecta la coordenada GPS sobre la polilínea de la calle si está a menos de maxDistanciaM (por defecto 35m).
+ * Si está más lejos (desvío, callejón o estacionamiento), devuelve la coordenada GPS real.
+ */
+export function proyectarSobreRuta(
+  pos: [number, number],
+  ruta: [number, number][],
+  desdeIndice: number = 0,
+  maxDistanciaM: number = 35
+): { punto: [number, number]; distanciaM: number; indiceSegmento: number } {
+  if (!ruta || ruta.length < 2) {
+    return { punto: pos, distanciaM: 0, indiceSegmento: 0 }
+  }
+  const cosLat = Math.cos((pos[0] * Math.PI) / 180)
+  const M = 111320
+
+  let minDist = Infinity
+  let mejorPunto: [number, number] = pos
+  let mejorIndice = desdeIndice
+  const inicio = Math.max(0, desdeIndice - 2)
+
+  for (let i = inicio; i < ruta.length - 1; i++) {
+    const ax = (ruta[i][0] - pos[0]) * M
+    const ay = (ruta[i][1] - pos[1]) * M * cosLat
+    const bx = (ruta[i + 1][0] - ruta[i][0]) * M
+    const by = (ruta[i + 1][1] - ruta[i][1]) * M * cosLat
+    const segLenCuad = bx * bx + by * by
+
+    let distSeg: number
+    let puntoSeg: [number, number]
+
+    if (segLenCuad < 1e-10) {
+      distSeg = Math.sqrt(ax * ax + ay * ay)
+      puntoSeg = ruta[i]
+    } else {
+      const t = Math.max(0, Math.min(1, -(ax * bx + ay * by) / segLenCuad))
+      const px = ax + t * bx
+      const py = ay + t * by
+      distSeg = Math.sqrt(px * px + py * py)
+      puntoSeg = [
+        ruta[i][0] + t * (ruta[i + 1][0] - ruta[i][0]),
+        ruta[i][1] + t * (ruta[i + 1][1] - ruta[i][1]),
+      ]
+    }
+
+    if (distSeg < minDist) {
+      minDist = distSeg
+      mejorPunto = puntoSeg
+      mejorIndice = i
+    }
+  }
+
+  if (minDist <= maxDistanciaM) {
+    return { punto: mejorPunto, distanciaM: minDist, indiceSegmento: mejorIndice }
+  }
+
+  return { punto: pos, distanciaM: minDist, indiceSegmento: mejorIndice }
+}
+
 export function calcularCostoEnvio(distanciaKm: number): number {
   if (distanciaKm <= 1) return 1500
   if (distanciaKm <= 2) return 2000

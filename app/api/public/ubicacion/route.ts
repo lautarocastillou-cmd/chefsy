@@ -105,6 +105,17 @@ export async function POST(request: Request) {
 
     const estadoGpsFinal = gps_activo === false ? false : true
 
+    const velocidadActual = speed !== undefined && speed !== null && Number.isFinite(Number(speed)) ? Number(speed) : 0
+    const velocidadBufferMax = Array.isArray(bufferPuntos)
+      ? Math.max(0, ...bufferPuntos.map((p: any) => (Number.isFinite(Number(p?.speed)) ? Number(p.speed) : 0)))
+      : 0
+    const enMovimiento = velocidadActual > 0.5 || velocidadBufferMax > 0.5
+
+    // Si el cadete está en marcha (speed > 0.5 m/s, aprox ~1.8 km/h), el umbral se reduce a 3.5m
+    // para registrar giros en esquinas, bocacalles y frenadas suaves sin descartar puntos.
+    // Si está quieto (en el local o semáforo), se mantiene en 8m para filtrar el drift del sensor GPS.
+    const umbralDistancia = enMovimiento ? 3.5 : DISTANCIA_MINIMA_MOVIMIENTO_METROS
+
     const coordenadaAnteriorValida = esCoordenadaValida(
       (cadeteExistente as any)?.lat,
       (cadeteExistente as any)?.lng
@@ -120,10 +131,10 @@ export async function POST(request: Request) {
         Number((cadeteExistente as any).lng),
         Number(p.lat),
         Number(p.lng)
-      ) >= DISTANCIA_MINIMA_MOVIMIENTO_METROS
+      ) >= umbralDistancia
     })
     const hayMovimientoSignificativo = !cadeteExistente ||
-      distanciaDesdeUltimoPunto >= DISTANCIA_MINIMA_MOVIMIENTO_METROS ||
+      distanciaDesdeUltimoPunto >= umbralDistancia ||
       bufferTieneMovimiento
     const cambioEstadoGps = cadeteExistente?.gps_activo !== estadoGpsFinal
 
@@ -235,11 +246,11 @@ export async function POST(request: Request) {
             for (const punto of puntosAProcesar) {
               const ultimoPunto = historial[historial.length - 1]
 
-              // Grabar si es el primer punto o si se desplazó más de 5 metros (~0.00005 grados)
+              // Grabar si es el primer punto o si se desplazó más de 3 metros (~0.00003 grados)
               if (
                 !ultimoPunto ||
-                Math.abs(ultimoPunto.lat - punto.lat) > 0.00005 ||
-                Math.abs(ultimoPunto.lng - punto.lng) > 0.00005
+                Math.abs(ultimoPunto.lat - punto.lat) > 0.00003 ||
+                Math.abs(ultimoPunto.lng - punto.lng) > 0.00003
               ) {
                 historial.push(punto)
                 huboCambios = true

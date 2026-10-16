@@ -8,7 +8,8 @@ import {
   MAPA_TILES_URL, 
   MAPA_ATTRIBUTION, 
   MAPA_SUBDOMAINS,
-  obtenerRutaConduccion
+  obtenerRutaConduccion,
+  proyectarSobreRuta
 } from '@/lib/ubicacion'
 import { Navigation, Compass, Home, Bike, CheckCircle2, Layers, BellRing, Plus, Minus } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -128,6 +129,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
   // ── Detección de Desvío y Re-cálculo Adaptativo ────────────────────────────
   const ultimoRecalculoRef = useRef<number>(0)       // timestamp del último recálculo
   const recalculandoRef = useRef<boolean>(false)     // evita llamadas paralelas
+  const conteoDesviosRef = useRef<number>(0)         // contador de lecturas consecutivas fuera de ruta (regla de los 2 strikes)
 
   // ── Referencias del Motor de Interpolación a 60 FPS ─────────────────────────
   const animFrameRef = useRef<number | null>(null)
@@ -561,30 +563,38 @@ export default function MapaSeguimiento({ pedido }: Props) {
     const { latitud: targetLat, longitud: targetLng } = pedido.cadete_coordenadas
     const ahora = performance.now()
 
-    // Medir dinámicamente el intervalo entre reportes GPS para sincronizar la duración
+    // Medir dinámicamente el intervalo entre reportes GPS para sincronizar la duración con solapamiento continuo (1.20x)
     if (tiempoUltimoUpdateRef.current > 0) {
       const lapsoReal = ahora - tiempoUltimoUpdateRef.current
-      duracionAnimacionRef.current = Math.min(Math.max(lapsoReal * 1.05, 2200), 5500)
+      duracionAnimacionRef.current = Math.min(Math.max(lapsoReal * 1.20, 2500), 6000)
     }
     tiempoUltimoUpdateRef.current = ahora
 
-    // ── Map Matching Eficiente: Se ejecuta SOLO al recibir un ping GPS nuevo (cada 3-5 seg),
-    // NUNCA dentro del requestAnimationFrame a 60 FPS. Esto libera el 100% de CPU en cada cuadro.
+    // ── Map Matching Eficiente con Regla de 2 Strikes:
+    // Se ejecuta SOLO al recibir un ping GPS nuevo (cada 2.5-3 seg), NUNCA en requestAnimationFrame
     const rutaActualMatching = rutaGeometriaRef.current
     if (rutaActualMatching && rutaActualMatching.length >= 2) {
       const posGps: [number, number] = [targetLat, targetLng]
       const idxGps = encontrarIndiceMasCercano(posGps, rutaActualMatching, indiceRutaRef.current)
       const distanciaDesvioM = distanciaMinAPolilinea(posGps, rutaActualMatching, idxGps)
 
-      const THRESHOLD_DESVIO_M = 60 // 60 metros fuera de la calle → desvío real
-      const COOLDOWN_MS = 8_000     // 8s mínimo entre recálculos
+      const THRESHOLD_DESVIO_M = 55 // 55 metros fuera de la calle → posible desvío
+      const COOLDOWN_MS = 10_000    // 10s mínimo entre recálculos
 
+      if (distanciaDesvioM > THRESHOLD_DESVIO_M) {
+        conteoDesviosRef.current += 1
+      } else {
+        conteoDesviosRef.current = 0
+      }
+
+      // Solo se dispara recálculo si 2 pings consecutivos confirman que el cadete abandonó la ruta (evita falsos desvíos al doblar)
       if (
-        distanciaDesvioM > THRESHOLD_DESVIO_M &&
+        conteoDesviosRef.current >= 2 &&
         !recalculandoRef.current &&
         Date.now() - ultimoRecalculoRef.current > COOLDOWN_MS &&
         recalcularRutaRef.current
       ) {
+        conteoDesviosRef.current = 0
         recalculandoRef.current = true
         ultimoRecalculoRef.current = Date.now()
         recalcularRutaRef.current()
@@ -644,11 +654,20 @@ export default function MapaSeguimiento({ pedido }: Props) {
       `
     }
 
+    // Snap-to-Route (Map Matching): si hay geometría activa, proyectar el punto a la calzada (max 35m)
+    let destinoLat = targetLat
+    let destinoLng = targetLng
+    if (rutaActualMatching && rutaActualMatching.length >= 2) {
+      const snap = proyectarSobreRuta([targetLat, targetLng], rutaActualMatching, indiceRutaRef.current, 35)
+      destinoLat = snap.punto[0]
+      destinoLng = snap.punto[1]
+    }
+
     // Caso 1: Primera vez que recibimos posición
     if (!posicionAnimadaRef.current) {
-      posicionAnimadaRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
-      posicionInicioRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
-      posicionDestinoRef.current = { latitud: targetLat, longitud: targetLng, rumbo: 0 }
+      posicionAnimadaRef.current = { latitud: destinoLat, longitud: destinoLng, rumbo: 0 }
+      posicionInicioRef.current = { latitud: destinoLat, longitud: destinoLng, rumbo: 0 }
+      posicionDestinoRef.current = { latitud: destinoLat, longitud: destinoLng, rumbo: 0 }
 
       const cadeteIcon = L.divIcon({
         html: generarHtmlCadete(0),
@@ -657,7 +676,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         iconAnchor: [27, 27],
       })
 
-      markersRef.current.cadete = L.marker([targetLat, targetLng], {
+      markersRef.current.cadete = L.marker([destinoLat, destinoLng], {
         icon: cadeteIcon,
         zIndexOffset: 300,
       }).addTo(leafletMapRef.current).bindPopup(`Repartidor: ${pedido.cadete_nombre || 'En camino'}`)
@@ -666,8 +685,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     // Calcular distancia al nuevo punto
     const distDelta = Math.sqrt(
-      Math.pow(targetLat - posicionAnimadaRef.current.latitud, 2) +
-      Math.pow(targetLng - posicionAnimadaRef.current.longitud, 2)
+      Math.pow(destinoLat - posicionAnimadaRef.current.latitud, 2) +
+      Math.pow(destinoLng - posicionAnimadaRef.current.longitud, 2)
     )
 
     // Si el cambio es microscópico (< 1 metro), no reiniciar bucle
@@ -678,14 +697,14 @@ export default function MapaSeguimiento({ pedido }: Props) {
       calcularRumbo(
         posicionAnimadaRef.current.latitud,
         posicionAnimadaRef.current.longitud,
-        targetLat,
-        targetLng
+        destinoLat,
+        destinoLng
       )
     )
 
     // El punto de partida de la nueva animación es EXACTAMENTE donde se encuentra actualmente la moto (cero saltos)
     posicionInicioRef.current = { ...posicionAnimadaRef.current }
-    posicionDestinoRef.current = { latitud: targetLat, longitud: targetLng, rumbo: targetHeading }
+    posicionDestinoRef.current = { latitud: destinoLat, longitud: destinoLng, rumbo: targetHeading }
     animStartTimeRef.current = performance.now()
 
     // Si había una animación previa en curso, cancelarla para empalmar sin tirones
@@ -705,7 +724,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
       const tiempoTranscurrido = timestamp - animStartTimeRef.current
       const progresoCrudo = Math.min(tiempoTranscurrido / duracionAnimacionRef.current, 1)
-      const progreso = easeInOutSine(progresoCrudo)
+      // Desplazamiento lineal uniforme a velocidad de crucero constante (elimina el vaivén de acelerón/freno)
+      const progreso = progresoCrudo
 
       // 1. Interpolación de Latitud y Longitud
       const latActual = inicio.latitud + (destino.latitud - inicio.latitud) * progreso

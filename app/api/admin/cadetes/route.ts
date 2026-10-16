@@ -158,8 +158,8 @@ export async function POST(request: Request) {
 
               if (
                 !ultimoPunto ||
-                Math.abs(ultimoPunto.lat - punto.lat) > 0.00005 ||
-                Math.abs(ultimoPunto.lng - punto.lng) > 0.00005
+                Math.abs(ultimoPunto.lat - punto.lat) > 0.00003 ||
+                Math.abs(ultimoPunto.lng - punto.lng) > 0.00003
               ) {
                 historial.push(punto)
                 huboCambios = true

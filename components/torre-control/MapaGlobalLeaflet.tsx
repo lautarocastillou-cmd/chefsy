@@ -10,6 +10,8 @@ import {
   obtenerRutaMultiParada,
   obtenerRutaConduccion,
   encontrarIndiceMasCercano,
+  distanciaMinAPolilinea,
+  proyectarSobreRuta,
   Coordenadas
 } from '@/lib/ubicacion'
 import { formatearPrecio } from '@/lib/utils'
@@ -122,6 +124,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
   const rutasFirmaRef = useRef<Record<string, string>>({})
   const ultimasSolicitudesRutaRef = useRef<Record<string, { lat: number; lng: number; at: number }>>({})
   const indicesRutaRef = useRef<Record<string, number>>({})
+  const conteoDesviosRef = useRef<Record<string, number>>({})
   const abortControllersRef = useRef<Record<string, AbortController>>({})
   const estaVisibleRef = useRef<boolean>(true)
   const cadetesDataRef = useRef<CadeteData[]>([])
@@ -296,7 +299,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
         const tiempoPasado = timestamp - s.startTime
         const progresoCrudo = Math.min(tiempoPasado / s.duracion, 1)
-        const progreso = easeInOutSine(progresoCrudo)
+        // Desplazamiento lineal uniforme a velocidad de crucero constante (elimina el vaivén de acelerón/freno)
+        const progreso = progresoCrudo
 
         // 1. Coordenadas interpoladas
         const lat = s.latInicio + (s.latDestino - s.latInicio) * progreso
@@ -440,6 +444,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         delete rutasFirmaRef.current[id]
         delete ultimasSolicitudesRutaRef.current[id]
         delete indicesRutaRef.current[id]
+        delete conteoDesviosRef.current[id]
 
         const rutaKey = `ruta_${id}`
         if (markersRef.current.rutasBase[rutaKey]) {
@@ -469,43 +474,59 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       const colorBg = esEnViaje ? '#E11D48' : '#10B981'
       const sombraColor = esEnViaje ? 'rgba(225,29,72,0.5)' : 'rgba(16,185,129,0.5)'
 
-      // Medir lapso entre updates para suavizado dinÃ¡mico
+      // Medir lapso entre updates para suavizado dinámico con solapamiento continuo (1.20x)
       const ultimoT = ultimosUpdatesRef.current[cadete.id] || 0
       const lapsoReal = ultimoT > 0 ? ahora - ultimoT : 4000
       ultimosUpdatesRef.current[cadete.id] = ahora
-      const duracionAnim = Math.min(Math.max(lapsoReal * 1.05, 2500), 6000)
+      const duracionAnim = Math.min(Math.max(lapsoReal * 1.20, 2600), 6500)
 
-      // Inicializar o actualizar estado de animaciÃ³n del cadete
+      // Snap-to-Route (Map Matching): si hay geometría de ruta activa, proyectar el punto a la calzada
+      let targetLatAjustado = targetLat
+      let targetLngAjustado = targetLng
+      const geomCadete = rutasGeometriaRef.current[cadete.id]
+      if (geomCadete && geomCadete.length >= 2) {
+        const snap = proyectarSobreRuta(
+          [targetLat, targetLng],
+          geomCadete,
+          indicesRutaRef.current[cadete.id] || 0,
+          35 // hasta 35m de tolerancia para alinear al asfalto
+        )
+        targetLatAjustado = snap.punto[0]
+        targetLngAjustado = snap.punto[1]
+      }
+
+      // Inicializar o actualizar estado de animación del cadete
       const estadoActual = animStatesRef.current[cadete.id]
       if (!estadoActual) {
         animStatesRef.current[cadete.id] = {
-          latActual: targetLat,
-          lngActual: targetLng,
-          rumboActual: 0,
-          latInicio: targetLat,
-          lngInicio: targetLng,
-          rumboInicio: 0,
-          latDestino: targetLat,
-          lngDestino: targetLng,
-          rumboDestino: 0,
+          latActual: targetLatAjustado,
+          lngActual: targetLngAjustado,
+          rumboActual: cadete.heading != null && cadete.heading >= 0 ? Math.round(cadete.heading) : 0,
+          latInicio: targetLatAjustado,
+          lngInicio: targetLngAjustado,
+          rumboInicio: cadete.heading != null && cadete.heading >= 0 ? Math.round(cadete.heading) : 0,
+          latDestino: targetLatAjustado,
+          lngDestino: targetLngAjustado,
+          rumboDestino: cadete.heading != null && cadete.heading >= 0 ? Math.round(cadete.heading) : 0,
           startTime: ahora,
           duracion: duracionAnim,
           terminado: true,
         }
       } else {
         const distDelta = Math.sqrt(
-          Math.pow(targetLat - estadoActual.latActual, 2) +
-          Math.pow(targetLng - estadoActual.lngActual, 2)
+          Math.pow(targetLatAjustado - estadoActual.latActual, 2) +
+          Math.pow(targetLngAjustado - estadoActual.lngActual, 2)
         )
         if (distDelta > 0.00001) {
-          const targetHeading = Math.round(
-            calcularRumbo(estadoActual.latActual, estadoActual.lngActual, targetLat, targetLng)
-          )
+          const targetHeading = cadete.heading != null && cadete.heading >= 0
+            ? Math.round(cadete.heading)
+            : Math.round(calcularRumbo(estadoActual.latActual, estadoActual.lngActual, targetLatAjustado, targetLngAjustado))
+
           estadoActual.latInicio = estadoActual.latActual
           estadoActual.lngInicio = estadoActual.lngActual
           estadoActual.rumboInicio = estadoActual.rumboActual
-          estadoActual.latDestino = targetLat
-          estadoActual.lngDestino = targetLng
+          estadoActual.latDestino = targetLatAjustado
+          estadoActual.lngDestino = targetLngAjustado
           estadoActual.rumboDestino = targetHeading
           estadoActual.startTime = ahora
           estadoActual.duracion = duracionAnim
@@ -783,24 +804,46 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           latitud: estadoActual?.latActual || targetLat,
           longitud: estadoActual?.lngActual || targetLng,
         }
-        const metrosDesdeUltimaSolicitud = solicitudAnterior
-          ? calcularDistanciaKm(
-            { latitud: solicitudAnterior.lat, longitud: solicitudAnterior.lng },
-            puntoActual
-          ) * 1000
-          : Infinity
-        const puedeRecalcularPorDesvio = metrosDesdeUltimaSolicitud >= 250 &&
-          (!solicitudAnterior || ahora - solicitudAnterior.at >= 30000)
+        // Evaluar desvío real con Map Matching y regla de 2 strikes (evita recalcular al doblar en esquinas)
+        const geomActual = rutasGeometriaRef.current[cadete.id]
+        let distanciaDesvioM = 0
+        if (geomActual && geomActual.length >= 2) {
+          const idxActual = indicesRutaRef.current[cadete.id] || 0
+          distanciaDesvioM = distanciaMinAPolilinea(
+            [puntoActual.latitud, puntoActual.longitud],
+            geomActual,
+            idxActual
+          )
+        }
+
+        const THRESHOLD_DESVIO_M = 55 // > 55m fuera de la calle de la ruta
+        const COOLDOWN_DESVIO_MS = 10000 // 10s mínimo entre recálculos por desvío
+
+        if (distanciaDesvioM > THRESHOLD_DESVIO_M) {
+          conteoDesviosRef.current[cadete.id] = (conteoDesviosRef.current[cadete.id] || 0) + 1
+        } else {
+          conteoDesviosRef.current[cadete.id] = 0
+        }
+
+        // Regla de 2 strikes: sólo se declara desvío si 2 lecturas consecutivas confirman que salió de la ruta
+        const desvioConfirmado = (conteoDesviosRef.current[cadete.id] || 0) >= 2
+        const tiempoDesdeUltimaSolicitud = solicitudAnterior ? ahora - solicitudAnterior.at : Infinity
+        const puedeRecalcularPorDesvio = desvioConfirmado && tiempoDesdeUltimaSolicitud >= COOLDOWN_DESVIO_MS
         const hayGeometria = Boolean(rutasGeometriaRef.current[cadete.id]?.length)
         const haySolicitudEnCurso = Boolean(abortControllersRef.current[cadete.id])
 
-        // Recalcular solo por cambio de itinerario, primera carga o un movimiento
-        // significativo sostenido. Esto evita golpear OSRM en cada pulso de GPS.
+        // Recalcular solo por:
+        // 1. Cambio de itinerario (paradas añadidas o reordenadas)
+        // 2. Primera carga sin geometría
+        // 3. Desvío real confirmado por 2 lecturas consecutivas fuera de la ruta con enfriamiento
         if (
           rutasFirmaRef.current[cadete.id] !== firmaNueva ||
           (!hayGeometria && !haySolicitudEnCurso) ||
           (puedeRecalcularPorDesvio && !haySolicitudEnCurso)
         ) {
+          if (puedeRecalcularPorDesvio) {
+            conteoDesviosRef.current[cadete.id] = 0
+          }
           const itinerarioCambio = rutasFirmaRef.current[cadete.id] !== firmaNueva
           rutasFirmaRef.current[cadete.id] = firmaNueva
           ultimasSolicitudesRutaRef.current[cadete.id] = {
@@ -869,20 +912,6 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           const ultimoIdx = indicesRutaRef.current[cadete.id] || 0
           const nuevoIdx = encontrarIndiceMasCercano(startPoint, geometriaGuardada, ultimoIdx)
           indicesRutaRef.current[cadete.id] = nuevoIdx
-
-          // Verificar si el cadete se desviÃ³ demasiado de la ruta calculada (> 350m)
-          const puntoGeom = geometriaGuardada[nuevoIdx]
-          if (puntoGeom) {
-            const desviacionKm = calcularDistanciaKm(
-              { latitud: startPoint[0], longitud: startPoint[1] },
-              { latitud: puntoGeom[0], longitud: puntoGeom[1] }
-            )
-            if (desviacionKm > 0.35) {
-              // El desvío se evalúa junto con el enfriamiento de solicitudes más
-              // arriba; no invalidamos la firma en cada pulso porque eso
-              // convertiría un desvío persistente en una tormenta de requests.
-            }
-          }
 
           const resto = geometriaGuardada.slice(nuevoIdx + 1)
           rutaCoords = resto.length > 0 ? [startPoint, ...resto] : [startPoint, geometriaGuardada[geometriaGuardada.length - 1]]
