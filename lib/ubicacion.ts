@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Coordenadas } from '@/tipos'
+import { buscarSugerenciasLocales } from '@/lib/geo/matcher'
 export type { Coordenadas }
 
 export const UBICACION_LOCAL: Coordenadas = {
@@ -597,6 +598,12 @@ export async function buscarCoordenadasPorDireccion(
   const directas = extraerCoordenadasDeTexto(texto)
   if (directas) return directas
 
+  // 1.b. Resolver instantáneamente (0ms) si coincide con un barrio o punto de referencia local
+  const matchLocal = buscarSugerenciasLocales(texto, 1)[0]
+  if (matchLocal && (matchLocal.esBarrio || matchLocal.esReferencia)) {
+    return matchLocal.coordenadas
+  }
+
   // 2. Si es una URL acortada o enlace de Google Maps, resolver mediante /api/resolve-maps
   const urlMaps = extraerUrlDeGoogleMaps(texto)
   if (urlMaps) {
@@ -821,70 +828,53 @@ export async function buscarSugerenciasDireccion(
   signal?: AbortSignal
 ): Promise<SugerenciaDireccion[]> {
   const query = texto.trim()
-  if (query.length < 3) return []
+  if (query.length < 2) return []
 
   const cacheKey = query.toLowerCase()
   if (cacheSugerencias.has(cacheKey)) {
     return cacheSugerencias.get(cacheKey)!
   }
 
-  let queryBuscar = query
-  if (!queryBuscar.toLowerCase().includes('catamarca')) {
-    queryBuscar = `${queryBuscar}, Catamarca`
-  }
+  // 1. Obtener de inmediato las sugerencias locales de memoria (0ms sincrónico)
+  const locales = buscarSugerenciasLocales(query, 5)
 
-  try {
-    const parametros = new URLSearchParams({
-      format: 'json',
-      q: queryBuscar,
-      limit: '5',
-      countrycodes: 'ar',
-      addressdetails: '1',
-      viewbox: '-65.95,-28.15,-65.60,-28.60',
-      bounded: '1',
-    })
-
-    let respuesta = await fetch(
-      `https://nominatim.openstreetmap.org/search?${parametros}`,
-      { headers: { 'Accept-Language': 'es' }, signal }
-    )
-
-    let resultados = []
-    if (respuesta.ok) {
-      resultados = await respuesta.json()
-    }
-
-    if (resultados.length === 0) {
-      parametros.set('bounded', '0')
-      parametros.set('q', query)
-      respuesta = await fetch(
-        `https://nominatim.openstreetmap.org/search?${parametros}`,
-        { headers: { 'Accept-Language': 'es' }, signal }
-      )
-      if (respuesta.ok) {
-        resultados = await respuesta.json()
-      }
-    }
-    
-    const sugerencias = resultados.map((item: any) => ({
-      nombre: item.display_name,
-      coordenadas: {
-        latitud: parseFloat(item.lat),
-        longitud: parseFloat(item.lon),
-      }
-    }))
-
-    // Limitar caché a 50 entradas para no devorar memoria
-    if (cacheSugerencias.size > 50) {
+  // 2. Si es una búsqueda de 2 caracteres o no tiene números y encontramos barrios/referencias,
+  // devolvemos de inmediato sin esperar la red.
+  const tieneNumero = /\d{1,5}/.test(query)
+  if (locales.length > 0 && !tieneNumero) {
+    if (cacheSugerencias.size > 100) {
       const firstKey = cacheSugerencias.keys().next().value
       if (firstKey) cacheSugerencias.delete(firstKey)
     }
-    cacheSugerencias.set(cacheKey, sugerencias)
+    cacheSugerencias.set(cacheKey, locales)
+    return locales
+  }
 
-    return sugerencias
+  // 3. Consultar a través del proxy acelerado con caché de servidor
+  try {
+    const res = await fetch(`/api/geo/sugerencias?q=${encodeURIComponent(query)}`, { signal })
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data?.sugerencias) && data.sugerencias.length > 0) {
+        const sugerencias: SugerenciaDireccion[] = data.sugerencias
+
+        if (cacheSugerencias.size > 100) {
+          const firstKey = cacheSugerencias.keys().next().value
+          if (firstKey) cacheSugerencias.delete(firstKey)
+        }
+        cacheSugerencias.set(cacheKey, sugerencias)
+        return sugerencias
+      }
+    }
   } catch (err: any) {
     if (err.name === 'AbortError') throw err // Dejar que lo capture el caller
-    return []
   }
+
+  // 4. Si la red falló o estuvo vacía pero teníamos sugerencias locales, devolverlas
+  if (locales.length > 0) {
+    return locales
+  }
+
+  return []
 }
 

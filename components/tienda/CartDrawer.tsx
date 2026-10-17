@@ -7,6 +7,7 @@ import { Plus, Minus, Trash2, X, ShoppingCart, ChevronRight, Map, Store, Bike, I
 import { User, Phone, MapPin, CreditCard } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { buscarSugerenciasDireccion, buscarCoordenadasPorDireccion, SugerenciaDireccion } from '@/lib/ubicacion'
+import { buscarSugerenciasLocales } from '@/lib/geo/matcher'
 
 const MapaSelector = dynamic(() => import('@/components/ubicacion/MapaSelector'), { ssr: false })
 
@@ -178,23 +179,32 @@ export default function CartDrawer() {
   }, [])
 
   useEffect(() => {
-    if (direccionCliente.length < 4 || !mostrarSugerencias) {
+    const textoLimpio = direccionCliente.trim()
+    if (textoLimpio.length < 2 || !mostrarSugerencias) {
       setSugerencias([])
       return
+    }
+
+    // 1. Mostrar sugerencias locales en 0ms inmediatamente al teclear
+    const inmediatas = buscarSugerenciasLocales(textoLimpio, 4)
+    if (inmediatas.length > 0) {
+      setSugerencias(inmediatas)
     }
 
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       setBuscandoSugerencias(true)
       try {
-        const resultados = await buscarSugerenciasDireccion(direccionCliente, controller.signal)
-        setSugerencias(resultados)
+        const resultados = await buscarSugerenciasDireccion(textoLimpio, controller.signal)
+        if (!controller.signal.aborted && resultados.length > 0) {
+          setSugerencias(resultados)
+        }
       } catch (err: any) {
         if (err.name !== 'AbortError') console.error('Error buscando sugerencias:', err)
       } finally {
         if (!controller.signal.aborted) setBuscandoSugerencias(false)
       }
-    }, 600)
+    }, 180) // Debounce ultrarrápido (180ms)
 
     return () => {
       clearTimeout(timer)

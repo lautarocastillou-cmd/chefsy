@@ -12,6 +12,7 @@ import {
   extraerCoordenadasDeTexto,
   extraerUrlDeGoogleMaps
 } from '@/lib/ubicacion'
+import { buscarSugerenciasLocales } from '@/lib/geo/matcher'
 import ModalSelectorUbicacion from './ModalSelectorUbicacion'
 import { MapPin, Pencil, Check } from 'lucide-react'
 
@@ -121,9 +122,17 @@ export default function CampoUbicacion({
   }, [])
 
   useEffect(() => {
-    if (direccion.length < 4) {
+    const textoLimpio = direccion.trim()
+    if (textoLimpio.length < 2) {
       setSugerencias([])
       return
+    }
+
+    // 1. Mostrar sugerencias locales en 0ms inmediatamente al teclear
+    const inmediatas = buscarSugerenciasLocales(textoLimpio, 4)
+    if (inmediatas.length > 0) {
+      setSugerencias(inmediatas)
+      setMostrarSugerencias(true)
     }
 
     const controller = new AbortController()
@@ -131,8 +140,11 @@ export default function CampoUbicacion({
     const timer = setTimeout(async () => {
       setBuscando(true)
       try {
-        const resultados = await buscarSugerenciasDireccion(direccion, controller.signal)
-        setSugerencias(resultados)
+        const resultados = await buscarSugerenciasDireccion(textoLimpio, controller.signal)
+        if (!controller.signal.aborted && resultados.length > 0) {
+          setSugerencias(resultados)
+          setMostrarSugerencias(true)
+        }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           console.error('Error buscando sugerencias:', err)
@@ -142,7 +154,7 @@ export default function CampoUbicacion({
           setBuscando(false)
         }
       }
-    }, 800) // Debounce
+    }, 180) // Debounce ultrarrápido (180ms)
 
     return () => {
       clearTimeout(timer)
