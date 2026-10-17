@@ -30,7 +30,7 @@ export async function obtenerDatosProductoParaLink(idOrSlug: string): Promise<Da
     // Búsqueda directa por ID
     let { data: prodDb } = await supabaseAdmin
       .from('productos')
-      .select('id, nombre, precio, precio_puntos, activo, categoriaId')
+      .select('id, nombre, precio, precio_puntos, activo')
       .eq('id', buscado)
       .maybeSingle()
 
@@ -38,7 +38,7 @@ export async function obtenerDatosProductoParaLink(idOrSlug: string): Promise<Da
     if (!prodDb) {
       const { data: todos } = await supabaseAdmin
         .from('productos')
-        .select('id, nombre, precio, precio_puntos, activo, categoriaId')
+        .select('id, nombre, precio, precio_puntos, activo')
       
       if (todos && todos.length > 0) {
         prodDb =

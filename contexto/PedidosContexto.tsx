@@ -433,22 +433,18 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
           if (!esCadete && !esVistaCadeteria) {
             if (nuevo.estado === 'entregado') {
-              if (!esCambioReciente) {
-                const cadeteTexto = nuevo.cadete_nombre ? ` (Cadete: ${nuevo.cadete_nombre})` : ''
-                agregarNotificacion(
-                  `¡Pedido entregado! ${nuevo.cliente} recibió su pedido${cadeteTexto}.`,
-                  'success'
-                )
-                reproducirSonidoEntregaExitosa()
-              }
+              const cadeteTexto = nuevo.cadete_nombre ? ` (Cadete: ${nuevo.cadete_nombre})` : ''
+              agregarNotificacion(
+                `¡Pedido entregado! ${nuevo.cliente} recibió su pedido${cadeteTexto}.`,
+                'success'
+              )
+              reproducirSonidoEntregaExitosa()
             } else {
-              if (!esCambioReciente) {
-                agregarNotificacion(
-                  `Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`,
-                  'info'
-                )
-                reproducirSonidoNotificacion()
-              }
+              agregarNotificacion(
+                `Pedido de ${nuevo.cliente} cambió a "${nombresEstados[nuevo.estado]}".`,
+                'info'
+              )
+              reproducirSonidoNotificacion()
             }
           }
         }
@@ -535,11 +531,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
   const cambiarEstado = async (
     id: string,
     nuevoEstado: EstadoPedido,
-    mostrarDeshacer: boolean = true
+    _mostrarDeshacer: boolean = true
   ) => {
     const pedido = estado.pedidos.find((p) => p.id === id)
     if (pedido && pedido.estado !== nuevoEstado) {
-      const estadoAnterior = pedido.estado
       const updates = obtenerCamposDeTiempoParaEstado(nuevoEstado, pedido)
 
       cambiosLocalesRef.current[id] = {
@@ -552,56 +547,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
         if (!current) return current
         return current.map((p) => (p.id === id ? { ...p, ...updates } : p))
       }, false)
-
-      const nombresEstados: Record<EstadoPedido, string> = {
-        nuevo: 'Nuevo',
-        en_cocina: 'En Cocina',
-        listo: 'Listo',
-        en_camino: 'En Camino',
-        entregado: 'Entregado',
-        cancelado: 'Cancelado',
-      }
-
-      agregarNotificacion(
-        `Pedido de ${pedido.cliente} cambiado a "${nombresEstados[nuevoEstado]}".`,
-        'info',
-        mostrarDeshacer
-          ? {
-              etiqueta: 'Deshacer',
-              alHacerClick: async () => {
-                if (!pedido) return
-                cambiosLocalesRef.current[id] = Date.now()
-                const updatesAnteriores = obtenerCamposDeTiempoParaEstado(estadoAnterior, pedido)
-                despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
-                mutateSWR((current) => {
-                  if (!current) return current
-                  return current.map((p) => (p.id === id ? { ...p, ...updatesAnteriores } : p))
-                }, false)
-                try {
-                  await enviarAccionPedido({
-                    accion: 'actualizar_estado',
-                    id,
-                    ...updatesAnteriores,
-                  })
-                } catch (e: any) {
-                  // Si falla, volvemos atrás silenciosamente y mostramos error
-                  if (e.message && e.message.includes('no existe en la base de datos')) {
-                    despachar({ tipo: 'ELIMINAR_PEDIDO', id })
-                    mutateSWR((current) => (current ? current.filter((p) => p.id !== id) : []), false)
-                    agregarNotificacion('Se eliminó un pedido "fantasma" que no existía en la base de datos.', 'info')
-                  } else {
-                    despachar({ tipo: 'CAMBIAR_ESTADO', id, ...updatesAnteriores })
-                    mutateSWR((current) => {
-                      if (!current) return current
-                      return current.map((p) => (p.id === id ? { ...p, ...updatesAnteriores } : p))
-                    }, false)
-                    agregarNotificacion(`Error: ${e.message || 'No se pudo cambiar el estado'}`, 'warning')
-                  }
-                }
-              },
-            }
-          : undefined
-      )
 
       try {
         await enviarAccionPedido({ accion: 'actualizar_estado', id, ...updates })
@@ -653,7 +598,6 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
     try {
       await enviarAccionPedido({ accion: 'actualizar_estado', id, ...updates })
-      agregarNotificacion('Se ha revertido el estado del pedido.', 'info')
     } catch (e: any) {
       console.error('Error al revertir estado:', e)
       agregarNotificacion(`Error al revertir: ${e.message}`, 'warning')
