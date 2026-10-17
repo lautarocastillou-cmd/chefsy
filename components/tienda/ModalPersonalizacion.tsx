@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image'
-import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2, FileText, Check } from 'lucide-react'
+import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2, FileText, Check, Share2 } from 'lucide-react'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio, optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
 import { usarCarrito } from '@/contexto/CarritoContexto'
@@ -57,8 +57,47 @@ export default function ModalPersonalizacion({
 
   const [indiceFoto, setIndiceFoto] = useState(0)
   const [lightboxAbierto, setLightboxAbierto] = useState(false)
+  const [copiadoLink, setCopiadoLink] = useState(false)
   const carruselMobileRef = useRef<HTMLDivElement>(null)
   const scrollRafRef = useRef<number>(0)
+
+  const compartirProducto = useCallback(async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://chefsy.xyz'
+    const url = `${origin}/p/${encodeURIComponent(producto.id)}`
+    const texto = `¡Mirá ${producto.nombre} en Chefsy! 🍔🍕`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: producto.nombre,
+          text: texto,
+          url: url,
+        })
+        return
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiadoLink(true)
+      setTimeout(() => setCopiadoLink(false), 2200)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = url
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopiadoLink(true)
+      setTimeout(() => setCopiadoLink(false), 2200)
+    }
+  }, [producto.id, producto.nombre])
 
   const cerradoPorAtrasRef = useRef(false)
   const onCerrarRef = useRef(onCerrar)
@@ -176,6 +215,17 @@ export default function ModalPersonalizacion({
                   <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                     <div className="w-10 h-1 rounded-full bg-white/40 shadow-sm" />
                   </div>
+
+                  {/* Botón flotante Compartir (Mobile) */}
+                  <button
+                    type="button"
+                    onClick={compartirProducto}
+                    className="absolute top-3 right-14 z-30 w-9 h-9 flex items-center justify-center rounded-full bg-[#1e1e1e]/90 hover:bg-[#2a2a2a] text-white border border-white/15 shadow-lg transition-transform active:scale-90 cursor-pointer"
+                    aria-label="Compartir este producto"
+                    title={copiadoLink ? "¡Enlace copiado!" : "Compartir enlace directo"}
+                  >
+                    {copiadoLink ? <Check size={16} className="text-emerald-400" /> : <Share2 size={16} />}
+                  </button>
 
                   {/* Botón flotante Cerrar (Mobile) */}
                   <button
@@ -397,13 +447,24 @@ export default function ModalPersonalizacion({
                     </h3>
                   </div>
 
-                  <button
-                    onClick={onCerrar}
-                    className="w-9 h-9 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer shadow-md"
-                    aria-label="Cerrar modal"
-                  >
-                    <X size={18} />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={compartirProducto}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer shadow-md"
+                      aria-label="Compartir este producto"
+                      title={copiadoLink ? "¡Enlace copiado!" : "Compartir enlace directo"}
+                    >
+                      {copiadoLink ? <Check size={16} className="text-emerald-400" /> : <Share2 size={16} />}
+                    </button>
+                    <button
+                      onClick={onCerrar}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer shadow-md"
+                      aria-label="Cerrar modal"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Cuerpo del Modal con Scroll */}
@@ -558,12 +619,23 @@ export default function ModalPersonalizacion({
                     {producto.nombre}
                   </h3>
                 </div>
-                <button
-                  onClick={onCerrar}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={compartirProducto}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer"
+                    aria-label="Compartir este producto"
+                    title={copiadoLink ? "¡Enlace copiado!" : "Compartir enlace directo"}
+                  >
+                    {copiadoLink ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
+                  </button>
+                  <button
+                    onClick={onCerrar}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Cuerpo */}

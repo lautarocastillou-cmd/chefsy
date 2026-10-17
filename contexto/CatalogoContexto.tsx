@@ -22,7 +22,7 @@ export interface ValorContextoCatalogo {
   estaListoCatalogo: boolean
 }
 
-const ContextoCatalogo = createContext<ValorContextoCatalogo | undefined>(undefined)
+export const ContextoCatalogo = createContext<ValorContextoCatalogo | undefined>(undefined)
 
 function leerCatalogoCache<T>(clave: string, fallback: T): T {
   // getCache ya maneja TTL, corrupción y limpieza automática

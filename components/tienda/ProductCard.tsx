@@ -147,6 +147,7 @@ function ProductCard({
   return (
     <div
       ref={ref}
+      id={`producto-${prod.id}`}
       onClick={() => {
         if (estaCerrado) {
           mostrarCartel({

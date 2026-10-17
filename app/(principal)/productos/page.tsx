@@ -21,8 +21,10 @@ import {
   Sliders,
   UtensilsCrossed,
   AlertCircle,
+  Share2,
 } from 'lucide-react'
 import { CategoriaCatalogo, ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
+import ModalCompartirProducto from '@/components/productos/ModalCompartirProducto'
 
 export default function PaginaAdministracionCatalogos() {
   const {
@@ -67,6 +69,9 @@ export default function PaginaAdministracionCatalogos() {
     esCombo: false,
     modificadoresIds: [] as string[],
   })
+
+  // Modal para compartir enlace de producto / promo
+  const [productoACompartir, setProductoACompartir] = useState<ProductoCatalogo | null>(null)
 
   // Mensajes de error/validación
   const [errorCat, setErrorCat] = useState('')
@@ -589,6 +594,13 @@ export default function PaginaAdministracionCatalogos() {
                               <td className="px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
+                                    onClick={() => setProductoACompartir(prod)}
+                                    className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-200 dark:hover:border-amber-900/60 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-all cursor-pointer"
+                                    title="Generar link directo para Instagram o WhatsApp"
+                                  >
+                                    <Share2 size={13} />
+                                  </button>
+                                  <button
                                     onClick={() => seleccionarProductoParaEditar(prod)}
                                     className={`p-1.5 rounded-lg border transition-all ${
                                       editandoProductoId === prod.id
@@ -601,7 +613,7 @@ export default function PaginaAdministracionCatalogos() {
                                   </button>
                                   <button
                                     onClick={() => eliminarProducto(prod.id)}
-                                    className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 dark:text-slate-450 hover:text-red-600 dark:hover:text-red-400 hover:border-red-150 dark:hover:border-red-900/60 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all"
+                                    className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 dark:text-slate-450 hover:text-red-600 dark:hover:text-red-400 hover:border-red-150 dark:hover:border-red-900/60 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
                                     title="Eliminar"
                                   >
                                     <Trash2 size={13} />
@@ -712,6 +724,13 @@ export default function PaginaAdministracionCatalogos() {
 
                         {/* Acciones */}
                         <div className="flex gap-2 border-t border-slate-50 dark:border-slate-800/80 pt-2.5 mt-0.5">
+                          <button
+                            onClick={() => setProductoACompartir(prod)}
+                            className="py-1.5 px-3 bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                            title="Generar enlace directo"
+                          >
+                            <Share2 size={12} /> Enlace
+                          </button>
                           <button
                             onClick={() => seleccionarProductoParaEditar(prod)}
                             className="flex-1 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
@@ -1304,6 +1323,15 @@ export default function PaginaAdministracionCatalogos() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal para compartir enlace de producto o promoción */}
+      {productoACompartir && (
+        <ModalCompartirProducto
+          producto={productoACompartir}
+          categoriaNombre={mapaCategorias[productoACompartir.categoriaId]}
+          onClose={() => setProductoACompartir(null)}
+        />
       )}
     </div>
   )

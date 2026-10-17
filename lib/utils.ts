@@ -170,3 +170,31 @@ export function obtenerEnlaceWhatsAppDirecto(telefono: string): string {
   const tel = normalizarTelefonoWhatsApp(telefono)
   return `whatsapp://send?phone=${tel}`
 }
+
+/** Convierte un texto en un slug amigable para URLs (ej: "2 Milas Napos" -> "2-milas-napos") */
+export function generarSlug(texto: string): string {
+  if (!texto) return ''
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Genera el enlace directo oficial a un producto de la tienda para Instagram, WhatsApp o Web.
+ */
+export function generarEnlaceProducto(productoId: string, baseUrl?: string): string {
+  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://chefsy.xyz')
+  return `${base}/tienda?p=${encodeURIComponent(productoId)}`
+}
+
+/**
+ * Genera el enlace corto amigable para Stories o biografía de Instagram (/p/ID).
+ */
+export function generarEnlaceCortoProducto(productoId: string, baseUrl?: string): string {
+  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://chefsy.xyz')
+  return `${base}/p/${encodeURIComponent(productoId)}`
+}
+

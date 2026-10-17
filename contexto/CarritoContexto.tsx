@@ -6,7 +6,8 @@ import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion, resolverDireccionHumana } from '@/lib/ubicacion'
-import { generarId } from '@/lib/utils'
+import { generarId, generarSlug } from '@/lib/utils'
+import { ContextoCatalogo } from '@/contexto/CatalogoContexto'
 import { insertarPedidoLocal } from '@/servicios/supabase/pedidos'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
 import { supabase } from '@/lib/supabase'
@@ -32,7 +33,7 @@ interface ValorContextoCarrito {
   setModsSeleccionados: React.Dispatch<React.SetStateAction<ModificadorCatalogo[]>>
   setCantidadModal: (c: number) => void
   setNotaPersonalizacion: (n: string) => void
-  abrirModalPersonalizacion: (prod: ProductoCatalogo) => void
+  abrirModalPersonalizacion: (prod: ProductoCatalogo, permitirCerrado?: boolean) => void
   alternarModificador: (mod: ModificadorCatalogo) => void
   calcularPrecioUnitarioModal: () => number
   agregarAlCarritoDesdeModal: () => void
@@ -170,10 +171,15 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'sin_especificar'>('sin_especificar')
   const [observaciones, setObservaciones] = useState('')
   
+  const catalogo = useContext(ContextoCatalogo)
+  const productos = catalogo?.productos || []
+  const estaListoCatalogo = catalogo?.estaListoCatalogo || false
+  const productoUrlProcesadoRef = useRef<string | null>(null)
+
   const [pedidoCompletado, setPedidoCompletado] = useState<Pedido | null>(null)
 
-  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo) => {
-    if (turnoActivo === false || esDomingoCerrado) {
+  const abrirModalPersonalizacion = useCallback((prod: ProductoCatalogo, permitirCerrado: boolean = false) => {
+    if ((turnoActivo === false || esDomingoCerrado) && !permitirCerrado) {
       mostrarCartel({
         tipo: 'cerrado',
         titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
@@ -187,6 +193,38 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setCantidadModal(1)
     setNotaPersonalizacion('')
   }, [turnoActivo, esDomingoCerrado, mensajeCierre])
+
+  // Detección automática de enlaces profundos (?p=... o ?producto=... o ?promo=...)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !estaListoCatalogo || productos.length === 0) return
+
+    const params = new URLSearchParams(window.location.search)
+    const idProdUrl = params.get('p') || params.get('producto') || params.get('promo')
+    if (!idProdUrl) return
+
+    const buscado = decodeURIComponent(idProdUrl).trim().toLowerCase()
+    if (!buscado || productoUrlProcesadoRef.current === buscado) return
+
+    const encontrado =
+      productos.find(p => p.id.toLowerCase() === buscado) ||
+      productos.find(p => generarSlug(p.nombre) === buscado) ||
+      productos.find(p => p.nombre.toLowerCase() === buscado) ||
+      productos.find(p => p.nombre.toLowerCase().includes(buscado))
+
+    if (encontrado) {
+      productoUrlProcesadoRef.current = buscado
+      // Abre el modal con el precio y datos oficiales de la base de datos
+      abrirModalPersonalizacion(encontrado, true)
+
+      // Auto-scroll hacia la tarjeta del producto si está presente en el DOM
+      setTimeout(() => {
+        const elemento = document.getElementById(`producto-${encontrado.id}`)
+        if (elemento) {
+          elemento.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 350)
+    }
+  }, [estaListoCatalogo, productos, abrirModalPersonalizacion])
 
   const alternarModificador = useCallback((mod: ModificadorCatalogo) => {
     setModsSeleccionados(prev => 
