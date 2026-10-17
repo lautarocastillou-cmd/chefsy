@@ -476,7 +476,9 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
         <div className="flex flex-wrap items-center gap-1.5 text-gray-500">
           <select
             value={pedido.metodoPago}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
+              e.stopPropagation()
               const nuevoMetodo = e.target.value as any
               if (nuevoMetodo === 'mixto') {
                 setModalPagoMixtoAbierto(true)
@@ -533,9 +535,13 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             <div className="flex items-center gap-1.5 ml-1">
               <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">¿Impactó?</span>
               <button 
-                onClick={() => marcarPagoConfirmado(pedido.id, !pedido.pago_confirmado)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  marcarPagoConfirmado(pedido.id, !pedido.pago_confirmado)
+                }}
                 className={cn(
-                  "relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors focus:outline-none",
+                  "relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
                   pedido.pago_confirmado ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-700"
                 )}
               >

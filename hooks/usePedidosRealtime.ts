@@ -13,10 +13,17 @@ export type AccionDespachar =
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
   | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido }
 
+export type RegistroCambioLocal =
+  | number
+  | {
+      timestamp: number
+      cambios: Partial<Pedido>
+    }
+
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
   prevPedidosRef?: MutableRefObject<Pedido[]>
-  cambiosLocalesRef?: MutableRefObject<Record<string, number>>
+  cambiosLocalesRef?: MutableRefObject<Record<string, RegistroCambioLocal>>
   eliminadosLocalesRef?: MutableRefObject<Record<string, number>>
   habilitado?: boolean
 }
@@ -121,50 +128,45 @@ export function usePedidosRealtime({
       let pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
 
       // ── Ventana de protección de mutaciones locales recientes (Optimistic Lock) ──
-      // Si el usuario modificó recientemente un pedido (hace menos de 5s) y el servidor
+      // Si el usuario modificó recientemente un pedido (hace menos de 6s) y el servidor
       // responde antes de que la DB haya completado la réplica o sirvió caché HTTP,
       // protegemos el cambio local del usuario para no parpadear ni revertir su acción.
       const cambiosMap = cambiosLocalesRef?.current || {}
-      const pedidosLocalesActuales = prevPedidosRef?.current || []
-      const mapaLocales = new Map(pedidosLocalesActuales.map(p => [p.id, p]))
 
       pedidosSWRFiltrados = pedidosSWRFiltrados.map((pServidor) => {
-        const tsCambio = cambiosMap[pServidor.id]
-        if (!tsCambio || ahora - tsCambio >= 5000) {
+        const reg = cambiosMap[pServidor.id]
+        if (!reg) return pServidor
+
+        const tsCambio = typeof reg === 'number' ? reg : reg.timestamp
+        if (!tsCambio || ahora - tsCambio >= 6000) {
+          delete cambiosMap[pServidor.id]
           return pServidor
         }
 
-        const pLocal = mapaLocales.get(pServidor.id)
-        if (!pLocal) return pServidor
+        const cambios = typeof reg === 'object' && reg.cambios ? reg.cambios : null
+        if (!cambios) return pServidor
 
-        let preservado = { ...pServidor }
-        let huboDiferencia = false
-
-        if (pLocal.cadete_id !== pServidor.cadete_id || pLocal.cadete_nombre !== pServidor.cadete_nombre) {
-          preservado.cadete_id = pLocal.cadete_id
-          preservado.cadete_nombre = pLocal.cadete_nombre
-          huboDiferencia = true
+        // Si el servidor ya contiene todos los valores modificados por el usuario,
+        // liberamos el lock local.
+        let servidorYaAlDia = true
+        for (const [clave, valor] of Object.entries(cambios)) {
+          if ((pServidor as any)[clave] !== valor) {
+            servidorYaAlDia = false
+            break
+          }
         }
 
-        if (pLocal.metodoPago !== pServidor.metodoPago) {
-          preservado.metodoPago = pLocal.metodoPago
-          preservado.montoEfectivo = pLocal.montoEfectivo
-          preservado.montoTransferencia = pLocal.montoTransferencia
-          preservado.montoTarjeta = pLocal.montoTarjeta
-          huboDiferencia = true
-        }
-
-        if (pLocal.pago_confirmado !== pServidor.pago_confirmado) {
-          preservado.pago_confirmado = pLocal.pago_confirmado
-          huboDiferencia = true
-        }
-
-        // Si el servidor ya tiene exactamente los mismos valores, liberamos el lock local
-        if (!huboDiferencia) {
+        if (servidorYaAlDia) {
           delete cambiosMap[pServidor.id]
+          return pServidor
         }
 
-        return preservado
+        // El servidor aún devolvió datos viejos antes de impactar el cambio:
+        // preservamos las propiedades modificadas optimistamente por el usuario
+        return {
+          ...pServidor,
+          ...cambios,
+        }
       })
 
       // Un pedido recién creado o editado de forma optimista puede no aparecer aún
@@ -173,12 +175,13 @@ export function usePedidosRealtime({
       const idsRecibidos = new Set(pedidosSWRFiltrados.map((p) => p.id))
       const pedidosLocalesParaAgregar = prevPedidosRef?.current || swrPrevRef.current
       for (const pedidoLocal of pedidosLocalesParaAgregar) {
-        const cambioLocalAt = cambiosMap[pedidoLocal.id] || 0
+        const reg = cambiosMap[pedidoLocal.id]
+        const cambioLocalAt = typeof reg === 'number' ? reg : reg?.timestamp || 0
         if (
           !idsRecibidos.has(pedidoLocal.id) &&
           !idsEliminados.has(pedidoLocal.id) &&
           cambioLocalAt > 0 &&
-          ahora - cambioLocalAt < 5000
+          ahora - cambioLocalAt < 6000
         ) {
           pedidosSWRFiltrados.push(pedidoLocal)
         }
