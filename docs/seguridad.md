@@ -112,4 +112,3 @@ curl "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/cierres_diarios?select=*" \
 ## 7. Puntos Pendientes de Verificación
 
 - [ ] **Rate Limiting tras Proxy CDN**: Verificar que el proveedor de hosting o CDN reescriba de manera confiable la cabecera `x-forwarded-for` para evitar la suplantación de IPs en `lib/rate-limit.ts`.
-- [ ] **Cuotas de APIs Externas**: Validar límites de tasa o autenticación en el proxy de Streetview / Google Maps (`/api/streetview`).

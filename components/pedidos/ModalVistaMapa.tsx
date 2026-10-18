@@ -5,10 +5,8 @@ import { createPortal } from 'react-dom'
 import { Pedido } from '@/tipos'
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
-import StreetViewFachada from '@/components/ubicacion/StreetViewFachada'
-import { X, ExternalLink, MapPin, Copy, Bike, Check, Camera, Navigation } from 'lucide-react'
+import { X, ExternalLink, MapPin, Copy, Bike, Check } from 'lucide-react'
 import { copiarConNotificacion } from '@/lib/notificaciones'
-import { cn } from '@/lib/utils'
 import { esEnlaceOCoordenadas, resolverDireccionHumana } from '@/lib/ubicacion'
 
 interface Props {
@@ -20,7 +18,6 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
   const { cambiarEstado } = usarPedidos()
   const [montado, setMontado] = useState(false)
   const [copiado, setCopiado] = useState(false)
-  const [vistaActiva, setVistaActiva] = useState<'mapa' | 'fachada'>('mapa')
   const [direccionLegible, setDireccionLegible] = useState<string>('')
 
   useEffect(() => {
@@ -115,40 +112,6 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {pedido.coordenadas && (
-              <div className="flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setVistaActiva('mapa')}
-                  className={cn(
-                    'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
-                    vistaActiva === 'mapa'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  )}
-                  title="Ver mapa en vivo"
-                >
-                  <Navigation size={13} />
-                  <span>Mapa</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVistaActiva('fachada')}
-                  className={cn(
-                    'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
-                    vistaActiva === 'fachada'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  )}
-                  title="Ver fotografía de la fachada en Street View"
-                >
-                  <Camera size={13} />
-                  <span className="hidden sm:inline">Fachada</span>
-                  <span className="sm:hidden">Foto</span>
-                </button>
-              </div>
-            )}
-
             <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400 bg-slate-800 border border-slate-700 px-2 py-1 rounded-md tracking-wider">
               ESC
             </span>
@@ -163,38 +126,9 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
           </div>
         </div>
 
-        {/* Contenedor Principal (Mapa o Fachada) */}
+        {/* Contenedor Principal (Mapa) */}
         <div className="relative flex-1 w-full overflow-hidden bg-slate-950 flex flex-col">
-          {vistaActiva === 'mapa' ? (
-            <>
-              <MapaSeguimiento pedido={pedido} />
-              {/* Botón flotante para ver fachada rápido */}
-              {pedido.coordenadas && (
-                <button
-                  type="button"
-                  onClick={() => setVistaActiva('fachada')}
-                  className="absolute bottom-4 left-4 z-[1000] bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-extrabold px-3 py-2 rounded-xl border border-slate-700 shadow-xl backdrop-blur-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
-                >
-                  <Camera size={14} className="text-emerald-400" />
-                  <span>Ver Fachada (Street View)</span>
-                </button>
-              )}
-            </>
-          ) : (
-            pedido.coordenadas && (
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto flex items-center justify-center bg-slate-950">
-                <div className="w-full max-w-2xl">
-                  <StreetViewFachada
-                    lat={pedido.coordenadas.latitud}
-                    lng={pedido.coordenadas.longitud}
-                    modoCadete={true}
-                    titulo={`Fachada de ${pedido.cliente}`}
-                    subtitulo={`Domicilio: ${direccionLegible || (esEnlaceOCoordenadas(pedido.direccion) ? 'Ubicación seleccionada en el mapa' : (pedido.direccion || 'Sin dirección'))}. Foto de Google Street View para identificar el domicilio.`}
-                  />
-                </div>
-              </div>
-            )
-          )}
+          <MapaSeguimiento pedido={pedido} />
         </div>
 
         {/* Footer del Modal */}

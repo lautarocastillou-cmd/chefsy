@@ -53,7 +53,6 @@ Asegurarse de tener configuradas las siguientes variables en el panel de Vercel 
 | `RESERVAS_SESSION_SECRET` | Privado (Solo Servidor) | Secreto aleatorio de al menos 32 caracteres para firmar sesiones exclusivas de reservas. |
 | `RESERVAS_ALLOWED_ORIGIN` | Público | Origen HTTPS exacto de la PWA independiente, por ejemplo `https://reservas.malu.com`. |
 | `RESERVAS_APP_URL` | Público | URL pública de la PWA para el enlace de notificaciones. |
-| `GOOGLE_MAPS_API_KEY` | Privado | Clave usada por el proxy de Street View; revisar autenticación y rate limit de `/api/streetview` antes de exponerlo públicamente. |
 
 ---
 
