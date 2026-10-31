@@ -133,11 +133,7 @@ export default function TorreControlPage() {
   // Estado GPS derivado de los datos que ya trae la torre (sin fetch extra)
   useEffect(() => {
     const parametros = new URLSearchParams(window.location.search)
-    const memoria = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-    const lento = parametros.get('rendimiento') === 'extremo' ||
-      navigator.hardwareConcurrency <= 2 ||
-      (memoria != null && memoria <= 2) ||
-      Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData)
+    const lento = parametros.get('rendimiento') === 'extremo'
     setModoBajoConsumo(lento)
   }, [])
 
@@ -227,7 +223,7 @@ export default function TorreControlPage() {
       const iniciarPolling = () => {
         if (intervalId) clearInterval(intervalId)
         void fetchTorreData()
-        intervalId = setInterval(() => void fetchTorreData(), modoBajoConsumo ? 4500 : 2500)
+        intervalId = setInterval(() => void fetchTorreData(), modoBajoConsumo ? 5000 : 2500)
     }
 
     const detenerPolling = () => {

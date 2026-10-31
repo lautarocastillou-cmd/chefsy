@@ -133,12 +133,12 @@ export default function PaginaUbicacionPublica({ params }: { params: Promise<{ i
           if (nuevo) {
             setCadete(prev => prev ? {
               ...prev,
-              lat: nuevo.lat ?? prev.lat,
-              lng: nuevo.lng ?? prev.lng,
-              speed: nuevo.speed ?? prev.speed,
-              heading: nuevo.heading ?? prev.heading,
-              accuracy: nuevo.accuracy ?? prev.accuracy,
-              bateria: nuevo.bateria ?? prev.bateria,
+              lat: nuevo.lat != null && Number.isFinite(Number(nuevo.lat)) ? Number(nuevo.lat) : prev.lat,
+              lng: nuevo.lng != null && Number.isFinite(Number(nuevo.lng)) ? Number(nuevo.lng) : prev.lng,
+              speed: nuevo.speed != null && Number.isFinite(Number(nuevo.speed)) ? Number(nuevo.speed) : prev.speed,
+              heading: nuevo.heading != null && Number.isFinite(Number(nuevo.heading)) ? Number(nuevo.heading) : prev.heading,
+              accuracy: nuevo.accuracy != null && Number.isFinite(Number(nuevo.accuracy)) ? Number(nuevo.accuracy) : prev.accuracy,
+              bateria: nuevo.bateria != null && Number.isFinite(Number(nuevo.bateria)) ? Number(nuevo.bateria) : prev.bateria,
               gps_activo: nuevo.gps_activo ?? prev.gps_activo,
               updated_at: nuevo.updated_at ?? prev.updated_at,
             } : null)

@@ -137,19 +137,22 @@ export async function GET(request: Request) {
 
       const updatedAt = cadete?.updated_at ? new Date(cadete.updated_at).getTime() : 0
       const haceSegundos = updatedAt ? (ahora - updatedAt) / 1000 : 999999
-      // Online si reportó en los últimos 3 minutos y gps_activo es true
-      const gpsActivo = Boolean(cadete?.gps_activo && haceSegundos < 180 && cadete?.lat != null)
+      const numLat = cadete?.lat != null ? Number(cadete.lat) : null
+      const numLng = cadete?.lng != null ? Number(cadete.lng) : null
+      const tieneCoordsValidas = numLat !== null && numLng !== null && Number.isFinite(numLat) && Number.isFinite(numLng)
+      // Online si reportó en los últimos 3 minutos y gps_activo es true con coordenadas válidas
+      const gpsActivo = Boolean(cadete?.gps_activo && haceSegundos < 180 && tieneCoordsValidas)
 
       return {
         id: entry.id,
         nombre: entry.nombre,
-        lat: cadete?.lat ?? null,
-        lng: cadete?.lng ?? null,
-        speed: cadete?.speed != null ? Number(cadete.speed) : null,
-        heading: cadete?.heading != null ? Number(cadete.heading) : null,
+        lat: tieneCoordsValidas ? numLat : null,
+        lng: tieneCoordsValidas ? numLng : null,
+        speed: cadete?.speed != null && Number.isFinite(Number(cadete.speed)) ? Number(cadete.speed) : null,
+        heading: cadete?.heading != null && Number.isFinite(Number(cadete.heading)) ? Number(cadete.heading) : null,
         gps_activo: gpsActivo,
         gps_activo_db: Boolean(cadete?.gps_activo),
-        bateria: cadete?.bateria ?? null,
+        bateria: cadete?.bateria != null && Number.isFinite(Number(cadete.bateria)) ? Number(cadete.bateria) : null,
         updated_at: cadete?.updated_at ?? null,
         segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
         pedidoActivo: pedidoActivo,

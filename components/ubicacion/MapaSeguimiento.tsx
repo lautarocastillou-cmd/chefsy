@@ -560,7 +560,12 @@ export default function MapaSeguimiento({ pedido }: Props) {
     }
 
     const L = require('leaflet')
-    const { latitud: targetLat, longitud: targetLng } = pedido.cadete_coordenadas
+    const rawLat = Number(pedido.cadete_coordenadas?.latitud)
+    const rawLng = Number(pedido.cadete_coordenadas?.longitud)
+    if (!Number.isFinite(rawLat) || !Number.isFinite(rawLng)) return
+
+    const targetLat = rawLat
+    const targetLng = rawLng
     const ahora = performance.now()
 
     // Medir dinámicamente el intervalo entre reportes GPS para sincronizar la duración con solapamiento continuo (1.20x)
@@ -718,27 +723,34 @@ export default function MapaSeguimiento({ pedido }: Props) {
       if (!inicio || !destino || !cadeteMarker) return
 
       const tiempoTranscurrido = timestamp - animStartTimeRef.current
-      const progresoCrudo = Math.min(tiempoTranscurrido / duracionAnimacionRef.current, 1)
+      const progresoCrudo = Math.min(Math.max(tiempoTranscurrido / duracionAnimacionRef.current, 0), 1)
       // Desplazamiento sinusoidal suave para eliminar saltos y tirones
       const progreso = easeInOutSine(progresoCrudo)
 
-      // 1. Interpolación de Latitud y Longitud
-      const latActual = inicio.latitud + (destino.latitud - inicio.latitud) * progreso
-      const lngActual = inicio.longitud + (destino.longitud - inicio.longitud) * progreso
+      // 1. Interpolación de Latitud y Longitud (conversión explícita a número para evitar concatenación de cadenas)
+      const inicioLat = Number(inicio.latitud)
+      const destinoLat = Number(destino.latitud)
+      const inicioLng = Number(inicio.longitud)
+      const destinoLng = Number(destino.longitud)
+
+      const latActual = inicioLat + (destinoLat - inicioLat) * progreso
+      const lngActual = inicioLng + (destinoLng - inicioLng) * progreso
 
       // 2. Interpolación del Rumbo por el camino angular más corto
       const deltaRumbo = calcularRumboMasCorto(inicio.rumbo, destino.rumbo)
       const rumboActual = (inicio.rumbo + deltaRumbo * progreso + 360) % 360
 
-      // Almacenar posición animada actual
-      posicionAnimadaRef.current = {
-        latitud: latActual,
-        longitud: lngActual,
-        rumbo: rumboActual
-      }
+      if (Number.isFinite(latActual) && Number.isFinite(lngActual)) {
+        // Almacenar posición animada actual
+        posicionAnimadaRef.current = {
+          latitud: latActual,
+          longitud: lngActual,
+          rumbo: rumboActual
+        }
 
-      // Actualizar posición del marcador en Leaflet
-      cadeteMarker.setLatLng([latActual, lngActual])
+        // Actualizar posición del marcador en Leaflet
+        cadeteMarker.setLatLng([latActual, lngActual])
+      }
 
       // Actualizar rotación del faro y la moto en CSS
       aplicarRotacionAlElemento(rumboActual)

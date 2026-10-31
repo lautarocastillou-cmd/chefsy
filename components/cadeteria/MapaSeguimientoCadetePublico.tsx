@@ -238,8 +238,9 @@ export default function MapaSeguimientoCadetePublico({
   useEffect(() => {
     if (!posicion || !posicion.lat || !posicion.lng) return
 
-    const destinoLat = posicion.lat
-    const destinoLng = posicion.lng
+    const destinoLat = Number(posicion.lat)
+    const destinoLng = Number(posicion.lng)
+    if (!Number.isFinite(destinoLat) || !Number.isFinite(destinoLng)) return
 
     const actual = posActualRef.current || {
       lat: destinoLat,
@@ -272,14 +273,21 @@ export default function MapaSeguimientoCadetePublico({
       // Curva de aceleración sinusoidal suave
       const ease = -(Math.cos(Math.PI * progreso) - 1) / 2
 
-      const curLat = posInicioRef.current.lat + (posDestinoRef.current.lat - posInicioRef.current.lat) * ease
-      const curLng = posInicioRef.current.lng + (posDestinoRef.current.lng - posInicioRef.current.lng) * ease
+      const inicioLat = Number(posInicioRef.current.lat)
+      const destLat = Number(posDestinoRef.current.lat)
+      const inicioLng = Number(posInicioRef.current.lng)
+      const destLng = Number(posDestinoRef.current.lng)
+
+      const curLat = inicioLat + (destLat - inicioLat) * ease
+      const curLng = inicioLng + (destLng - inicioLng) * ease
 
       const deltaRumbo = calcularRumboMasCorto(posInicioRef.current.rumbo, posDestinoRef.current.rumbo)
       const curRumbo = (posInicioRef.current.rumbo + deltaRumbo * ease + 360) % 360
 
-      posActualRef.current = { lat: curLat, lng: curLng, rumbo: curRumbo }
-      actualizarMarcadorEnMapa(curLat, curLng, curRumbo)
+      if (Number.isFinite(curLat) && Number.isFinite(curLng)) {
+        posActualRef.current = { lat: curLat, lng: curLng, rumbo: curRumbo }
+        actualizarMarcadorEnMapa(curLat, curLng, curRumbo)
+      }
 
       if (progreso < 1) {
         animFrameRef.current = requestAnimationFrame(pasoAnimacion)

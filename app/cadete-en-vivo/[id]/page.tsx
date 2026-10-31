@@ -207,7 +207,11 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           estado: data.estado,
           cadete_id: data.cadete_id ?? null,
           cadete_nombre: data.cadete_nombre ?? null,
-          cadete_coordenadas: (data.estado === 'entregado' || data.estado === 'cancelado') ? null : (data.cadete_coordenadas ?? null),
+          cadete_coordenadas: (data.estado === 'entregado' || data.estado === 'cancelado')
+            ? null
+            : (data.cadete_coordenadas && Number.isFinite(Number(data.cadete_coordenadas.latitud)) && Number.isFinite(Number(data.cadete_coordenadas.longitud))
+                ? { latitud: Number(data.cadete_coordenadas.latitud), longitud: Number(data.cadete_coordenadas.longitud) }
+                : null),
           cadete_volviendo_al_local: false,
           coordenadas: data.destino_coordenadas ?? null,
           local_coordenadas: data.local_coordenadas ?? null,

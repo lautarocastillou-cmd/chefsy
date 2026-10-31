@@ -297,27 +297,34 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         if (s.terminado) continue
 
         const tiempoPasado = timestamp - s.startTime
-        const progresoCrudo = Math.min(tiempoPasado / s.duracion, 1)
+        const progresoCrudo = Math.min(Math.max(tiempoPasado / s.duracion, 0), 1)
         // Desplazamiento sinusoidal suave para eliminar saltos y tirones
         const progreso = easeInOutSine(progresoCrudo)
 
-        // 1. Coordenadas interpoladas
-        const lat = s.latInicio + (s.latDestino - s.latInicio) * progreso
-        const lng = s.lngInicio + (s.lngDestino - s.lngInicio) * progreso
+        // 1. Coordenadas interpoladas (conversión estricta a Number para garantizar aritmética pura sin concatenación de strings)
+        const latInicio = Number(s.latInicio)
+        const latDestino = Number(s.latDestino)
+        const lngInicio = Number(s.lngInicio)
+        const lngDestino = Number(s.lngDestino)
+
+        const lat = latInicio + (latDestino - latInicio) * progreso
+        const lng = lngInicio + (lngDestino - lngInicio) * progreso
 
         // 2. Rumbo interpolado
         const deltaRumbo = calcularRumboMasCorto(s.rumboInicio, s.rumboDestino)
         const rumbo = (s.rumboInicio + deltaRumbo * progreso + 360) % 360
 
-        s.latActual = lat
-        s.lngActual = lng
-        s.rumboActual = rumbo
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          s.latActual = lat
+          s.lngActual = lng
+          s.rumboActual = rumbo
 
-        // Mover marcador
-        marker.setLatLng([lat, lng])
+          // Mover marcador de manera suave
+          marker.setLatLng([lat, lng])
 
-        // Rotar faro y moto
-        aplicarRotacionCadete(id, rumbo)
+          // Rotar faro y moto en CSS sin tocar el DOM de Leaflet
+          aplicarRotacionCadete(id, rumbo)
+        }
 
         // 3. Acortar polilÃ­nea de entrega en tiempo real si tiene pedidos activos (con throttle por cadete)
         const ultimoRender = ultimoRenderCadetesRef.current[id] || 0
@@ -460,11 +467,13 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
     const activeClientOrderIds = new Set<string>()
 
     cadetes.forEach((cadete) => {
-      const tieneGps = cadete.lat != null && cadete.lng != null && cadete.gps_activo
-      if (!tieneGps || cadete.lat == null || cadete.lng == null) return
+      const rawLat = Number(cadete.lat)
+      const rawLng = Number(cadete.lng)
+      const tieneGps = Number.isFinite(rawLat) && Number.isFinite(rawLng) && cadete.gps_activo
+      if (!tieneGps) return
 
-      const targetLat = cadete.lat
-      const targetLng = cadete.lng
+      const targetLat = rawLat
+      const targetLng = rawLng
       const listaPedidos = (cadete.pedidosActivos && cadete.pedidosActivos.length > 0)
         ? cadete.pedidosActivos
         : (cadete.pedidoActivo ? [cadete.pedidoActivo] : [])
@@ -473,7 +482,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       const colorBg = esEnViaje ? '#E11D48' : '#10B981'
       const sombraColor = esEnViaje ? 'rgba(225,29,72,0.5)' : 'rgba(16,185,129,0.5)'
 
-      // Medir lapso entre updates para suavizado dinámico con solapamiento continuo (1.20x)
+      // Medir lapso entre updates para suavizado dinámico con solapamiento continuo (1.10x)
       const ultimoT = ultimosUpdatesRef.current[cadete.id] || 0
       const lapsoReal = ultimoT > 0 ? ahora - ultimoT : 4000
       ultimosUpdatesRef.current[cadete.id] = ahora
@@ -501,17 +510,30 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           terminado: true,
         }
       } else {
-        const distDelta = Math.sqrt(
-          Math.pow(targetLatAjustado - estadoActual.latActual, 2) +
-          Math.pow(targetLngAjustado - estadoActual.lngActual, 2)
+        const distDelta = Math.hypot(
+          targetLatAjustado - estadoActual.latActual,
+          targetLngAjustado - estadoActual.lngActual
         )
-        if (distDelta > 0.00001) {
+
+        if (distDelta > 0.008) {
+          // Salto grande (> 800m, reactivación de app o teleport inicial): posicionar de inmediato sin vuelo irreal
+          estadoActual.latActual = targetLatAjustado
+          estadoActual.lngActual = targetLngAjustado
+          estadoActual.latInicio = targetLatAjustado
+          estadoActual.lngInicio = targetLngAjustado
+          estadoActual.latDestino = targetLatAjustado
+          estadoActual.lngDestino = targetLngAjustado
+          estadoActual.startTime = ahora
+          estadoActual.duracion = duracionAnim
+          estadoActual.terminado = true
+          markersRef.current.cadetes[cadete.id]?.setLatLng([targetLatAjustado, targetLngAjustado])
+        } else if (distDelta > 0.00001) {
           const targetHeading = cadete.heading != null && cadete.heading >= 0
             ? Math.round(cadete.heading)
             : Math.round(calcularRumbo(estadoActual.latActual, estadoActual.lngActual, targetLatAjustado, targetLngAjustado))
 
-          estadoActual.latInicio = estadoActual.latActual
-          estadoActual.lngInicio = estadoActual.lngActual
+          estadoActual.latInicio = Number(estadoActual.latActual)
+          estadoActual.lngInicio = Number(estadoActual.lngActual)
           estadoActual.rumboInicio = estadoActual.rumboActual
           estadoActual.latDestino = targetLatAjustado
           estadoActual.lngDestino = targetLngAjustado
@@ -553,13 +575,12 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       const esOeste = rumbo > 180 && rumbo < 360
 
       // A) Marcador del Cadete con Haz de Luz 360Â°, Moto que nunca se da vuelta y Nombre nÃ­tido
+      // Firma estructural del marcador sin rumbo para que no desmonte el DOM de Leaflet en cada grado de giro
       const firmaMarcadorCadete = [
+        cadete.id,
         cadete.nombre,
         cadete.gps_activo,
-        cadete.bateria == null ? '' : Math.round(cadete.bateria),
-        velKmH,
         esEnViaje,
-        Math.round(rumbo),
         bajoConsumo,
       ].join('|')
       const firmaPopupCadete = [
@@ -661,6 +682,15 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
           const el = existingMarker.getElement()
           if (el) delete (el as any)._rotCache
+        } else {
+          // Actualizar velocímetro en DOM sin recrear el nodo de Leaflet
+          const el = existingMarker.getElement()
+          if (el) {
+            const speedSpan = el.querySelector('.cadete-speed-label span')
+            if (speedSpan && speedSpan.textContent !== `${velKmH} km/h`) {
+              speedSpan.textContent = `${velKmH} km/h`
+            }
+          }
         }
         if (firmasPopupCadeteRef.current[cadete.id] !== firmaPopupCadete) {
           existingMarker.setPopupContent(popupContent)

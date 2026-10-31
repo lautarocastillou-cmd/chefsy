@@ -76,7 +76,11 @@ export async function GET(request: Request) {
           gpsActivo = cadeteData.gps_activo
         }
         if (cadeteData.lat != null && cadeteData.lng != null) {
-          cadeteCoordsFallback = { latitud: cadeteData.lat, longitud: cadeteData.lng }
+          const latNum = Number(cadeteData.lat)
+          const lngNum = Number(cadeteData.lng)
+          if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+            cadeteCoordsFallback = { latitud: latNum, longitud: lngNum }
+          }
         }
         if (cadeteData.nombre) {
           cadeteNombreFallback = cadeteData.nombre
@@ -96,9 +100,20 @@ export async function GET(request: Request) {
 
     const estadosActivos = ['en_cocina', 'listo', 'en_camino']
     const mostrarCadete = !esPedidoFinalizado && estadosActivos.includes(data.estado)
-    const coordsFinalesCadete = mostrarCadete
+    const coordsRaw = mostrarCadete
       ? (cadeteCoordsFallback ?? data.cadete_coordenadas ?? null)
       : null
+    let coordsFinalesCadete: { latitud: number; longitud: number } | null = null
+    if (
+      coordsRaw &&
+      Number.isFinite(Number(coordsRaw.latitud)) &&
+      Number.isFinite(Number(coordsRaw.longitud))
+    ) {
+      coordsFinalesCadete = {
+        latitud: Number(coordsRaw.latitud),
+        longitud: Number(coordsRaw.longitud),
+      }
+    }
 
     // Buscar otros pedidos activos del mismo cliente (por teléfono)
     let pedidosRelacionados: any[] = []
