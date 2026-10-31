@@ -4,7 +4,7 @@ import { verificarTokenFlutter } from '@/lib/auth-flutter'
 import { obtenerSesion } from '@/lib/auth-server'
 import { notificarCambioCadete } from '@/lib/cadetes-broadcast'
 
-const DISTANCIA_MINIMA_MOVIMIENTO_METROS = 8
+const DISTANCIA_MINIMA_MOVIMIENTO_METROS = 2.5
 
 function esCoordenadaValida(lat: any, lng: any): boolean {
   if (lat === null || lat === undefined || lat === '' || typeof lat === 'boolean') return false
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     // Si el cadete está en marcha (speed > 0.5 m/s, aprox ~1.8 km/h), el umbral se reduce a 3.5m
     // para registrar giros en esquinas, bocacalles y frenadas suaves sin descartar puntos.
     // Si está quieto (en el local o semáforo), se mantiene en 8m para filtrar el drift del sensor GPS.
-    const umbralDistancia = enMovimiento ? 3.5 : DISTANCIA_MINIMA_MOVIMIENTO_METROS
+    const umbralDistancia = enMovimiento ? 2.5 : DISTANCIA_MINIMA_MOVIMIENTO_METROS
 
     const coordenadaAnteriorValida = esCoordenadaValida(
       (cadeteExistente as any)?.lat,

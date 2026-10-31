@@ -566,7 +566,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
     // Medir dinámicamente el intervalo entre reportes GPS para sincronizar la duración con solapamiento continuo (1.20x)
     if (tiempoUltimoUpdateRef.current > 0) {
       const lapsoReal = ahora - tiempoUltimoUpdateRef.current
-      duracionAnimacionRef.current = Math.min(Math.max(lapsoReal * 1.20, 2500), 6000)
+      duracionAnimacionRef.current = Math.min(Math.max(lapsoReal * 1.10, 2200), 4500)
     }
     tiempoUltimoUpdateRef.current = ahora
 
@@ -654,14 +654,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
       `
     }
 
-    // Snap-to-Route (Map Matching): si hay geometría activa, proyectar el punto a la calzada (max 35m)
-    let destinoLat = targetLat
-    let destinoLng = targetLng
-    if (rutaActualMatching && rutaActualMatching.length >= 2) {
-      const snap = proyectarSobreRuta([targetLat, targetLng], rutaActualMatching, indiceRutaRef.current, 35)
-      destinoLat = snap.punto[0]
-      destinoLng = snap.punto[1]
-    }
+    // Posición GPS real y fiel para seguimiento continuo (sin desvíos ni saltos artificiales)
+    const destinoLat = targetLat
+    const destinoLng = targetLng
 
     // Caso 1: Primera vez que recibimos posición
     if (!posicionAnimadaRef.current) {
@@ -724,8 +719,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
       const tiempoTranscurrido = timestamp - animStartTimeRef.current
       const progresoCrudo = Math.min(tiempoTranscurrido / duracionAnimacionRef.current, 1)
-      // Desplazamiento lineal uniforme a velocidad de crucero constante (elimina el vaivén de acelerón/freno)
-      const progreso = progresoCrudo
+      // Desplazamiento sinusoidal suave para eliminar saltos y tirones
+      const progreso = easeInOutSine(progresoCrudo)
 
       // 1. Interpolación de Latitud y Longitud
       const latActual = inicio.latitud + (destino.latitud - inicio.latitud) * progreso

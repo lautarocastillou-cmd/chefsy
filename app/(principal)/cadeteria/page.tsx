@@ -227,7 +227,7 @@ export default function TorreControlPage() {
       const iniciarPolling = () => {
         if (intervalId) clearInterval(intervalId)
         void fetchTorreData()
-        intervalId = setInterval(() => void fetchTorreData(), modoBajoConsumo ? 15000 : 6000)
+        intervalId = setInterval(() => void fetchTorreData(), modoBajoConsumo ? 4500 : 2500)
     }
 
     const detenerPolling = () => {

@@ -279,7 +279,6 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
   // â”€â”€ 2. Bucle Global de AnimaciÃ³n a 60 FPS (Gliding Multi-Cadete Optimizado) â”€â”€
   useEffect(() => {
     const loopAnimacion = (timestamp: number) => {
-      if (bajoConsumo) return
       if (!estaVisibleRef.current) return
 
       const states = animStatesRef.current
@@ -299,8 +298,8 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
         const tiempoPasado = timestamp - s.startTime
         const progresoCrudo = Math.min(tiempoPasado / s.duracion, 1)
-        // Desplazamiento lineal uniforme a velocidad de crucero constante (elimina el vaivén de acelerón/freno)
-        const progreso = progresoCrudo
+        // Desplazamiento sinusoidal suave para eliminar saltos y tirones
+        const progreso = easeInOutSine(progresoCrudo)
 
         // 1. Coordenadas interpoladas
         const lat = s.latInicio + (s.latDestino - s.latInicio) * progreso
@@ -478,22 +477,11 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       const ultimoT = ultimosUpdatesRef.current[cadete.id] || 0
       const lapsoReal = ultimoT > 0 ? ahora - ultimoT : 4000
       ultimosUpdatesRef.current[cadete.id] = ahora
-      const duracionAnim = Math.min(Math.max(lapsoReal * 1.20, 2600), 6500)
+      const duracionAnim = Math.min(Math.max(lapsoReal * 1.10, 2200), 4500)
 
-      // Snap-to-Route (Map Matching): si hay geometría de ruta activa, proyectar el punto a la calzada
-      let targetLatAjustado = targetLat
-      let targetLngAjustado = targetLng
-      const geomCadete = rutasGeometriaRef.current[cadete.id]
-      if (geomCadete && geomCadete.length >= 2) {
-        const snap = proyectarSobreRuta(
-          [targetLat, targetLng],
-          geomCadete,
-          indicesRutaRef.current[cadete.id] || 0,
-          35 // hasta 35m de tolerancia para alinear al asfalto
-        )
-        targetLatAjustado = snap.punto[0]
-        targetLngAjustado = snap.punto[1]
-      }
+      // Posición GPS real y fiel para seguimiento continuo (sin desvíos ni saltos artificiales)
+      const targetLatAjustado = targetLat
+      const targetLngAjustado = targetLng
 
       // Inicializar o actualizar estado de animación del cadete
       const estadoActual = animStatesRef.current[cadete.id]
@@ -667,14 +655,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
       if (markersRef.current.cadetes[cadete.id]) {
         const existingMarker = markersRef.current.cadetes[cadete.id]
-        if (bajoConsumo) {
-          existingMarker.setLatLng([targetLat, targetLng])
-          if (estadoActual) {
-            estadoActual.latActual = targetLat
-            estadoActual.lngActual = targetLng
-            estadoActual.terminado = true
-          }
-        }
+
         if (firmasMarcadorCadeteRef.current[cadete.id] !== firmaMarcadorCadete) {
           existingMarker.setIcon(cadeteIcon)
           firmasMarcadorCadeteRef.current[cadete.id] = firmaMarcadorCadete
