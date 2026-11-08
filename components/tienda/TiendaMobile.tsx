@@ -75,7 +75,6 @@ export default function TiendaMobile() {
     toastActivoRef.current = true
     toast('Próximamente disponible', {
       id: 'toast-perfil-proximamente',
-      icon: '🚀',
       duration: 1200,
     })
 

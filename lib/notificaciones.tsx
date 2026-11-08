@@ -1,6 +1,19 @@
-import React from 'react'
 import toast from 'react-hot-toast'
-import { AlertTriangle, AlertCircle, CheckCircle2, Info } from 'lucide-react'
+
+/**
+ * Marcas que lee components/ui/ChefsyToast.tsx para elegir el color del chip.
+ * react-hot-toast no tiene un tipo "warning" ni "info" propio.
+ */
+export const CLASE_AVISO = 'chefsy-aviso'
+export const CLASE_INFO = 'chefsy-info'
+
+function vibrar(patron: number | number[]) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(patron)
+    } catch {}
+  }
+}
 
 export interface CartelOpciones {
   titulo?: string
@@ -55,29 +68,13 @@ export function mostrarCartel(opciones: CartelOpciones | string): Promise<boolea
  * Notificación Toast de aviso/advertencia con estética oscura Chefsy (sin backdrop-blur).
  */
 export function notificarAviso(mensaje: string, duracion = 3200) {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    try {
-      navigator.vibrate(30)
-    } catch {}
-  }
+  vibrar(30)
 
   toast(mensaje, {
     id: `aviso-${mensaje}`,
     duration: duracion,
     position: 'bottom-center',
-    icon: <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />,
-    style: {
-      background: '#0f172a',
-      color: '#fef3c7',
-      border: '1px solid rgba(245, 158, 11, 0.35)',
-      borderRadius: '16px',
-      padding: '11px 20px',
-      fontSize: '13.5px',
-      fontWeight: '600',
-      textAlign: 'left',
-      maxWidth: '92vw',
-      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-    },
+    className: CLASE_AVISO,
   })
 }
 
@@ -85,29 +82,12 @@ export function notificarAviso(mensaje: string, duracion = 3200) {
  * Notificación Toast de error con estética oscura Chefsy (sin backdrop-blur).
  */
 export function notificarError(mensaje: string, duracion = 3500) {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    try {
-      navigator.vibrate([40, 60, 40])
-    } catch {}
-  }
+  vibrar([40, 60, 40])
 
-  toast(mensaje, {
+  toast.error(mensaje, {
     id: `error-${mensaje}`,
     duration: duracion,
     position: 'bottom-center',
-    icon: <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />,
-    style: {
-      background: '#0f172a',
-      color: '#fecaca',
-      border: '1px solid rgba(239, 68, 68, 0.35)',
-      borderRadius: '16px',
-      padding: '11px 20px',
-      fontSize: '13.5px',
-      fontWeight: '600',
-      textAlign: 'left',
-      maxWidth: '92vw',
-      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-    },
   })
 }
 
@@ -115,29 +95,12 @@ export function notificarError(mensaje: string, duracion = 3500) {
  * Notificación Toast de éxito con estética oscura Chefsy (sin backdrop-blur).
  */
 export function notificarExito(mensaje: string, duracion = 2500) {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    try {
-      navigator.vibrate(25)
-    } catch {}
-  }
+  vibrar(25)
 
-  toast(mensaje, {
+  toast.success(mensaje, {
     id: `exito-${mensaje}`,
     duration: duracion,
     position: 'bottom-center',
-    icon: <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />,
-    style: {
-      background: '#0f172a',
-      color: '#d1fae5',
-      border: '1px solid rgba(16, 185, 129, 0.35)',
-      borderRadius: '16px',
-      padding: '11px 20px',
-      fontSize: '13.5px',
-      fontWeight: '600',
-      textAlign: 'left',
-      maxWidth: '92vw',
-      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-    },
   })
 }
 
@@ -149,19 +112,7 @@ export function notificarInfo(mensaje: string, duracion = 2800) {
     id: `info-${mensaje}`,
     duration: duracion,
     position: 'bottom-center',
-    icon: <Info className="w-5 h-5 text-sky-400 shrink-0" />,
-    style: {
-      background: '#0f172a',
-      color: '#ffffff',
-      border: '1px solid rgba(255, 255, 255, 0.18)',
-      borderRadius: '16px',
-      padding: '11px 20px',
-      fontSize: '13.5px',
-      fontWeight: '600',
-      textAlign: 'left',
-      maxWidth: '92vw',
-      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-    },
+    className: CLASE_INFO,
   })
 }
 
@@ -210,32 +161,12 @@ export async function copiarAlPortapapeles(texto: string): Promise<boolean> {
  * y con formato píldora.
  */
 export function notificarCopiado(mensaje: string) {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    try {
-      navigator.vibrate(25)
-    } catch {}
-  }
+  vibrar(25)
 
   toast.success(mensaje, {
     id: 'toast-copiado',
     duration: 2200,
     position: 'bottom-center',
-    style: {
-      background: '#0f172a',
-      color: '#ffffff',
-      border: '1px solid rgba(255, 255, 255, 0.18)',
-      borderRadius: '9999px',
-      padding: '10px 24px',
-      fontSize: '13.5px',
-      fontWeight: '600',
-      textAlign: 'center',
-      maxWidth: '90vw',
-      boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-    },
-    iconTheme: {
-      primary: '#10b981',
-      secondary: '#ffffff',
-    },
   })
 }
 

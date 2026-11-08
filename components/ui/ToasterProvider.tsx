@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Toaster, useToasterStore, toast } from 'react-hot-toast'
+import ChefsyToast from './ChefsyToast'
 
 export default function ToasterProvider() {
   const [montado, setMontado] = useState(false)
@@ -11,6 +12,7 @@ export default function ToasterProvider() {
     setMontado(true)
   }, [])
 
+  // Nunca más de 3 avisos apilados: los viejos se van con la animación corta.
   useEffect(() => {
     if (!montado) return
     toasts
@@ -31,32 +33,12 @@ export default function ToasterProvider() {
       }}
       toastOptions={{
         duration: 2800,
-        style: {
-          background: '#0f172a',
-          color: '#ffffff',
-          border: '1px solid rgba(255, 255, 255, 0.16)',
-          borderRadius: '16px',
-          padding: '11px 20px',
-          fontSize: '13.5px',
-          fontWeight: '600',
-          textAlign: 'center',
-          maxWidth: '92vw',
-          lineHeight: '1.4',
-          boxShadow: '0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 15px 0 rgba(0, 0, 0, 0.4)',
-        },
-        success: {
-          iconTheme: {
-            primary: '#10b981',
-            secondary: '#ffffff',
-          },
-        },
-        error: {
-          iconTheme: {
-            primary: '#ef4444',
-            secondary: '#ffffff',
-          },
-        },
+        // La salida dura 120 ms (ver globals.css). Este margen deja que se
+        // pinte completa antes de desmontar el nodo.
+        removeDelay: 140,
       }}
-    />
+    >
+      {(t) => <ChefsyToast toast={t} />}
+    </Toaster>
   )
 }
