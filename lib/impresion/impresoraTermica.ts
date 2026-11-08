@@ -21,16 +21,19 @@ export interface ConfiguracionImpresora {
   cortarPapel: boolean
   sonarAlarmaComanda: boolean
   impresionSilenciosaActiva: boolean
+  autoImprimirPedidosNuevos: boolean
   baudRate: number
 }
 
 const CONFIG_STORAGE_KEY = 'chefsy_config_impresora_v1'
+export const EVENTO_CONFIG_IMPRESORA = 'chefsy:config-impresora-actualizada'
 
 const CONFIG_POR_DEFECTO: ConfiguracionImpresora = {
   anchoMm: 80,
   cortarPapel: true,
   sonarAlarmaComanda: true,
   impresionSilenciosaActiva: true,
+  autoImprimirPedidosNuevos: false,
   baudRate: 9600, // Estándar para Xprinter, POS-80, Unnion TP85, Epson, etc.
 }
 
@@ -50,6 +53,15 @@ class GestorImpresoraTermica {
       this.cargarConfiguracion()
       // Intentar reconectar con puertos previamente autorizados en segundo plano
       this.autoReconectar()
+
+      // Mantener sincronizada la configuración entre pestañas del mismo navegador.
+      window.addEventListener('storage', (event) => {
+        if (event.key !== CONFIG_STORAGE_KEY) return
+        this.cargarConfiguracion()
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_CONFIG_IMPRESORA, { detail: { ...this.config } })
+        )
+      })
     }
   }
 
@@ -59,9 +71,11 @@ class GestorImpresoraTermica {
       const guardada = localStorage.getItem(CONFIG_STORAGE_KEY)
       if (guardada) {
         this.config = { ...CONFIG_POR_DEFECTO, ...JSON.parse(guardada) }
+      } else {
+        this.config = { ...CONFIG_POR_DEFECTO }
       }
     } catch {
-      this.config = CONFIG_POR_DEFECTO
+      this.config = { ...CONFIG_POR_DEFECTO }
     }
     return this.config
   }
@@ -71,6 +85,9 @@ class GestorImpresoraTermica {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(this.config))
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_CONFIG_IMPRESORA, { detail: { ...this.config } })
+        )
       } catch (err) {
         console.error('Error guardando configuración de impresora:', err)
       }

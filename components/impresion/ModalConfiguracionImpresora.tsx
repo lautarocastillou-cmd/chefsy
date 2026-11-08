@@ -16,7 +16,11 @@ import {
   DollarSign,
   Loader2,
 } from 'lucide-react'
-import { gestorImpresora, ConfiguracionImpresora } from '@/lib/impresion/impresoraTermica'
+import {
+  gestorImpresora,
+  ConfiguracionImpresora,
+  EVENTO_CONFIG_IMPRESORA,
+} from '@/lib/impresion/impresoraTermica'
 
 interface PropsModalConfiguracionImpresora {
   abierto: boolean
@@ -44,6 +48,20 @@ export default function ModalConfiguracionImpresora({
       setConfig(gestorImpresora.obtenerConfiguracion())
       setInfo(gestorImpresora.obtenerInfo())
       setMensajeFeedback(null)
+    }
+  }, [abierto])
+
+  useEffect(() => {
+    if (!abierto) return
+
+    const actualizarConfiguracion = () => {
+      setConfig(gestorImpresora.obtenerConfiguracion())
+      setInfo(gestorImpresora.obtenerInfo())
+    }
+
+    window.addEventListener(EVENTO_CONFIG_IMPRESORA, actualizarConfiguracion)
+    return () => {
+      window.removeEventListener(EVENTO_CONFIG_IMPRESORA, actualizarConfiguracion)
     }
   }, [abierto])
 
@@ -286,6 +304,34 @@ export default function ModalConfiguracionImpresora({
                 onChange={e => handleGuardarCambio({ impresionSilenciosaActiva: e.target.checked })}
                 className="w-5 h-5 accent-chefsy-600 rounded cursor-pointer shrink-0"
               />
+            </div>
+
+            {/* Auto-impresión de comandas */}
+            <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Printer size={16} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-xs sm:text-sm">Auto-imprimir comandas</p>
+                    <p className="text-[11px] text-slate-400">
+                      Al entrar un pedido nuevo o crearlo desde el panel, envía la comanda a cocina y lo pasa a “En cocina” si estaba “Nuevo”. Solo en este dispositivo.
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={config.autoImprimirPedidosNuevos}
+                  onChange={e => handleGuardarCambio({ autoImprimirPedidosNuevos: e.target.checked })}
+                  className="w-5 h-5 accent-chefsy-600 rounded cursor-pointer shrink-0"
+                />
+              </div>
+              {config.autoImprimirPedidosNuevos && !info.conectada && (
+                <p className="text-[11px] text-amber-300/90 leading-relaxed border-t border-slate-800 pt-2">
+                  Sin conexión directa se usará el diálogo de impresión del navegador/Windows. Para que sea automático, vinculá la impresora por USB/Serial/Bluetooth o configurá el navegador para imprimir sin diálogo.
+                </p>
+              )}
             </div>
 
             {/* Corte de papel */}

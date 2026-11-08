@@ -1,10 +1,16 @@
 'use client'
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders } from 'lucide-react'
+import { useCallback, useState, useEffect } from 'react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
-import { notificarError } from '@/lib/notificaciones'
+import { notificarError, notificarAviso } from '@/lib/notificaciones'
+import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
+import {
+  gestorImpresora,
+  ConfiguracionImpresora,
+  EVENTO_CONFIG_IMPRESORA,
+} from '@/lib/impresion/impresoraTermica'
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
@@ -213,6 +219,181 @@ function PestanaUsuarios() {
           </button>
         </form>
       </div>
+    </div>
+  )
+}
+
+
+// --- COMPONENTE DE IMPRESIÓN ---
+function PestanaImpresion() {
+  const [config, setConfig] = useState<ConfiguracionImpresora>(() =>
+    gestorImpresora.obtenerConfiguracion()
+  )
+  const [info, setInfo] = useState(() => gestorImpresora.obtenerInfo())
+  const [modalAbierto, setModalAbierto] = useState(false)
+
+  const actualizar = useCallback(() => {
+    setConfig(gestorImpresora.obtenerConfiguracion())
+    setInfo(gestorImpresora.obtenerInfo())
+  }, [])
+
+  useEffect(() => {
+    const actualizarConfiguracion = () => actualizar()
+    window.addEventListener(EVENTO_CONFIG_IMPRESORA, actualizarConfiguracion)
+    return () => {
+      window.removeEventListener(EVENTO_CONFIG_IMPRESORA, actualizarConfiguracion)
+    }
+  }, [actualizar])
+
+  const autoImprimir = config.autoImprimirPedidosNuevos
+  const conectada = info.conectada
+
+  const cambiarAutoImprimir = (valor: boolean) => {
+    gestorImpresora.guardarConfiguracion({ autoImprimirPedidosNuevos: valor })
+    actualizar()
+
+    if (valor) {
+      notificarAviso(
+        conectada
+          ? `Auto-impresión activada en ${info?.nombre || 'esta impresora'}.`
+          : 'Auto-impresión activada. Sin impresora directa se abrirá el diálogo del navegador/Windows.'
+      )
+    } else {
+      notificarAviso('Auto-impresión de comandas desactivada en este dispositivo.')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-start gap-3 border-b border-slate-100 dark:border-slate-800/60 pb-4">
+          <span className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+            <Printer size={18} />
+          </span>
+          <div>
+            <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              Impresión de Comandas
+            </h2>
+            <p className="text-[11px] text-slate-400 leading-relaxed mt-0.5">
+              Configurá la comandera de esta PC y elegí si los pedidos nuevos se imprimen solos.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 pt-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Comandera de esta PC
+              </span>
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2 py-1 rounded-full border ${
+                conectada
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
+                  : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/40'
+              }`}>
+                {conectada ? (
+                  <><CheckCircle2 size={11} /> Conectada</>
+                ) : (
+                  <><AlertTriangle size={11} /> Modo navegador</>
+                )}
+              </span>
+            </div>
+
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                {info.nombre || 'Sin conexión directa'}
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+                {conectada
+                  ? 'La impresora está vinculada por USB, Serial, HID o Bluetooth.'
+                  : 'Se usará el controlador de Windows o el diálogo de impresión del navegador.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setModalAbierto(true)}
+              className="inline-flex items-center justify-center gap-1.5 w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-colors cursor-pointer"
+            >
+              <Sliders size={14} />
+              Configurar impresora
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                  Imprimir comandas automáticamente
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                  Cuando entra un pedido nuevo o lo creás desde el panel, se envía la comanda de cocina a esta comandera.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={autoImprimir}
+                  onChange={(e) => cambiarAutoImprimir(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-disabled:opacity-50"></div>
+              </label>
+            </div>
+
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed border-t border-emerald-200/60 dark:border-emerald-900/40 pt-2.5">
+              Se guarda solo en este navegador. Si abrís el panel en otra PC, activalo ahí si esa PC tiene la comandera.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <AlertTriangle size={15} className="text-amber-500" />
+          Cómo funciona
+        </h3>
+        <ul className="space-y-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          <li className="flex gap-2">
+            <span className="text-emerald-500 font-black">•</span>
+            <span>Se imprime una comanda de cocina, sin precios, con productos, cantidades y notas.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500 font-black">•</span>
+            <span>Si el pedido estaba en “Nuevo”, al mandar la comanda pasa a “En cocina”, igual que con la impresión manual.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500 font-black">•</span>
+            <span>La opción se aplica solo en esta PC y mientras el panel de administración esté abierto.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500 font-black">•</span>
+            <span>Si no hay impresora vinculada o la impresión silenciosa está desactivada, el navegador puede abrir el diálogo de impresión. Para que salga directo, vinculá la comandera por USB/Serial/Bluetooth y mantené activa la impresión silenciosa.</span>
+          </li>
+        </ul>
+      </div>
+
+      {autoImprimir && !conectada && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-extrabold text-amber-800 dark:text-amber-300">
+              La impresora no está vinculada por USB/Serial/Bluetooth
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 leading-relaxed mt-1">
+              La auto-impresión está activada, pero se usará el diálogo de impresión del navegador/Windows. Para que salga directo sin intervención, conectá la comandera desde “Configurar impresora”.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <ModalConfiguracionImpresora
+        abierto={modalAbierto}
+        onCerrar={() => {
+          setModalAbierto(false)
+          actualizar()
+        }}
+      />
     </div>
   )
 }
@@ -940,7 +1121,7 @@ function PestanaParametros() {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function PaginaConfiguracion() {
-  const [pestanaActiva, setPestanaActiva] = useState<'parametros' | 'usuarios'>('parametros')
+  const [pestanaActiva, setPestanaActiva] = useState<'parametros' | 'impresion' | 'usuarios'>('parametros')
 
   return (
     <div className="space-y-6 max-w-5xl pb-12 text-slate-800 dark:text-[#e6e6e6]">
@@ -952,7 +1133,7 @@ export default function PaginaConfiguracion() {
             Configuración del Sistema
           </h1>
           <p className="text-xs text-gray-400 dark:text-slate-400">
-            Administrá los usuarios del local y los parámetros de alerta de los pedidos.
+            Administrá los usuarios, los parámetros de los pedidos y la impresión de comandas.
           </p>
         </div>
         <Link 
@@ -965,10 +1146,10 @@ export default function PaginaConfiguracion() {
       </div>
 
       {/* Navegación de Pestañas */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setPestanaActiva('parametros')}
-          className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
+          className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
             pestanaActiva === 'parametros' 
               ? 'border-chefsy text-chefsy dark:text-chefsy-400' 
               : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -977,8 +1158,19 @@ export default function PaginaConfiguracion() {
           Parámetros de Operación
         </button>
         <button
+          onClick={() => setPestanaActiva('impresion')}
+          className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+            pestanaActiva === 'impresion'
+              ? 'border-chefsy text-chefsy dark:text-chefsy-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <Printer size={15} />
+          Impresión
+        </button>
+        <button
           onClick={() => setPestanaActiva('usuarios')}
-          className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
+          className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
             pestanaActiva === 'usuarios' 
               ? 'border-chefsy text-chefsy dark:text-chefsy-400' 
               : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -991,6 +1183,7 @@ export default function PaginaConfiguracion() {
       {/* Contenido de la Pestaña Activa */}
       <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
         {pestanaActiva === 'parametros' && <PestanaParametros />}
+        {pestanaActiva === 'impresion' && <PestanaImpresion />}
         {pestanaActiva === 'usuarios' && <PestanaUsuarios />}
       </div>
     </div>

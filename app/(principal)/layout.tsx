@@ -23,6 +23,7 @@ import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
 import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
 import ConsumoPersonalFlotante from '@/components/herramientas/ConsumoPersonalFlotante'
 import AlertaPedidosDemoradosFlotante from '@/components/pedidos/AlertaPedidosDemoradosFlotante'
+import AutoImpresionPedidos from '@/components/pedidos/AutoImpresionPedidos'
 import ModalHerramientasTesteo from '@/components/dev/ModalHerramientasTesteo'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
 
@@ -242,6 +243,11 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
     )
   }
 
-  return <ContenidoPrincipal>{children}</ContenidoPrincipal>
+  return (
+    <>
+      <AutoImpresionPedidos />
+      <ContenidoPrincipal>{children}</ContenidoPrincipal>
+    </>
+  )
 }
 
