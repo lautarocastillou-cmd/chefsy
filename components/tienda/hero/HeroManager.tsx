@@ -7,6 +7,7 @@ import HeroParallaxDoble from './HeroParallaxDoble'
 import HeroCarruselPromo from './HeroCarruselPromo'
 import HeroCinematicVideo from './HeroCinematicVideo'
 import HeroCentradoMinimalista from './HeroCentradoMinimalista'
+import HeroPortadaApp from './HeroPortadaApp'
 
 interface HeroManagerProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -61,6 +62,15 @@ export default function HeroManager(props: HeroManagerProps) {
     case 'centrado_minimalista':
       return (
         <HeroCentradoMinimalista
+          {...props}
+          configuracion={configuracion}
+          fuenteHeroClase={fuenteHeroClase}
+        />
+      )
+
+    case 'portada_app':
+      return (
+        <HeroPortadaApp
           {...props}
           configuracion={configuracion}
           fuenteHeroClase={fuenteHeroClase}

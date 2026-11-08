@@ -467,11 +467,11 @@ export default function EditorTienda() {
                   Layout de Portada
                 </label>
                 <span className="text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2 py-0.5 rounded-full font-bold">
-                  4 Diseños
+                  5 Diseños
                 </span>
               </div>
 
-              {/* 4 Tarjetas de Layouts */}
+              {/* 5 Tarjetas de Layouts */}
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -486,6 +486,21 @@ export default function EditorTienda() {
                   <Film className="text-emerald-400 mb-1" size={20} />
                   <div className="text-xs font-black text-slate-200">Marco Loop</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Loop de fotos (9:16)</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleChange('hero_layout', 'portada_app')}
+                  className={cn(
+                    'p-3 rounded-2xl border text-left transition-all cursor-pointer',
+                    heroLayoutActual === 'portada_app'
+                      ? 'bg-emerald-950/40 border-emerald-500 shadow-md ring-2 ring-emerald-500/20'
+                      : 'bg-zinc-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                  )}
+                >
+                  <Smartphone className="text-emerald-400 mb-1" size={20} />
+                  <div className="text-xs font-black text-slate-200">Portada App</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Producto primero</div>
                 </button>
 
                 <button

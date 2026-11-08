@@ -3,6 +3,7 @@
 import React from 'react'
 import { ScrollSpyNavBar } from '@/components/tienda/ScrollSpyNavBar'
 import ProductCard from '@/components/tienda/ProductCard'
+import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA, resolverImagen } from '@/lib/tienda-helpers'
 
@@ -51,6 +52,8 @@ function CatalogoProductosComponente({
   metadata,
   onAbrirModal,
 }: CatalogoProductosProps) {
+  const { configuracion } = usarConfiguracionTienda()
+  const portadaAppActiva = configuracion?.hero_layout === 'portada_app'
   const catDetalles = OBTENER_DETALLES_CATEGORIA(categoriaSeleccionada || 'todos')
 
   const idPatys   = categoriasActivas.find(c => c.nombre.toLowerCase().trim() === 'patys')?.id
@@ -86,7 +89,7 @@ function CatalogoProductosComponente({
       ) : (
         <>
           {/* Barra Scrollspy aislada para no causar re-renders de page.tsx */}
-          {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && (
+          {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && !portadaAppActiva && (
             <ScrollSpyNavBar 
               categoriasActivas={categoriasActivas} 
               productosFiltrados={productosFiltrados} 
@@ -101,10 +104,10 @@ function CatalogoProductosComponente({
                 if (productosDeCat.length === 0) return null
 
                 return (
-                  <div key={cat.id} id={cat.id} className="categoria-seccion flex flex-col gap-4 scroll-mt-36">
+                  <div key={cat.id} id={cat.id} className={`categoria-seccion flex flex-col gap-4 scroll-mt-36 ${portadaAppActiva ? 'md:grid md:grid-cols-2 md:gap-x-5 md:gap-y-4' : ''}`}>
                     {/* Título de Categoría en la lista */}
                     {(!categoriaSeleccionada || categoriaSeleccionada === 'todos' || busqueda || esCategoriaCombinada) && (
-                      <h3 className="font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2">
+                      <h3 className={`font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2 ${portadaAppActiva ? 'md:col-span-2' : ''}`}>
                         {cat.nombre}
                       </h3>
                     )}
@@ -119,7 +122,7 @@ function CatalogoProductosComponente({
 
                     {/* Medias Pizzas */}
                     {cat.id === 'pizzas' && productosDeCat.some(p => p.nombre.toLowerCase().includes('media') && !p.esCombo) && (
-                      <div className="mt-4 mb-2">
+                      <div className={`mt-4 mb-2 ${portadaAppActiva ? 'md:col-span-2' : ''}`}>
                         <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
                           MEDIAS PIZZAS
                         </h4>
@@ -134,7 +137,7 @@ function CatalogoProductosComponente({
                       })}
 
                     {productosDeCat.some(p => p.esCombo) && (
-                      <div className="mt-4 mb-2">
+                      <div className={`mt-4 mb-2 ${portadaAppActiva ? 'md:col-span-2' : ''}`}>
                         <h4 className="font-bebas text-3xl text-white tracking-wide border-b border-white/10 pb-2">
                           PROMOS {cat.nombre.toUpperCase()}
                         </h4>

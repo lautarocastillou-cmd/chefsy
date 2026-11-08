@@ -33,7 +33,7 @@ export interface ConfiguracionTienda {
   whatsapp_mensaje?: string
   link_instagram?: string
   link_tiktok?: string
-  hero_layout?: 'parallax_doble' | 'carrusel_promo' | 'cinematic_video' | 'centrado_minimalista'
+  hero_layout?: 'parallax_doble' | 'carrusel_promo' | 'cinematic_video' | 'centrado_minimalista' | 'portada_app'
   hero_video_url?: string
   hero_video_overlay_opacity?: number
   hero_badge_texto?: string
