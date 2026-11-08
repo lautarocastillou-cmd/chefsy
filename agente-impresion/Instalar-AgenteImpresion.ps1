@@ -103,7 +103,7 @@ $shortcut.Description = "Chefsy Print Agent"
 $shortcut.Save()
 
 try {
-    Start-Process -FilePath $exePath -WorkingDirectory $installDir
+    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $exePath; CurrentDirectory = $installDir } | Out-Null
 } catch {
     Fallar "El agente se compilo pero no se pudo iniciar: $($_.Exception.Message)"
 }
@@ -168,3 +168,4 @@ Write-Host ""
 Write-Host "Siguiente paso: Chefsy -> Configuracion -> Impresion -> Agente local."
 Write-Host "Activa el interruptor, pega la URL y el token, y toca 'Probar agente'."
 Write-Host ""
+

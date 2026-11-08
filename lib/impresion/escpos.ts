@@ -2,6 +2,8 @@
 // lib/impresion/escpos.ts
 // Codificador binario de comandos ESC/POS nativos para
 // impresoras térmicas de 80mm (48 columnas) y 58mm (32 columnas).
+// Replica con precisión el diseño visual y proporciones
+// de las comandas y tickets de Chefsy.
 // ─────────────────────────────────────────────────────
 
 import { Pedido } from '@/tipos'
@@ -43,6 +45,7 @@ const COMANDOS = {
  */
 export function stringABytesCP850(texto: string): number[] {
   const bytes: number[] = []
+  const textoLimpio = texto.replace(/↳/g, '->')
 
   const mapaEspeciales: Record<string, number> = {
     á: 0xa0,
@@ -66,8 +69,8 @@ export function stringABytesCP850(texto: string): number[] {
     '•': 0x07,
   }
 
-  for (let i = 0; i < texto.length; i++) {
-    const char = texto[i]
+  for (let i = 0; i < textoLimpio.length; i++) {
+    const char = textoLimpio[i]
     if (mapaEspeciales[char]) {
       bytes.push(mapaEspeciales[char])
     } else {
@@ -141,20 +144,39 @@ export class EscPosBuilder {
   }
 
   /**
-   * Imprime dos textos justificados a los extremos (ej: "Mila Especial .......... $12.500")
+   * Imprime dos textos justificados a los extremos (ej: "2x Hamburguesa Clásica         $12.500")
+   * Por defecto utiliza espacios limpios sin relleno de puntos para replicar la tabla limpia de Chefsy.
    */
   filaDosColumnas(izq: string, der: string, relleno: string = ' '): this {
-    const lenIzq = izq.length
     const lenDer = der.length
-    const espacioDisponible = this.anchoColumnas - lenIzq - lenDer
+    const espacioMaxIzq = this.anchoColumnas - lenDer - 1
 
-    if (espacioDisponible > 0) {
+    if (izq.length <= espacioMaxIzq) {
+      const espacioDisponible = Math.max(1, this.anchoColumnas - izq.length - lenDer)
       const lineaTexto = izq + relleno.repeat(espacioDisponible) + der
       this.alinear('izq').linea(lineaTexto)
     } else {
-      const izqRecortado = izq.slice(0, this.anchoColumnas - lenDer - 2) + '..'
-      const espacioRecortado = Math.max(1, this.anchoColumnas - izqRecortado.length - lenDer)
-      this.alinear('izq').linea(izqRecortado + ' '.repeat(espacioRecortado) + der)
+      // Si el texto izquierdo es muy largo, partimos de forma elegante para no truncar con '..'
+      const palabras = izq.split(' ')
+      let linea1 = ''
+      let linea2 = ''
+
+      for (const pal of palabras) {
+        if (!linea2 && (linea1 + (linea1 ? ' ' : '') + pal).length <= espacioMaxIzq) {
+          linea1 += (linea1 ? ' ' : '') + pal
+        } else {
+          linea2 += (linea2 ? ' ' : '') + pal
+        }
+      }
+
+      if (linea2) {
+        this.alinear('izq').linea(linea1)
+        const espacio2 = Math.max(1, this.anchoColumnas - linea2.length - lenDer)
+        this.alinear('izq').linea(linea2 + relleno.repeat(espacio2) + der)
+      } else {
+        const espacio = Math.max(1, this.anchoColumnas - izq.length - lenDer)
+        this.alinear('izq').linea(izq + relleno.repeat(espacio) + der)
+      }
     }
     return this
   }
@@ -191,6 +213,7 @@ export class EscPosBuilder {
 
 /**
  * Genera el ticket final para el cliente con precios, desglose y datos de entrega.
+ * Réplica exacta de la plantilla htmlTicket de Chefsy.
  */
 export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -199,7 +222,7 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 
   const metodoPagoLabel: Record<string, string> = {
     efectivo: 'Efectivo',
-    tarjeta: 'Tarjeta / Débito',
+    tarjeta: 'Tarjeta',
     transferencia: 'Transferencia',
     mixto: 'Mixto',
     sin_especificar: 'Sin especificar',
@@ -213,50 +236,48 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
     .linea('CHEFSY')
     .tamano('normal')
     .negrita(false)
-    .linea('TICKET DE PEDIDO')
-    .negrita(true)
+    .linea('Ticket de Pedido')
     .linea(`Pedido #${pedido.id.slice(0, 6).toUpperCase()} · ${pedido.hora}`)
     .separador('-')
 
   // 2. Datos del Cliente
-  builder
-    .alinear('izq')
-    .negrita(true)
-    .linea(`Cliente: ${pedido.cliente}`)
-    .negrita(false)
+  builder.alinear('izq').tamano('normal')
+  builder.negrita(true).texto('Cliente: ').negrita(false).linea(pedido.cliente)
 
   if (pedido.telefono && pedido.telefono !== 'Sin especificar') {
-    builder.linea(`Tel: ${pedido.telefono}`)
+    builder.negrita(true).texto('Tel: ').negrita(false).linea(pedido.telefono)
   }
 
   const tipoEntregaStr =
     pedido.tipoEntrega === 'delivery'
-      ? 'DELIVERY'
+      ? 'Delivery'
       : pedido.tipoEntrega === 'retiro'
-      ? 'RETIRO EN LOCAL'
-      : 'CONSUMO EN LOCAL'
+      ? 'Retiro en local'
+      : 'Consumo en local'
 
-  builder
-    .negrita(true)
-    .linea(`Entrega: ${tipoEntregaStr}`)
-    .negrita(false)
+  builder.negrita(true).texto('Entrega: ').negrita(false).linea(tipoEntregaStr)
 
   if (pedido.direccion) {
-    builder.linea(`Dir: ${pedido.direccion}`)
+    builder.negrita(true).texto('Dir: ').negrita(false).linea(pedido.direccion)
   }
 
   builder.separador('-')
 
-  // 3. Detalle de Productos
+  // 3. Detalle de Productos (tabla limpia con espacios, idéntica a la web)
   builder.alinear('izq')
   for (const item of pedido.productos) {
     const cantidadStr = `${item.cantidad}x `
     const precioStr = f(item.precio * item.cantidad)
-    builder.negrita(true).filaDosColumnas(cantidadStr + item.nombre, precioStr, '.')
+    builder.negrita(true).filaDosColumnas(cantidadStr + item.nombre, precioStr, ' ')
 
     if (item.coccion) {
       const coccionStr = item.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'
       builder.negrita(true).linea(`   ↳ [${coccionStr}]`)
+    }
+
+    const aclaracion = (item as any).aclaracion
+    if (aclaracion) {
+      builder.negrita(false).linea(`   * ${aclaracion}`)
     }
 
     if ((item as any).modificadores && Array.isArray((item as any).modificadores)) {
@@ -270,18 +291,18 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 
   // 4. Totales y Envío
   if (pedido.costoEnvio !== undefined && pedido.costoEnvio > 0) {
-    builder.filaDosColumnas('Subtotal:', f(pedido.total - pedido.costoEnvio))
-    builder.filaDosColumnas(`Envío (${pedido.distanciaKm || 0} km):`, f(pedido.costoEnvio))
+    builder.filaDosColumnas('Subtotal:', f(pedido.total - pedido.costoEnvio), ' ')
+    builder.filaDosColumnas('Envío:', f(pedido.costoEnvio), ' ')
   }
 
   builder
     .alinear('izq')
     .tamano('doble_alto')
     .negrita(true)
-    .filaDosColumnas('TOTAL:', f(pedido.total))
+    .filaDosColumnas('TOTAL:', f(pedido.total), ' ')
     .tamano('normal')
     .negrita(false)
-    .linea(`Método de Pago: ${metodoPagoLabel[pedido.metodoPago ?? 'sin_especificar'] ?? 'Sin especificar'}`)
+    .filaDosColumnas('Pago:', metodoPagoLabel[pedido.metodoPago ?? 'sin_especificar'] ?? 'Sin especificar', ' ')
 
   // 5. Observaciones / Notas
   if (pedido.observaciones && pedido.observaciones.trim()) {
@@ -289,20 +310,16 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
       .separador('-')
       .alinear('izq')
       .negrita(true)
-      .linea('NOTAS / ACLARACIONES:')
-      .negrita(false)
-      .linea(pedido.observaciones.toUpperCase())
+      .linea(`NOTAS: ${pedido.observaciones.toUpperCase()}`)
   }
 
   // 6. Pie de Página
   builder
     .separador('-')
     .alinear('centro')
-    .negrita(true)
-    .linea('¡Gracias por tu compra!')
     .tamano('normal')
     .negrita(false)
-    .linea('chefsy.xyz')
+    .linea('¡Gracias por su compra! · Sistema Chefsy')
 
   if (opciones.abrirCajon) {
     builder.abrirCajon()
@@ -316,7 +333,8 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 }
 
 /**
- * Genera la comanda para cocina (letras gigantes, sin precios, con notas resaltadas).
+ * Genera la comanda para cocina.
+ * Réplica exacta de la plantilla htmlCocina de Chefsy (títulos claros, cantidades altas y legibles).
  */
 export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -327,68 +345,77 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
     .alinear('centro')
     .tamano('doble')
     .negrita(true)
-    .linea('*** COCINA ***')
-    .tamano('doble_alto')
-    .linea(`ORDEN #${pedido.id.slice(0, 6).toUpperCase()}`)
+    .linea('COCINA')
     .tamano('normal')
     .negrita(false)
-    .linea(`Hora: ${pedido.hora} · ${pedido.cliente}`)
-    .separador('=')
+    .linea(pedido.hora)
+    .tamano('doble_alto')
+    .negrita(true)
+    .linea(pedido.cliente)
+    .tamano('normal')
+    .negrita(false)
+    .separador('-')
 
   // 2. Lista de Platos con Cantidades Resaltadas
   builder.alinear('izq')
   for (const item of pedido.productos) {
     builder
-      .tamano('doble')
+      .tamano('doble_alto')
       .negrita(true)
-      .linea(`[ ${item.cantidad}x ] ${item.nombre}`)
-      .tamano('normal')
-      .negrita(false)
+      .linea(`${item.cantidad}x ${item.nombre}`)
 
     if (item.coccion) {
-      const coccionStr = item.coccion === 'fritas' ? '*** FRITAS ***' : '*** AL HORNO ***'
+      const coccionStr = item.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'
       builder
-        .tamano('doble')
+        .tamano('doble_alto')
         .negrita(true)
-        .linea(`   >> ${coccionStr}`)
+        .linea(`   ↳ [${coccionStr}]`)
+    }
+
+    const aclaracion = (item as any).aclaracion
+    if (aclaracion) {
+      builder
         .tamano('normal')
-        .negrita(false)
+        .negrita(true)
+        .linea(`   * ${String(aclaracion).toUpperCase()}`)
     }
 
     if ((item as any).modificadores && Array.isArray((item as any).modificadores)) {
       for (const mod of (item as any).modificadores) {
-        builder.negrita(true).linea(`   >> ${mod.nombre || mod}`)
+        builder
+          .tamano('normal')
+          .negrita(false)
+          .linea(`   + ${mod.nombre || mod}`)
       }
     }
-    builder.linea('')
+
+    builder.tamano('normal').negrita(false).linea('')
   }
 
   // 3. Notas Urgentes de Cocina
   if (pedido.observaciones && pedido.observaciones.trim()) {
     builder
-      .separador('*')
+      .separador('-')
       .alinear('izq')
       .tamano('doble_alto')
       .negrita(true)
-      .linea('ATENCION NOTAS:')
-      .tamano('normal')
-      .linea(pedido.observaciones.toUpperCase())
-      .separador('*')
+      .linea(`NOTA: ${pedido.observaciones.toUpperCase()}`)
   }
 
-  // 4. Tipo de Entrega en Marco
+  // 4. Tipo de Entrega
   const tipoEntregaStr =
     pedido.tipoEntrega === 'delivery'
-      ? '>> DELIVERY <<'
+      ? 'DELIVERY'
       : pedido.tipoEntrega === 'retiro'
-      ? '>> RETIRO EN LOCAL <<'
-      : '>> CONSUMO EN LOCAL <<'
+      ? 'RETIRO EN LOCAL'
+      : 'CONSUMO EN LOCAL'
 
   builder
+    .separador('-')
     .alinear('centro')
     .tamano('doble_alto')
     .negrita(true)
-    .linea(tipoEntregaStr)
+    .linea(`[ ${tipoEntregaStr} ]`)
 
   if (opciones.sonarAlarma) {
     builder.sonarAlarma()
@@ -403,6 +430,7 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
 
 /**
  * Genera un ticket de prueba para calibrar ancho de papel, fuentes y guillotina.
+ * Réplica exacta de la plantilla htmlPrueba de Chefsy.
  */
 export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -415,25 +443,29 @@ export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uin
     .linea('CHEFSY POS')
     .tamano('normal')
     .negrita(false)
-    .linea('PRUEBA DE IMPRESION DIRECTA')
-    .separador('=')
+    .linea(`Prueba de Impresión · ${anchoMm}mm`)
+    .separador('-')
     .alinear('izq')
-    .linea(`Ancho configurado: ${anchoMm}mm (${anchoMm === 58 ? 32 : 48} columnas)`)
-    .linea(`Fecha: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`)
+    .filaDosColumnas('Estado conexión:', 'ONLINE', ' ')
+    .filaDosColumnas('Fecha:', new Date().toLocaleDateString('es-AR'), ' ')
+    .filaDosColumnas('Hora:', new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), ' ')
     .separador('-')
     .negrita(true)
-    .filaDosColumnas('Item de Prueba 1', '$4.500', '.')
-    .filaDosColumnas('Item de Prueba 2', '$7.800', '.')
+    .filaDosColumnas('Item de prueba 1', '$ 4.500', ' ')
+    .filaDosColumnas('Item de prueba 2', '$ 7.800', ' ')
     .separador('-')
     .tamano('doble_alto')
     .negrita(true)
-    .filaDosColumnas('TOTAL TEST:', '$12.300')
+    .filaDosColumnas('TOTAL TEST:', '$ 12.300', ' ')
     .tamano('normal')
-    .separador('=')
+    .negrita(false)
+    .separador('-')
     .alinear('centro')
     .negrita(true)
-    .linea('¡Conexion ESC/POS Exitosa!')
-    .linea('Impresion silenciosa lista para usar.')
+    .linea('¡Impresora Térmica Configurada!')
+    .tamano('normal')
+    .negrita(false)
+    .linea('chefsy.xyz')
 
   if (opciones.sonarAlarma) {
     builder.sonarAlarma()
