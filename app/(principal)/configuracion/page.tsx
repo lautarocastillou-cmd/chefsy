@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useCallback, useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2 } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
@@ -231,9 +231,16 @@ function PestanaImpresion() {
   )
   const [info, setInfo] = useState(() => gestorImpresora.obtenerInfo())
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [urlAgente, setUrlAgente] = useState(config.agenteImpresionUrl)
+  const [tokenAgente, setTokenAgente] = useState(config.agenteImpresionToken)
+  const [probandoAgente, setProbandoAgente] = useState(false)
+  const [resultadoAgente, setResultadoAgente] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
 
   const actualizar = useCallback(() => {
-    setConfig(gestorImpresora.obtenerConfiguracion())
+    const nuevaConfig = gestorImpresora.obtenerConfiguracion()
+    setConfig(nuevaConfig)
+    setUrlAgente(nuevaConfig.agenteImpresionUrl)
+    setTokenAgente(nuevaConfig.agenteImpresionToken)
     setInfo(gestorImpresora.obtenerInfo())
   }, [])
 
@@ -246,7 +253,75 @@ function PestanaImpresion() {
   }, [actualizar])
 
   const autoImprimir = config.autoImprimirPedidosNuevos
-  const conectada = info.conectada
+  const modoImpresion = gestorImpresora.obtenerModoImpresion()
+  const agenteConfigurado = gestorImpresora.tieneAgenteConfigurado()
+  const salidaLista = modoImpresion === 'directa' || (modoImpresion === 'agente' && agenteConfigurado)
+
+  const guardarAgente = (cambios: Partial<ConfiguracionImpresora>) => {
+    gestorImpresora.guardarConfiguracion(cambios)
+    actualizar()
+    setResultadoAgente(null)
+  }
+
+  const cambiarAgente = (valor: boolean) => {
+    const url = urlAgente.trim() || 'http://127.0.0.1:9187'
+    const token = tokenAgente.trim()
+    setUrlAgente(url)
+    setTokenAgente(token)
+    guardarAgente({
+      usarAgenteImpresion: valor,
+      agenteImpresionUrl: url,
+      agenteImpresionToken: token,
+    })
+
+    if (!valor) {
+      notificarAviso('Agente local desactivado. Sin impresora directa se usará el diálogo del navegador.')
+      return
+    }
+
+    notificarAviso(
+      token
+        ? 'Agente local activado. Las comandas se imprimirán sin diálogo.'
+        : 'Agente local activado. Completá el token para que funcione.'
+    )
+  }
+
+  const guardarUrlAgente = () => {
+    const url = urlAgente.trim() || 'http://127.0.0.1:9187'
+    setUrlAgente(url)
+    guardarAgente({ agenteImpresionUrl: url })
+  }
+
+  const guardarTokenAgente = () => {
+    const token = tokenAgente.trim()
+    setTokenAgente(token)
+    guardarAgente({ agenteImpresionToken: token })
+  }
+
+  const probarAgente = async () => {
+    const url = urlAgente.trim() || 'http://127.0.0.1:9187'
+    const token = tokenAgente.trim()
+    setUrlAgente(url)
+    setTokenAgente(token)
+    guardarAgente({ agenteImpresionUrl: url, agenteImpresionToken: token })
+    setProbandoAgente(true)
+    setResultadoAgente(null)
+
+    try {
+      const resultado = await gestorImpresora.probarAgente()
+      setResultadoAgente({
+        tipo: resultado.ok ? 'ok' : 'error',
+        texto: resultado.ok
+          ? `Conectado. Impresora: ${resultado.printer || 'predeterminada de Windows'}.`
+          : resultado.error || 'No se pudo conectar con el agente local.',
+      })
+    } catch (error) {
+      console.error('Error probando el agente local:', error)
+      setResultadoAgente({ tipo: 'error', texto: 'No se pudo probar el agente local.' })
+    } finally {
+      setProbandoAgente(false)
+    }
+  }
 
   const cambiarAutoImprimir = (valor: boolean) => {
     gestorImpresora.guardarConfiguracion({ autoImprimirPedidosNuevos: valor })
@@ -254,9 +329,13 @@ function PestanaImpresion() {
 
     if (valor) {
       notificarAviso(
-        conectada
+        modoImpresion === 'directa'
           ? `Auto-impresión activada en ${info?.nombre || 'esta impresora'}.`
-          : 'Auto-impresión activada. Sin impresora directa se abrirá el diálogo del navegador/Windows.'
+          : modoImpresion === 'agente' && agenteConfigurado
+            ? 'Auto-impresión activada con agente local. No se abrirá el diálogo.'
+            : modoImpresion === 'agente'
+              ? 'Auto-impresión activada. El agente local está incompleto: completá URL y token.'
+              : 'Auto-impresión activada. Sin impresora directa se abrirá el diálogo del navegador/Windows.'
       )
     } else {
       notificarAviso('Auto-impresión de comandas desactivada en este dispositivo.')
@@ -287,12 +366,16 @@ function PestanaImpresion() {
                 Comandera de esta PC
               </span>
               <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2 py-1 rounded-full border ${
-                conectada
+                salidaLista
                   ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
                   : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/40'
               }`}>
-                {conectada ? (
+                {modoImpresion === 'directa' ? (
                   <><CheckCircle2 size={11} /> Conectada</>
+                ) : modoImpresion === 'agente' && agenteConfigurado ? (
+                  <><Zap size={11} /> Agente local</>
+                ) : modoImpresion === 'agente' ? (
+                  <><AlertTriangle size={11} /> Agente incompleto</>
                 ) : (
                   <><AlertTriangle size={11} /> Modo navegador</>
                 )}
@@ -301,12 +384,22 @@ function PestanaImpresion() {
 
             <div>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                {info.nombre || 'Sin conexión directa'}
+                {modoImpresion === 'directa'
+                  ? info.nombre
+                  : modoImpresion === 'agente'
+                    ? agenteConfigurado
+                      ? 'Agente local en esta PC'
+                      : 'Agente local sin configurar'
+                    : 'Sin salida silenciosa'}
               </p>
               <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
-                {conectada
+                {modoImpresion === 'directa'
                   ? 'La impresora está vinculada por USB, Serial, HID o Bluetooth.'
-                  : 'Se usará el controlador de Windows o el diálogo de impresión del navegador.'}
+                  : modoImpresion === 'agente'
+                    ? agenteConfigurado
+                      ? 'Las comandas se envían al agente local sin abrir el diálogo de impresión.'
+                      : 'Activaste el agente local, pero falta la URL o el token. Completalos abajo.'
+                    : 'Se usará el controlador de Windows o el diálogo de impresión del navegador.'}
               </p>
             </div>
 
@@ -348,6 +441,118 @@ function PestanaImpresion() {
         </div>
       </div>
 
+      <div className="bg-white dark:bg-slate-900 border border-sky-200/80 dark:border-sky-900/50 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800/60 pb-4">
+          <div className="flex items-start gap-3">
+            <span className="p-2 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-xl shrink-0">
+              <Zap size={18} />
+            </span>
+            <div>
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Agente local de impresión
+              </h2>
+              <p className="text-[11px] text-slate-400 leading-relaxed mt-0.5">
+                Imprime sin diálogo usando un proceso chico en esta PC. Ideal si la comandera ya está instalada en Windows.
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+            <input
+              type="checkbox"
+              checked={config.usarAgenteImpresion}
+              onChange={(e) => cambiarAgente(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+          </label>
+        </div>
+
+        {config.usarAgenteImpresion ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  URL del agente
+                </span>
+                <input
+                  type="url"
+                  value={urlAgente}
+                  onChange={(e) => {
+                    setUrlAgente(e.target.value)
+                    setResultadoAgente(null)
+                  }}
+                  onBlur={guardarUrlAgente}
+                  placeholder="http://127.0.0.1:9187"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-sky-500/50 text-slate-800 dark:text-slate-100"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  Token
+                </span>
+                <input
+                  type="text"
+                  value={tokenAgente}
+                  onChange={(e) => {
+                    setTokenAgente(e.target.value)
+                    setResultadoAgente(null)
+                  }}
+                  onBlur={guardarTokenAgente}
+                  placeholder="Token que muestra el instalador"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-sky-500/50 text-slate-800 dark:text-slate-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={probarAgente}
+                disabled={probandoAgente}
+                className="inline-flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-colors active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                {probandoAgente ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                {probandoAgente ? 'Probando...' : 'Probar agente'}
+              </button>
+              {resultadoAgente && (
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold break-words ${
+                  resultadoAgente.tipo === 'ok'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {resultadoAgente.tipo === 'ok' ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                  {resultadoAgente.texto}
+                </span>
+              )}
+            </div>
+
+            {(!urlAgente.trim() || !tokenAgente.trim()) && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                Completá la URL y el token que muestra el instalador para que el agente funcione.
+              </p>
+            )}
+
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              El agente escucha solo en <code className="font-mono">127.0.0.1</code> y exige token. Si Chrome o Edge pide permiso para acceder a la red local, elegí <strong>Permitir</strong>. Si el agente falla, Chefsy no abre el diálogo: muestra un aviso.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Activalo si querés imprimir sin el diálogo del navegador. Requiere instalar el agente una vez en esta PC.
+          </p>
+        )}
+
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-3">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Instalador en <code className="font-mono text-slate-700 dark:text-slate-300 break-all">agente-impresion/Instalar-AgenteImpresion.ps1</code>. Al ejecutarlo te muestra el token para pegar acá.
+          </p>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
         <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <AlertTriangle size={15} className="text-amber-500" />
@@ -368,20 +573,38 @@ function PestanaImpresion() {
           </li>
           <li className="flex gap-2">
             <span className="text-emerald-500 font-black">•</span>
-            <span>Si no hay impresora vinculada o la impresión silenciosa está desactivada, el navegador puede abrir el diálogo de impresión. Para que salga directo, vinculá la comandera por USB/Serial/Bluetooth y mantené activa la impresión silenciosa.</span>
+            <span>La impresora directa por USB/Serial/Bluetooth o el agente local evitan el diálogo. Si no hay ninguno, el navegador puede abrir el diálogo de impresión.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500 font-black">•</span>
+            <span>El agente local se instala una vez en esta PC y usa el driver de Windows para imprimir sin diálogo.</span>
           </li>
         </ul>
       </div>
 
-      {autoImprimir && !conectada && (
+      {autoImprimir && modoImpresion === 'navegador' && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
           <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-extrabold text-amber-800 dark:text-amber-300">
-              La impresora no está vinculada por USB/Serial/Bluetooth
+              No hay salida silenciosa configurada
             </p>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 leading-relaxed mt-1">
-              La auto-impresión está activada, pero se usará el diálogo de impresión del navegador/Windows. Para que salga directo sin intervención, conectá la comandera desde “Configurar impresora”.
+              La auto-impresión está activada, pero no hay impresora directa ni agente local. Se usará el diálogo de impresión del navegador/Windows. Conectá la comandera desde “Configurar impresora” o activá el agente local.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {autoImprimir && modoImpresion === 'agente' && !agenteConfigurado && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-extrabold text-amber-800 dark:text-amber-300">
+              El agente local está incompleto
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 leading-relaxed mt-1">
+              La auto-impresión está activada y no se abrirá el diálogo, pero el agente no tiene URL o token. Completá los datos de arriba y tocá “Probar agente” para que las comandas salgan.
             </p>
           </div>
         </div>

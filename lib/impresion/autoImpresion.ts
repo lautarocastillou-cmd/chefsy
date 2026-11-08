@@ -9,6 +9,7 @@ import { gestorImpresora } from './impresoraTermica'
 const CLAVE_IMPRESOS = 'chefsy_comandas_autoimpresas_v1'
 const MAX_REGISTROS = 250
 const PAUSA_ENTRE_COMANDAS_MS = 1200
+const PAUSA_SILENCIOSA_MS = 350
 
 type ItemColaImpresion = {
   pedido: Pedido
@@ -107,9 +108,7 @@ async function procesarCola(): Promise<void> {
       const item = cola.shift()
       if (!item) continue
 
-      try {
-        await gestorImpresora.imprimirPedido(item.pedido, 'cocina')
-      } catch (error) {
+      const avisarFallo = (error: unknown) => {
         console.error('[Auto-impresión] Error al imprimir comanda:', error)
         try {
           item.onError?.(error)
@@ -118,8 +117,20 @@ async function procesarCola(): Promise<void> {
         }
       }
 
+      try {
+        const resultado = await gestorImpresora.imprimirPedido(item.pedido, 'cocina')
+        if (!resultado.exito) {
+          avisarFallo(new Error(resultado.error || 'No se pudo imprimir la comanda.'))
+        }
+      } catch (error) {
+        avisarFallo(error)
+      }
+
       if (cola.length > 0) {
-        await new Promise((resolve) => setTimeout(resolve, PAUSA_ENTRE_COMANDAS_MS))
+        const pausa = gestorImpresora.obtenerModoImpresion() === 'navegador'
+          ? PAUSA_ENTRE_COMANDAS_MS
+          : PAUSA_SILENCIOSA_MS
+        await new Promise((resolve) => setTimeout(resolve, pausa))
       }
     }
   } finally {

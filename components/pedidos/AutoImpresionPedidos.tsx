@@ -82,8 +82,11 @@ export default function AutoImpresionPedidos() {
           void cambiarEstado(pedido.id, 'en_cocina')
         }
 
-        encolarComandaAutomatica(pedido, () => {
-          notificarError(`No se pudo imprimir automáticamente la comanda de ${pedido.cliente}.`)
+        encolarComandaAutomatica(pedido, (error) => {
+          const detalle = error instanceof Error ? error.message : ''
+          notificarError(
+            `No se pudo imprimir automáticamente la comanda de ${pedido.cliente}.${detalle ? ` ${detalle}` : ''}`
+          )
         })
       })
   }, [pedidos, estaListo, cambiarEstado])

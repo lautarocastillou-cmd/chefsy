@@ -32,7 +32,7 @@ import { usarPedidos } from '@/contexto/PedidosContexto'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { crearEnlaceGoogleMaps, calcularCostoEnvio } from '@/lib/ubicacion'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
-import { copiarConNotificacion } from '@/lib/notificaciones'
+import { copiarConNotificacion, notificarError } from '@/lib/notificaciones'
 import ModalPagoMixto from './ModalPagoMixto'
 import BadgeEstado from './BadgeEstado'
 import InfoEntregaPedido from './InfoEntregaPedido'
@@ -97,6 +97,19 @@ const TarjetaPedido = React.memo(function TarjetaPedido({ pedido, soloLectura = 
   const [modalPagoMixtoAbierto, setModalPagoMixtoAbierto] = useState(false)
   const [infoImpresora, setInfoImpresora] = useState(gestorImpresora.obtenerInfo())
   const [sheetMobileAbierto, setSheetMobileAbierto] = useState(false)
+  const configImpresora = gestorImpresora.obtenerConfiguracion()
+  const agenteConfigurado = gestorImpresora.tieneAgenteConfigurado()
+  const modoImpresion = infoImpresora.conectada && configImpresora.impresionSilenciosaActiva
+    ? 'directa'
+    : configImpresora.usarAgenteImpresion
+      ? 'agente'
+      : 'navegador'
+  const salidaLista = modoImpresion === 'directa' || (modoImpresion === 'agente' && agenteConfigurado)
+  const colorEstado = salidaLista
+    ? 'bg-emerald-500 animate-pulse'
+    : modoImpresion === 'agente'
+      ? 'bg-amber-500'
+      : 'bg-slate-400'
 
   useEffect(() => {
     setMontado(true)
@@ -299,9 +312,16 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
     // Damos un micro-respiro (50ms) para que React desmonte el modal y
     // pinte la tarjeta actualizada antes de que el navegador atienda la impresión
     setTimeout(() => {
-      gestorImpresora.imprimirPedido(pedido, tipo).catch(err => {
-        console.error('Error en proceso de impresión en background:', err)
-      })
+      gestorImpresora.imprimirPedido(pedido, tipo)
+        .then((resultado) => {
+          if (!resultado.exito) {
+            notificarError(resultado.error || 'No se pudo imprimir. Revisá la configuración de impresión.')
+          }
+        })
+        .catch(err => {
+          console.error('Error en proceso de impresión en background:', err)
+          notificarError('No se pudo imprimir. Revisá la configuración de impresión.')
+        })
     }, 50)
   }
 
@@ -890,9 +910,15 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
             <div className="px-4 pb-4 space-y-2">
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#3d3d3d] text-xs">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${infoImpresora.conectada ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${colorEstado}`}></span>
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">
-                    {infoImpresora.conectada ? 'Térmica Directa (0.1s)' : 'Modo Diálogo Windows'}
+                    {modoImpresion === 'directa'
+                      ? 'Térmica Directa (0.1s)'
+                      : modoImpresion === 'agente'
+                        ? agenteConfigurado
+                          ? 'Agente local (sin diálogo)'
+                          : 'Agente local (incompleto)'
+                        : 'Modo Diálogo Windows'}
                   </span>
                 </div>
                 <button

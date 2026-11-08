@@ -65,6 +65,9 @@ export default function ModalConfiguracionImpresora({
     }
   }, [abierto])
 
+  const modoImpresion = gestorImpresora.obtenerModoImpresion()
+  const agenteConfigurado = gestorImpresora.tieneAgenteConfigurado()
+
   if (!abierto || !montado || typeof document === 'undefined') return null
 
   const handleConectar = async (tipo: 'usb' | 'serial' | 'hid' | 'bluetooth') => {
@@ -110,14 +113,31 @@ export default function ModalConfiguracionImpresora({
   }
 
   const handleAbrirCajon = async () => {
-    if (!info.conectada) {
-      setMensajeFeedback({ tipo: 'error', texto: 'Conectá una impresora térmica para enviar el pulso al cajón.' })
-      return
-    }
+    setMensajeFeedback(null)
     const { EscPosBuilder } = await import('@/lib/impresion/escpos')
     const builder = new EscPosBuilder(config.anchoMm)
     builder.abrirCajon()
-    await gestorImpresora.enviarRaw(builder.obtenerBytes())
+    const bytes = builder.obtenerBytes()
+
+    let enviado = false
+    if (info.conectada) {
+      enviado = await gestorImpresora.enviarRaw(bytes)
+    }
+
+    if (!enviado && config.usarAgenteImpresion) {
+      const resultado = await gestorImpresora.enviarAlAgente(bytes)
+      if (!resultado.exito) {
+        setMensajeFeedback({ tipo: 'error', texto: resultado.error || 'El agente local no pudo abrir el cajón.' })
+        return
+      }
+      enviado = true
+    }
+
+    if (!enviado) {
+      setMensajeFeedback({ tipo: 'error', texto: 'Conectá una impresora térmica o activá el agente local para enviar el pulso al cajón.' })
+      return
+    }
+
     setMensajeFeedback({ tipo: 'ok', texto: 'Pulso de apertura enviado al cajón de dinero.' })
   }
 
@@ -174,10 +194,20 @@ export default function ModalConfiguracionImpresora({
           <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estado de Conexión</span>
-              {info.conectada ? (
+              {modoImpresion === 'directa' ? (
                 <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1 rounded-xl">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   <span>Conectada (Directa)</span>
+                </span>
+              ) : modoImpresion === 'agente' && agenteConfigurado ? (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1 rounded-xl">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Agente local (sin diálogo)</span>
+                </span>
+              ) : modoImpresion === 'agente' ? (
+                <span className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold px-2.5 py-1 rounded-xl">
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span>Agente local (incompleto)</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 bg-slate-800 text-slate-400 border border-slate-700 text-xs font-bold px-2.5 py-1 rounded-xl">
@@ -188,10 +218,26 @@ export default function ModalConfiguracionImpresora({
             </div>
 
             <p className="text-xs text-slate-300">
-              {info.conectada
+              {modoImpresion === 'directa'
                 ? `Dispositivo: ${info.nombre} (${info.tipo.toUpperCase()})`
-                : 'Conectá tu impresora térmica para imprimir comandas en 0.1s sin carteles ni demoras:'}
+                : modoImpresion === 'agente'
+                  ? agenteConfigurado
+                    ? 'Las comandas se envían al agente local de esta PC. La impresora la elige Windows, sin abrir el diálogo.'
+                    : 'El agente está activado, pero falta la URL o el token. Configuralo en Configuración → Impresión → Agente local.'
+                  : 'Conectá tu impresora térmica para imprimir comandas en 0.1s sin carteles ni demoras:'}
             </p>
+
+            {modoImpresion === 'agente' && agenteConfigurado && (
+              <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-300/90 leading-relaxed">
+                <strong>Agente local activo:</strong> imprime sin diálogo usando la impresora de Windows. Se configura en Configuración → Impresión → Agente local. Si querés la vía directa, igual podés vincularla abajo.
+              </div>
+            )}
+
+            {modoImpresion === 'agente' && !agenteConfigurado && (
+              <div className="p-2.5 bg-amber-950/40 border border-amber-500/20 rounded-xl text-[11px] text-amber-200/90 leading-relaxed">
+                <strong>Agente local incompleto:</strong> activaste el agente, pero falta la URL o el token. Completalo en Configuración → Impresión → Agente local. Mientras tanto, las comandas no se imprimirán y no se abrirá el diálogo.
+              </div>
+            )}
 
             {/* Botones de Conexión */}
             <div className="space-y-2 pt-1">
@@ -247,7 +293,7 @@ export default function ModalConfiguracionImpresora({
             {/* Guía para impresoras de Windows */}
             {!info.conectada && (
               <div className="p-2.5 bg-slate-900/80 border border-slate-800/80 rounded-xl text-[11px] text-slate-400 leading-relaxed">
-                <strong>Tip para Unnion TP85:</strong> Si tu impresora ya está instalada en Windows, no hace falta vincularla; Chefsy imprimirá automáticamente tus tickets de 80mm usando el controlador de Windows.
+                <strong>Tip para impresoras instaladas en Windows:</strong> podés usar el agente local para imprimir sin diálogo con el controlador de Windows. También podés vincularla por USB/Serial/Bluetooth para la vía directa.
               </div>
             )}
           </div>
@@ -295,7 +341,7 @@ export default function ModalConfiguracionImpresora({
                 </div>
                 <div>
                   <p className="font-bold text-white text-xs sm:text-sm">Impresión Silenciosa en 1 Clic</p>
-                  <p className="text-[11px] text-slate-400">No abre el diálogo nativo de Windows al imprimir</p>
+                  <p className="text-[11px] text-slate-400">Se usa con la impresora vinculada por USB/Serial/Bluetooth. El agente local tiene su propia vía silenciosa.</p>
                 </div>
               </div>
               <input
@@ -327,9 +373,19 @@ export default function ModalConfiguracionImpresora({
                   className="w-5 h-5 accent-chefsy-600 rounded cursor-pointer shrink-0"
                 />
               </div>
-              {config.autoImprimirPedidosNuevos && !info.conectada && (
+              {config.autoImprimirPedidosNuevos && modoImpresion === 'navegador' && (
                 <p className="text-[11px] text-amber-300/90 leading-relaxed border-t border-slate-800 pt-2">
-                  Sin conexión directa se usará el diálogo de impresión del navegador/Windows. Para que sea automático, vinculá la impresora por USB/Serial/Bluetooth o configurá el navegador para imprimir sin diálogo.
+                  Sin conexión directa ni agente local se usará el diálogo de impresión del navegador/Windows. Para que sea automático, vinculá la impresora por USB/Serial/Bluetooth o activá el agente local.
+                </p>
+              )}
+              {config.autoImprimirPedidosNuevos && modoImpresion === 'agente' && agenteConfigurado && (
+                <p className="text-[11px] text-emerald-300/90 leading-relaxed border-t border-slate-800 pt-2">
+                  Auto-impresión activa con agente local: las comandas salen sin abrir el diálogo del navegador.
+                </p>
+              )}
+              {config.autoImprimirPedidosNuevos && modoImpresion === 'agente' && !agenteConfigurado && (
+                <p className="text-[11px] text-amber-300/90 leading-relaxed border-t border-slate-800 pt-2">
+                  El agente local está incompleto: las comandas no se imprimirán hasta que completes la URL y el token. No se abrirá el diálogo.
                 </p>
               )}
             </div>

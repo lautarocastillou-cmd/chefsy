@@ -22,6 +22,9 @@ export interface ConfiguracionImpresora {
   sonarAlarmaComanda: boolean
   impresionSilenciosaActiva: boolean
   autoImprimirPedidosNuevos: boolean
+  usarAgenteImpresion: boolean
+  agenteImpresionUrl: string
+  agenteImpresionToken: string
   baudRate: number
 }
 
@@ -34,6 +37,9 @@ const CONFIG_POR_DEFECTO: ConfiguracionImpresora = {
   sonarAlarmaComanda: true,
   impresionSilenciosaActiva: true,
   autoImprimirPedidosNuevos: false,
+  usarAgenteImpresion: false,
+  agenteImpresionUrl: 'http://127.0.0.1:9187',
+  agenteImpresionToken: '',
   baudRate: 9600, // Estándar para Xprinter, POS-80, Unnion TP85, Epson, etc.
 }
 
@@ -134,6 +140,148 @@ class GestorImpresoraTermica {
       soporteWebSerial,
       soporteWebHid,
       soporteWebBluetooth,
+    }
+  }
+
+  /**
+   * Indica si el agente local está activado y tiene URL + token.
+   */
+  public tieneAgenteConfigurado(): boolean {
+    return Boolean(
+      this.config.usarAgenteImpresion &&
+      this.config.agenteImpresionUrl.trim() &&
+      this.config.agenteImpresionToken.trim()
+    )
+  }
+
+  /**
+   * Resume la salida que va a usar la app en este dispositivo.
+   */
+  public obtenerModoImpresion(): 'directa' | 'agente' | 'navegador' {
+    if (this.estaConectada() && this.config.impresionSilenciosaActiva) return 'directa'
+    // Si el agente está activado, no abrimos el diálogo aunque falte configurar.
+    if (this.config.usarAgenteImpresion) return 'agente'
+    return 'navegador'
+  }
+
+  private obtenerUrlBaseAgente(): string {
+    return this.config.agenteImpresionUrl
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/(health|print)$/i, '')
+  }
+
+  /**
+   * Consulta el estado del agente local (health + token).
+   */
+  public async probarAgente(): Promise<{ ok: boolean; printer?: string; error?: string }> {
+    const base = this.obtenerUrlBaseAgente()
+    const token = this.config.agenteImpresionToken.trim()
+
+    if (!base) return { ok: false, error: 'Configurá la URL del agente local.' }
+    if (!token) return { ok: false, error: 'Falta el token del agente local.' }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
+    try {
+      const respuesta = await fetch(`${base}/health`, {
+        headers: { 'X-Chefsy-Token': token },
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+      })
+
+      const texto = await respuesta.text()
+      let data: { ok?: boolean; printer?: string; error?: string } | null = null
+      try {
+        data = texto ? JSON.parse(texto) : null
+      } catch {
+        data = null
+      }
+
+      if (respuesta.status === 401) {
+        return { ok: false, error: 'El token del agente no coincide.' }
+      }
+      if (!respuesta.ok) {
+        return { ok: false, error: data?.error || `El agente respondió con error ${respuesta.status}.` }
+      }
+      if (!data || data.ok !== true) {
+        return { ok: false, error: data?.error || 'El agente no está listo para imprimir.' }
+      }
+
+      return { ok: true, printer: data.printer }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return { ok: false, error: 'El agente local no respondió a tiempo.' }
+      }
+      return {
+        ok: false,
+        error: 'No se pudo conectar con el agente local. Verificá que esté instalado y corriendo en esta PC.',
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  /**
+   * Envía bytes ESC/POS al agente local para que los mande al spooler.
+   * No abre ningún diálogo del navegador.
+   */
+  public async enviarAlAgente(bytes: Uint8Array): Promise<{ exito: boolean; error?: string }> {
+    const base = this.obtenerUrlBaseAgente()
+    const token = this.config.agenteImpresionToken.trim()
+
+    if (!base) return { exito: false, error: 'Configurá la URL del agente local.' }
+    if (!token) return { exito: false, error: 'Falta el token del agente local.' }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 7000)
+
+    try {
+      const respuesta = await fetch(`${base}/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Chefsy-Token': token,
+        },
+        body: new Blob([new Uint8Array(bytes)]),
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+      })
+
+      const texto = await respuesta.text()
+      let data: { ok?: boolean; error?: string } | null = null
+      try {
+        data = texto ? JSON.parse(texto) : null
+      } catch {
+        data = null
+      }
+
+      if (respuesta.status === 401) {
+        return { exito: false, error: 'El token del agente no coincide.' }
+      }
+      if (!respuesta.ok) {
+        return { exito: false, error: data?.error || `El agente respondió con error ${respuesta.status}.` }
+      }
+      if (!data || data.ok !== true) {
+        return { exito: false, error: data?.error || 'El agente no confirmó la impresión.' }
+      }
+
+      return { exito: true }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return { exito: false, error: 'El agente local no respondió a tiempo.' }
+      }
+      return {
+        exito: false,
+        error: 'No se pudo conectar con el agente local. Verificá que esté instalado y corriendo en esta PC.',
+      }
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
@@ -415,27 +563,37 @@ class GestorImpresoraTermica {
   public async imprimirPedido(
     pedido: Pedido,
     tipo: 'ticket' | 'cocina'
-  ): Promise<{ metodo: 'directo' | 'iframe'; exito: boolean; error?: string }> {
+  ): Promise<{ metodo: 'directo' | 'agente' | 'iframe'; exito: boolean; error?: string }> {
     const opciones: OpcionesImpresion = {
       anchoMm: this.config.anchoMm,
       cortarPapel: this.config.cortarPapel,
       sonarAlarma: tipo === 'cocina' && this.config.sonarAlarmaComanda,
     }
 
-    // Si la impresora térmica está conectada por hardware directo:
-    if (this.estaConectada() && this.config.impresionSilenciosaActiva) {
-      const bytes =
-        tipo === 'ticket'
-          ? generarEscPosTicketCliente(pedido, opciones)
-          : generarEscPosComandaCocina(pedido, opciones)
+    const bytes =
+      tipo === 'ticket'
+        ? generarEscPosTicketCliente(pedido, opciones)
+        : generarEscPosComandaCocina(pedido, opciones)
 
+    // 1. Impresora térmica conectada por hardware directo:
+    if (this.estaConectada() && this.config.impresionSilenciosaActiva) {
       const enviado = await this.enviarRaw(bytes)
       if (enviado) {
         return { metodo: 'directo', exito: true }
       }
     }
 
-    // Fallback Iframe
+    // 2. Agente local: si está activado, es la única salida silenciosa.
+    // No caemos al iframe porque abriría el diálogo del navegador.
+    if (this.config.usarAgenteImpresion) {
+      const resultado = await this.enviarAlAgente(bytes)
+      if (resultado.exito) {
+        return { metodo: 'agente', exito: true }
+      }
+      return { metodo: 'agente', exito: false, error: resultado.error }
+    }
+
+    // 3. Fallback Iframe
     const f = formatearPrecio
     const p = pedido
     const metodoPagoLabel: Record<string, string> = {
@@ -529,6 +687,14 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">NOTA: ${p.observac
     if (this.estaConectada()) {
       const ok = await this.enviarRaw(bytes)
       if (ok) return true
+    }
+
+    // Si el agente local está activado, no abrimos el diálogo.
+    // Un fallo se informa para que el usuario revise el agente.
+    if (this.config.usarAgenteImpresion) {
+      const resultado = await this.enviarAlAgente(bytes)
+      if (resultado.exito) return true
+      throw new Error(resultado.error || 'El agente local no pudo imprimir el ticket de prueba.')
     }
 
     // Fallback Iframe si no hay conexión directa o si falló el envío directo

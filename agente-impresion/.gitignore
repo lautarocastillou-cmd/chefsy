@@ -1,0 +1,5 @@
+*.exe
+*.log
+config.ini
+bin/
+obj/
