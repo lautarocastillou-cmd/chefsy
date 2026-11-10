@@ -5,6 +5,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
+import { obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
 import {
   gestorImpresora,
@@ -655,7 +656,22 @@ function PestanaParametros() {
   const [alertaAplazoMinutos, setAlertaAplazoMinutos] = useState(5)
   const [alertaSonidoHabilitado, setAlertaSonidoHabilitado] = useState(true)
 
+  // Promo del Día en Tienda Online
+  const [promoTiendaHabilitada, setPromoTiendaHabilitada] = useState(true)
+  const [guardandoPromo, setGuardandoPromo] = useState(false)
+
   const [guardando, setGuardando] = useState(false)
+
+  // Cargar estado inicial de la promo de hoy desde la tienda
+  useEffect(() => {
+    obtenerConfiguracionTienda()
+      .then((cfg) => {
+        if (cfg && cfg.promo_popup) {
+          setPromoTiendaHabilitada(cfg.promo_popup.activo !== false)
+        }
+      })
+      .catch((err) => console.error('Error al cargar config promo tienda:', err))
+  }, [])
 
   // Cargar valores iniciales desde la configuración centralizada
   useEffect(() => {
@@ -836,6 +852,35 @@ function PestanaParametros() {
     )
   }
 
+  // Guardar inmediatamente al cambiar el switch de la Promo del Día en Tienda Online
+  const manejarCambioSwitchPromo = async (nuevoValor: boolean) => {
+    setPromoTiendaHabilitada(nuevoValor)
+    setGuardandoPromo(true)
+    try {
+      const cfgActual = await obtenerConfiguracionTienda()
+      const nuevoPromoPopup = {
+        ...(cfgActual?.promo_popup || {}),
+        activo: nuevoValor,
+      }
+      const ok = await actualizarConfiguracionTienda({ promo_popup: nuevoPromoPopup })
+      if (ok) {
+        if (nuevoValor) {
+          notificarAviso('Promo del Día activada en la tienda online.')
+        } else {
+          notificarAviso('Promo del Día desactivada. Cartel y bebidas de regalo ocultos.')
+        }
+      } else {
+        notificarError('No se pudo guardar el cambio de la promoción.')
+        setPromoTiendaHabilitada(!nuevoValor)
+      }
+    } catch {
+      notificarError('Error de conexión al actualizar la promo.')
+      setPromoTiendaHabilitada(!nuevoValor)
+    } finally {
+      setGuardandoPromo(false)
+    }
+  }
+
   // Guardar configuración modificada en el archivo del servidor
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1004,6 +1049,37 @@ function PestanaParametros() {
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+
+          {/* Función 4: Promo del Día en la Tienda Online (Cartel y Bebida de Regalo) */}
+          <div className="flex items-center justify-between pt-3">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Promo del Día en Tienda Online (Cartel y Bebida de Regalo)
+                </span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  promoTiendaHabilitada
+                    ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {promoTiendaHabilitada ? 'Activada' : 'Desactivada'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Muestra el cartel de la promo del día al entrar al link/página y permite elegir Fanta 375cc o Sprite 375cc gratis al pedir Burger Especial o Lomito de Pollo. Si se desactiva, el cartel y la promo no se mostrarán en la tienda.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={promoTiendaHabilitada}
+                disabled={guardandoPromo}
+                onChange={(e) => manejarCambioSwitchPromo(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
         </div>

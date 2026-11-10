@@ -238,7 +238,7 @@ function ProductCard({
         {/* Badges Automáticos del Producto */}
         {mostrarBadges && (
           <div className="flex flex-wrap items-center gap-1 mb-1">
-            {esProductoPromo(prod.id, prod.nombre) && (
+            {esProductoPromo(prod.id, prod.nombre, configuracion?.promo_popup?.activo !== false) && (
               <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
                 <Gift size={10} className="text-emerald-400" />
                 <span>+ BEBIDA 375cc DE REGALO</span>

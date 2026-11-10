@@ -5,7 +5,7 @@ import { setCache, getCache, removeCache } from '@/lib/localCache'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
-import { esProductoPromo, MOD_PROMO_COCA, MOD_PROMO_SPRITE } from '@/tipos/promo'
+import { esProductoPromo, MOD_PROMO_FANTA, MOD_PROMO_SPRITE } from '@/tipos/promo'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion, resolverDireccionHumana } from '@/lib/ubicacion'
 import { generarId, generarSlug } from '@/lib/utils'
 import { ContextoCatalogo } from '@/contexto/CatalogoContexto'
@@ -191,7 +191,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     }
     setProductoAPersonalizar(prod)
     if (esProductoPromo(prod.id, prod.nombre)) {
-      setModsSeleccionados([MOD_PROMO_COCA])
+      setModsSeleccionados([MOD_PROMO_FANTA])
     } else {
       setModsSeleccionados([])
     }
@@ -256,7 +256,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     if (esProductoPromo(productoAPersonalizar.id, productoAPersonalizar.nombre)) {
       const tienePromoBebida = modsFinales.some(m => m.id.startsWith('promo-regalo-'))
       if (!tienePromoBebida) {
-        modsFinales = [MOD_PROMO_COCA, ...modsFinales]
+        modsFinales = [MOD_PROMO_FANTA, ...modsFinales]
       }
     }
     const extra = modsFinales.reduce((acc, curr) => acc + curr.precioExtra, 0)

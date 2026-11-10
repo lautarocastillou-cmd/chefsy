@@ -123,7 +123,7 @@ export default function CartelPromoDelDia() {
 
           {/* Subtítulo / Descripción */}
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
-            {configPromo.descripcion || 'Comprando una Burger Especial o un Lomito de Pollo, sumás una Coca-Cola o Sprite de 375cc de regalo.'}
+            {configPromo.descripcion || 'Comprando una Burger Especial o un Lomito de Pollo, sumás una Fanta o Sprite de 375cc de regalo.'}
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export default function CartelPromoDelDia() {
                   Medallón de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas.
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                  Incluye: <span className="text-white font-bold">Coca-Cola o Sprite 375cc</span>
+                  Incluye: <span className="text-white font-bold">Fanta o Sprite 375cc</span>
                 </p>
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function CartelPromoDelDia() {
                   Bife de pollo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas.
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                  Incluye: <span className="text-white font-bold">Coca-Cola o Sprite 375cc</span>
+                  Incluye: <span className="text-white font-bold">Fanta o Sprite 375cc</span>
                 </p>
               </div>
             </div>

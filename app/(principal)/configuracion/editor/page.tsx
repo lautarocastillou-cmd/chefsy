@@ -1268,7 +1268,7 @@ export default function EditorTienda() {
                 <textarea
                   value={
                     (configLive as any).promo_popup?.descripcion ??
-                    'Comprando una Burger Especial o un Lomito de Pollo, ¡te llevás una Coca-Cola o Sprite de 375cc de regalo!'
+                    'Comprando una Burger Especial o un Lomito de Pollo, sumás una Fanta o Sprite de 375cc de regalo.'
                   }
                   onChange={(e) =>
                     handleChange('promo_popup' as any, {
