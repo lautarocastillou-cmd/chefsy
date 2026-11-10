@@ -1289,7 +1289,7 @@ export default function EditorTienda() {
                   <li>🍗 Lomito de Pollo ($11.500)</li>
                 </ul>
                 <p className="text-[10px] text-slate-500 pt-1">
-                  Ambos productos abren con el selector de bebida 375cc de regalo (Coca o Sprite gratis).
+                  Ambos productos abren con el selector de bebida 375cc de regalo (Fanta o Sprite gratis).
                 </p>
               </div>
             </div>

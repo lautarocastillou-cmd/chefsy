@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Plus, Flame, Star, Leaf, Sparkles, Utensils, Gift } from 'lucide-react'
+import { Plus, Flame, Star, Leaf, Sparkles, Utensils } from 'lucide-react'
 import { esProductoPromo } from '@/tipos/promo'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
@@ -81,6 +81,7 @@ function ProductCard({
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
   const descripcionVisible = meta?.descripcion_publica || detalles.desc
+  const esPromo = esProductoPromo(prod.id, prod.nombre, configuracion?.promo_popup?.activo !== false)
 
   useEffect(() => {
     const el = textoRef.current
@@ -238,12 +239,6 @@ function ProductCard({
         {/* Badges Automáticos del Producto */}
         {mostrarBadges && (
           <div className="flex flex-wrap items-center gap-1 mb-1">
-            {esProductoPromo(prod.id, prod.nombre, configuracion?.promo_popup?.activo !== false) && (
-              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                <Gift size={10} className="text-emerald-400" />
-                <span>+ BEBIDA 375cc DE REGALO</span>
-              </span>
-            )}
             {((meta as any)?.es_mas_pedido || prod.esCombo) && (
               <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded-md">
                 <Flame size={10} className="text-amber-400" />
@@ -305,6 +300,11 @@ function ProductCard({
                 </button>
               )}
             </p>
+            {esPromo && (
+              <p className="text-[11px] sm:text-xs text-emerald-400/90 font-medium mt-0.5 leading-tight">
+                Sale con Fanta o Sprite 375cc de regalo.
+              </p>
+            )}
             {!expandido && puedeTruncar && (
               <button
                 type="button"
@@ -318,6 +318,10 @@ function ProductCard({
               </button>
             )}
           </div>
+        ) : esPromo ? (
+          <p className="text-[11px] sm:text-xs text-emerald-400/90 font-medium mt-1 leading-tight">
+            Sale con Fanta o Sprite 375cc de regalo.
+          </p>
         ) : null}
       </div>
 

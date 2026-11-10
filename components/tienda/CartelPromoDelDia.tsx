@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { X, Gift, ArrowRight } from 'lucide-react'
+import { X, ArrowRight } from 'lucide-react'
 import { usarCatalogo } from '@/contexto/CatalogoContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -135,17 +135,6 @@ export default function CartelPromoDelDia() {
             onClick={() => handleElegirProducto(productoBurger, 'patys-especial', 'Burger Especial', 8000)}
             className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
-            {/* Badge de Regalo sobre la Card */}
-            <div className="flex items-center justify-between gap-1 mb-2.5">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                <Gift size={11} className="text-emerald-400" />
-                <span>+ BEBIDA 375cc DE REGALO</span>
-              </span>
-              <span className="font-bebas text-base sm:text-lg text-emerald-400">
-                {productoBurger ? formatearPrecio(productoBurger.precio) : '$8.000'}
-              </span>
-            </div>
-
             <div className="flex items-start gap-3">
               {/* Imagen del plato */}
               <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
@@ -161,14 +150,19 @@ export default function CartelPromoDelDia() {
 
               {/* Textos */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                  Burger Especial
-                </h3>
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                    Burger Especial
+                  </h3>
+                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
+                    {productoBurger ? formatearPrecio(productoBurger.precio) : '$8.000'}
+                  </span>
+                </div>
                 <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Medallón de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas.
+                  Medallón de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
                 </p>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                  Incluye: <span className="text-white font-bold">Fanta o Sprite 375cc</span>
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
+                  Sale con Fanta o Sprite 375cc de regalo.
                 </p>
               </div>
             </div>
@@ -187,17 +181,6 @@ export default function CartelPromoDelDia() {
             onClick={() => handleElegirProducto(productoLomito, 'prod-1779840756425-936', 'Lomito de pollo', 11500)}
             className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
-            {/* Badge de Regalo sobre la Card */}
-            <div className="flex items-center justify-between gap-1 mb-2.5">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                <Gift size={11} className="text-emerald-400" />
-                <span>+ BEBIDA 375cc DE REGALO</span>
-              </span>
-              <span className="font-bebas text-base sm:text-lg text-emerald-400">
-                {productoLomito ? formatearPrecio(productoLomito.precio) : '$11.500'}
-              </span>
-            </div>
-
             <div className="flex items-start gap-3">
               {/* Imagen del plato */}
               <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
@@ -213,14 +196,19 @@ export default function CartelPromoDelDia() {
 
               {/* Textos */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                  Lomito de Pollo
-                </h3>
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                    Lomito de Pollo
+                  </h3>
+                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
+                    {productoLomito ? formatearPrecio(productoLomito.precio) : '$11.500'}
+                  </span>
+                </div>
                 <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Bife de pollo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas.
+                  Bife de pollo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
                 </p>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                  Incluye: <span className="text-white font-bold">Fanta o Sprite 375cc</span>
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
+                  Sale con Fanta o Sprite 375cc de regalo.
                 </p>
               </div>
             </div>
