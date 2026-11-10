@@ -2,8 +2,8 @@
 // lib/impresion/escpos.ts
 // Codificador binario de comandos ESC/POS nativos para
 // impresoras térmicas de 80mm (48 columnas) y 58mm (32 columnas).
-// Replica con precisión el diseño visual y proporciones
-// de las comandas y tickets de Chefsy.
+// Tipografía nítida con espaciado natural (no apretado)
+// y tamaño proporcional a las comandas estándar de Chefsy.
 // ─────────────────────────────────────────────────────
 
 import { Pedido } from '@/tipos'
@@ -20,16 +20,18 @@ export interface OpcionesImpresion {
 const COMANDOS = {
   INIT: [0x1b, 0x40], // ESC @ (Inicializar impresora)
   CODE_PAGE_CP850: [0x1b, 0x74, 0x02], // ESC t 2 (Página de códigos CP850 Multilingual)
+  FONT_A: [0x1b, 0x4d, 0x00], // ESC M 0 (Fuente A estándar 12x24 dots)
+  FONT_B: [0x1b, 0x4d, 0x01], // ESC M 1 (Fuente B compacta 9x17 dots)
   ALIGN_LEFT: [0x1b, 0x61, 0x00], // ESC a 0
   ALIGN_CENTER: [0x1b, 0x61, 0x01], // ESC a 1
   ALIGN_RIGHT: [0x1b, 0x61, 0x02], // ESC a 2
   BOLD_ON: [0x1b, 0x45, 0x01], // ESC E 1
   BOLD_OFF: [0x1b, 0x45, 0x00], // ESC E 0
-  SIZE_NORMAL: [0x1d, 0x21, 0x00], // GS ! 0
+  SIZE_NORMAL: [0x1d, 0x21, 0x00], // GS ! 0 (Tamaño 1x1 natural)
   SIZE_DOUBLE_HEIGHT: [0x1d, 0x21, 0x01], // GS ! 1
   SIZE_DOUBLE_WIDTH: [0x1d, 0x21, 0x10], // GS ! 16
-  SIZE_DOUBLE: [0x1d, 0x21, 0x11], // GS ! 17 (Doble ancho y alto)
-  SIZE_QUADRUPLE: [0x1d, 0x21, 0x22], // GS ! 34 (Cuádruple tamaño)
+  SIZE_DOUBLE: [0x1d, 0x21, 0x11], // GS ! 17 (Doble ancho y alto proporcionado)
+  SIZE_QUADRUPLE: [0x1d, 0x21, 0x22], // GS ! 34
   UNDERLINE_ON: [0x1b, 0x2d, 0x01], // ESC - 1
   UNDERLINE_OFF: [0x1b, 0x2d, 0x00], // ESC - 0
   FEED_LINES: (n: number) => [0x1b, 0x64, n], // ESC d n
@@ -95,6 +97,12 @@ export class EscPosBuilder {
     this.anchoColumnas = anchoMm === 58 ? 32 : 48
     this.buffer.push(...COMANDOS.INIT)
     this.buffer.push(...COMANDOS.CODE_PAGE_CP850)
+    // Seleccionar Fuente A estándar (12x24 dots): tipografía abierta y redonda
+    this.buffer.push(...COMANDOS.FONT_A)
+    // 1 dot de espaciado entre caracteres: evita que las letras queden pegadas o apretadas
+    this.buffer.push(0x1b, 0x20, 0x01)
+    // Interlineado cómodo de 32 dots (altura 24 dots + 8 dots de separación)
+    this.buffer.push(0x1b, 0x33, 32)
   }
 
   alinear(alineacion: 'izq' | 'centro' | 'der'): this {
@@ -115,6 +123,25 @@ export class EscPosBuilder {
     else if (tipo === 'doble_ancho') this.buffer.push(...COMANDOS.SIZE_DOUBLE_WIDTH)
     else if (tipo === 'cuadruple') this.buffer.push(...COMANDOS.SIZE_QUADRUPLE)
     else this.buffer.push(...COMANDOS.SIZE_NORMAL)
+    return this
+  }
+
+  fuente(tipo: 'A' | 'B'): this {
+    this.buffer.push(...(tipo === 'B' ? COMANDOS.FONT_B : COMANDOS.FONT_A))
+    return this
+  }
+
+  espaciado(dots: number = 1): this {
+    this.buffer.push(0x1b, 0x20, Math.max(0, Math.min(32, dots)))
+    return this
+  }
+
+  interlineado(dots?: number): this {
+    if (dots === undefined) {
+      this.buffer.push(0x1b, 0x32) // Reset a 1/6 pulgada
+    } else {
+      this.buffer.push(0x1b, 0x33, Math.max(0, Math.min(255, dots)))
+    }
     return this
   }
 
@@ -213,7 +240,7 @@ export class EscPosBuilder {
 
 /**
  * Genera el ticket final para el cliente con precios, desglose y datos de entrega.
- * Réplica exacta de la plantilla htmlTicket de Chefsy.
+ * Réplica exacta de la plantilla htmlTicket de Chefsy en tamaño normal y proporción natural.
  */
 export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -231,10 +258,11 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
   // 1. Encabezado
   builder
     .alinear('centro')
-    .tamano('doble')
-    .negrita(true)
-    .linea('CHEFSY')
     .tamano('normal')
+    .negrita(true)
+    .espaciado(2)
+    .linea('CHEFSY')
+    .espaciado(1)
     .negrita(false)
     .linea('Ticket de Pedido')
     .linea(`Pedido #${pedido.id.slice(0, 6).toUpperCase()} · ${pedido.hora}`)
@@ -263,8 +291,8 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 
   builder.separador('-')
 
-  // 3. Detalle de Productos (tabla limpia con espacios, idéntica a la web)
-  builder.alinear('izq')
+  // 3. Detalle de Productos (tabla limpia con espacios, tamaño normal proporcionado)
+  builder.alinear('izq').tamano('normal')
   for (const item of pedido.productos) {
     const cantidadStr = `${item.cantidad}x `
     const precioStr = f(item.precio * item.cantidad)
@@ -297,10 +325,9 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 
   builder
     .alinear('izq')
-    .tamano('doble_alto')
+    .tamano('normal')
     .negrita(true)
     .filaDosColumnas('TOTAL:', f(pedido.total), ' ')
-    .tamano('normal')
     .negrita(false)
     .filaDosColumnas('Pago:', metodoPagoLabel[pedido.metodoPago ?? 'sin_especificar'] ?? 'Sin especificar', ' ')
 
@@ -334,7 +361,7 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
 
 /**
  * Genera la comanda para cocina.
- * Réplica exacta de la plantilla htmlCocina de Chefsy (títulos claros, cantidades altas y legibles).
+ * Réplica exacta de la plantilla htmlCocina de Chefsy en tamaño normal proporcionado y letra espaciada.
  */
 export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -343,31 +370,28 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
   // 1. Encabezado de Cocina
   builder
     .alinear('centro')
-    .tamano('doble')
-    .negrita(true)
-    .linea('COCINA')
     .tamano('normal')
+    .negrita(true)
+    .espaciado(2)
+    .linea('COCINA')
+    .espaciado(1)
     .negrita(false)
     .linea(pedido.hora)
-    .tamano('doble_alto')
     .negrita(true)
     .linea(pedido.cliente)
-    .tamano('normal')
     .negrita(false)
     .separador('-')
 
-  // 2. Lista de Platos con Cantidades Resaltadas
-  builder.alinear('izq')
+  // 2. Lista de Platos con Cantidades Resaltadas (tamaño normal, nunca distorsionado)
+  builder.alinear('izq').tamano('normal')
   for (const item of pedido.productos) {
     builder
-      .tamano('doble_alto')
       .negrita(true)
       .linea(`${item.cantidad}x ${item.nombre}`)
 
     if (item.coccion) {
       const coccionStr = item.coccion === 'fritas' ? 'FRITAS' : 'AL HORNO'
       builder
-        .tamano('doble_alto')
         .negrita(true)
         .linea(`   ↳ [${coccionStr}]`)
     }
@@ -375,21 +399,19 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
     const aclaracion = (item as any).aclaracion
     if (aclaracion) {
       builder
-        .tamano('normal')
-        .negrita(true)
+        .negrita(false)
         .linea(`   * ${String(aclaracion).toUpperCase()}`)
     }
 
     if ((item as any).modificadores && Array.isArray((item as any).modificadores)) {
       for (const mod of (item as any).modificadores) {
         builder
-          .tamano('normal')
           .negrita(false)
           .linea(`   + ${mod.nombre || mod}`)
       }
     }
 
-    builder.tamano('normal').negrita(false).linea('')
+    builder.linea('')
   }
 
   // 3. Notas Urgentes de Cocina
@@ -397,7 +419,7 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
     builder
       .separador('-')
       .alinear('izq')
-      .tamano('doble_alto')
+      .tamano('normal')
       .negrita(true)
       .linea(`NOTA: ${pedido.observaciones.toUpperCase()}`)
   }
@@ -413,9 +435,11 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
   builder
     .separador('-')
     .alinear('centro')
-    .tamano('doble_alto')
+    .tamano('normal')
     .negrita(true)
+    .espaciado(2)
     .linea(`[ ${tipoEntregaStr} ]`)
+    .espaciado(1)
 
   if (opciones.sonarAlarma) {
     builder.sonarAlarma()
@@ -430,7 +454,7 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
 
 /**
  * Genera un ticket de prueba para calibrar ancho de papel, fuentes y guillotina.
- * Réplica exacta de la plantilla htmlPrueba de Chefsy.
+ * Tamaño natural y espaciado limpio.
  */
 export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
@@ -438,14 +462,15 @@ export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uin
 
   builder
     .alinear('centro')
-    .tamano('doble')
-    .negrita(true)
-    .linea('CHEFSY POS')
     .tamano('normal')
+    .negrita(true)
+    .espaciado(2)
+    .linea('CHEFSY POS')
+    .espaciado(1)
     .negrita(false)
     .linea(`Prueba de Impresión · ${anchoMm}mm`)
     .separador('-')
-    .alinear('izq')
+    .alinear('izq').tamano('normal')
     .filaDosColumnas('Estado conexión:', 'ONLINE', ' ')
     .filaDosColumnas('Fecha:', new Date().toLocaleDateString('es-AR'), ' ')
     .filaDosColumnas('Hora:', new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), ' ')
@@ -454,16 +479,13 @@ export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uin
     .filaDosColumnas('Item de prueba 1', '$ 4.500', ' ')
     .filaDosColumnas('Item de prueba 2', '$ 7.800', ' ')
     .separador('-')
-    .tamano('doble_alto')
     .negrita(true)
     .filaDosColumnas('TOTAL TEST:', '$ 12.300', ' ')
-    .tamano('normal')
     .negrita(false)
     .separador('-')
     .alinear('centro')
     .negrita(true)
     .linea('¡Impresora Térmica Configurada!')
-    .tamano('normal')
     .negrita(false)
     .linea('chefsy.xyz')
 
