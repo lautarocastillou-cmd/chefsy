@@ -20,7 +20,7 @@ export default function ErrorPrincipalLayout({
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 sm:p-8 min-h-[60vh]">
-      <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center backdrop-blur-xl">
+      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center">
         <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
           <AlertTriangle className="w-7 h-7 stroke-[2.2]" />
         </div>

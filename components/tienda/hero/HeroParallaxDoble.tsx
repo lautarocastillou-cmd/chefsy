@@ -125,7 +125,7 @@ export default function HeroParallaxDoble({
                 placeholder="Buscar hamburguesas, papas, bebidas, promos..."
                 value={busqueda}
                 onChange={(e) => onBusquedaChange(e.target.value)}
-                className="w-full bg-zinc-950/80 backdrop-blur-xl border-2 border-white/15 hover:border-emerald-500/50 focus:border-emerald-400 text-white py-4 sm:py-5 pl-14 sm:pl-16 pr-12 rounded-2xl sm:rounded-3xl outline-none transition-all shadow-[0_10px_35px_rgba(0,0,0,0.6)] focus:shadow-[0_0_35px_rgba(52,211,153,0.3)] placeholder:text-slate-400 font-medium text-base sm:text-lg focus:ring-4 focus:ring-emerald-500/20"
+                className="w-full bg-zinc-950 border-2 border-white/15 hover:border-emerald-500/50 focus:border-emerald-400 text-white py-4 sm:py-5 pl-14 sm:pl-16 pr-12 rounded-2xl sm:rounded-3xl outline-none transition-all shadow-[0_10px_35px_rgba(0,0,0,0.6)] focus:shadow-[0_0_35px_rgba(52,211,153,0.3)] placeholder:text-slate-400 font-medium text-base sm:text-lg focus:ring-4 focus:ring-emerald-500/20"
               />
               <Search className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 text-emerald-400 group-hover:scale-110 transition-transform duration-200" size={22} />
               

@@ -691,7 +691,7 @@ export default function MapaGlobalMapLibre({
   return (
     <div className={`mapa-bajo-consumo-${bajoConsumo ? 'si' : 'no'} relative z-0 h-full min-h-[400px] w-full overflow-hidden bg-slate-100 dark:bg-slate-900`}>
       <div ref={contenedorRef} className="absolute inset-0" />
-      <div className="absolute right-3 top-3 z-10 flex gap-1 rounded-xl border border-white/15 bg-slate-950/85 p-1 shadow-lg backdrop-blur" aria-label="Controles del mapa">
+      <div className="absolute right-3 top-3 z-10 flex gap-1 rounded-xl border border-white/15 bg-slate-950 p-1 shadow-lg" aria-label="Controles del mapa">
         {([
           ['flota', 'Ver toda la flota', 'flota'],
           ['cadete', 'Seguir cadete seleccionado', 'cadete'],

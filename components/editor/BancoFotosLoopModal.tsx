@@ -72,7 +72,7 @@ export default function BancoFotosLoopModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[150] flex items-center justify-center bg-black/85 p-4 animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="titulo-banco-fotos-loop"

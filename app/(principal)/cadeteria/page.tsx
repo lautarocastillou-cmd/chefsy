@@ -318,7 +318,7 @@ export default function TorreControlPage() {
       <div className={cn(
         'z-30 flex items-end justify-center gap-1 overflow-x-auto scrollbar-none',
         tabSuperior === 'mapa'
-          ? 'absolute left-1/2 top-3 max-w-[calc(100%-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200/80 bg-white/95 px-1 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95'
+          ? 'absolute left-1/2 top-3 max-w-[calc(100%-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-1 shadow-lg dark:border-slate-700 dark:bg-slate-900'
           : 'relative w-full shrink-0 border-b border-gray-200 bg-white/90 px-1 dark:border-slate-800 dark:bg-slate-950/90'
       )}>
         {(
@@ -362,7 +362,7 @@ export default function TorreControlPage() {
       {tabSuperior === 'mapa' && (
         <>
       {/* Selector de Pestañas Móvil */}
-      <div className="absolute left-1/2 top-[3.7rem] z-30 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center rounded-xl border border-gray-200 bg-white/95 p-1 shadow-lg backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95">
+      <div className="absolute left-1/2 top-[3.7rem] z-30 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center rounded-xl border border-gray-200 bg-white p-1 shadow-lg md:hidden dark:border-slate-700 dark:bg-slate-900">
         <button
           type="button"
           onClick={() => setVistaMobile('mapa')}

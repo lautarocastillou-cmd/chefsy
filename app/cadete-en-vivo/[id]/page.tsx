@@ -93,7 +93,7 @@ function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
 
   return (
     <div
-      className="absolute inset-x-0 top-0 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/10 p-3 pointer-events-none shadow-2xl text-white"
+      className="absolute inset-x-0 top-0 bg-slate-900 rounded-2xl border border-white/10 p-3 pointer-events-none shadow-2xl text-white"
       style={{
         transform: `translateY(${translateY}px) scale(${scale})`,
         transformOrigin: 'top center',
@@ -359,7 +359,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
   if (error || !pedido) return (
     <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white z-50">
-      <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
+      <div className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-8 text-center max-w-xs w-full flex flex-col items-center gap-3">
         <AlertCircle size={44} className="text-amber-500" />
         <h1 className="text-lg font-bold text-white">Ups...</h1>
         <p className="text-slate-400 text-sm">{error || 'No se encontró el pedido.'}</p>
@@ -387,7 +387,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
 
       {/* Overlay: Señal GPS pausada */}
       {gpsApagado && (
-        <div className="absolute inset-x-3 top-24 sm:top-28 z-[350] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md rounded-2xl p-3 shadow-2xl border border-red-500/30 flex items-center gap-2.5 animate-in slide-in-from-top-4">
+        <div className="absolute inset-x-3 top-24 sm:top-28 z-[350] max-w-md mx-auto bg-slate-900 rounded-2xl p-3 shadow-2xl border border-red-500/30 flex items-center gap-2.5 animate-in slide-in-from-top-4">
           <WifiOff size={18} className="text-red-400 shrink-0" />
           <span className="text-xs font-bold text-slate-200">
             {cadeteNombre} está en camino (señal GPS momentáneamente pausada).
@@ -506,7 +506,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
         />
       ))}
       {/* Tarjeta principal cápsula glassmorphism */}
-      <div className="relative bg-slate-950/85 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 p-3.5 sm:p-4 text-white" style={{ zIndex: 20 }}>
+      <div className="relative bg-slate-950 rounded-2xl shadow-2xl border border-white/10 p-3.5 sm:p-4 text-white" style={{ zIndex: 20 }}>
         {headerPrincipal}
       </div>
     </div>
@@ -631,7 +631,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
       }`}
     >
       {paradasPrevias > 0 && !isTerminado ? (
-        <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
           </div>
@@ -649,7 +649,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       ) : esProximaEntrega && isEnCamino && !gpsApagado ? (
-        <div className="bg-emerald-950/90 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-emerald-950 text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <Bike size={22} />
           </div>
@@ -663,7 +663,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       ) : cadeteOcupadoEnOtroViaje && !isEnCamino && !isTerminado ? (
-        <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-amber-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Bike size={22} className="animate-bounce" />
           </div>
@@ -677,7 +677,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       ) : isEnPreparacion && !cadeteOcupadoEnOtroViaje && paradasPrevias === 0 ? (
-        <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-white/10 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-slate-900 rounded-2xl p-3.5 shadow-2xl border border-white/10 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
             <Flame size={22} className="animate-pulse" />
           </div>
@@ -693,7 +693,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       ) : isTerminado ? (
-        <div className="bg-emerald-950/90 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4">
+        <div className="bg-emerald-950 text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <CheckCircle2 size={22} />
           </div>
@@ -710,7 +710,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
   const bottomSheet = (
     <div
       ref={sheetContainerRef}
-      className="w-full bg-slate-950/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-white/10 overflow-hidden text-white will-change-transform"
+      className="w-full bg-slate-950 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-white/10 overflow-hidden text-white will-change-transform"
       style={{
         transform: `translate3d(0, ${currentTranslateY}px, 0)`,
         transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',

@@ -112,7 +112,7 @@ export default function MarcoHistoriaInstagram({
             {lista.map((_, i) => (
               <div 
                 key={i} 
-                className="h-1 rounded-full flex-1 overflow-hidden bg-white/25 backdrop-blur-md"
+                className="h-1 rounded-full flex-1 overflow-hidden bg-white/25"
               >
                 <div 
                   className={`h-full transition-all duration-300 ${

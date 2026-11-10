@@ -196,7 +196,7 @@ export default function ModalCompartirUbicacion({ abierto, onClose }: ModalCompa
   if (!abierto || !montado || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-in fade-in duration-150 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-in fade-in duration-150">
       <div 
         className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 dark:text-slate-100 animate-in zoom-in-95 duration-150"
       >

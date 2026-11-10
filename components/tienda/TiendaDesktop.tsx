@@ -404,7 +404,7 @@ export default function TiendaDesktop() {
             ) : (
               <button
                 onClick={() => setCartAbierto(true)}
-                className="bg-[#1c1c1c]/90 hover:bg-[#252525] text-white p-3.5 md:p-4 rounded-full flex items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] active:scale-95 transition-all cursor-pointer border border-white/10 group backdrop-blur-md"
+                className="bg-[#1c1c1c] hover:bg-[#252525] text-white p-3.5 md:p-4 rounded-full flex items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] active:scale-95 transition-all cursor-pointer border border-white/10 group"
                 title="Ver carrito de compras"
                 aria-label="Ver carrito"
               >

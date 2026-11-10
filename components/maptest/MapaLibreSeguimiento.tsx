@@ -869,7 +869,7 @@ export default function MapaLibreSeguimiento({
 
       {/* Indicador de cambio de estilo en curso */}
       {cargandoEstilo && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
           <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
           <span className="text-[11px] font-bold text-white tracking-wide">Cambiando tema...</span>
         </div>

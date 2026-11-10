@@ -118,7 +118,7 @@ export default function ModalConfiguracionLoop({
   }
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[120] bg-black/85 flex items-center justify-center p-4">
       <div 
         className="bg-zinc-950 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -234,7 +234,7 @@ export default function ModalConfiguracionLoop({
                       </div>
                     )}
 
-                    <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold px-1 rounded z-10 font-mono">
+                    <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 rounded z-10 font-mono">
                       #{index + 1}
                     </span>
                   </div>

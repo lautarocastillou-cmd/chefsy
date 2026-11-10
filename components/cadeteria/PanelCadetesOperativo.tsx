@@ -281,7 +281,7 @@ function PanelCadetesOperativo({
   const finalizarArrastre = useCallback(() => setPedidoArrastrado(null), [])
 
   return (
-    <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-gray-50/95 shadow-xl backdrop-blur md:left-24 md:flex dark:border-slate-700 dark:bg-slate-900/95`}>
+    <div className={`${vistaMobile === 'cadetes' ? 'flex' : 'hidden'} pointer-events-auto absolute bottom-3 left-3 top-[4.5rem] z-20 w-[min(22rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-xl md:left-24 md:flex dark:border-slate-700 dark:bg-slate-900`}>
       <div className="border-b border-slate-200 bg-white px-3 py-3 shrink-0 dark:border-slate-800 dark:bg-slate-950">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">

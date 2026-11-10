@@ -83,7 +83,7 @@ export default function ModalPagoMixto({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-150">
       <div 
         className="bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-[#333] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150 text-left"
         onClick={(e) => e.stopPropagation()}

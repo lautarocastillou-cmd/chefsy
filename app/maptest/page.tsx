@@ -255,7 +255,7 @@ function MapTestContent() {
       {/* ── 2. HEADER SUPERIOR FLOTANTE CON SELECTOR ──────────────────────────── */}
       <header className="absolute top-3 inset-x-3 sm:top-4 sm:inset-x-4 z-40 flex flex-col sm:flex-row items-center justify-between gap-2.5 pointer-events-none">
         {/* Título & Badge Beta */}
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3 pointer-events-auto w-full sm:w-auto">
+        <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3 pointer-events-auto w-full sm:w-auto">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Sparkles size={18} className="text-white" />
           </div>
@@ -285,7 +285,7 @@ function MapTestContent() {
                   if (c) setCadeteSeleccionado(c)
                 }
               }}
-              className="w-full bg-slate-900/90 backdrop-blur-xl border border-white/15 text-xs text-white rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:border-emerald-500 shadow-xl cursor-pointer"
+              className="w-full bg-slate-900 border border-white/15 text-xs text-white rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:border-emerald-500 shadow-xl cursor-pointer"
             >
               <option value="">
                 {cargandoLista ? 'Buscando pedidos activos...' : `📦 Pedidos en curso (${pedidosActivos.length})`}
@@ -308,7 +308,7 @@ function MapTestContent() {
                 const c = cadetesActivos.find((item) => item.id === id)
                 setCadeteSeleccionado(c || null)
               }}
-              className="w-full bg-slate-900/90 backdrop-blur-xl border border-white/15 text-xs text-white rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:border-emerald-500 shadow-xl cursor-pointer"
+              className="w-full bg-slate-900 border border-white/15 text-xs text-white rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:border-emerald-500 shadow-xl cursor-pointer"
             >
               <option value="">
                 {`🛵 Cadetes GPS (${cadetesActivos.filter((c) => c.tiene_coordenadas).length})`}
@@ -326,7 +326,7 @@ function MapTestContent() {
           <button
             onClick={recargarActivos}
             title="Refrescar lista"
-            className="w-8 h-8 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-white/15 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-900 border border-white/15 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           >
             <RefreshCw size={14} />
           </button>
@@ -336,7 +336,7 @@ function MapTestContent() {
       {/* ── 3. BARRA INFERIOR DE CONTROLES 3D & CÁMARA ────────────────────────── */}
       <footer className="absolute bottom-4 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-40 flex flex-col items-center gap-2 pointer-events-none">
         {/* Toggle para ocultar/mostrar controles en pantallas pequeñas */}
-        <div className="bg-slate-900/95 backdrop-blur-xl border border-white/15 p-2 rounded-2xl shadow-2xl flex flex-wrap items-center justify-center gap-2 pointer-events-auto max-w-full">
+        <div className="bg-slate-900 border border-white/15 p-2 rounded-2xl shadow-2xl flex flex-wrap items-center justify-center gap-2 pointer-events-auto max-w-full">
           {/* Modos de Cámara */}
           <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/10">
             <button
@@ -483,7 +483,7 @@ function MapTestContent() {
 
       {/* ── 4. HUD FLOTANTE DE TELEMETRÍA (Esquina Superior Derecha) ─────────── */}
       <aside className="absolute top-20 right-3.5 z-40 pointer-events-none flex flex-col items-end gap-2">
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/15 p-3 rounded-2xl shadow-2xl text-left pointer-events-auto min-w-[170px]">
+        <div className="bg-slate-900 border border-white/15 p-3 rounded-2xl shadow-2xl text-left pointer-events-auto min-w-[170px]">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <Activity size={12} className="text-emerald-400" />
@@ -538,7 +538,7 @@ function MapTestContent() {
         </div>
 
         {/* Control deslizante de Pitch / Inclinación */}
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/15 px-3 py-2 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-2 text-xs">
+        <div className="bg-slate-900 border border-white/15 px-3 py-2 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-2 text-xs">
           <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">Inclinación:</span>
           <input
             type="range"
@@ -555,7 +555,7 @@ function MapTestContent() {
       {/* ── 5. BADGE DE ESTADO INFORMATIVO ───────────────────────────────────── */}
       {pedidoSeleccionado && (
         <div className="absolute top-20 left-3.5 z-40 pointer-events-none">
-          <div className="bg-slate-900/90 backdrop-blur-xl border border-white/15 px-3.5 py-2 rounded-2xl shadow-2xl pointer-events-auto flex items-center gap-3">
+          <div className="bg-slate-900 border border-white/15 px-3.5 py-2 rounded-2xl shadow-2xl pointer-events-auto flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
               <Bike size={16} />
             </div>

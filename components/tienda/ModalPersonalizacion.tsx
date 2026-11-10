@@ -369,14 +369,14 @@ export default function ModalPersonalizacion({
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
 
                     {/* Hint flotante de Zoom en Desktop */}
-                    <div className="absolute top-3.5 right-3.5 z-30 opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
+                    <div className="absolute top-3.5 right-3.5 z-30 opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 text-white text-xs font-bold border border-white/15 shadow-xl pointer-events-none">
                       <Maximize2 size={13} className="text-chefsy-400" />
                       <span>Ampliar HD</span>
                     </div>
 
                     {/* Indicador de foto activa si hay más de 1 */}
                     {listaFotos.length > 1 && (
-                      <div className="absolute top-3.5 left-3.5 z-30 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/15">
+                      <div className="absolute top-3.5 left-3.5 z-30 px-2.5 py-1 rounded-full bg-black/85 text-[10px] font-bold text-white tracking-wider flex items-center gap-1.5 border border-white/15">
                         <span className="w-1.5 h-1.5 rounded-full bg-chefsy-400 animate-pulse" />
                         Foto {indiceFoto + 1} de {listaFotos.length}
                       </div>
@@ -391,7 +391,7 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev - 1 + listaFotos.length) % listaFotos.length)
                           }}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
                           aria-label="Foto anterior"
                         >
                           <ChevronLeft size={20} />
@@ -403,7 +403,7 @@ export default function ModalPersonalizacion({
                             e.stopPropagation()
                             setIndiceFoto(prev => (prev + 1) % listaFotos.length)
                           }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center border border-white/15 shadow-md transition-all active:scale-90 cursor-pointer"
                           aria-label="Foto siguiente"
                         >
                           <ChevronRight size={20} />
@@ -413,7 +413,7 @@ export default function ModalPersonalizacion({
 
                     {/* Barra de Miniaturas flotante en la parte inferior si hay > 1 foto */}
                     {listaFotos.length > 1 && (
-                      <div className="absolute bottom-3.5 left-3.5 right-3.5 z-30 flex items-center gap-2 p-1.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 overflow-x-auto scrollbar-hide">
+                      <div className="absolute bottom-3.5 left-3.5 right-3.5 z-30 flex items-center gap-2 p-1.5 rounded-2xl bg-black/85 border border-white/15 overflow-x-auto scrollbar-hide">
                         {listaFotos.map((foto, idx) => {
                           const mini = optimizarUrlImagen(foto, 100, true)
                           const isSelect = idx === indiceFoto

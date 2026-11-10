@@ -394,7 +394,7 @@ export default function CartDrawer() {
       contexto="CartDrawer y Checkout"
       fallback={({ reset }) => (
         <div 
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/85 p-4"
           onClick={onCerrar}
         >
           <div 
@@ -438,7 +438,7 @@ export default function CartDrawer() {
         initial={{ opacity: 0 }}
         animate={{ opacity: estaCerrando ? 0 : 1 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm pointer-events-auto" 
+        className="fixed inset-0 bg-black/80 pointer-events-auto" 
         onClick={onCerrar}
       />
       

@@ -253,7 +253,7 @@ export default function PaginaUbicacionPublica({ params }: { params: Promise<{ i
     <div className="relative w-full h-[100dvh] bg-slate-950 flex flex-col overflow-hidden text-white font-sans select-none">
       
       {/* Barra Superior Flotante */}
-      <header className="absolute top-3 inset-x-3 z-[500] max-w-lg mx-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3">
+      <header className="absolute top-3 inset-x-3 z-[500] max-w-lg mx-auto bg-slate-900 border border-slate-700/80 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center shrink-0 shadow-inner">
             <Bike className="w-5 h-5" />
@@ -325,7 +325,7 @@ export default function PaginaUbicacionPublica({ params }: { params: Promise<{ i
 
       {/* Tarjeta Inferior de Telemetría y Navegación */}
       {tieneCoordenadas && (
-        <footer className="absolute bottom-3 inset-x-3 z-[500] max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl flex flex-col gap-3">
+        <footer className="absolute bottom-3 inset-x-3 z-[500] max-w-lg mx-auto bg-slate-900 border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl flex flex-col gap-3">
           
           {/* Métricas en vivo (Velocidad, Batería, Estado) */}
           <div className="grid grid-cols-3 gap-2 text-center text-xs">

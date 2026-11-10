@@ -780,7 +780,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
 
           {/* Overlay de Carga */}
           {cargandoRuta && (
-            <div className="absolute inset-0 z-[600] bg-slate-950/70 backdrop-blur-xs flex flex-col items-center justify-center gap-2 text-slate-300">
+            <div className="absolute inset-0 z-[600] bg-slate-950/80 flex flex-col items-center justify-center gap-2 text-slate-300">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs font-semibold">Cargando telemetría del viaje...</p>
             </div>

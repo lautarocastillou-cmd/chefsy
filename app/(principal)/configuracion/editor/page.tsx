@@ -1511,7 +1511,7 @@ export default function EditorTienda() {
             <button
               type="button"
               onClick={() => setVistaMobile('editor')}
-              className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-full text-xs font-black flex items-center gap-2 shadow-2xl border border-white/20 active:scale-95 cursor-pointer backdrop-blur-md"
+              className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-full text-xs font-black flex items-center gap-2 shadow-2xl border border-white/20 active:scale-95 cursor-pointer"
             >
               <Sliders size={15} />
               <span>Volver a Controles</span>

@@ -1053,7 +1053,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
       {/* HUD Superior con Estado Claro (debajo del header flotante) */}
       {pedido.estado === 'entregado' ? (
         <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
+          <div className="bg-[#032e22] text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
             <span className="text-xs font-bold text-white/95 tracking-wide">
               ¡Pedido entregado con éxito! Que lo disfrutes.
@@ -1062,7 +1062,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         </div>
       ) : enLaPuerta ? (
         <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#064e3b]/95 to-[#022c22]/95 backdrop-blur-xl text-white px-4 py-2 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 border border-emerald-400/50 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
+          <div className="bg-[#032e22] text-white px-4 py-2 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 border border-emerald-400/50 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
             <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shrink-0">
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -1082,7 +1082,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         </div>
       ) : paradasPrevias > 0 && !esperandoGps ? (
         <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#1c1917]/90 to-[#292524]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40 pointer-events-auto">
+          <div className="bg-[#1c1917] text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-amber-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-amber-200 tracking-wide">
               {previosEntregados > 0
@@ -1093,7 +1093,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
         </div>
       ) : esProximaEntrega && pedido.cadete_coordenadas && ['listo', 'en_camino'].includes(pedido.estado) && !esperandoGps ? (
         <div className="absolute top-[11.5rem] sm:top-44 left-0 right-0 z-[350] flex justify-center pointer-events-none px-3">
-          <div className="bg-gradient-to-r from-[#064e3b]/90 to-[#022c22]/90 backdrop-blur-xl text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
+          <div className="bg-[#032e22] text-white px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 border border-emerald-400/40 pointer-events-auto">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-xs font-bold text-emerald-200 tracking-wide">
               {totalPrevios > 0 && previosEntregados >= totalPrevios
