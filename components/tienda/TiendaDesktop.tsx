@@ -26,6 +26,7 @@ import dynamic from 'next/dynamic'
 // Componentes dynamic (code splitting)
 const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
 const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
+const CartelPromoDelDia = dynamic(() => import('@/components/tienda/CartelPromoDelDia'), { ssr: false })
 const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
 
 export default function TiendaDesktop() {
@@ -453,6 +454,7 @@ export default function TiendaDesktop() {
             />
           </Suspense>
         )}
+        <CartelPromoDelDia />
         <BotonPedidoFlotante />
       </div>
     </div>

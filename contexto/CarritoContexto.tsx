@@ -5,6 +5,7 @@ import { setCache, getCache, removeCache } from '@/lib/localCache'
 import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
+import { esProductoPromo, MOD_PROMO_COCA, MOD_PROMO_SPRITE } from '@/tipos/promo'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion, resolverDireccionHumana } from '@/lib/ubicacion'
 import { generarId, generarSlug } from '@/lib/utils'
 import { ContextoCatalogo } from '@/contexto/CatalogoContexto'
@@ -189,7 +190,11 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       return
     }
     setProductoAPersonalizar(prod)
-    setModsSeleccionados([])
+    if (esProductoPromo(prod.id, prod.nombre)) {
+      setModsSeleccionados([MOD_PROMO_COCA])
+    } else {
+      setModsSeleccionados([])
+    }
     setCantidadModal(1)
     setNotaPersonalizacion('')
   }, [turnoActivo, esDomingoCerrado, mensajeCierre])
@@ -227,11 +232,16 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   }, [estaListoCatalogo, productos, abrirModalPersonalizacion])
 
   const alternarModificador = useCallback((mod: ModificadorCatalogo) => {
-    setModsSeleccionados(prev => 
-      prev.some(m => m.id === mod.id)
+    setModsSeleccionados(prev => {
+      // Si es un modificador de promo de regalo (Coca o Sprite gratis), es mutuamente excluyente
+      if (mod.id.startsWith('promo-regalo-')) {
+        const sinPromo = prev.filter(m => !m.id.startsWith('promo-regalo-'))
+        return [...sinPromo, mod]
+      }
+      return prev.some(m => m.id === mod.id)
         ? prev.filter(m => m.id !== mod.id)
         : [...prev, mod]
-    )
+    })
   }, [])
 
   const calcularPrecioUnitarioModal = useCallback((): number => {
@@ -242,8 +252,16 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
 
   const agregarAlCarritoDesdeModal = useCallback((conPuntos: boolean = false) => {
     if (!productoAPersonalizar) return
-    const precioUnitario = calcularPrecioUnitarioModal()
-    const modsIdsStr = modsSeleccionados.map(m => m.id).sort().join('-')
+    let modsFinales = [...modsSeleccionados]
+    if (esProductoPromo(productoAPersonalizar.id, productoAPersonalizar.nombre)) {
+      const tienePromoBebida = modsFinales.some(m => m.id.startsWith('promo-regalo-'))
+      if (!tienePromoBebida) {
+        modsFinales = [MOD_PROMO_COCA, ...modsFinales]
+      }
+    }
+    const extra = modsFinales.reduce((acc, curr) => acc + curr.precioExtra, 0)
+    const precioUnitario = productoAPersonalizar.precio + extra
+    const modsIdsStr = modsFinales.map(m => m.id).sort().join('-')
     const idCart = modsIdsStr ? `${productoAPersonalizar.id}-${modsIdsStr}${conPuntos ? '-pts' : ''}` : `${productoAPersonalizar.id}${conPuntos ? '-pts' : ''}`
 
     setCarrito(prev => {
@@ -257,7 +275,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           idCart,
           producto: productoAPersonalizar,
           cantidad: cantidadModal,
-          modificadoresSeleccionados: modsSeleccionados,
+          modificadoresSeleccionados: modsFinales,
           precioUnitario,
           notaPersonalizacion: notaPersonalizacion.trim() || undefined,
           pago_con_puntos: conPuntos

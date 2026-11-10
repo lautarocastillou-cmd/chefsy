@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image'
-import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2, FileText, Check, Share2 } from 'lucide-react'
+import { Plus, Minus, X, ChevronLeft, ChevronRight, Maximize2, FileText, Check, Share2, Gift, Sparkles } from 'lucide-react'
+import { esProductoPromo, MOD_PROMO_COCA, MOD_PROMO_SPRITE } from '@/tipos/promo'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { formatearPrecio, optimizarUrlImagen, esConexionLenta } from '@/lib/utils'
 import { usarCarrito } from '@/contexto/CarritoContexto'
@@ -46,6 +47,23 @@ export default function ModalPersonalizacion({
 }: ModalPersonalizacionProps) {
   const { turnoActivo, esDomingoCerrado, mensajeCierre } = usarCarrito()
   const estaCerrado = turnoActivo === false || esDomingoCerrado
+
+  // Detección de promo del día (Burger Especial / Lomito de Pollo + Bebida 375cc de regalo)
+  const esPromo = esProductoPromo(producto.id, producto.nombre)
+  const modPromoSeleccionado = modsSeleccionados.find(m => m.id.startsWith('promo-regalo-'))?.id || MOD_PROMO_COCA.id
+
+  useEffect(() => {
+    if (esPromo) {
+      const yaTiene = modsSeleccionados.some(m => m.id.startsWith('promo-regalo-'))
+      if (!yaTiene) {
+        onAlternarModificador(MOD_PROMO_COCA)
+      }
+    }
+  }, [esPromo, modsSeleccionados, onAlternarModificador])
+
+  const modsDisponiblesFiltrados = useMemo(() => {
+    return modificadoresDisponibles.filter(m => !m.id.startsWith('promo-regalo-'))
+  }, [modificadoresDisponibles])
 
   // Lista de fotos memoizada
   const listaFotos = useMemo(() => {
@@ -511,12 +529,73 @@ export default function ModalPersonalizacion({
                     </div>
                   </div>
 
+                  {/* 🎁 CATEGORÍA PROMO: BEBIDA 375cc DE REGALO */}
+                  {esPromo && (
+                    <div className="bg-gradient-to-br from-amber-500/15 via-[#221c10] to-[#1c1c1c] border-2 border-amber-500/50 rounded-2xl p-3.5 space-y-2.5 shadow-lg shadow-amber-500/5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                            <Gift size={12} />
+                          </div>
+                          <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                            PROMO DE HOY: BEBIDA DE REGALO (375cc)
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          GRATIS
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-300 leading-snug">
+                        ¡Tu pedido incluye una bebida de 375cc sin cargo! Elegí cuál preferís:
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => onAlternarModificador(MOD_PROMO_COCA)}
+                          className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            modPromoSeleccionado === MOD_PROMO_COCA.id
+                              ? 'bg-amber-500/20 border-amber-400 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
+                              : 'bg-[#181818] border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                          }`}
+                        >
+                          <span className="text-base mb-1">🥤</span>
+                          <span className="text-xs font-black tracking-wide leading-tight">
+                            Coca-Cola 375cc
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-300 mt-0.5">
+                            {modPromoSeleccionado === MOD_PROMO_COCA.id ? '✓ ELEGIDA (GRATIS)' : '$0 · REGALO'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onAlternarModificador(MOD_PROMO_SPRITE)}
+                          className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            modPromoSeleccionado === MOD_PROMO_SPRITE.id
+                              ? 'bg-emerald-500/20 border-emerald-400 text-white shadow-md shadow-emerald-500/10 scale-[1.02]'
+                              : 'bg-[#181818] border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                          }`}
+                        >
+                          <span className="text-base mb-1">🍋</span>
+                          <span className="text-xs font-black tracking-wide leading-tight">
+                            Sprite 375cc
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-300 mt-0.5">
+                            {modPromoSeleccionado === MOD_PROMO_SPRITE.id ? '✓ ELEGIDA (GRATIS)' : '$0 · REGALO'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Modificadores disponibles */}
-                  {modificadoresDisponibles.length > 0 && (
+                  {modsDisponiblesFiltrados.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Extras disponibles</h4>
                       <div className="space-y-1.5">
-                        {modificadoresDisponibles.map(modObj => {
+                        {modsDisponiblesFiltrados.map(modObj => {
                           const seleccionado = modsSeleccionados.some(m => m.id === modObj.id)
                           return (
                             <button
@@ -682,12 +761,73 @@ export default function ModalPersonalizacion({
                   </div>
                 </div>
 
+                {/* 🎁 CATEGORÍA PROMO: BEBIDA 375cc DE REGALO */}
+                  {esPromo && (
+                    <div className="bg-gradient-to-br from-amber-500/15 via-[#221c10] to-[#1c1c1c] border-2 border-amber-500/50 rounded-2xl p-3.5 space-y-2.5 shadow-lg shadow-amber-500/5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                            <Gift size={12} />
+                          </div>
+                          <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                            PROMO DE HOY: BEBIDA DE REGALO (375cc)
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          GRATIS
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-300 leading-snug">
+                        ¡Tu pedido incluye una bebida de 375cc sin cargo! Elegí cuál preferís:
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => onAlternarModificador(MOD_PROMO_COCA)}
+                          className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            modPromoSeleccionado === MOD_PROMO_COCA.id
+                              ? 'bg-amber-500/20 border-amber-400 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
+                              : 'bg-[#181818] border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                          }`}
+                        >
+                          <span className="text-base mb-1">🥤</span>
+                          <span className="text-xs font-black tracking-wide leading-tight">
+                            Coca-Cola 375cc
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-300 mt-0.5">
+                            {modPromoSeleccionado === MOD_PROMO_COCA.id ? '✓ ELEGIDA (GRATIS)' : '$0 · REGALO'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onAlternarModificador(MOD_PROMO_SPRITE)}
+                          className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            modPromoSeleccionado === MOD_PROMO_SPRITE.id
+                              ? 'bg-emerald-500/20 border-emerald-400 text-white shadow-md shadow-emerald-500/10 scale-[1.02]'
+                              : 'bg-[#181818] border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                          }`}
+                        >
+                          <span className="text-base mb-1">🍋</span>
+                          <span className="text-xs font-black tracking-wide leading-tight">
+                            Sprite 375cc
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-300 mt-0.5">
+                            {modPromoSeleccionado === MOD_PROMO_SPRITE.id ? '✓ ELEGIDA (GRATIS)' : '$0 · REGALO'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                 {/* Modificadores disponibles */}
-                {modificadoresDisponibles.length > 0 && (
+                {modsDisponiblesFiltrados.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Extras disponibles</h4>
                     <div className="space-y-1.5">
-                      {modificadoresDisponibles.map(modObj => {
+                      {modsDisponiblesFiltrados.map(modObj => {
                         const seleccionado = modsSeleccionados.some(m => m.id === modObj.id)
                         return (
                           <button

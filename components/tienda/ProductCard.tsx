@@ -2,7 +2,8 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Plus, Flame, Star, Leaf, Sparkles, Utensils } from 'lucide-react'
+import { Plus, Flame, Star, Leaf, Sparkles, Utensils, Gift } from 'lucide-react'
+import { esProductoPromo } from '@/tipos/promo'
 import { formatearPrecio, optimizarUrlImagen, generarBlurUrl, cn } from '@/lib/utils'
 import { ProductoCatalogo, MetaProducto, DetallesComplementarios } from '@/tipos/catalogo'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
@@ -237,6 +238,12 @@ function ProductCard({
         {/* Badges Automáticos del Producto */}
         {mostrarBadges && (
           <div className="flex flex-wrap items-center gap-1 mb-1">
+            {esProductoPromo(prod.id, prod.nombre) && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-300 bg-amber-500/20 border border-amber-500/50 px-1.5 py-0.2 rounded-md">
+                <Gift size={10} className="text-amber-400" />
+                <span>+ BEBIDA 375cc GRATIS</span>
+              </span>
+            )}
             {((meta as any)?.es_mas_pedido || prod.esCombo) && (
               <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded-md">
                 <Flame size={10} className="text-amber-400" />

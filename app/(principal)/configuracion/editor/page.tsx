@@ -56,7 +56,7 @@ import { cn } from '@/lib/utils'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 
 type DeviceType = 'desktop' | 'ios' | 'android' | 'tablet'
-type TabType = 'hero' | 'tarjetas' | 'colores' | 'tipografia' | 'recursos' | 'redes'
+type TabType = 'hero' | 'tarjetas' | 'colores' | 'tipografia' | 'recursos' | 'redes' | 'promo'
 
 const GOOGLE_FONTS_CATALOG = [
   { id: 'bebas', nombre: 'Bebas Neue', categoria: 'Urbana / Impacto', cssVar: 'font-bebas' },
@@ -376,7 +376,7 @@ export default function EditorTienda() {
         </div>
 
         {/* Pestañas Ergonómicas de Navegación */}
-        <div className="grid grid-cols-6 border-b border-slate-800/80 bg-zinc-900/40 p-1 gap-1 text-center shrink-0 w-full min-w-0">
+        <div className="grid grid-cols-7 border-b border-slate-800/80 bg-zinc-900/40 p-1 gap-1 text-center shrink-0 w-full min-w-0">
           <button
             type="button"
             onClick={() => setActiveTab('hero')}
@@ -1178,6 +1178,119 @@ export default function EditorTienda() {
                   placeholder="https://tiktok.com/@tu_tienda"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ TAB 7: CARTEL PROMO DEL DÍA ═══════════════════ */}
+          {activeTab === 'promo' && (
+            <div className="space-y-4 animate-in fade-in duration-200 text-left">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div>
+                  <label className="text-xs font-black text-amber-400 uppercase tracking-wider block">
+                    Cartel Promo Popup
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Ventana emergente que reciben los clientes al entrar a la tienda.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activoActual = (configLive as any).promo_popup?.activo !== false
+                    handleChange('promo_popup' as any, {
+                      ...((configLive as any).promo_popup || {}),
+                      activo: !activoActual,
+                    })
+                  }}
+                  className={cn(
+                    'px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer',
+                    (configLive as any).promo_popup?.activo !== false
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  )}
+                >
+                  {(configLive as any).promo_popup?.activo !== false ? 'Activo' : 'Pausado'}
+                </button>
+              </div>
+
+              {/* Botón para probar en vivo */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('chefsy:abrir-promo'))
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 text-xs font-black transition-all active:scale-98 cursor-pointer shadow-sm"
+              >
+                <Flame size={14} className="text-amber-400" />
+                <span>Abrir Cartel de Prueba Ahora</span>
+              </button>
+
+              {/* Badge superior */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">Badge Superior</label>
+                <input
+                  type="text"
+                  value={(configLive as any).promo_popup?.badge ?? 'SOLO POR HOY'}
+                  onChange={(e) =>
+                    handleChange('promo_popup' as any, {
+                      ...((configLive as any).promo_popup || {}),
+                      badge: e.target.value,
+                    })
+                  }
+                  placeholder="Ej: SOLO POR HOY, PROMO EXCLUSIVA"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                />
+              </div>
+
+              {/* Título principal */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">Título del Cartel</label>
+                <input
+                  type="text"
+                  value={(configLive as any).promo_popup?.titulo ?? 'PROMO DE HOY'}
+                  onChange={(e) =>
+                    handleChange('promo_popup' as any, {
+                      ...((configLive as any).promo_popup || {}),
+                      titulo: e.target.value,
+                    })
+                  }
+                  placeholder="Ej: PROMO DE HOY"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bebas text-base tracking-wide"
+                />
+              </div>
+
+              {/* Descripción */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">Descripción de la Oferta</label>
+                <textarea
+                  value={
+                    (configLive as any).promo_popup?.descripcion ??
+                    'Comprando una Burger Especial o un Lomito de Pollo, ¡te llevás una Coca-Cola o Sprite de 375cc de regalo!'
+                  }
+                  onChange={(e) =>
+                    handleChange('promo_popup' as any, {
+                      ...((configLive as any).promo_popup || {}),
+                      descripcion: e.target.value,
+                    })
+                  }
+                  placeholder="Describí los detalles de la promo..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white h-20 resize-none"
+                />
+              </div>
+
+              {/* Resumen de productos incluidos */}
+              <div className="p-3 bg-zinc-900/60 border border-slate-800 rounded-xl space-y-1.5 text-left">
+                <span className="text-[10px] font-black uppercase text-amber-400">Productos Vinculados</span>
+                <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
+                  <li>🍔 Burger Especial ($8.000)</li>
+                  <li>🍗 Lomito de Pollo ($11.500)</li>
+                </ul>
+                <p className="text-[10px] text-slate-500 pt-1">
+                  Ambos productos abren con el selector de bebida 375cc de regalo (Coca o Sprite gratis).
+                </p>
               </div>
             </div>
           )}

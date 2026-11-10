@@ -35,6 +35,7 @@ const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfil
 
 const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
 const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
+const CartelPromoDelDia = dynamic(() => import('@/components/tienda/CartelPromoDelDia'), { ssr: false })
 const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
 
 export default function TiendaMobile() {
@@ -528,6 +529,7 @@ export default function TiendaMobile() {
         onAbrirHistorial={() => setMostrarHistorial(true)}
       />
 
+      <CartelPromoDelDia />
       <BotonPedidoFlotante />
     </div>
   )

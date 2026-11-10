@@ -35,7 +35,7 @@ const ItemCarritoFila = React.memo(function ItemCarritoFila({ item, onEliminar, 
         </h4>
         {item.modificadoresSeleccionados.length > 0 && (
           <p className="text-sm text-slate-400 italic">
-            + {item.modificadoresSeleccionados.map(m => `${m.nombre} (${formatearPrecio(m.precioExtra)})`).join(', ')}
+            + {item.modificadoresSeleccionados.map(m => m.precioExtra > 0 ? `${m.nombre} (${formatearPrecio(m.precioExtra)})` : `${m.nombre} (GRATIS)`).join(', ')}
           </p>
         )}
         <p className="text-sm font-bold text-slate-400 flex items-center gap-2">

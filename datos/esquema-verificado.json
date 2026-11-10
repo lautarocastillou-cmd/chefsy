@@ -152,7 +152,8 @@
       "color_titulo_secundario",
       "fuente_tienda_catalogo",
       "hero_loop_imagenes",
-      "hero_loop_transicion"
+      "hero_loop_transicion",
+      "promo_popup"
     ],
     "consumos_personal": [
       "id",

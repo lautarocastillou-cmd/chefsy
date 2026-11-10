@@ -47,6 +47,7 @@ export interface ConfiguracionTienda {
   hero_loop_imagenes?: ImagenLoopHero[]
   hero_loop_transicion?: TransicionLoopHero
   fuente_tienda_catalogo?: string
+  promo_popup?: import('@/tipos/promo').PromoPopupConfig
 }
 
 export type TransicionLoopHero = 
