@@ -12,22 +12,22 @@ export interface PromoPopupConfig {
 
 export const MOD_PROMO_COCA: ModificadorCatalogo = {
   id: 'promo-regalo-coca-375',
-  nombre: '🎁 Regalo: Coca-Cola 375cc',
+  nombre: 'Bebida de regalo: Coca-Cola 375cc',
   precioExtra: 0,
 }
 
 export const MOD_PROMO_SPRITE: ModificadorCatalogo = {
   id: 'promo-regalo-sprite-375',
-  nombre: '🎁 Regalo: Sprite 375cc',
+  nombre: 'Bebida de regalo: Sprite 375cc',
   precioExtra: 0,
 }
 
 export const PROMO_POPUP_DEFAULT: PromoPopupConfig = {
   activo: true,
   titulo: 'PROMO DE HOY',
-  subtitulo: '¡Te regalamos la bebida!',
-  descripcion: 'Comprando una Burger Especial o un Lomito de Pollo, ¡te llevás una Coca-Cola o Sprite de 375cc de regalo!',
-  badge: 'SOLO POR HOY',
+  subtitulo: 'Bebida sin cargo',
+  descripcion: 'Comprando una Burger Especial o un Lomito de Pollo, sumás una Coca-Cola o Sprite de 375cc de regalo.',
+  badge: '',
   productos_ids: ['patys-especial', 'prod-1779840756425-936'],
   bebidas: ['Coca-Cola 375cc', 'Sprite 375cc'],
 }

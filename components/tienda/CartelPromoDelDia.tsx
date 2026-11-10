@@ -115,17 +115,9 @@ export default function CartelPromoDelDia() {
         </button>
 
         {/* Encabezado del Cartel */}
-        <div className="flex flex-col items-center space-y-2 max-w-lg mx-auto">
-          {/* Badge superior sobrio Chefsy */}
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[10px] sm:text-[11px] font-bold tracking-widest text-emerald-400 uppercase">
-              {configPromo.badge || 'PROMO EXCLUSIVA'}
-            </span>
-          </div>
-
+        <div className="flex flex-col items-center space-y-1.5 max-w-lg mx-auto">
           {/* Título Principal de Impacto */}
-          <h2 className="font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide leading-none uppercase mt-1">
+          <h2 className="font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide leading-none uppercase">
             {configPromo.titulo || 'PROMO DE HOY'}
           </h2>
 

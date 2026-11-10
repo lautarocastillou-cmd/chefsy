@@ -1233,7 +1233,7 @@ export default function EditorTienda() {
                 <label className="text-xs font-bold text-slate-300">Badge Superior</label>
                 <input
                   type="text"
-                  value={(configLive as any).promo_popup?.badge ?? 'SOLO POR HOY'}
+                  value={(configLive as any).promo_popup?.badge ?? ''}
                   onChange={(e) =>
                     handleChange('promo_popup' as any, {
                       ...((configLive as any).promo_popup || {}),
