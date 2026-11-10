@@ -239,9 +239,9 @@ function ProductCard({
         {mostrarBadges && (
           <div className="flex flex-wrap items-center gap-1 mb-1">
             {esProductoPromo(prod.id, prod.nombre) && (
-              <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-300 bg-amber-500/20 border border-amber-500/50 px-1.5 py-0.2 rounded-md">
-                <Gift size={10} className="text-amber-400" />
-                <span>+ BEBIDA 375cc GRATIS</span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                <Gift size={10} className="text-emerald-400" />
+                <span>+ BEBIDA 375cc DE REGALO</span>
               </span>
             )}
             {((meta as any)?.es_mas_pedido || prod.esCombo) && (
