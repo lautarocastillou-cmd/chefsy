@@ -15,12 +15,14 @@ import {
   Sliders,
   DollarSign,
   Loader2,
+  Wrench,
 } from 'lucide-react'
 import {
   gestorImpresora,
   ConfiguracionImpresora,
   EVENTO_CONFIG_IMPRESORA,
 } from '@/lib/impresion/impresoraTermica'
+import SolucionadorImpresion from '@/components/impresion/SolucionadorImpresion'
 
 interface PropsModalConfiguracionImpresora {
   abierto: boolean
@@ -38,6 +40,7 @@ export default function ModalConfiguracionImpresora({
   const [conectando, setConectando] = useState(false)
   const [probando, setProbando] = useState(false)
   const [mensajeFeedback, setMensajeFeedback] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+  const [solucionadorAbierto, setSolucionadorAbierto] = useState(false)
 
   useEffect(() => {
     setMontado(true)
@@ -452,7 +455,25 @@ export default function ModalConfiguracionImpresora({
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setSolucionadorAbierto(true)}
+            className="w-full py-3 px-3 bg-sky-950/40 hover:bg-sky-900/50 text-sky-200 font-bold rounded-2xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 text-xs border border-sky-800/60"
+          >
+            <Wrench size={15} className="text-sky-400" />
+            <span>Solucionar problemas de impresión</span>
+          </button>
+
+          <p className="text-[10px] text-slate-500 leading-relaxed text-center">
+            La tipografía de comandas y tickets se ajusta en Configuración → Impresión → Tipografía.
+          </p>
+
         </div>
+
+        <SolucionadorImpresion
+          abierto={solucionadorAbierto}
+          onCerrar={() => setSolucionadorAbierto(false)}
+        />
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/90 flex justify-end">

@@ -68,7 +68,7 @@ Get-Process -Name "ChefsyPrintAgent" -ErrorAction SilentlyContinue | Stop-Proces
 Start-Sleep -Milliseconds 300
 
 Write-Host "Compilando agente..."
-& $csc /nologo /target:winexe /optimize+ /r:System.dll /r:System.Core.dll /out:"$exePath" "$sourcePath"
+& $csc /nologo /target:winexe /optimize+ /r:System.dll /r:System.Core.dll /r:System.Web.Extensions.dll /out:"$exePath" "$sourcePath"
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
     Fallar "No se pudo compilar el agente. Revisa que Windows tenga .NET Framework 4.8."
 }
@@ -87,7 +87,8 @@ $lineas = @(
     "# No compartas este archivo: contiene el token de acceso.",
     "puerto=$Puerto",
     "token=$token",
-    "impresora=$Impresora"
+    "impresora=$Impresora",
+    "origen_actualizacion=https://chefsy.xyz"
 )
 Set-Content -Path $configPath -Value $lineas -Encoding UTF8
 
@@ -132,6 +133,9 @@ $leeme = @(
     "En Chefsy: Configuracion -> Impresion -> Agente local.",
     "Activa el interruptor, pega la URL http://127.0.0.1:$Puerto y este token.",
     "Si Chrome o Edge pide permiso para acceder a la red local, elegi Permitir.",
+    "",
+    "Actualizaciones: desde Chefsy -> Configuracion -> Impresion -> Actualizaciones.",
+    "La primera vez hay que instalar esta version a mano; despues se actualiza sola.",
     "",
     "Log: $logPath",
     "Para desinstalar: ejecuta Desinstalar-AgenteImpresion.ps1"

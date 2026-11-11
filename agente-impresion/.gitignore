@@ -1,5 +1,6 @@
 *.exe
 *.log
 config.ini
+tipografia.json
 bin/
 obj/

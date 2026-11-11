@@ -12,6 +12,11 @@ import {
   generarEscPosTicketPrueba,
   OpcionesImpresion,
 } from './escpos'
+import {
+  normalizarTipografia,
+  TIPOGRAFIA_POR_DEFECTO,
+  TipografiaImpresion,
+} from './tipografia'
 import { formatearPrecio } from '@/lib/utils'
 
 export type TipoDriverImpresora = 'usb' | 'serial' | 'hid' | 'bluetooth' | 'ninguna'
@@ -26,6 +31,7 @@ export interface ConfiguracionImpresora {
   agenteImpresionUrl: string
   agenteImpresionToken: string
   baudRate: number
+  tipografia: TipografiaImpresion
 }
 
 const CONFIG_STORAGE_KEY = 'chefsy_config_impresora_v1'
@@ -41,6 +47,40 @@ const CONFIG_POR_DEFECTO: ConfiguracionImpresora = {
   agenteImpresionUrl: 'http://127.0.0.1:9187',
   agenteImpresionToken: '',
   baudRate: 9600, // Estándar para Xprinter, POS-80, Unnion TP85, Epson, etc.
+  tipografia: TIPOGRAFIA_POR_DEFECTO,
+}
+
+/** Quita barras finales y rutas de endpoints para quedarse con la base. */
+export function normalizarUrlAgente(url: string): string {
+  return (url || '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/(health|config|diagnostico|print)$/i, '')
+}
+
+/**
+ * Variantes de la URL del agente para el diagnóstico: si se configuró
+ * `localhost`, también probamos `127.0.0.1` (y viceversa), porque el permiso
+ * de red local del navegador se concede por origen distinto.
+ */
+export function urlsAgenteCandidatas(url: string): string[] {
+  const base = normalizarUrlAgente(url)
+  if (!base) return []
+
+  const candidatas = [base]
+  try {
+    const parsed = new URL(base)
+    const puerto = parsed.port ? `:${parsed.port}` : ''
+    if (parsed.hostname === '127.0.0.1') {
+      candidatas.push(`${parsed.protocol}//localhost${puerto}`)
+    } else if (parsed.hostname === 'localhost') {
+      candidatas.push(`${parsed.protocol}//127.0.0.1${puerto}`)
+    }
+  } catch {
+    // URL inválida: el diagnóstico la reporta como error.
+  }
+
+  return Array.from(new Set(candidatas))
 }
 
 class GestorImpresoraTermica {
@@ -75,14 +115,16 @@ class GestorImpresoraTermica {
     if (typeof window === 'undefined') return CONFIG_POR_DEFECTO
     try {
       const guardada = localStorage.getItem(CONFIG_STORAGE_KEY)
-      if (guardada) {
-        this.config = { ...CONFIG_POR_DEFECTO, ...JSON.parse(guardada) }
-      } else {
-        this.config = { ...CONFIG_POR_DEFECTO }
-      }
+      this.config = guardada
+        ? { ...CONFIG_POR_DEFECTO, ...JSON.parse(guardada) }
+        : { ...CONFIG_POR_DEFECTO }
     } catch {
       this.config = { ...CONFIG_POR_DEFECTO }
     }
+
+    // Las configuraciones viejas no tienen tipografía: se completa y se
+    // recortan valores fuera de rango para que el generador nunca reciba basura.
+    this.config.tipografia = normalizarTipografia(this.config.tipografia)
     return this.config
   }
 
@@ -165,10 +207,7 @@ class GestorImpresoraTermica {
   }
 
   private obtenerUrlBaseAgente(): string {
-    return this.config.agenteImpresionUrl
-      .trim()
-      .replace(/\/+$/, '')
-      .replace(/\/(health|print)$/i, '')
+    return normalizarUrlAgente(this.config.agenteImpresionUrl)
   }
 
   /**
@@ -282,6 +321,190 @@ class GestorImpresoraTermica {
       }
     } finally {
       clearTimeout(timeout)
+    }
+  }
+
+  /**
+   * Llamada HTTP genérica al agente con timeout. Clasifica el error para que
+   * el solucionador de problemas pueda explicar qué pasó y qué revisar.
+   */
+  public async solicitarAlAgente(
+    ruta: string,
+    opciones: {
+      metodo?: 'GET' | 'POST'
+      cuerpo?: BodyInit
+      contentType?: string
+      timeoutMs?: number
+      urlBase?: string
+    } = {}
+  ): Promise<{
+    ok: boolean
+    status: number
+    datos: any
+    error?: string
+    tipoError?: 'config' | 'red' | 'timeout' | 'http'
+  }> {
+    const base = normalizarUrlAgente(opciones.urlBase || this.config.agenteImpresionUrl)
+    const token = this.config.agenteImpresionToken.trim()
+
+    if (!base) {
+      return { ok: false, status: 0, datos: null, error: 'Configurá la URL del agente local.', tipoError: 'config' }
+    }
+    if (!token) {
+      return { ok: false, status: 0, datos: null, error: 'Falta el token del agente local.', tipoError: 'config' }
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), opciones.timeoutMs ?? 5000)
+
+    try {
+      const respuesta = await fetch(`${base}${ruta}`, {
+        method: opciones.metodo ?? 'GET',
+        headers: {
+          'X-Chefsy-Token': token,
+          ...(opciones.contentType ? { 'Content-Type': opciones.contentType } : {}),
+        },
+        body: opciones.cuerpo,
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+      })
+
+      const texto = await respuesta.text()
+      let datos: any = null
+      try {
+        datos = texto ? JSON.parse(texto) : null
+      } catch {
+        datos = null
+      }
+
+      if (!respuesta.ok) {
+        return {
+          ok: false,
+          status: respuesta.status,
+          datos,
+          error: datos?.error || `El agente respondió con error ${respuesta.status}.`,
+          tipoError: 'http',
+        }
+      }
+
+      return { ok: true, status: respuesta.status, datos }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return { ok: false, status: 0, datos: null, error: 'El agente no respondió a tiempo.', tipoError: 'timeout' }
+      }
+      return { ok: false, status: 0, datos: null, error: 'No se pudo conectar con el agente local.', tipoError: 'red' }
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  /** Guarda la tipografía local en el agente (queda persistida en su carpeta). */
+  public async sincronizarTipografia(): Promise<{
+    ok: boolean
+    error?: string
+    actualizada?: string
+    version?: string
+    tipoError?: string
+  }> {
+    const resultado = await this.solicitarAlAgente('/config', {
+      metodo: 'POST',
+      contentType: 'application/json',
+      cuerpo: JSON.stringify({ tipografia: this.config.tipografia }),
+      timeoutMs: 8000,
+    })
+
+    if (!resultado.ok) {
+      return { ok: false, error: resultado.error, tipoError: resultado.tipoError }
+    }
+
+    return {
+      ok: true,
+      actualizada: resultado.datos?.actualizada,
+      version: resultado.datos?.version,
+    }
+  }
+
+  /** Recupera la tipografía guardada en el agente y la aplica en este navegador. */
+  public async traerTipografiaDelAgente(): Promise<{
+    ok: boolean
+    error?: string
+    tipografia?: TipografiaImpresion
+    actualizada?: string
+  }> {
+    const resultado = await this.solicitarAlAgente('/config', { timeoutMs: 6000 })
+
+    if (!resultado.ok) {
+      return { ok: false, error: resultado.error }
+    }
+
+    if (!resultado.datos?.configurada || !resultado.datos?.tipografia) {
+      return { ok: false, error: 'El agente todavía no tiene una tipografía guardada.' }
+    }
+
+    const tipografia = normalizarTipografia(resultado.datos.tipografia)
+    this.guardarConfiguracion({ tipografia })
+    return { ok: true, tipografia, actualizada: resultado.datos.actualizada }
+  }
+
+  /** Diagnóstico completo que arma el propio agente (impresora, cola, spooler). */
+  public async obtenerDiagnosticoAgente(): Promise<{
+    ok: boolean
+    error?: string
+    datos?: any
+    tipoError?: string
+  }> {
+    const resultado = await this.solicitarAlAgente('/diagnostico', { timeoutMs: 7000 })
+    return {
+      ok: resultado.ok,
+      error: resultado.error,
+      datos: resultado.datos,
+      tipoError: resultado.tipoError,
+    }
+  }
+
+  /** Estado completo del agente (`/health`), incluida su versión. */
+  public async obtenerEstadoAgente(): Promise<{
+    ok: boolean
+    datos?: any
+    error?: string
+    tipoError?: string
+  }> {
+    const resultado = await this.solicitarAlAgente('/health', { timeoutMs: 5000 })
+    return {
+      ok: resultado.ok,
+      datos: resultado.datos,
+      error: resultado.error,
+      tipoError: resultado.tipoError,
+    }
+  }
+
+  /**
+   * Pide al agente que se actualice. El agente ignora cualquier URL que
+   * mande el navegador: descarga desde su `origen_actualizacion` fijo,
+   * verifica SHA-256 y se reemplaza a sí mismo.
+   */
+  public async actualizarAgente(version: string): Promise<{
+    ok: boolean
+    status: number
+    error?: string
+    datos?: any
+    tipoError?: string
+  }> {
+    const resultado = await this.solicitarAlAgente('/update', {
+      metodo: 'POST',
+      contentType: 'application/json',
+      cuerpo: JSON.stringify({ version }),
+      timeoutMs: 35000,
+    })
+
+    return {
+      ok: resultado.ok,
+      status: resultado.status,
+      error: resultado.error,
+      datos: resultado.datos,
+      tipoError: resultado.tipoError,
     }
   }
 
@@ -568,6 +791,7 @@ class GestorImpresoraTermica {
       anchoMm: this.config.anchoMm,
       cortarPapel: this.config.cortarPapel,
       sonarAlarma: tipo === 'cocina' && this.config.sonarAlarmaComanda,
+      tipografia: tipo === 'ticket' ? this.config.tipografia.ticket : this.config.tipografia.comanda,
     }
 
     const bytes =
@@ -682,6 +906,7 @@ ${p.observaciones ? `<div class="sep"></div><div class="nota">NOTA: ${p.observac
       anchoMm: this.config.anchoMm,
       cortarPapel: this.config.cortarPapel,
       sonarAlarma: true,
+      tipografia: this.config.tipografia.ticket,
     })
 
     if (this.estaConectada()) {

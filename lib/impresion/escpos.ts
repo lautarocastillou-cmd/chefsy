@@ -8,12 +8,21 @@
 
 import { Pedido } from '@/tipos'
 import { formatearPrecio } from '@/lib/utils'
+import {
+  anchoColumnas as calcularAnchoColumnas,
+  dotsInterlineado,
+  normalizarDocumento,
+  TIPOGRAFIA_POR_DEFECTO,
+  TipografiaDocumento,
+} from '@/lib/impresion/tipografia'
 
 export interface OpcionesImpresion {
   anchoMm?: 80 | 58
   cortarPapel?: boolean
   abrirCajon?: boolean
   sonarAlarma?: boolean
+  /** Tipografía del documento a generar. Si falta, se usa la de por defecto. */
+  tipografia?: TipografiaDocumento
 }
 
 // ── Comandos ESC/POS estándar ─────────────────────────
@@ -92,17 +101,28 @@ export function stringABytesCP850(texto: string): number[] {
 export class EscPosBuilder {
   private buffer: number[] = []
   private anchoColumnas: number
+  private tamanoBase: { ancho: number; alto: number }
 
-  constructor(anchoMm: 80 | 58 = 80) {
-    this.anchoColumnas = anchoMm === 58 ? 32 : 48
+  constructor(anchoMm: 80 | 58 = 80, tipografia?: TipografiaDocumento) {
+    const documento = normalizarDocumento(tipografia, TIPOGRAFIA_POR_DEFECTO.ticket)
+    this.tamanoBase = { ancho: documento.ancho, alto: documento.alto }
+    // Las columnas dependen de la fuente, el tamaño horizontal y el interletrado:
+    // con 1 dot de espaciado ya no entran 48 caracteres en 80 mm.
+    this.anchoColumnas = calcularAnchoColumnas(anchoMm, documento)
+
     this.buffer.push(...COMANDOS.INIT)
     this.buffer.push(...COMANDOS.CODE_PAGE_CP850)
-    // Seleccionar Fuente A estándar (12x24 dots): tipografía abierta y redonda
-    this.buffer.push(...COMANDOS.FONT_A)
-    // 1 dot de espaciado entre caracteres: evita que las letras queden pegadas o apretadas
-    this.buffer.push(0x1b, 0x20, 0x01)
-    // Interlineado cómodo de 32 dots (altura 24 dots + 8 dots de separación)
-    this.buffer.push(0x1b, 0x33, 32)
+    this.buffer.push(...(documento.fuente === 'B' ? COMANDOS.FONT_B : COMANDOS.FONT_A))
+    this.buffer.push(0x1b, 0x20, documento.interletrado) // ESC SP (interletrado)
+    this.buffer.push(0x1b, 0x33, dotsInterlineado(documento)) // ESC 3 (interlineado)
+    this.aplicarTamano(documento.ancho, documento.alto)
+  }
+
+  private aplicarTamano(ancho: number, alto: number): this {
+    const anchoFinal = Math.max(1, Math.min(8, Math.round(ancho)))
+    const altoFinal = Math.max(1, Math.min(8, Math.round(alto)))
+    this.buffer.push(0x1d, 0x21, ((anchoFinal - 1) << 4) | (altoFinal - 1))
+    return this
   }
 
   alinear(alineacion: 'izq' | 'centro' | 'der'): this {
@@ -118,12 +138,12 @@ export class EscPosBuilder {
   }
 
   tamano(tipo: 'normal' | 'doble_alto' | 'doble_ancho' | 'doble' | 'cuadruple'): this {
-    if (tipo === 'doble') this.buffer.push(...COMANDOS.SIZE_DOUBLE)
-    else if (tipo === 'doble_alto') this.buffer.push(...COMANDOS.SIZE_DOUBLE_HEIGHT)
-    else if (tipo === 'doble_ancho') this.buffer.push(...COMANDOS.SIZE_DOUBLE_WIDTH)
-    else if (tipo === 'cuadruple') this.buffer.push(...COMANDOS.SIZE_QUADRUPLE)
-    else this.buffer.push(...COMANDOS.SIZE_NORMAL)
-    return this
+    const { ancho, alto } = this.tamanoBase
+    if (tipo === 'doble') return this.aplicarTamano(ancho * 2, alto * 2)
+    if (tipo === 'doble_alto') return this.aplicarTamano(ancho, alto * 2)
+    if (tipo === 'doble_ancho') return this.aplicarTamano(ancho * 2, alto)
+    if (tipo === 'cuadruple') return this.aplicarTamano(ancho * 3, alto * 3)
+    return this.aplicarTamano(ancho, alto)
   }
 
   fuente(tipo: 'A' | 'B'): this {
@@ -244,7 +264,9 @@ export class EscPosBuilder {
  */
 export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
-  const builder = new EscPosBuilder(anchoMm)
+  const tipografia = normalizarDocumento(opciones.tipografia, TIPOGRAFIA_POR_DEFECTO.ticket)
+  const builder = new EscPosBuilder(anchoMm, tipografia)
+  const espaciadoTitulo = Math.min(8, tipografia.interletrado + 1)
   const f = formatearPrecio
 
   const metodoPagoLabel: Record<string, string> = {
@@ -260,9 +282,9 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
     .alinear('centro')
     .tamano('normal')
     .negrita(true)
-    .espaciado(2)
+    .espaciado(espaciadoTitulo)
     .linea('CHEFSY')
-    .espaciado(1)
+    .espaciado(tipografia.interletrado)
     .negrita(false)
     .linea('Ticket de Pedido')
     .linea(`Pedido #${pedido.id.slice(0, 6).toUpperCase()} · ${pedido.hora}`)
@@ -312,6 +334,10 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
       for (const mod of (item as any).modificadores) {
         builder.negrita(false).linea(`   + ${mod.nombre || mod}`)
       }
+    }
+
+    for (let i = 0; i < tipografia.espacioItems; i++) {
+      builder.linea('')
     }
   }
 
@@ -365,16 +391,18 @@ export function generarEscPosTicketCliente(pedido: Pedido, opciones: OpcionesImp
  */
 export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
-  const builder = new EscPosBuilder(anchoMm)
+  const tipografia = normalizarDocumento(opciones.tipografia, TIPOGRAFIA_POR_DEFECTO.comanda)
+  const builder = new EscPosBuilder(anchoMm, tipografia)
+  const espaciadoTitulo = Math.min(8, tipografia.interletrado + 1)
 
   // 1. Encabezado de Cocina
   builder
     .alinear('centro')
     .tamano('normal')
     .negrita(true)
-    .espaciado(2)
+    .espaciado(espaciadoTitulo)
     .linea('COCINA')
-    .espaciado(1)
+    .espaciado(tipografia.interletrado)
     .negrita(false)
     .linea(pedido.hora)
     .negrita(true)
@@ -411,7 +439,9 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
       }
     }
 
-    builder.linea('')
+    for (let i = 0; i < tipografia.espacioItems; i++) {
+      builder.linea('')
+    }
   }
 
   // 3. Notas Urgentes de Cocina
@@ -437,9 +467,9 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
     .alinear('centro')
     .tamano('normal')
     .negrita(true)
-    .espaciado(2)
+    .espaciado(espaciadoTitulo)
     .linea(`[ ${tipoEntregaStr} ]`)
-    .espaciado(1)
+    .espaciado(tipografia.interletrado)
 
   if (opciones.sonarAlarma) {
     builder.sonarAlarma()
@@ -458,15 +488,17 @@ export function generarEscPosComandaCocina(pedido: Pedido, opciones: OpcionesImp
  */
 export function generarEscPosTicketPrueba(opciones: OpcionesImpresion = {}): Uint8Array {
   const anchoMm = opciones.anchoMm || 80
-  const builder = new EscPosBuilder(anchoMm)
+  const tipografia = normalizarDocumento(opciones.tipografia, TIPOGRAFIA_POR_DEFECTO.ticket)
+  const builder = new EscPosBuilder(anchoMm, tipografia)
+  const espaciadoTitulo = Math.min(8, tipografia.interletrado + 1)
 
   builder
     .alinear('centro')
     .tamano('normal')
     .negrita(true)
-    .espaciado(2)
+    .espaciado(espaciadoTitulo)
     .linea('CHEFSY POS')
-    .espaciado(1)
+    .espaciado(tipografia.interletrado)
     .negrita(false)
     .linea(`Prueba de Impresión · ${anchoMm}mm`)
     .separador('-')

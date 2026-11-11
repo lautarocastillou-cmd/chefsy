@@ -2,11 +2,14 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useCallback, useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2 } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 import { obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
 import ModalConfiguracionImpresora from '@/components/impresion/ModalConfiguracionImpresora'
+import ConfiguracionTipografia from '@/components/impresion/ConfiguracionTipografia'
+import SolucionadorImpresion from '@/components/impresion/SolucionadorImpresion'
+import ActualizadorAgente from '@/components/impresion/ActualizadorAgente'
 import {
   gestorImpresora,
   ConfiguracionImpresora,
@@ -236,6 +239,7 @@ function PestanaImpresion() {
   const [tokenAgente, setTokenAgente] = useState(config.agenteImpresionToken)
   const [probandoAgente, setProbandoAgente] = useState(false)
   const [resultadoAgente, setResultadoAgente] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+  const [solucionadorAbierto, setSolucionadorAbierto] = useState(false)
 
   const actualizar = useCallback(() => {
     const nuevaConfig = gestorImpresora.obtenerConfiguracion()
@@ -529,7 +533,17 @@ function PestanaImpresion() {
                   {resultadoAgente.texto}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => setSolucionadorAbierto(true)}
+                className="inline-flex items-center justify-center gap-1.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-extrabold py-2.5 px-4 rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 cursor-pointer"
+              >
+                <Wrench size={14} />
+                Solucionar problemas
+              </button>
             </div>
+
+            <ActualizadorAgente />
 
             {(!urlAgente.trim() || !tokenAgente.trim()) && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-relaxed">
@@ -553,6 +567,8 @@ function PestanaImpresion() {
           </p>
         </div>
       </div>
+
+      <ConfiguracionTipografia onAbrirSolucionador={() => setSolucionadorAbierto(true)} />
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
         <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -617,6 +633,11 @@ function PestanaImpresion() {
           setModalAbierto(false)
           actualizar()
         }}
+      />
+
+      <SolucionadorImpresion
+        abierto={solucionadorAbierto}
+        onCerrar={() => setSolucionadorAbierto(false)}
       />
     </div>
   )

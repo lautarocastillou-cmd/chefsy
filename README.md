@@ -123,6 +123,14 @@ El modo experimental comparte los datos y la selección de cadetes de la Torre d
 - `/ubicacion/[id]`: vista pública de ubicación.
 - `/imprimir/[id]`: render del ticket/comanda.
 
+### Impresión térmica y agente local
+
+- El agente en [`agente-impresion/`](agente-impresion/) escucha solo en `127.0.0.1`, recibe ESC/POS y lo manda al spooler de Windows con datatype `RAW`.
+- **Configuración → Impresión → Tipografía** ajusta fuente, tamaño, interletrado e interlineado de la comanda de cocina y del ticket del cliente, con vista previa y sincronización contra el agente.
+- **Configuración → Impresión → Agente local → Solucionar problemas** ejecuta el diagnóstico con reintentos y muestra el estado de la impresora, la cola y el spooler.
+- **Configuración → Impresión → Agente local → Actualizaciones** compara la versión instalada con `public/agente/version.json`, verifica SHA-256 y actualiza el agente sin reinstalar. El binario se publica con `scripts/publicar-agente.ps1` (Vercel no compila C#).
+- La app incluye `http://127.0.0.1:*` en el `connect-src` de la CSP; si el navegador pide permiso de red local, hay que elegir **Permitir**.
+
 ## Pedido y sincronización
 
 El flujo operativo principal es:
