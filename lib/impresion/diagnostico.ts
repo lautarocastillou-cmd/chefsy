@@ -12,6 +12,8 @@ import {
   consultarPermisoRedLocal,
   esErrorBloqueoRedLocal,
   PASOS_HABILITAR_RED_LOCAL,
+  PASOS_HABILITAR_BRAVE,
+  PASOS_HABILITAR_EDGE_CHROME,
 } from './permisoRedLocal'
 
 export type EstadoCheck = 'ok' | 'aviso' | 'error'
@@ -278,8 +280,10 @@ export async function ejecutarDiagnostico(
     return resultado
   }
 
-  // 3.5. Permiso de red local (Edge / Chrome)
+  // 3.5. Permiso de red local (Edge / Chrome / Brave)
   const infoPermiso = await consultarPermisoRedLocal(candidatas[0])
+  const esBrave = infoPermiso.navegador === 'brave'
+
   if (infoPermiso.estado === 'granted') {
     agregar({
       id: 'permiso_red_local',
@@ -287,15 +291,17 @@ export async function ejecutarDiagnostico(
       estado: 'ok',
       detalle: `Concedido (${infoPermiso.descriptor || 'loopback-network'}). El navegador autoriza llamadas a 127.0.0.1.`,
     })
-  } else if (infoPermiso.estado === 'prompt') {
+  } else if (infoPermiso.estado === 'prompt' || esBrave) {
     agregar({
       id: 'permiso_red_local',
-      titulo: 'Permiso de red local del navegador',
+      titulo: esBrave ? 'Escudos de Brave (Brave Shields)' : 'Permiso de red local del navegador',
       estado: 'aviso',
-      detalle:
-        'En espera ("Preguntar"). En Edge/Chrome las llamadas de red local se bloquean hasta que lo autorices en los permisos del sitio.',
-      sugerencia:
-        'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz en la barra de direcciones → "Acceso a la red local" → seleccioná "Permitir".',
+      detalle: esBrave
+        ? 'Brave bloquea por defecto las llamadas a 127.0.0.1 desde sitios web para evitar fingerprinting.'
+        : 'En espera ("Preguntar"). En Edge/Chrome las llamadas de red local se bloquean hasta que lo autorices en los permisos del sitio.',
+      sugerencia: esBrave
+        ? 'Hacé clic en el ícono del León de Brave (Shields) a la derecha de la barra de direcciones y desactivá los escudos para chefsy.xyz (Shields DOWN).'
+        : 'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz en la barra de direcciones → "Acceso a la red local" → seleccioná "Permitir".',
     })
   } else if (infoPermiso.estado === 'denied') {
     agregar({
@@ -303,8 +309,9 @@ export async function ejecutarDiagnostico(
       titulo: 'Permiso de red local del navegador',
       estado: 'error',
       detalle: 'El navegador tiene BLOQUEADO el acceso a la red local para chefsy.xyz.',
-      sugerencia:
-        'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz → "Acceso a la red local" → cambialo a "Permitir".',
+      sugerencia: esBrave
+        ? 'En Brave: apagá Brave Shields en el ícono del León junto a la URL.'
+        : 'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz → "Acceso a la red local" → cambialo a "Permitir".',
     })
   }
 
@@ -334,17 +341,22 @@ export async function ejecutarDiagnostico(
       infoPermiso.estado === 'prompt' ||
       infoPermiso.estado === 'denied' ||
       esErrorBloqueoRedLocal(null, candidatas[0], infoPermiso.estado)
+    const esBrave = infoPermiso.navegador === 'brave'
 
     agregar({
       id: 'conexion',
       titulo: 'Conexión con el agente local',
       estado: 'error',
       detalle: bloqueoRed
-        ? `El navegador bloqueó la conexión a 127.0.0.1. Causa: restricción de Red Local de Edge/Chrome (permiso: ${infoPermiso.estado}).`
+        ? esBrave
+          ? 'Brave bloqueó la conexión a 127.0.0.1. Causa: escudos de privacidad de Brave (Brave Shields) activos para este sitio.'
+          : `El navegador bloqueó la conexión a 127.0.0.1. Causa: restricción de Red Local de Edge/Chrome (permiso: ${infoPermiso.estado}).`
         : `No hubo respuesta después de reintentar. ${erroresPorUrl.join(' · ')}`,
       sugerencia: bloqueoRed
-        ? PASOS_HABILITAR_RED_LOCAL.join(' ')
-        : 'Comprobá que el agente esté corriendo (Administrador de tareas → ChefsyPrintAgent), que el puerto coincida y que Chrome/Edge tenga permitido el acceso a la red local para chefsy.xyz.',
+        ? esBrave
+          ? PASOS_HABILITAR_BRAVE.join(' ')
+          : PASOS_HABILITAR_EDGE_CHROME.join(' ')
+        : 'Comprobá que el agente esté corriendo (Administrador de tareas → ChefsyPrintAgent), que el puerto coincida y que Chrome/Edge/Brave tenga permitido el acceso local para chefsy.xyz.',
     })
     const resultado: ResultadoDiagnostico = { ok: false, checks, contexto, informe: '' }
     resultado.informe = crearInforme(resultado)

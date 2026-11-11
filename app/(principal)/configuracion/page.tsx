@@ -15,7 +15,7 @@ import {
   ConfiguracionImpresora,
   EVENTO_CONFIG_IMPRESORA,
 } from '@/lib/impresion/impresoraTermica'
-import { solicitarPermisoRedLocal } from '@/lib/impresion/permisoRedLocal'
+import { solicitarPermisoRedLocal, detectarNavegador } from '@/lib/impresion/permisoRedLocal'
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
@@ -241,7 +241,18 @@ function PestanaImpresion() {
   const [probandoAgente, setProbandoAgente] = useState(false)
   const [resultadoAgente, setResultadoAgente] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
   const [bloqueoRedLocal, setBloqueoRedLocal] = useState(false)
+  const [pestanaNavegador, setPestanaNavegador] = useState<'brave' | 'edge_chrome'>('brave')
   const [solucionadorAbierto, setSolucionadorAbierto] = useState(false)
+
+  useEffect(() => {
+    void detectarNavegador().then((nav) => {
+      if (nav === 'brave') {
+        setPestanaNavegador('brave')
+      } else {
+        setPestanaNavegador('edge_chrome')
+      }
+    })
+  }, [])
 
   const actualizar = useCallback(() => {
     const nuevaConfig = gestorImpresora.obtenerConfiguracion()
@@ -548,29 +559,95 @@ function PestanaImpresion() {
             </div>
 
             {bloqueoRedLocal && (
-              <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-2.5 animate-in fade-in duration-200">
-                <div className="flex items-start gap-2.5">
-                  <ShieldAlert className="text-amber-400 shrink-0 mt-0.5" size={18} />
-                  <div className="space-y-1">
-                    <p className="text-xs font-black text-amber-200">
-                      Permiso de red local requerido en Edge / Chrome
-                    </p>
-                    <p className="text-[11px] text-amber-100/90 leading-relaxed">
-                      El navegador bloqueó la conexión a 127.0.0.1 porque la directiva de seguridad del navegador para red local está en espera o bloqueada para chefsy.xyz.
-                    </p>
+              <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldAlert className="text-amber-400 shrink-0 mt-0.5" size={18} />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-black text-amber-200">
+                        {pestanaNavegador === 'brave'
+                          ? 'Brave bloqueó la conexión local (Brave Shields activo)'
+                          : 'Permiso de red local requerido en Edge / Chrome'}
+                      </p>
+                      <p className="text-[11px] text-amber-100/90 leading-relaxed">
+                        {pestanaNavegador === 'brave'
+                          ? 'Brave bloquea por defecto las llamadas a 127.0.0.1 desde sitios web para evitar rastreo. Desactivá Shields para chefsy.xyz.'
+                          : 'El navegador bloqueó la conexión a 127.0.0.1 porque la directiva de seguridad de red local está en espera o bloqueada.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selector de Navegador */}
+                  <div className="flex items-center gap-1 p-0.5 bg-black/50 border border-slate-700/60 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setPestanaNavegador('brave')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                        pestanaNavegador === 'brave'
+                          ? 'bg-amber-500 text-black shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🦁 Brave
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPestanaNavegador('edge_chrome')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                        pestanaNavegador === 'edge_chrome'
+                          ? 'bg-amber-500 text-black shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🌐 Edge / Chrome
+                    </button>
                   </div>
                 </div>
 
-                <div className="bg-black/40 rounded-xl p-3 border border-amber-500/20 text-[11px] text-slate-200 space-y-1.5">
-                  <p className="font-bold text-amber-300">Pasos para habilitarlo en 10 segundos:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-300">
-                    <li>Hacé clic en el ícono del candado o controles de sitio a la izquierda de la URL (chefsy.xyz).</li>
-                    <li>Buscá <strong>Acceso a la red local</strong> (o <strong>Apps en este dispositivo</strong>).</li>
-                    <li>Cambiá la opción a <strong>Permitir</strong>.</li>
-                  </ol>
-                </div>
+                {pestanaNavegador === 'brave' ? (
+                  <div className="bg-black/45 rounded-xl p-3.5 border border-amber-500/20 text-[11px] text-slate-200 space-y-2">
+                    <p className="font-bold text-amber-300">
+                      Cómo habilitar la impresora en Brave en 5 segundos:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                      <li>
+                        Hacé clic en el ícono del <strong>León de Brave (Shields)</strong> a la <strong>derecha</strong> de la barra de direcciones (al lado de la URL).
+                      </li>
+                      <li>
+                        Desactivá el interruptor principal (cambiar de <strong>"Shields UP"</strong> a <strong>"Shields DOWN"</strong> para chefsy.xyz).
+                      </li>
+                      <li>
+                        Brave recargará automáticamente la página y la conexión con el agente local funcionará de inmediato.
+                      </li>
+                    </ol>
+                    <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                      💡 <em>Alternativa sin apagar Shields:</em> abrí <code className="font-mono text-amber-300">brave://flags/#local-network-access-check</code> en una pestaña nueva, configuralo en <strong>Disabled</strong> y reiniciá Brave.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-black/45 rounded-xl p-3.5 border border-amber-500/20 text-[11px] text-slate-200 space-y-2">
+                    <p className="font-bold text-amber-300">Pasos para habilitarlo en Edge o Chrome:</p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                      <li>
+                        Hacé clic en el ícono del <strong>candado o controles de sitio</strong> a la <strong>izquierda</strong> de chefsy.xyz en la barra de direcciones.
+                      </li>
+                      <li>
+                        Buscá <strong>Acceso a la red local</strong> (o <strong>Apps en este dispositivo</strong>).
+                      </li>
+                      <li>
+                        Cambiá la opción a <strong>Permitir</strong>.
+                      </li>
+                      <li>
+                        Pulsá <strong>Probar agente</strong> abajo.
+                      </li>
+                    </ol>
+                    <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                      💡 <em>Alternativa flags:</em> abrí <code className="font-mono text-amber-300">edge://flags/#local-network-access-check</code> o <code className="font-mono text-amber-300">chrome://flags/#local-network-access-check</code>, elegí <strong>Disabled</strong> y reiniciá el navegador.
+                    </p>
+                  </div>
+                )}
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   <button
                     type="button"
                     onClick={async () => {
@@ -583,7 +660,7 @@ function PestanaImpresion() {
                     className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black px-3.5 py-2 rounded-xl transition-transform active:scale-95 cursor-pointer"
                   >
                     <ShieldCheck size={14} />
-                    Solicitar permiso al navegador
+                    Reintentar conexión
                   </button>
                   <button
                     type="button"

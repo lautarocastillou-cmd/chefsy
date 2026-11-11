@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────
 
 export type EstadoPermisoRedLocal = 'granted' | 'prompt' | 'denied' | 'no_soportado'
+export type TipoNavegador = 'brave' | 'edge' | 'chrome' | 'otro'
 
 export interface InfoPermisoRedLocal {
   estado: EstadoPermisoRedLocal
@@ -19,17 +20,48 @@ export interface InfoPermisoRedLocal {
   esContextoHttps: boolean
   esDestinoLocal: boolean
   mensaje: string
+  navegador?: TipoNavegador
 }
 
-export const PASOS_HABILITAR_RED_LOCAL = [
-  'En la barra de direcciones de Edge o Chrome, hacé clic en el ícono del candado o controles de sitio a la izquierda de chefsy.xyz.',
+export const PASOS_HABILITAR_BRAVE = [
+  'Hacé clic en el ícono del León de Brave (Shields) a la derecha de la barra de direcciones en chefsy.xyz.',
+  'Desactivá el interruptor de los escudos para este sitio (pasar a "Shields DOWN").',
+  'Brave recargará la página y permitirá la conexión inmediata con el agente en 127.0.0.1.',
+]
+
+export const PASOS_HABILITAR_EDGE_CHROME = [
+  'En la barra de direcciones, hacé clic en el ícono del candado o controles de sitio a la izquierda de chefsy.xyz.',
   'Buscá la opción "Acceso a la red local" (o "Apps en este dispositivo" / "Local network access").',
   'Cambiá la opción de "Preguntar" o "Bloquear" a "Permitir" (Allow).',
   'Hacé clic en "Reintentar conexión" para validar la comunicación con la impresora.',
 ]
 
-export const MENSAJE_FLAGS_ALTERNATIVO =
-  'Para terminales de comandera fijas o desarrollo local, podés desactivar esta restricción en edge://flags/#local-network-access-check (o chrome://flags/#local-network-access-check) configurándolo en Disabled.'
+export const PASOS_HABILITAR_RED_LOCAL = PASOS_HABILITAR_EDGE_CHROME
+
+export const MENSAJE_FLAGS_BRAVE =
+  'En Brave, si preferís no desactivar Shields, abrí brave://flags/#local-network-access-check en una pestaña nueva, elegí "Disabled" y reiniciá Brave.'
+
+export const MENSAJE_FLAGS_EDGE_CHROME =
+  'Para terminales de comandera fijas en Edge/Chrome, podés desactivar esta restricción en edge://flags/#local-network-access-check (o chrome://flags/#local-network-access-check) configurándolo en Disabled.'
+
+export const MENSAJE_FLAGS_ALTERNATIVO = MENSAJE_FLAGS_EDGE_CHROME
+
+/**
+ * Detecta si el navegador es Brave, Edge o Chrome.
+ */
+export async function detectarNavegador(): Promise<TipoNavegador> {
+  if (typeof window === 'undefined') return 'otro'
+  try {
+    if ((navigator as any).brave && typeof (navigator as any).brave.isBrave === 'function') {
+      const esBrave = await (navigator as any).brave.isBrave()
+      if (esBrave) return 'brave'
+    }
+  } catch {}
+  const ua = navigator.userAgent || ''
+  if (ua.includes('Edg/')) return 'edge'
+  if (ua.includes('Chrome/')) return 'chrome'
+  return 'otro'
+}
 
 /**
  * Consulta el estado actual del permiso en el navegador mediante Permissions API.
@@ -43,13 +75,17 @@ export async function consultarPermisoRedLocal(
 ): Promise<InfoPermisoRedLocal> {
   const esContextoHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
   const esDestinoLocal = esUrlLoopbackOLocal(urlDestino)
+  const nav = await detectarNavegador()
 
   if (typeof navigator === 'undefined' || !navigator.permissions?.query) {
     return {
       estado: 'no_soportado',
       esContextoHttps,
       esDestinoLocal,
-      mensaje: 'El navegador no expone la API de permisos para red local.',
+      mensaje: nav === 'brave'
+        ? 'En Brave, los escudos (Brave Shields) bloquean por defecto llamadas a localhost desde HTTPS.'
+        : 'El navegador no expone la API de permisos para red local.',
+      navegador: nav,
     }
   }
 
@@ -63,11 +99,13 @@ export async function consultarPermisoRedLocal(
         if (status.state === 'granted') {
           mensaje = 'Acceso a la red local permitido por el navegador.'
         } else if (status.state === 'prompt') {
-          mensaje =
-            'El navegador requiere permiso para conectarse a esta PC (estado "Preguntar"). En Edge/Chrome las llamadas automáticas se bloquean hasta que lo permitas.'
+          mensaje = nav === 'brave'
+            ? 'Brave bloquea la conexión local mediante Brave Shields (o permiso en espera).'
+            : 'El navegador requiere permiso para conectarse a esta PC (estado "Preguntar"). En Edge/Chrome las llamadas automáticas se bloquean hasta que lo permitas.'
         } else {
-          mensaje =
-            'El navegador tiene BLOQUEADO el acceso a la red local para chefsy.xyz. Debes habilitarlo en los permisos del sitio.'
+          mensaje = nav === 'brave'
+            ? 'Brave tiene BLOQUEADO el acceso a 127.0.0.1 para este sitio.'
+            : 'El navegador tiene BLOQUEADO el acceso a la red local para chefsy.xyz. Debes habilitarlo en los permisos del sitio.'
         }
 
         return {
@@ -76,6 +114,7 @@ export async function consultarPermisoRedLocal(
           esContextoHttps,
           esDestinoLocal,
           mensaje,
+          navegador: nav,
         }
       }
     } catch {
@@ -88,7 +127,10 @@ export async function consultarPermisoRedLocal(
     estado: 'no_soportado',
     esContextoHttps,
     esDestinoLocal,
-    mensaje: 'No se detectó restricción explícita de red local en la API de permisos.',
+    mensaje: nav === 'brave'
+      ? 'Brave Shields bloquea subrecursos a 127.0.0.1 por protección de rastreo.'
+      : 'No se detectó restricción explícita de red local en la API de permisos.',
+    navegador: nav,
   }
 }
 

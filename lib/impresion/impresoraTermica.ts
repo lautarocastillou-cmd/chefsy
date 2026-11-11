@@ -224,6 +224,7 @@ class GestorImpresoraTermica {
     error?: string
     bloqueadoPorRedLocal?: boolean
     estadoPermiso?: EstadoPermisoRedLocal
+    navegador?: string
   }> {
     const base = this.obtenerUrlBaseAgente()
     const token = this.config.agenteImpresionToken.trim()
@@ -269,12 +270,15 @@ class GestorImpresoraTermica {
 
       const infoPermiso = await consultarPermisoRedLocal(base)
       if (esErrorBloqueoRedLocal(error, base, infoPermiso.estado)) {
+        const esBrave = infoPermiso.navegador === 'brave'
         return {
           ok: false,
-          error:
-            'El navegador bloqueó la conexión a la red local. Hacé clic en el candado junto a la URL y cambiá "Acceso a la red local" a "Permitir".',
+          error: esBrave
+            ? 'Brave bloqueó la conexión a 127.0.0.1 por sus escudos de privacidad. Hacé clic en el León de Brave junto a la URL y desactivá Shields para chefsy.xyz.'
+            : 'El navegador bloqueó la conexión a la red local. Hacé clic en el candado junto a la URL y cambiá "Acceso a la red local" a "Permitir".',
           bloqueadoPorRedLocal: true,
           estadoPermiso: infoPermiso.estado,
+          navegador: infoPermiso.navegador,
         }
       }
 
