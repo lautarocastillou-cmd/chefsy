@@ -6,6 +6,7 @@ import { Search, Star, Clock, Sparkles } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 
 interface Props {
   configuracion: ConfiguracionTienda | null
@@ -122,10 +123,12 @@ export default function HeroCentradoMinimalista({
           type="text"
           placeholder="Escribí para buscar en el menú..."
           value={busqueda}
+          data-buscador-input
           onChange={(e) => onBusquedaChange(e.target.value)}
           className="w-full bg-zinc-900 border border-white/20 hover:border-white/40 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-full outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm"
         />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <PanelResultadosBusqueda />
       </div>
 
     </div>

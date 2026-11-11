@@ -7,17 +7,19 @@ import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { ModificadorCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { Pedido } from '@/tipos'
-import { Search, ChevronRight, LogOut, User, Lock } from 'lucide-react'
+import { Search, ChevronRight, LogOut, User, Lock, X } from 'lucide-react'
 import { formatearPrecio, cn } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
 import Image from 'next/image'
-import Fuse from 'fuse.js'
+import { buscarProductos } from '@/lib/busqueda-productos'
+import { ProveedorBuscadorTienda } from '@/contexto/BuscadorTiendaContexto'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 import toast from 'react-hot-toast'
 
 import BottomNav from '@/components/ui/BottomNav'
 import CatalogoProductos from '@/components/tienda/CatalogoProductos'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 import FooterTienda from '@/components/tienda/FooterTienda'
 import BotonWhatsAppHeader from '@/components/tienda/BotonWhatsAppHeader'
 import BotonPedidoFlotante from '@/components/tienda/BotonPedidoFlotante'
@@ -151,16 +153,10 @@ export default function TiendaMobile() {
       return catFiltro === 'promos' ? esPromoValida : perteneceACategoria
     })
 
-    // 2. Si hay búsqueda, aplicar Fuse.js
+    // 2. Si hay búsqueda, aplicar el buscador difuso compartido
     if (!hayBusqueda) return productosPorCategoria
 
-    const fuse = new Fuse(productosPorCategoria, {
-      keys: ['nombre', 'descripcion', 'categoriaId'],
-      threshold: 0.4,
-      ignoreLocation: true
-    })
-
-    return fuse.search(busqueda).map(res => res.item)
+    return buscarProductos(productosPorCategoria, busqueda)
   }, [productos, categoriaSeleccionada, busqueda])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
@@ -284,6 +280,12 @@ export default function TiendaMobile() {
   const bgImage = (!isVideoBg && configuracion?.textura_fondo_url) ? `url(${configuracion.textura_fondo_url})` : undefined
 
   return (
+    <ProveedorBuscadorTienda
+      consulta={busqueda}
+      metadata={metadata}
+      onConsultaChange={setBusqueda}
+      onAbrirProducto={abrirModalPersonalizacion}
+    >
     <div className={`${(isVideoBg || bgImage) ? 'bg-transparent' : 'bg-[#0c0c0c]'} text-slate-200 ${fuenteClase} min-h-screen pb-24 relative`}>
       {/* CAPA DE FONDO FIJA (Optimización de rendimiento para Mobile) */}
       {(isVideoBg || bgImage) && (
@@ -346,6 +348,7 @@ export default function TiendaMobile() {
             type="text"
             placeholder="¿Qué vas a pedir hoy?"
             value={busqueda}
+            data-buscador-input
             onFocus={() => {
               setBuscadorIluminado(true)
             }}
@@ -359,7 +362,7 @@ export default function TiendaMobile() {
                 setCategoriaSeleccionada(null)
               }
             }}
-            className={`w-full bg-[#1e1e1e] text-white py-2.5 pl-10 pr-4 rounded-xl text-sm outline-none transition-all duration-300 relative z-20 ${
+            className={`w-full bg-[#1e1e1e] text-white py-2.5 pl-10 pr-10 rounded-xl text-sm outline-none transition-all duration-300 relative z-20 ${
               buscadorIluminado
                 ? 'border-2 border-emerald-400 bg-[#161616] shadow-[0_0_25px_rgba(52,211,153,0.55),0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40'
                 : 'border border-white/10 hover:border-white/25 focus:border-emerald-400/70 focus:shadow-[0_0_15px_rgba(52,211,153,0.3)]'
@@ -373,23 +376,20 @@ export default function TiendaMobile() {
             }`} 
             size={18} 
           />
-          
-          {/* Sugerencia: ¿Quisiste decir? */}
-          {sugerenciaBusqueda && (
-            <div className="absolute -bottom-9 left-1 animate-in fade-in slide-in-from-top-2 duration-300 z-10">
-              <button
-                onClick={() => {
-                  setBusqueda(sugerenciaBusqueda)
-                  if (categoriaSeleccionada) setCategoriaSeleccionada(null)
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-chefsy-500/20 border border-chefsy-500/40 rounded-b-xl rounded-tr-xl text-[11px] font-medium text-white shadow-lg active:bg-chefsy-500/40 transition-colors pt-2"
-              >
-                <span className="text-slate-300">¿Quisiste decir</span>
-                <span className="text-chefsy-400 font-bold">{sugerenciaBusqueda}</span>
-                <span className="text-slate-300">?</span>
-              </button>
-            </div>
+
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => setBusqueda('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2.5 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white/10 p-1 text-slate-300 transition-colors hover:bg-white/20 hover:text-white active:scale-95"
+            >
+              <X size={14} />
+            </button>
           )}
+
+          {/* Resultados anclados al buscador */}
+          <PanelResultadosBusqueda variante="header" />
         </div>
       </div>
 
@@ -532,6 +532,7 @@ export default function TiendaMobile() {
       <CartelPromoDelDia />
       <BotonPedidoFlotante />
     </div>
+    </ProveedorBuscadorTienda>
   )
 }
 

@@ -225,3 +225,38 @@ export function scrollHaciaCategoria(catId: string | null) {
   }
 }
 
+/**
+ * Desplaza la ventana hasta el inicio del catálogo, compensando la cabecera
+ * sticky. Es el destino de "Ver todos los resultados" del buscador.
+ */
+export function scrollHaciaResultados() {
+  if (typeof window === 'undefined') return
+
+  const contenedor = document.getElementById('catalogo-productos')
+  if (!contenedor) return
+
+  if (document.body.style.overflow === 'hidden') {
+    document.body.style.overflow = ''
+    document.documentElement.style.overflow = ''
+  }
+
+  // Altura real de la cabecera sticky, solo si está pegada al borde superior
+  const cabecera = document.getElementById('tienda-sticky-header')
+  const rectCabecera = cabecera?.getBoundingClientRect()
+  const alturaCabecera =
+    rectCabecera && rectCabecera.top <= 10 ? Math.round(rectCabecera.height) : 0
+
+  const scrollActual = window.scrollY || document.documentElement.scrollTop || 0
+  const destino = Math.max(
+    0,
+    Math.round(scrollActual + contenedor.getBoundingClientRect().top - alturaCabecera - 12)
+  )
+
+  const lenis = (window as any).__lenis
+  if (lenis && typeof lenis.scrollTo === 'function') {
+    lenis.scrollTo(destino, { duration: 0.7, force: true })
+  } else {
+    window.scrollTo({ top: destino, behavior: 'smooth' })
+  }
+}
+

@@ -11,7 +11,8 @@ import { ShoppingCart, Instagram } from 'lucide-react'
 import { formatearPrecio } from '@/lib/utils'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, resolverImagen, scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { metadataRespaldo } from '@/datos/productos'
-import Fuse from 'fuse.js'
+import { buscarProductos } from '@/lib/busqueda-productos'
+import { ProveedorBuscadorTienda } from '@/contexto/BuscadorTiendaContexto'
 import { useSugerenciaBusqueda } from '@/hooks/useBuscadorInteligente'
 import Link from 'next/link'
 
@@ -177,16 +178,10 @@ export default function TiendaDesktop() {
       return catFiltro === 'promos' ? esPromoValida : perteneceACategoria
     })
 
-    // 2. Si hay búsqueda, aplicar Fuse.js para tolerancia a errores tipográficos
+    // 2. Si hay búsqueda, aplicar el buscador difuso compartido
     if (!hayBusqueda) return productosPorCategoria
 
-    const fuse = new Fuse(productosPorCategoria, {
-      keys: ['nombre', 'descripcion', 'categoriaId'],
-      threshold: 0.4, // Tolerancia a errores de tipeo
-      ignoreLocation: true
-    })
-
-    return fuse.search(busqueda).map(res => res.item)
+    return buscarProductos(productosPorCategoria, busqueda)
   }, [productos, categoriaSeleccionada, busqueda, categorias])
 
   const generarEnlaceWhatsApp = useCallback((pedido: Pedido): string => {
@@ -356,6 +351,12 @@ export default function TiendaDesktop() {
           )}
         </div>
       )}
+      <ProveedorBuscadorTienda
+        consulta={busqueda}
+        metadata={metadata}
+        onConsultaChange={setBusqueda}
+        onAbrirProducto={abrirModalPersonalizacion}
+      >
       <div className="relative z-10">
         <HeroSection
           categoriasActivas={categoriasActivas}
@@ -457,6 +458,7 @@ export default function TiendaDesktop() {
         <CartelPromoDelDia />
         <BotonPedidoFlotante />
       </div>
+      </ProveedorBuscadorTienda>
     </div>
   )
 }

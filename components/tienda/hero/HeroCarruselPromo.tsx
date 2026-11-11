@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Search, ChevronLeft, ChevronRight, Sparkles, ArrowRight } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda, CarruselSlide } from '@/servicios/supabase/configuracion'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -233,10 +234,12 @@ export default function HeroCarruselPromo({
           type="text"
           placeholder="¿Qué tenés ganas de comer hoy? (ej. Bacon, Mozzarella, Papas)..."
           value={busqueda}
+          data-buscador-input
           onChange={(e) => onBusquedaChange(e.target.value)}
           className="w-full bg-zinc-900/90 border border-white/15 hover:border-white/30 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-xl placeholder-slate-400 font-medium text-xs sm:text-sm"
         />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <PanelResultadosBusqueda />
       </div>
 
     </div>

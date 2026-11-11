@@ -84,12 +84,14 @@ function CatalogoProductosComponente({
       {/* Listado de Productos */}
       {productosFiltrados.length === 0 ? (
         <div className="text-center py-20 text-slate-300 text-sm bg-black/20 rounded-3xl border border-dashed border-white/20 p-6">
-          No encontramos productos activos.
+          {busqueda
+            ? `No encontramos resultados para «${busqueda.trim()}».`
+            : 'No encontramos productos activos.'}
         </div>
       ) : (
         <>
           {/* Barra Scrollspy aislada para no causar re-renders de page.tsx */}
-          {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && !portadaAppActiva && (
+          {(!categoriaSeleccionada || categoriaSeleccionada === 'todos') && !portadaAppActiva && !busqueda && (
             <ScrollSpyNavBar 
               categoriasActivas={categoriasActivas} 
               productosFiltrados={productosFiltrados} 

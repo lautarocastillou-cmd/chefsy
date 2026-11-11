@@ -6,6 +6,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Clock3, Grid2X2, Search } from '
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda, CarruselSlide } from '@/servicios/supabase/configuracion'
 import { usarCarrito } from '@/contexto/CarritoContexto'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -34,7 +35,6 @@ export default function HeroPortadaApp({
   categoriasActivas,
   categoriaSeleccionada,
   busqueda,
-  sugerenciaBusqueda,
   fuenteHeroClase,
   onBusquedaChange,
   onSeleccionarCategoria,
@@ -97,18 +97,11 @@ export default function HeroPortadaApp({
                 type="text"
                 placeholder="Buscar en el menú..."
                 value={busqueda}
+                data-buscador-input
                 onChange={(event) => onBusquedaChange(event.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-zinc-950/80 py-3.5 pl-11 pr-4 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-emerald-400/70"
               />
-              {sugerenciaBusqueda && (
-                <button
-                  type="button"
-                  onClick={() => onBusquedaChange(sugerenciaBusqueda)}
-                  className="absolute left-0 top-full mt-2 rounded-lg border border-emerald-500/30 bg-emerald-950 px-3 py-1.5 text-xs text-emerald-200"
-                >
-                  ¿Quisiste decir <strong>{sugerenciaBusqueda}</strong>?
-                </button>
-              )}
+              <PanelResultadosBusqueda />
             </div>
           </div>
 

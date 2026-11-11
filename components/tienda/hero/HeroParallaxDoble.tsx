@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import MarcoHistoriaInstagram from './MarcoHistoriaInstagram'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
 
@@ -21,7 +22,6 @@ interface Props {
 export default function HeroParallaxDoble({
   configuracion,
   busqueda,
-  sugerenciaBusqueda,
   fuenteHeroClase,
   onBusquedaChange,
 }: Props) {
@@ -124,6 +124,7 @@ export default function HeroParallaxDoble({
                 type="text"
                 placeholder="Buscar hamburguesas, papas, bebidas, promos..."
                 value={busqueda}
+                data-buscador-input
                 onChange={(e) => onBusquedaChange(e.target.value)}
                 className="w-full bg-zinc-950 border-2 border-white/15 hover:border-emerald-500/50 focus:border-emerald-400 text-white py-4 sm:py-5 pl-14 sm:pl-16 pr-12 rounded-2xl sm:rounded-3xl outline-none transition-all shadow-[0_10px_35px_rgba(0,0,0,0.6)] focus:shadow-[0_0_35px_rgba(52,211,153,0.3)] placeholder:text-slate-400 font-medium text-base sm:text-lg focus:ring-4 focus:ring-emerald-500/20"
               />
@@ -140,18 +141,7 @@ export default function HeroParallaxDoble({
                 </button>
               )}
 
-              {sugerenciaBusqueda && (
-                <div className="absolute -bottom-9 left-0 right-0 lg:right-auto flex justify-center lg:justify-start animate-in fade-in duration-300">
-                  <button
-                    onClick={() => onBusquedaChange(sugerenciaBusqueda)}
-                    className="flex items-center gap-1.5 px-3.5 py-1 bg-emerald-950/80 hover:bg-emerald-900/90 border border-emerald-500/40 rounded-full text-xs font-semibold text-emerald-300 transition-all shadow-lg"
-                  >
-                    <span className="text-slate-400">¿Quisiste decir</span>
-                    <span className="text-emerald-400 font-bold">{sugerenciaBusqueda}</span>
-                    <span className="text-slate-400">?</span>
-                  </button>
-                </div>
-              )}
+              <PanelResultadosBusqueda />
             </div>
           </div>
         </div>

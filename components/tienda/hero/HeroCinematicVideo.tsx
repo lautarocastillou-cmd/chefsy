@@ -4,6 +4,7 @@ import React, { useRef } from 'react'
 import { Search, Flame, Volume2, VolumeX } from 'lucide-react'
 import { CategoriaCatalogo } from '@/tipos/catalogo'
 import { ConfiguracionTienda } from '@/servicios/supabase/configuracion'
+import PanelResultadosBusqueda from '@/components/tienda/PanelResultadosBusqueda'
 
 interface Props {
   configuracion: ConfiguracionTienda | null
@@ -148,10 +149,12 @@ export default function HeroCinematicVideo({
             type="text"
             placeholder="Buscá tu plato favorito (ej. Doble Smash, Lomo, Mozzarella)..."
             value={busqueda}
+            data-buscador-input
             onChange={(e) => onBusquedaChange(e.target.value)}
             className="w-full bg-black/80 border border-white/25 hover:border-white/50 focus:border-chefsy-400 text-white py-3.5 pl-12 pr-6 rounded-2xl outline-none transition-all shadow-2xl placeholder-slate-400 font-medium text-xs sm:text-sm"
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+          <PanelResultadosBusqueda />
         </div>
 
       </div>
