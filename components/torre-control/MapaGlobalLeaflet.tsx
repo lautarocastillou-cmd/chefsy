@@ -165,7 +165,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
     // 1. Rotar faro delantero y flecha direccional en 360Â°
     if (cached.arrow) {
-      cached.arrow.style.transform = `rotate(${rumbo}deg) translateY(-25px)`
+      cached.arrow.style.transform = `rotate(${rumbo}deg) translateY(-27px)`
     }
     if (cached.cone) {
       cached.cone.style.transform = `rotate(${rumbo}deg)`
@@ -212,7 +212,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
     // Marcador del Local Chefsy
     const localIcon = L.divIcon({
       html: `
-        <div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+        <div style="width:80px;display:flex;flex-direction:column;align-items:center;user-select:none;">
           <div style="width:40px;height:40px;background:#2A6348;border:2.5px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(42,99,72,0.45);display:flex;align-items:center;justify-content:center;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
           </div>
@@ -582,6 +582,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
         cadete.gps_activo,
         esEnViaje,
         bajoConsumo,
+        'v2_centered',
       ].join('|')
       const firmaPopupCadete = [
         firmaMarcadorCadete,
@@ -590,7 +591,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       ].join('::')
 
       const cadeteHtml = `
-        <div class="cadete-marker-outer" style="position:relative; width:64px; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none;">
+        <div class="cadete-marker-outer" style="position:relative; width:120px; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none;">
           <!-- Contenedor del vehÃ­culo y faro de 44px -->
           <div style="position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
             <!-- Haz de luz delantero que apunta en 360Â° -->
@@ -604,7 +605,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
               </span>
             </div>
             <!-- Flecha direccional en 360° -->
-            <div class="cadete-direction-arrow cadete-rotatable" style="position:absolute; top:2px; transform: rotate(${rumbo}deg) translateY(-25px); display:flex; align-items:center; justify-content:center; color:${colorBg}; filter:drop-shadow(0 1px 2px rgba(255,255,255,0.9));">
+            <div class="cadete-direction-arrow cadete-rotatable" style="transform: rotate(${rumbo}deg) translateY(-27px); color:${colorBg}; filter:drop-shadow(0 1px 2px rgba(255,255,255,0.9));">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L3 21h18L12 2z"/>
               </svg>
@@ -741,7 +742,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
 
         const clienteIcon = L.divIcon({
           html: `
-            <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
+            <div style="width:110px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;">
               <div style="position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:${totalParadas > 1 && numParada === 1 ? '#059669' : '#2563EB'};border:2.5px solid #fff;border-radius:50%;${bajoConsumo ? '' : 'box-shadow:0 4px 10px rgba(37,99,235,0.4);'}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 ${totalParadas > 1 ? `<div style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:#fff;font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;${bajoConsumo ? '' : 'box-shadow:0 2px 4px rgba(0,0,0,0.3);'}">${numParada}</div>` : ''}
@@ -1065,11 +1066,25 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
           transform-origin: center center;
           will-change: transform;
         }
+        .custom-cadete-animated-marker {
+          background: transparent !important;
+          border: none !important;
+        }
         .cadete-direction-arrow {
           position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 12px;
+          height: 12px;
+          margin-top: -6px;
+          margin-left: -6px;
           z-index: 3;
-          transform-origin: 50% 27px;
+          transform-origin: center center;
           will-change: transform;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
         }
         .cadete-radar-pulse {
           position: absolute;
