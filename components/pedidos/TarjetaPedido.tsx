@@ -23,7 +23,7 @@ import {
   Zap
 } from 'lucide-react'
 import { Pedido } from '@/tipos'
-import { formatearPrecio, cn, obtenerEnlaceWhatsAppDirecto } from '@/lib/utils'
+import { formatearPrecio, cn, obtenerEnlaceWhatsAppDirecto, generarLinkSeguimiento } from '@/lib/utils'
 import {
   obtenerEtiquetaAccionEstado,
   obtenerSiguienteEstado,
@@ -326,13 +326,14 @@ ${pedido.observaciones ? `Notas: ${pedido.observaciones}` : ''}`.trim().replace(
   }
 
   const copiarLinkSeguimientoConAutoAvance = async () => {
-    const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+    const url = generarLinkSeguimiento(pedido)
+    const nombreCliente = pedido.cliente ? pedido.cliente.trim().split(' ')[0] : ''
     const noEstaEnCamino = pedido.estado !== 'en_camino'
     const ok = await copiarConNotificacion(
       url,
       noEstaEnCamino
-        ? '¡Link copiado y pedido marcado en camino!'
-        : '¡Link de seguimiento copiado al portapapeles!'
+        ? (nombreCliente ? `¡Link de ${nombreCliente} copiado y pedido en camino!` : '¡Link copiado y pedido marcado en camino!')
+        : (nombreCliente ? `¡Link de ${nombreCliente} copiado!` : '¡Link de seguimiento copiado al portapapeles!')
     )
     if (ok && noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
       try {

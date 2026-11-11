@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, X } from 'lucide-react'
 import { PedidoActivo } from '@/tipos'
+import { generarIdentificadorPedido } from '@/lib/utils'
 import {
   guardarPedidoActivo,
   leerPedidoActivo,
@@ -86,7 +87,7 @@ export default function BotonPedidoFlotante() {
     >
       {/* Botón principal */}
       <button
-        onClick={() => router.push(`/cadete-en-vivo/${pedido.id}`)}
+        onClick={() => router.push(`/cadete-en-vivo/${generarIdentificadorPedido(pedido)}`)}
         className="group relative flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black text-xs px-4 py-3 rounded-2xl shadow-2xl transition-all duration-200 active:scale-95 border border-emerald-400/40"
       >
         {/* Pulso animado */}

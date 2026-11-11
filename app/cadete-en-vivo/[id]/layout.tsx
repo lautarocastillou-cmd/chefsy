@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
+import { extraerIdPedido } from '@/lib/utils'
 
 export async function generateMetadata({
   params,
@@ -7,7 +8,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }> | { id: string }
 }): Promise<Metadata> {
   const resolvedParams = await Promise.resolve(params)
-  const id = resolvedParams?.id || ''
+  const idRaw = resolvedParams?.id || ''
+  const id = extraerIdPedido(idRaw)
 
   let titulo = 'Seguimiento de Pedido en Vivo | Chefsy'
   let descripcion = 'Seguí el estado de tu pedido y la ubicación del repartidor en tiempo real en el mapa interactivo de Chefsy.'
@@ -20,11 +22,22 @@ export async function generateMetadata({
       //
       // Solo se piden 3 columnas, y de `cliente` únicamente sale el primer
       // nombre, que va al <title>. No se expone el resto en el HTML.
-      const { data: pedido } = await obtenerSupabaseAdmin()
+      let { data: pedido } = await obtenerSupabaseAdmin()
         .from('pedidos')
         .select('id, cliente, estado')
         .eq('id', id)
         .maybeSingle()
+
+      if (!pedido && id !== idRaw) {
+        const reintento = await obtenerSupabaseAdmin()
+          .from('pedidos')
+          .select('id, cliente, estado')
+          .eq('id', idRaw)
+          .maybeSingle()
+        if (reintento.data) {
+          pedido = reintento.data
+        }
+      }
 
       if (pedido) {
         const idCorto = String(pedido.id).slice(-4)

@@ -198,3 +198,77 @@ export function generarEnlaceCortoProducto(productoId: string, baseUrl?: string)
   return `${base}/p/${encodeURIComponent(productoId)}`
 }
 
+/**
+ * Convierte el nombre de un cliente a un slug limpio para URLs legibles.
+ * Ej: "María Belén Gómez" -> "maria-belen-gomez"
+ * Ej: "Prado 747" -> "prado-747"
+ */
+export function generarSlugCliente(cliente?: string | null): string {
+  if (!cliente || typeof cliente !== "string") return "pedido"
+  const limpio = generarSlug(cliente).slice(0, 35).replace(/^-+|-+$/g, "")
+  return limpio || "pedido"
+}
+
+/**
+ * Genera el identificador legible para la URL de seguimiento.
+ * Si el pedido tiene nombre de cliente, incluye el slug seguido de "--" y el ID real.
+ * Ej: "franco--ped-1794356211521-842"
+ * Si no tiene cliente o ya viene formateado, devuelve el ID tal cual.
+ */
+export function generarIdentificadorPedido(pedido: { id: string; cliente?: string | null; clienteNombre?: string | null }): string {
+  if (!pedido || !pedido.id) return ""
+  const idOriginal = String(pedido.id).trim()
+  if (idOriginal.includes("--")) return idOriginal
+
+  const nombre = pedido.cliente || pedido.clienteNombre
+  const slug = generarSlugCliente(nombre)
+  return `${slug}--${idOriginal}`
+}
+
+/**
+ * Extrae el ID real de un pedido a partir de cualquier slug o identificador de URL.
+ * Soporta de manera retrocompatible:
+ * - "franco--ped-1794356211521-842" -> "ped-1794356211521-842"
+ * - "ped-1794356211521-842" -> "ped-1794356211521-842"
+ * - "franco-ped-1794356211521-842" -> "ped-1794356211521-842"
+ * - UUIDs con o sin slug previo
+ */
+export function extraerIdPedido(identificador?: string | null): string {
+  if (!identificador || typeof identificador !== "string") return ""
+  const limpio = decodeURIComponent(identificador).trim()
+
+  // 1. Separador canónico doble guión "--"
+  if (limpio.includes("--")) {
+    const partes = limpio.split("--")
+    const final = partes[partes.length - 1].trim()
+    if (final) return final
+  }
+
+  // 2. Si contiene el prefijo común "ped-"
+  const idxPed = limpio.indexOf("ped-")
+  if (idxPed !== -1) {
+    return limpio.slice(idxPed).trim()
+  }
+
+  // 3. Si contiene un UUID estándar
+  const matchUuid = limpio.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+  if (matchUuid) {
+    return matchUuid[0]
+  }
+
+  // 4. Fallback directo
+  return limpio
+}
+
+/**
+ * Genera el link público de seguimiento del cadete en vivo, visiblemente identificado
+ * con el nombre del pedido/cliente para evitar confusiones al compartir por WhatsApp.
+ */
+export function generarLinkSeguimiento(
+  pedido: { id: string; cliente?: string | null; clienteNombre?: string | null },
+  baseUrl?: string
+): string {
+  const base = baseUrl || (typeof window !== "undefined" ? window.location.origin : "https://chefsy.xyz")
+  const identificador = generarIdentificadorPedido(pedido)
+  return `${base}/cadete-en-vivo/${identificador}`
+}

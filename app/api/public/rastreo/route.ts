@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { calcularDistanciaKm, resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
+import { extraerIdPedido } from '@/lib/utils'
 
 // Coordenadas del local Chefsy (San Fernando del Valle de Catamarca)
 const LOCAL_LAT = -28.462809031658047
@@ -27,24 +28,38 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
-    const pedidoId = searchParams.get('id')
+    const pedidoIdParam = searchParams.get('id')
 
-    if (!pedidoId || typeof pedidoId !== 'string') {
+    if (!pedidoIdParam || typeof pedidoIdParam !== 'string') {
       return NextResponse.json({ error: 'ID de pedido requerido' }, { status: 400 })
     }
 
-    const pedidoIdLimpio = pedidoId.trim()
-    if (!pedidoIdLimpio || pedidoIdLimpio.length > 64 || !/^[a-zA-Z0-9_\-]+$/.test(pedidoIdLimpio)) {
+    const pedidoIdRaw = pedidoIdParam.trim()
+    const idReal = extraerIdPedido(pedidoIdRaw)
+    if (!idReal || idReal.length > 120 || !/^[a-zA-Z0-9_\-]+$/.test(idReal)) {
       return NextResponse.json({ error: 'Formato de ID de pedido inválido' }, { status: 400 })
     }
 
     const supabase = obtenerSupabaseAdmin()
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('pedidos')
       .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega, total, metodoPago, direccion, observaciones, hora, fecha, created_at, en_camino_at, orden_entrega, costoEnvio')
-      .eq('id', pedidoId)
+      .eq('id', idReal)
       .maybeSingle()
+
+    // Respaldo retrocompatible: si idReal no encontró nada y el param original es diferente
+    if (!data && idReal !== pedidoIdRaw && /^[a-zA-Z0-9_\-]+$/.test(pedidoIdRaw)) {
+      const reintento = await supabase
+        .from('pedidos')
+        .select('id, cliente, telefono, estado, coordenadas, cadete_id, cadete_nombre, cadete_coordenadas, productos, tipoEntrega, total, metodoPago, direccion, observaciones, hora, fecha, created_at, en_camino_at, orden_entrega, costoEnvio')
+        .eq('id', pedidoIdRaw)
+        .maybeSingle()
+      if (reintento.data) {
+        data = reintento.data
+        error = null
+      }
+    }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -57,6 +72,8 @@ export async function GET(request: Request) {
     if (!data) {
       return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
     }
+
+    const pedidoId = data.id
 
     let gpsActivo = true
     let cadeteCoordsFallback: { latitud: number; longitud: number } | null = null

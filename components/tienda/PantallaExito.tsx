@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { CheckCircle2, MessageCircle, BellRing, MapPin } from 'lucide-react'
 import Image from 'next/image'
 import { Pedido } from '@/tipos'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, generarIdentificadorPedido } from '@/lib/utils'
 import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import { leerPedidoActivo } from '@/components/tienda/BotonPedidoFlotante'
 import { notificarAviso, notificarError } from '@/lib/notificaciones'
@@ -215,7 +215,7 @@ export default function PantallaExito({ pedido, generarEnlaceWhatsApp, onNuevoPe
           {/* Botón Seguir mi Pedido — solo si hay pedido activo en localStorage */}
           {leerPedidoActivo()?.id === pedido.id && (
             <a
-              href={`/cadete-en-vivo/${pedido.id}`}
+              href={`/cadete-en-vivo/${generarIdentificadorPedido(pedido)}`}
               className="w-full bg-[#181818] hover:bg-[#222222] text-emerald-400 hover:text-emerald-300 font-extrabold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] border border-emerald-500/30 shadow-md"
             >
               <MapPin size={16} />

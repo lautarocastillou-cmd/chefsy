@@ -23,7 +23,7 @@ import {
   User,
   Receipt
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, generarIdentificadorPedido } from '@/lib/utils'
 
 // ── Botón de Menú / Hamburguesa Normal y Fluido ─────────────────────────────
 interface BotonHamburguesaProps {
@@ -231,7 +231,7 @@ export default function SidebarTienda({
                 {pedidosActivos.map((p) => (
                   <a
                     key={p.id}
-                    href={`/cadete-en-vivo/${p.id}`}
+                    href={`/cadete-en-vivo/${generarIdentificadorPedido(p)}`}
                     className="p-3 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/40 rounded-2xl flex items-center justify-between gap-2.5 transition-all shadow-md active:scale-98"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">

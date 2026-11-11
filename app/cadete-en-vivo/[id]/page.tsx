@@ -4,7 +4,7 @@ import { use, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { CANAL_PEDIDOS, crearClienteEscucha } from '@/lib/pedidos-broadcast'
-import { formatearPrecio } from '@/lib/utils'
+import { formatearPrecio, extraerIdPedido } from '@/lib/utils'
 import { resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
 import { 
@@ -114,7 +114,8 @@ function TarjetaApilada({ data, index }: { data: PedidoExtra; index: number }) {
 }
 
 export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: pedidoId } = use(params)
+  const { id: rawParamId } = use(params)
+  const pedidoId = extraerIdPedido(rawParamId)
 
   const [pedido, setPedido]           = useState<Pedido | null>(null)
   const [productos, setProductos]     = useState<any[]>([])

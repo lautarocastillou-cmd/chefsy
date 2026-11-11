@@ -8,6 +8,7 @@ import MapaSeguimiento from '@/components/ubicacion/MapaSeguimiento'
 import { X, ExternalLink, MapPin, Copy, Bike, Check } from 'lucide-react'
 import { copiarConNotificacion } from '@/lib/notificaciones'
 import { esEnlaceOCoordenadas, resolverDireccionHumana } from '@/lib/ubicacion'
+import { generarLinkSeguimiento } from '@/lib/utils'
 
 interface Props {
   pedido: Pedido
@@ -54,11 +55,12 @@ export default function ModalVistaMapa({ pedido, onClose }: Props) {
   if (!montado || typeof document === 'undefined') return null
 
   const copiarLinkRastreo = async () => {
-    const url = `https://chefsy.xyz/cadete-en-vivo/${pedido.id}`
+    const url = generarLinkSeguimiento(pedido)
+    const nombreCliente = pedido.cliente ? pedido.cliente.trim().split(' ')[0] : ''
     const noEstaEnCamino = pedido.estado !== 'en_camino'
     const mensaje = noEstaEnCamino && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'
-      ? '¡Link copiado y pedido marcado en camino!'
-      : '¡Link de seguimiento copiado al portapapeles!'
+      ? (nombreCliente ? `¡Link de ${nombreCliente} copiado y pedido en camino!` : '¡Link copiado y pedido marcado en camino!')
+      : (nombreCliente ? `¡Link de ${nombreCliente} copiado!` : '¡Link de seguimiento copiado al portapapeles!')
     const ok = await copiarConNotificacion(url, mensaje)
     if (ok) {
       setCopiado(true)
