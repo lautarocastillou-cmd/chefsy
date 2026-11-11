@@ -30,6 +30,7 @@ export default function ActualizadorAgente() {
   const [versionActual, setVersionActual] = useState<string | null>(null)
   const [origen, setOrigen] = useState<string | null>(null)
   const [manifiesto, setManifiesto] = useState<ManifiestoAgente | null>(null)
+  const [errorRedLocal, setErrorRedLocal] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
   const [actualizando, setActualizando] = useState(false)
@@ -57,6 +58,7 @@ export default function ActualizadorAgente() {
         ? salud.datos.origenActualizacion
         : null
     )
+    setErrorRedLocal(Boolean((salud as any).bloqueadoPorRedLocal))
     setManifiesto(remoto)
     setCargando(false)
   }, [])
@@ -154,7 +156,9 @@ export default function ActualizadorAgente() {
         <p className="text-[11px] text-slate-400">Consultando versión del agente…</p>
       ) : !versionActual ? (
         <p className="text-[11px] text-amber-600 dark:text-amber-400">
-          No se pudo leer la versión del agente. Revisá URL y token.
+          {errorRedLocal
+            ? 'El navegador bloqueó la consulta de versión (permiso de red local requerido en chefsy.xyz).'
+            : 'No se pudo leer la versión del agente. Revisá URL, token o el permiso de red local en el navegador.'}
         </p>
       ) : hayActualizacion && manifiesto ? (
         <div className="space-y-2">

@@ -8,6 +8,11 @@
 
 import { gestorImpresora, normalizarUrlAgente, urlsAgenteCandidatas } from './impresoraTermica'
 import { tipografiasIguales } from './tipografia'
+import {
+  consultarPermisoRedLocal,
+  esErrorBloqueoRedLocal,
+  PASOS_HABILITAR_RED_LOCAL,
+} from './permisoRedLocal'
 
 export type EstadoCheck = 'ok' | 'aviso' | 'error'
 
@@ -273,6 +278,36 @@ export async function ejecutarDiagnostico(
     return resultado
   }
 
+  // 3.5. Permiso de red local (Edge / Chrome)
+  const infoPermiso = await consultarPermisoRedLocal(candidatas[0])
+  if (infoPermiso.estado === 'granted') {
+    agregar({
+      id: 'permiso_red_local',
+      titulo: 'Permiso de red local del navegador',
+      estado: 'ok',
+      detalle: `Concedido (${infoPermiso.descriptor || 'loopback-network'}). El navegador autoriza llamadas a 127.0.0.1.`,
+    })
+  } else if (infoPermiso.estado === 'prompt') {
+    agregar({
+      id: 'permiso_red_local',
+      titulo: 'Permiso de red local del navegador',
+      estado: 'aviso',
+      detalle:
+        'En espera ("Preguntar"). En Edge/Chrome las llamadas de red local se bloquean hasta que lo autorices en los permisos del sitio.',
+      sugerencia:
+        'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz en la barra de direcciones → "Acceso a la red local" → seleccioná "Permitir".',
+    })
+  } else if (infoPermiso.estado === 'denied') {
+    agregar({
+      id: 'permiso_red_local',
+      titulo: 'Permiso de red local del navegador',
+      estado: 'error',
+      detalle: 'El navegador tiene BLOQUEADO el acceso a la red local para chefsy.xyz.',
+      sugerencia:
+        'Hacé clic en el candado o controles de sitio al lado de https://chefsy.xyz → "Acceso a la red local" → cambialo a "Permitir".',
+    })
+  }
+
   // 4. Conexión con reintentos y URLs alternativas
   publicar('Conectando con el agente local…')
   let respuesta: RespuestaAgente | null = null
@@ -295,13 +330,21 @@ export async function ejecutarDiagnostico(
   }
 
   if (!respuesta) {
+    const bloqueoRed =
+      infoPermiso.estado === 'prompt' ||
+      infoPermiso.estado === 'denied' ||
+      esErrorBloqueoRedLocal(null, candidatas[0], infoPermiso.estado)
+
     agregar({
       id: 'conexion',
       titulo: 'Conexión con el agente local',
       estado: 'error',
-      detalle: `No hubo respuesta después de reintentar. ${erroresPorUrl.join(' · ')}`,
-      sugerencia:
-        'Comprobá que el agente esté corriendo (Administrador de tareas → ChefsyPrintAgent), que el puerto coincida y que Chrome/Edge tenga permitido el acceso a la red local para chefsy.xyz.',
+      detalle: bloqueoRed
+        ? `El navegador bloqueó la conexión a 127.0.0.1. Causa: restricción de Red Local de Edge/Chrome (permiso: ${infoPermiso.estado}).`
+        : `No hubo respuesta después de reintentar. ${erroresPorUrl.join(' · ')}`,
+      sugerencia: bloqueoRed
+        ? PASOS_HABILITAR_RED_LOCAL.join(' ')
+        : 'Comprobá que el agente esté corriendo (Administrador de tareas → ChefsyPrintAgent), que el puerto coincida y que Chrome/Edge tenga permitido el acceso a la red local para chefsy.xyz.',
     })
     const resultado: ResultadoDiagnostico = { ok: false, checks, contexto, informe: '' }
     resultado.informe = crearInforme(resultado)

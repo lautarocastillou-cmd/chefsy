@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useCallback, useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2, Wrench } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2, Wrench, ShieldAlert, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 import { obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
@@ -15,6 +15,7 @@ import {
   ConfiguracionImpresora,
   EVENTO_CONFIG_IMPRESORA,
 } from '@/lib/impresion/impresoraTermica'
+import { solicitarPermisoRedLocal } from '@/lib/impresion/permisoRedLocal'
 
 // --- COMPONENTE DE USUARIOS ---
 function PestanaUsuarios() {
@@ -239,6 +240,7 @@ function PestanaImpresion() {
   const [tokenAgente, setTokenAgente] = useState(config.agenteImpresionToken)
   const [probandoAgente, setProbandoAgente] = useState(false)
   const [resultadoAgente, setResultadoAgente] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+  const [bloqueoRedLocal, setBloqueoRedLocal] = useState(false)
   const [solucionadorAbierto, setSolucionadorAbierto] = useState(false)
 
   const actualizar = useCallback(() => {
@@ -320,9 +322,11 @@ function PestanaImpresion() {
           ? `Conectado. Impresora: ${resultado.printer || 'predeterminada de Windows'}.`
           : resultado.error || 'No se pudo conectar con el agente local.',
       })
+      setBloqueoRedLocal(Boolean(resultado.bloqueadoPorRedLocal))
     } catch (error) {
       console.error('Error probando el agente local:', error)
       setResultadoAgente({ tipo: 'error', texto: 'No se pudo probar el agente local.' })
+      setBloqueoRedLocal(false)
     } finally {
       setProbandoAgente(false)
     }
@@ -542,6 +546,55 @@ function PestanaImpresion() {
                 Solucionar problemas
               </button>
             </div>
+
+            {bloqueoRedLocal && (
+              <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-2.5 animate-in fade-in duration-200">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="text-amber-400 shrink-0 mt-0.5" size={18} />
+                  <div className="space-y-1">
+                    <p className="text-xs font-black text-amber-200">
+                      Permiso de red local requerido en Edge / Chrome
+                    </p>
+                    <p className="text-[11px] text-amber-100/90 leading-relaxed">
+                      El navegador bloqueó la conexión a 127.0.0.1 porque la directiva de seguridad del navegador para red local está en espera o bloqueada para chefsy.xyz.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-black/40 rounded-xl p-3 border border-amber-500/20 text-[11px] text-slate-200 space-y-1.5">
+                  <p className="font-bold text-amber-300">Pasos para habilitarlo en 10 segundos:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-300">
+                    <li>Hacé clic en el ícono del candado o controles de sitio a la izquierda de la URL (chefsy.xyz).</li>
+                    <li>Buscá <strong>Acceso a la red local</strong> (o <strong>Apps en este dispositivo</strong>).</li>
+                    <li>Cambiá la opción a <strong>Permitir</strong>.</li>
+                  </ol>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await solicitarPermisoRedLocal(urlAgente)
+                      if (res.ok) {
+                        setBloqueoRedLocal(false)
+                      }
+                      void probarAgente()
+                    }}
+                    className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black px-3.5 py-2 rounded-xl transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <ShieldCheck size={14} />
+                    Solicitar permiso al navegador
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSolucionadorAbierto(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-white px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Abrir solucionador
+                  </button>
+                </div>
+              </div>
+            )}
 
             <ActualizadorAgente />
 

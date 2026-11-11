@@ -19,7 +19,7 @@ namespace ChefsyPrintAgent
     // manda al spooler de Windows con datatype RAW. No abre dialogos.
     internal static class Program
     {
-        private const string Version = "1.3.0";
+        private const string Version = "1.3.1";
         private const string MutexName = "ChefsyPrintAgent";
         private const string OrigenActualizacionPorDefecto = "https://chefsy.xyz";
         private const int MaxBodyBytes = 2 * 1024 * 1024;
@@ -181,13 +181,13 @@ namespace ChefsyPrintAgent
 
                 if (metodo == "OPTIONS")
                 {
-                    ResponderPreflight(stream);
+                    ResponderPreflight(stream, headers);
                     return;
                 }
 
                 if (!TokenValido(headers))
                 {
-                    ResponderError(stream, 401, "Token del agente incorrecto o ausente.");
+                    ResponderError(stream, 401, "Token del agente incorrecto o ausente.", headers);
                     return;
                 }
 
@@ -1065,58 +1065,85 @@ namespace ChefsyPrintAgent
             return Encoding.ASCII.GetString(bytes.ToArray());
         }
 
-        private static void ResponderPreflight(NetworkStream stream)
+        private static void ResponderPreflight(NetworkStream stream, Dictionary<string, string> headers = null)
         {
-            var headers = new StringBuilder();
-            headers.Append("HTTP/1.1 204 No Content\r\n");
-            headers.Append(CabecerasCors());
-            headers.Append("Content-Length: 0\r\n");
-            headers.Append("Connection: close\r\n");
-            headers.Append("\r\n");
+            var sb = new StringBuilder();
+            sb.Append("HTTP/1.1 204 No Content\r\n");
+            sb.Append(CabecerasCors(headers));
+            sb.Append("Content-Length: 0\r\n");
+            sb.Append("Connection: close\r\n");
+            sb.Append("\r\n");
 
-            var bytes = Encoding.ASCII.GetBytes(headers.ToString());
+            var bytes = Encoding.ASCII.GetBytes(sb.ToString());
             stream.Write(bytes, 0, bytes.Length);
             stream.Flush();
         }
 
-        private static void ResponderError(NetworkStream stream, int codigo, string mensaje)
+        private static void ResponderError(NetworkStream stream, int codigo, string mensaje, Dictionary<string, string> headers = null)
         {
             var body = new StringBuilder();
             body.Append("{\"ok\":false,\"error\":\"").Append(EscapeJson(mensaje)).Append("\"}");
-            ResponderTexto(stream, codigo, body.ToString());
+            ResponderTexto(stream, codigo, body.ToString(), headers);
         }
 
-        private static void ResponderJson(NetworkStream stream, int codigo, string json)
+        private static void ResponderJson(NetworkStream stream, int codigo, string json, Dictionary<string, string> headers = null)
         {
-            ResponderTexto(stream, codigo, json);
+            ResponderTexto(stream, codigo, json, headers);
         }
 
-        private static void ResponderTexto(NetworkStream stream, int codigo, string body)
+        private static void ResponderTexto(NetworkStream stream, int codigo, string body, Dictionary<string, string> headers = null)
         {
             var bodyBytes = Encoding.UTF8.GetBytes(body);
-            var headers = new StringBuilder();
-            headers.Append("HTTP/1.1 ").Append(codigo.ToString(CultureInfo.InvariantCulture)).Append(" ").Append(EstadoHttp(codigo)).Append("\r\n");
-            headers.Append("Content-Type: application/json; charset=utf-8\r\n");
-            headers.Append("Content-Length: ").Append(bodyBytes.Length.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
-            headers.Append("Cache-Control: no-store\r\n");
-            headers.Append("X-Content-Type-Options: nosniff\r\n");
-            headers.Append(CabecerasCors());
-            headers.Append("Connection: close\r\n");
-            headers.Append("\r\n");
+            var sb = new StringBuilder();
+            sb.Append("HTTP/1.1 ").Append(codigo.ToString(CultureInfo.InvariantCulture)).Append(" ").Append(EstadoHttp(codigo)).Append("\r\n");
+            sb.Append("Content-Type: application/json; charset=utf-8\r\n");
+            sb.Append("Content-Length: ").Append(bodyBytes.Length.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
+            sb.Append("Cache-Control: no-store\r\n");
+            sb.Append("X-Content-Type-Options: nosniff\r\n");
+            sb.Append(CabecerasCors(headers));
+            sb.Append("Connection: close\r\n");
+            sb.Append("\r\n");
 
-            var headerBytes = Encoding.ASCII.GetBytes(headers.ToString());
+            var headerBytes = Encoding.ASCII.GetBytes(sb.ToString());
             stream.Write(headerBytes, 0, headerBytes.Length);
             stream.Write(bodyBytes, 0, bodyBytes.Length);
             stream.Flush();
         }
 
-        private static string CabecerasCors()
+        private static string CabecerasCors(Dictionary<string, string> reqHeaders = null)
         {
-            return "Access-Control-Allow-Origin: *\r\n"
-                + "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-                + "Access-Control-Allow-Headers: Content-Type, X-Chefsy-Token, X-Chefsy-Printer\r\n"
-                + "Access-Control-Allow-Private-Network: true\r\n"
-                + "Access-Control-Max-Age: 86400\r\n";
+            string origin = null;
+            if (reqHeaders != null)
+            {
+                reqHeaders.TryGetValue("Origin", out origin);
+            }
+
+            var sb = new StringBuilder();
+            if (!string.IsNullOrEmpty(origin))
+            {
+                sb.Append("Access-Control-Allow-Origin: ").Append(origin).Append("\r\n");
+                sb.Append("Vary: Origin\r\n");
+            }
+            else
+            {
+                sb.Append("Access-Control-Allow-Origin: *\r\n");
+            }
+
+            sb.Append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
+
+            string reqAllowedHeaders;
+            if (reqHeaders != null && reqHeaders.TryGetValue("Access-Control-Request-Headers", out reqAllowedHeaders) && !string.IsNullOrEmpty(reqAllowedHeaders))
+            {
+                sb.Append("Access-Control-Allow-Headers: ").Append(reqAllowedHeaders).Append(", Content-Type, X-Chefsy-Token, X-Chefsy-Printer, Access-Control-Request-Private-Network\r\n");
+            }
+            else
+            {
+                sb.Append("Access-Control-Allow-Headers: Content-Type, X-Chefsy-Token, X-Chefsy-Printer, Access-Control-Request-Private-Network\r\n");
+            }
+
+            sb.Append("Access-Control-Allow-Private-Network: true\r\n");
+            sb.Append("Access-Control-Max-Age: 86400\r\n");
+            return sb.ToString();
         }
 
         private static string EstadoHttp(int codigo)

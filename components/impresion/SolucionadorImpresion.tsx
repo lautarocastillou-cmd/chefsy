@@ -18,6 +18,7 @@ import {
   Loader2,
   Printer,
   RefreshCw,
+  ShieldCheck,
   Wrench,
   X,
   XCircle,
@@ -28,6 +29,7 @@ import {
   ResultadoDiagnostico,
 } from '@/lib/impresion/diagnostico'
 import { gestorImpresora } from '@/lib/impresion/impresoraTermica'
+import { solicitarPermisoRedLocal } from '@/lib/impresion/permisoRedLocal'
 
 interface Props {
   abierto: boolean
@@ -254,9 +256,24 @@ export default function SolucionadorImpresion({ abierto, onCerrar }: Props) {
                   )}
 
                   {check.sugerencia && detalleAbierto[check.id] && (
-                    <p className="mt-1.5 text-[11px] leading-relaxed text-slate-200 bg-slate-950/60 border border-slate-800 rounded-xl px-2.5 py-2">
-                      {check.sugerencia}
-                    </p>
+                    <div className="mt-1.5 space-y-2">
+                      <p className="text-[11px] leading-relaxed text-slate-200 bg-slate-950/60 border border-slate-800 rounded-xl px-2.5 py-2 whitespace-pre-line">
+                        {check.sugerencia}
+                      </p>
+                      {(check.id === 'permiso_red_local' || check.id === 'conexion') && check.estado !== 'ok' && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await solicitarPermisoRedLocal()
+                            void ejecutar()
+                          }}
+                          className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black px-3 py-1.5 rounded-xl transition-transform active:scale-95 cursor-pointer"
+                        >
+                          <ShieldCheck size={13} />
+                          Solicitar permiso al navegador
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

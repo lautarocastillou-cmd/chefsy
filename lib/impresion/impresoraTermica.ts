@@ -17,6 +17,11 @@ import {
   TIPOGRAFIA_POR_DEFECTO,
   TipografiaImpresion,
 } from './tipografia'
+import {
+  consultarPermisoRedLocal,
+  esErrorBloqueoRedLocal,
+  EstadoPermisoRedLocal,
+} from './permisoRedLocal'
 import { formatearPrecio } from '@/lib/utils'
 
 export type TipoDriverImpresora = 'usb' | 'serial' | 'hid' | 'bluetooth' | 'ninguna'
@@ -213,7 +218,13 @@ class GestorImpresoraTermica {
   /**
    * Consulta el estado del agente local (health + token).
    */
-  public async probarAgente(): Promise<{ ok: boolean; printer?: string; error?: string }> {
+  public async probarAgente(): Promise<{
+    ok: boolean
+    printer?: string
+    error?: string
+    bloqueadoPorRedLocal?: boolean
+    estadoPermiso?: EstadoPermisoRedLocal
+  }> {
     const base = this.obtenerUrlBaseAgente()
     const token = this.config.agenteImpresionToken.trim()
 
@@ -255,6 +266,18 @@ class GestorImpresoraTermica {
       if (error?.name === 'AbortError') {
         return { ok: false, error: 'El agente local no respondió a tiempo.' }
       }
+
+      const infoPermiso = await consultarPermisoRedLocal(base)
+      if (esErrorBloqueoRedLocal(error, base, infoPermiso.estado)) {
+        return {
+          ok: false,
+          error:
+            'El navegador bloqueó la conexión a la red local. Hacé clic en el candado junto a la URL y cambiá "Acceso a la red local" a "Permitir".',
+          bloqueadoPorRedLocal: true,
+          estadoPermiso: infoPermiso.estado,
+        }
+      }
+
       return {
         ok: false,
         error: 'No se pudo conectar con el agente local. Verificá que esté instalado y corriendo en esta PC.',
@@ -268,7 +291,11 @@ class GestorImpresoraTermica {
    * Envía bytes ESC/POS al agente local para que los mande al spooler.
    * No abre ningún diálogo del navegador.
    */
-  public async enviarAlAgente(bytes: Uint8Array): Promise<{ exito: boolean; error?: string }> {
+  public async enviarAlAgente(bytes: Uint8Array): Promise<{
+    exito: boolean
+    error?: string
+    bloqueadoPorRedLocal?: boolean
+  }> {
     const base = this.obtenerUrlBaseAgente()
     const token = this.config.agenteImpresionToken.trim()
 
@@ -315,6 +342,17 @@ class GestorImpresoraTermica {
       if (error?.name === 'AbortError') {
         return { exito: false, error: 'El agente local no respondió a tiempo.' }
       }
+
+      const infoPermiso = await consultarPermisoRedLocal(base)
+      if (esErrorBloqueoRedLocal(error, base, infoPermiso.estado)) {
+        return {
+          exito: false,
+          error:
+            'Impresión bloqueada por el navegador: se requiere el permiso de "Acceso a la red local" en chefsy.xyz.',
+          bloqueadoPorRedLocal: true,
+        }
+      }
+
       return {
         exito: false,
         error: 'No se pudo conectar con el agente local. Verificá que esté instalado y corriendo en esta PC.',
@@ -342,7 +380,9 @@ class GestorImpresoraTermica {
     status: number
     datos: any
     error?: string
-    tipoError?: 'config' | 'red' | 'timeout' | 'http'
+    tipoError?: 'config' | 'red' | 'timeout' | 'http' | 'permiso_red_local'
+    bloqueadoPorRedLocal?: boolean
+    estadoPermiso?: EstadoPermisoRedLocal
   }> {
     const base = normalizarUrlAgente(opciones.urlBase || this.config.agenteImpresionUrl)
     const token = this.config.agenteImpresionToken.trim()
@@ -394,6 +434,21 @@ class GestorImpresoraTermica {
       if (error?.name === 'AbortError') {
         return { ok: false, status: 0, datos: null, error: 'El agente no respondió a tiempo.', tipoError: 'timeout' }
       }
+
+      const infoPermiso = await consultarPermisoRedLocal(base)
+      if (esErrorBloqueoRedLocal(error, base, infoPermiso.estado)) {
+        return {
+          ok: false,
+          status: 0,
+          datos: null,
+          error:
+            'El navegador bloqueó la conexión a la red local (permiso en espera o denegado). Habilitá "Acceso a la red local" en el candado del navegador.',
+          tipoError: 'permiso_red_local',
+          bloqueadoPorRedLocal: true,
+          estadoPermiso: infoPermiso.estado,
+        }
+      }
+
       return { ok: false, status: 0, datos: null, error: 'No se pudo conectar con el agente local.', tipoError: 'red' }
     } finally {
       clearTimeout(timeout)
