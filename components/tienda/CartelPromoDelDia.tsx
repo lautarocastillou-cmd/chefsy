@@ -129,7 +129,7 @@ export default function CartelPromoDelDia() {
 
           {/* Subtítulo / Descripción */}
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
-            {configPromo.descripcion || 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni promos).'}
+            {configPromo.descripcion || 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni milas al plato).'}
           </p>
         </div>
 
@@ -279,7 +279,7 @@ export default function CartelPromoDelDia() {
         {/* Footer del Popup */}
         <div className="mt-5 pt-3.5 border-t border-[#262626] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p className="text-[11px] text-slate-400">
-            * Aplica a cualquier Burger, Lomo o Mila individual de la carta. No incluye combos ni promos.
+            * Aplica a cualquier Burger, Lomo o Mila individual de la carta. No incluye combos ni milanesas al plato.
           </p>
           <button
             type="button"

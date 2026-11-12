@@ -33,7 +33,7 @@ export const PROMO_POPUP_DEFAULT: PromoPopupConfig = {
   activo: true,
   titulo: 'PROMO DE HOY',
   subtitulo: 'Bebida sin cargo',
-  descripcion: 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni promos).',
+  descripcion: 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni milas al plato).',
   badge: '',
   productos_ids: ['patys-especial', 'prod-1780506120462-538', 'lomos-y-milas-especial'],
   bebidas: ['Fanta 375cc', 'Sprite 375cc'],
@@ -42,7 +42,7 @@ export const PROMO_POPUP_DEFAULT: PromoPopupConfig = {
 /**
  * Determina si un producto aplica a la promoción de bebida de regalo (Fanta o Sprite 375cc).
  * Aplica a cualquier burger, lomo o mila individual de la carta.
- * Excluye explícitamente combos y promociones (ej: "2 BURGERS", "BURGER + COCA", combos, etc.).
+ * Excluye explícitamente combos, promociones y milanesas al plato (Napolitana/A caballo con papas).
  */
 export function esProductoPromo(
   productoOrId?: ProductoCatalogo | string,
@@ -90,19 +90,29 @@ export function esProductoPromo(
     return false
   }
 
-  // 3. Exclusión por categorías que no corresponden a burgers, lomos ni milas
-  const catsExcluidas = ['zapping', 'pizzas', 'tartas-xl', 'bebidas', 'cat-1781574714354']
+  // 3. Exclusión explícita de milanesas al plato (Napolitana con papas, A caballo con papas, etc.)
+  if (
+    cat === 'mila-al-plato' ||
+    id.includes('mila-al-plato') ||
+    nom.includes('al plato') ||
+    nom.includes('napolitana con papas') ||
+    nom.includes('a caballo con papas')
+  ) {
+    return false
+  }
+
+  // 4. Exclusión por categorías que no corresponden a burgers, lomos ni milas en sándwich
+  const catsExcluidas = ['zapping', 'pizzas', 'tartas-xl', 'bebidas', 'cat-1781574714354', 'mila-al-plato']
   if (cat && catsExcluidas.includes(cat)) {
     return false
   }
 
-  // 4. Inclusión directa por categorías reconocidas de burgers, patys, lomos y milas
+  // 5. Inclusión directa por categorías reconocidas de burgers, patys, lomos y milas en sándwich
   const catsValidas = [
     'patys',               // Burgers
     'cat-1781570568487',   // Patys
     'cat-1780506096615',   // Lomos
-    'lomos-y-milas',       // Milas
-    'mila-al-plato',       // Mila al plato
+    'lomos-y-milas',       // Milas en sándwich
     'hamburguesas',        // Hamburguesas
   ]
 
@@ -110,7 +120,7 @@ export function esProductoPromo(
     return true
   }
 
-  // 5. Inclusión por coincidencia léxica en nombre o id si no vino categoría o es genérica
+  // 6. Inclusión por coincidencia léxica en nombre o id si no vino categoría o es genérica
   const palabrasValidas = ['burger', 'paty', 'lomo', 'lomito', 'mila']
   return palabrasValidas.some((p) => nom.includes(p) || id.includes(p))
 }

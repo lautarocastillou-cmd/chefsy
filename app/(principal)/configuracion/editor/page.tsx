@@ -1287,10 +1287,10 @@ export default function EditorTienda() {
                 <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
                   <li>🍔 Burgers individuales (Común, Especial, Chefsy, American, 4 Quesos, etc.)</li>
                   <li>🥩 Lomos individuales (Lomo Especial, Chefsy, Lomito de Pollo, etc.)</li>
-                  <li>🥖 Milas individuales (Mila Especial, Chefsy, Napolitana, etc.)</li>
+                  <li>🥖 Milas individuales en sándwich (Mila Especial, Chefsy, etc. No incluye al plato)</li>
                 </ul>
                 <p className="text-[10px] text-slate-500 pt-1">
-                  Aplica a todas las Burgers, Lomos y Milas individuales de la carta (Fanta o Sprite 375cc gratis). No incluye combos ni promos.
+                  Aplica a todas las Burgers, Lomos y Milas individuales en sándwich (Fanta o Sprite 375cc gratis). No incluye promociones, combos ni milanesas al plato.
                 </p>
               </div>
             </div>
