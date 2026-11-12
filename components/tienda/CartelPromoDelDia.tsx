@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { X, ArrowRight, Sparkles } from 'lucide-react'
+import { X, ArrowRight } from 'lucide-react'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
@@ -84,7 +84,7 @@ export default function CartelPromoDelDia() {
 
   // Fotos oficiales de referencia de las categorías
   const fotoBurger = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009810/btwjx7btqxu4i28p0rzc.jpg'
-  const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346931837_5lgxt.jpeg'
+  const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1783992908572_cd157k.jpeg'
   const fotoMila = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346979850_ojawu.jpeg'
 
   return (
@@ -110,12 +110,6 @@ export default function CartelPromoDelDia() {
 
         {/* Encabezado del Cartel */}
         <div className="flex flex-col items-center space-y-2 max-w-lg mx-auto">
-          {/* Badge sutil */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
-            <Sparkles size={12} className="text-emerald-400 shrink-0" />
-            <span>Bebida sin cargo</span>
-          </div>
-
           {/* Título Principal */}
           <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight">
             {tituloLimpio}
