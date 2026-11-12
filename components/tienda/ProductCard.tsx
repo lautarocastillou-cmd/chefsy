@@ -81,7 +81,7 @@ function ProductCard({
 
   const nombreVisible = meta?.nombre_publico || prod.nombre
   const descripcionVisible = meta?.descripcion_publica || detalles.desc
-  const esPromo = esProductoPromo(prod.id, prod.nombre, configuracion?.promo_popup?.activo !== false)
+  const esPromo = esProductoPromo(prod.id, prod.nombre, configuracion?.promo_popup?.activo !== false, prod.esCombo, prod.categoriaId)
 
   useEffect(() => {
     const el = textoRef.current

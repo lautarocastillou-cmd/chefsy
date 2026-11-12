@@ -50,9 +50,9 @@ export default function ModalPersonalizacion({
   const { configuracion } = usarConfiguracionTienda()
   const estaCerrado = turnoActivo === false || esDomingoCerrado
 
-  // Detección de promo del día (Burger Especial / Lomito de Pollo + Bebida 375cc de regalo)
+  // Detección de promo del día (Burgers / Lomos / Milas individuales + Bebida 375cc de regalo)
   const promoHabilitada = configuracion?.promo_popup?.activo !== false
-  const esPromo = promoHabilitada && esProductoPromo(producto.id, producto.nombre, promoHabilitada)
+  const esPromo = promoHabilitada && esProductoPromo(producto.id, producto.nombre, promoHabilitada, producto.esCombo, producto.categoriaId)
   const modPromoSeleccionado = modsSeleccionados.find(m => m.id.startsWith('promo-regalo-'))?.id || MOD_PROMO_FANTA.id
 
   useEffect(() => {

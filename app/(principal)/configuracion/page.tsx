@@ -1219,7 +1219,7 @@ function PestanaParametros() {
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Muestra el cartel de la promo del día al entrar al link/página y permite elegir Fanta 375cc o Sprite 375cc gratis al pedir Burger Especial o Lomito de Pollo. Si se desactiva, el cartel y la promo no se mostrarán en la tienda.
+                Muestra el cartel de la promo del día al entrar a la tienda y permite elegir Fanta 375cc o Sprite 375cc gratis con cualquier burger, lomo o mila individual de la carta (no incluye combos ni promos). Si se desactiva, el cartel y la promo no se mostrarán en la tienda.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0">

@@ -1285,11 +1285,12 @@ export default function EditorTienda() {
               <div className="p-3 bg-zinc-900/60 border border-slate-800 rounded-xl space-y-1.5 text-left">
                 <span className="text-[10px] font-black uppercase text-amber-400">Productos Vinculados</span>
                 <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
-                  <li>🍔 Burger Especial ($8.000)</li>
-                  <li>🍗 Lomito de Pollo ($11.500)</li>
+                  <li>🍔 Burgers individuales (Común, Especial, Chefsy, American, 4 Quesos, etc.)</li>
+                  <li>🥩 Lomos individuales (Lomo Especial, Chefsy, Lomito de Pollo, etc.)</li>
+                  <li>🥖 Milas individuales (Mila Especial, Chefsy, Napolitana, etc.)</li>
                 </ul>
                 <p className="text-[10px] text-slate-500 pt-1">
-                  Ambos productos abren con el selector de bebida 375cc de regalo (Fanta o Sprite gratis).
+                  Aplica a todas las Burgers, Lomos y Milas individuales de la carta (Fanta o Sprite 375cc gratis). No incluye combos ni promos.
                 </p>
               </div>
             </div>

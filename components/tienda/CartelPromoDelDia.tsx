@@ -19,12 +19,17 @@ export default function CartelPromoDelDia() {
   const configPromo = configuracion?.promo_popup || PROMO_POPUP_DEFAULT
   const promoActiva = configPromo.activo !== false
 
-  // Buscar los productos oficiales en el catálogo
+  // Buscar los productos oficiales de referencia en el catálogo
   const productoBurger = productos.find(
-    (p) => p.id === 'patys-especial' || (p.nombre.toLowerCase().includes('burger especial') && !p.nombre.includes('+'))
+    (p) => p.id === 'patys-especial' || (p.nombre.toLowerCase().includes('burger especial') && !p.esCombo && !p.nombre.includes('+'))
   )
-  const productoLomito = productos.find(
-    (p) => p.id === 'prod-1779840756425-936' || (p.nombre.toLowerCase().includes('lomito de pollo') && !p.nombre.includes('+'))
+  const productoLomo = productos.find(
+    (p) => p.id === 'prod-1780506120462-538' || (p.nombre.toLowerCase().includes('lomo especial') && !p.esCombo && !p.nombre.includes('+'))
+  ) || productos.find(
+    (p) => p.id === 'prod-1779840756425-936' || (p.nombre.toLowerCase().includes('lomito de pollo') && !p.esCombo && !p.nombre.includes('+'))
+  )
+  const productoMila = productos.find(
+    (p) => p.id === 'lomos-y-milas-especial' || (p.nombre.toLowerCase().includes('mila especial') && !p.esCombo && !p.nombre.includes('+'))
   )
 
   // Abrir cartel al ingresar
@@ -89,9 +94,10 @@ export default function CartelPromoDelDia() {
 
   if (!abierto || !promoActiva) return null
 
-  // Fotos de los productos
+  // Fotos de referencia de los productos
   const fotoBurger = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009810/btwjx7btqxu4i28p0rzc.jpg'
-  const fotoLomito = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1783992909295_vxuwe.jpeg'
+  const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346931837_5lgxt.jpeg'
+  const fotoMila = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346979850_ojawu.jpeg'
 
   return (
     <div 
@@ -101,7 +107,7 @@ export default function CartelPromoDelDia() {
       aria-modal="true"
     >
       <div 
-        className="relative w-full max-w-xl sm:max-w-2xl bg-[#181818] border border-[#2e2e2e] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-xl sm:max-w-2xl md:max-w-4xl bg-[#181818] border border-[#2e2e2e] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Botón cerrar X */}
@@ -123,42 +129,42 @@ export default function CartelPromoDelDia() {
 
           {/* Subtítulo / Descripción */}
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
-            {configPromo.descripcion || 'Comprando una Burger Especial o un Lomito de Pollo, sumás una Fanta o Sprite de 375cc de regalo.'}
+            {configPromo.descripcion || 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni promos).'}
           </p>
         </div>
 
         {/* CONTENEDOR DE PRODUCTOS (Cards alineadas a la estética Chefsy) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-5 text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-3.5 mt-5 text-left">
           
           {/* TARJETA 1: BURGER ESPECIAL */}
           <div 
-            onClick={() => handleElegirProducto(productoBurger, 'patys-especial', 'Burger Especial', 8000)}
-            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+            onClick={() => handleElegirProducto(productoBurger, 'patys-especial', 'Burger Especial', 7500)}
+            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
             <div className="flex items-start gap-3">
               {/* Imagen del plato */}
-              <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
                 <Image
                   src={fotoBurger}
                   alt="Burger Especial"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="80px"
+                  sizes="64px"
                   priority
                 />
               </div>
 
               {/* Textos */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                <div className="flex items-baseline justify-between gap-1.5">
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
                     Burger Especial
                   </h3>
                   <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
-                    {productoBurger ? formatearPrecio(productoBurger.precio) : '$8.000'}
+                    {productoBurger ? formatearPrecio(productoBurger.precio) : '$7.500'}
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 mt-1 leading-snug">
+                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
                   Medallón de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
                 </p>
                 <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
@@ -168,7 +174,7 @@ export default function CartelPromoDelDia() {
             </div>
 
             {/* Botón Acción Card */}
-            <div className="mt-3.5 pt-2.5 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
+            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
               <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
               <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
                 <ArrowRight size={13} />
@@ -176,36 +182,36 @@ export default function CartelPromoDelDia() {
             </div>
           </div>
 
-          {/* TARJETA 2: LOMITO DE POLLO */}
+          {/* TARJETA 2: LOMO ESPECIAL */}
           <div 
-            onClick={() => handleElegirProducto(productoLomito, 'prod-1779840756425-936', 'Lomito de pollo', 11500)}
-            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+            onClick={() => handleElegirProducto(productoLomo, 'prod-1780506120462-538', 'Lomo Especial', 11500)}
+            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
             <div className="flex items-start gap-3">
               {/* Imagen del plato */}
-              <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
                 <Image
-                  src={fotoLomito}
-                  alt="Lomito de pollo"
+                  src={fotoLomo}
+                  alt="Lomo Especial"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="80px"
+                  sizes="64px"
                   priority
                 />
               </div>
 
               {/* Textos */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                    Lomito de Pollo
+                <div className="flex items-baseline justify-between gap-1.5">
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
+                    Lomo Especial
                   </h3>
                   <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
-                    {productoLomito ? formatearPrecio(productoLomito.precio) : '$11.500'}
+                    {productoLomo ? formatearPrecio(productoLomo.precio) : '$11.500'}
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Bife de pollo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
+                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                  Bife de lomo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
                 </p>
                 <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
                   Sale con Fanta o Sprite 375cc de regalo.
@@ -214,7 +220,53 @@ export default function CartelPromoDelDia() {
             </div>
 
             {/* Botón Acción Card */}
-            <div className="mt-3.5 pt-2.5 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
+            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
+              <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
+              <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
+                <ArrowRight size={13} />
+              </div>
+            </div>
+          </div>
+
+          {/* TARJETA 3: MILA ESPECIAL */}
+          <div 
+            onClick={() => handleElegirProducto(productoMila, 'lomos-y-milas-especial', 'Mila Especial', 11500)}
+            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+          >
+            <div className="flex items-start gap-3">
+              {/* Imagen del plato */}
+              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+                <Image
+                  src={fotoMila}
+                  alt="Mila Especial"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-200"
+                  sizes="64px"
+                  priority
+                />
+              </div>
+
+              {/* Textos */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-1.5">
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
+                    Mila Especial
+                  </h3>
+                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
+                    {productoMila ? formatearPrecio(productoMila.precio) : '$11.500'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                  Milanesa de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
+                </p>
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
+                  Sale con Fanta o Sprite 375cc de regalo.
+                </p>
+              </div>
+            </div>
+
+            {/* Botón Acción Card */}
+            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
               <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
               <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
                 <ArrowRight size={13} />
@@ -227,12 +279,12 @@ export default function CartelPromoDelDia() {
         {/* Footer del Popup */}
         <div className="mt-5 pt-3.5 border-t border-[#262626] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p className="text-[11px] text-slate-400">
-            * Promoción válida para pedidos online hasta agotar stock del turno.
+            * Aplica a cualquier Burger, Lomo o Mila individual de la carta. No incluye combos ni promos.
           </p>
           <button
             type="button"
             onClick={cerrarModal}
-            className="text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
+            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer shrink-0 underline underline-offset-2"
           >
             Ver toda la carta
           </button>

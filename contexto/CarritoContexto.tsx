@@ -6,6 +6,7 @@ import { ItemCarrito } from '@/tipos/tienda'
 import { Coordenadas, Pedido } from '@/tipos'
 import { ProductoCatalogo, ModificadorCatalogo } from '@/tipos/catalogo'
 import { esProductoPromo, MOD_PROMO_FANTA, MOD_PROMO_SPRITE } from '@/tipos/promo'
+import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio, buscarCoordenadasPorDireccion, resolverDireccionHumana } from '@/lib/ubicacion'
 import { generarId, generarSlug } from '@/lib/utils'
 import { ContextoCatalogo } from '@/contexto/CatalogoContexto'
@@ -79,6 +80,9 @@ interface ValorContextoCarrito {
 const ContextoCarrito = createContext<ValorContextoCarrito | undefined>(undefined)
 
 export function ProveedorCarrito({ children }: { children: ReactNode }) {
+  const { configuracion } = usarConfiguracionTienda()
+  const promoActiva = configuracion?.promo_popup?.activo !== false
+
   const [turnoActivo, setTurnoActivo] = useState<boolean | null>(null)
   const [esDomingoCerrado, setEsDomingoCerrado] = useState(false)
   const [mensajeCierre, setMensajeCierre] = useState(
@@ -190,14 +194,14 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       return
     }
     setProductoAPersonalizar(prod)
-    if (esProductoPromo(prod.id, prod.nombre)) {
+    if (esProductoPromo(prod.id, prod.nombre, promoActiva, prod.esCombo, prod.categoriaId)) {
       setModsSeleccionados([MOD_PROMO_FANTA])
     } else {
       setModsSeleccionados([])
     }
     setCantidadModal(1)
     setNotaPersonalizacion('')
-  }, [turnoActivo, esDomingoCerrado, mensajeCierre])
+  }, [turnoActivo, esDomingoCerrado, mensajeCierre, promoActiva])
 
   // Detección automática de enlaces profundos (?p=... o ?producto=... o ?promo=...)
   useEffect(() => {
@@ -253,7 +257,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
   const agregarAlCarritoDesdeModal = useCallback((conPuntos: boolean = false) => {
     if (!productoAPersonalizar) return
     let modsFinales = [...modsSeleccionados]
-    if (esProductoPromo(productoAPersonalizar.id, productoAPersonalizar.nombre)) {
+    if (esProductoPromo(productoAPersonalizar.id, productoAPersonalizar.nombre, promoActiva, productoAPersonalizar.esCombo, productoAPersonalizar.categoriaId)) {
       const tienePromoBebida = modsFinales.some(m => m.id.startsWith('promo-regalo-'))
       if (!tienePromoBebida) {
         modsFinales = [MOD_PROMO_FANTA, ...modsFinales]
@@ -283,7 +287,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       }
     })
     setProductoAPersonalizar(null)
-  }, [productoAPersonalizar, cantidadModal, modsSeleccionados, notaPersonalizacion, calcularPrecioUnitarioModal])
+  }, [productoAPersonalizar, cantidadModal, modsSeleccionados, notaPersonalizacion, calcularPrecioUnitarioModal, promoActiva])
 
   const actualizarCantidadCarrito = useCallback((idCart: string, delta: number) => {
     setCarrito(prev => 
