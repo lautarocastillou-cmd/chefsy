@@ -309,6 +309,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     const initialPoint = puntos[0] || { lat: UBICACION_LOCAL.latitud, lng: UBICACION_LOCAL.longitud }
 
     const map = L.map(mapContainerRef.current, {
+      preferCanvas: true,
       center: [initialPoint.lat, initialPoint.lng],
       zoom: 15,
       zoomControl: false,
@@ -319,6 +320,9 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
       maxZoom: 20,
+      keepBuffer: 2,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -776,7 +780,7 @@ export default function ModalBreadcrumbTrail({ pedido, onCerrar }: ModalBreadcru
 
         {/* Mapa Leaflet Interactivo (Contenedor 100% garantizado) */}
         <div className="flex-1 relative w-full min-h-0 bg-slate-950 overflow-hidden">
-          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', contain: 'layout paint', willChange: 'transform' }} />
 
           {/* Overlay de Carga */}
           {cargandoRuta && (

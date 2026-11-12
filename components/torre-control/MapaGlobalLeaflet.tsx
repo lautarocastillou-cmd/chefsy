@@ -189,16 +189,20 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
     }
 
     const map = L.map(mapContainerRef.current, {
+      preferCanvas: true,
       center: [LOCAL_LAT, LOCAL_LNG],
       zoom: 14,
       zoomControl: false,
       attributionControl: false,
     })
 
-    // Capa HD (Google Maps con mÃ¡xima compatibilidad y carga inmediata)
+    // Capa HD (Google Maps con máxima compatibilidad y carga inmediata)
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
       maxZoom: 20,
+      keepBuffer: 2,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -1131,7 +1135,7 @@ export default function MapaGlobal({ cadetes, focusedId, onSelectCadete, bajoCon
       <div
         ref={mapContainerRef}
         className="w-full h-full min-h-[260px]"
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', contain: 'layout paint', willChange: 'transform' }}
       />
 
       {/* HUD de Botones de CÃ¡mara Inteligente en Torre de Control */}

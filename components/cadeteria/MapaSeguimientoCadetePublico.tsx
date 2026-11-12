@@ -78,6 +78,7 @@ export default function MapaSeguimientoCadetePublico({
       : [UBICACION_LOCAL.latitud, UBICACION_LOCAL.longitud]
 
     const map = L.map(mapContainerRef.current, {
+      preferCanvas: true,
       center: centroInicial,
       zoom: 16,
       zoomControl: false,
@@ -88,6 +89,9 @@ export default function MapaSeguimientoCadetePublico({
     L.tileLayer(CARTO_VOYAGER_URL, {
       attribution: CARTO_ATTRIBUTION,
       maxZoom: 20,
+      keepBuffer: 2,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -377,7 +381,7 @@ export default function MapaSeguimientoCadetePublico({
       }} />
 
       {/* Contenedor del Mapa */}
-      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ contain: 'layout paint', willChange: 'transform' }} />
 
       {/* Botones Flotantes de Control de Cámara */}
       <div className="absolute top-4 right-4 z-[500] flex flex-col gap-2">

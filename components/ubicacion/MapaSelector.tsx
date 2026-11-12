@@ -54,6 +54,7 @@ export default function MapaSelector({
 
       try {
         mapa = L.map(contenedorRef.current, {
+          preferCanvas: true,
           center: [posicionInicial.latitud, posicionInicial.longitud],
           zoom: coordenadas ? 17 : 14,
         })
@@ -71,6 +72,9 @@ export default function MapaSelector({
       L.tileLayer(CARTO_VOYAGER_URL, {
         attribution: CARTO_ATTRIBUTION,
         maxZoom: 20,
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
       }).addTo(mapa)
 
       const marcador = L.marker([posicionInicial.latitud, posicionInicial.longitud], {
@@ -116,6 +120,7 @@ export default function MapaSelector({
     <div
       ref={contenedorRef}
       className={className}
+      style={{ contain: 'layout paint', willChange: 'transform' }}
     />
   )
 }

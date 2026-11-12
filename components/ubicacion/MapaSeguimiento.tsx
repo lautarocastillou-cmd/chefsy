@@ -342,6 +342,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
 
     if (!leafletMapRef.current) {
       const mapa = L.map(mapRef.current, {
+        preferCanvas: true,
         zoomControl: false,
         attributionControl: false,
         touchZoom: true,
@@ -357,6 +358,9 @@ export default function MapaSeguimiento({ pedido }: Props) {
         attribution: MAPA_ATTRIBUTION,
         subdomains: MAPA_SUBDOMAINS,
         maxZoom: 20,
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
       }).addTo(mapa)
 
       // Asegurar que todos los controladores táctiles y gestos estén activos en celular
@@ -1047,8 +1051,8 @@ export default function MapaSeguimiento({ pedido }: Props) {
       `,
       }} />
 
-      {/* Contenedor del Mapa Leaflet (100% absoluto con touch-action liberado para zoom táctil) */}
-      <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%', touchAction: 'none' }} />
+      {/* Contenedor del Mapa Leaflet (100% absoluto con touch-action liberado para zoom táctil y aislamiento GPU) */}
+      <div ref={mapRef} className="w-full h-full" style={{ width: '100%', height: '100%', touchAction: 'none', contain: 'layout paint', willChange: 'transform' }} />
 
       {/* HUD Superior con Estado Claro (debajo del header flotante) */}
       {pedido.estado === 'entregado' ? (
