@@ -31,11 +31,11 @@ export const MOD_PROMO_COCA: ModificadorCatalogo = {
 
 export const PROMO_POPUP_DEFAULT: PromoPopupConfig = {
   activo: true,
-  titulo: 'PROMO DE HOY',
+  titulo: 'Promo del día',
   subtitulo: 'Bebida sin cargo',
-  descripcion: 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni milas al plato).',
+  descripcion: 'Comprando cualquier burger, lomo o milanesa individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni milas al plato).',
   badge: '',
-  productos_ids: ['patys-especial', 'prod-1780506120462-538', 'lomos-y-milas-especial'],
+  productos_ids: ['patys', 'cat-1780506096615', 'lomos-y-milas'],
   bebidas: ['Fanta 375cc', 'Sprite 375cc'],
 }
 

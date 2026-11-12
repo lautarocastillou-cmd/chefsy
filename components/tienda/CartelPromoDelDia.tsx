@@ -2,35 +2,32 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { X, ArrowRight } from 'lucide-react'
-import { usarCatalogo } from '@/contexto/CatalogoContexto'
-import { usarCarrito } from '@/contexto/CarritoContexto'
+import { X, ArrowRight, Sparkles } from 'lucide-react'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
-import { formatearPrecio, optimizarUrlImagen } from '@/lib/utils'
-import { ProductoCatalogo } from '@/tipos/catalogo'
+import { scrollHaciaCategoria } from '@/lib/tienda-helpers'
 import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
 
 export default function CartelPromoDelDia() {
   const [abierto, setAbierto] = useState(false)
-  const { productos, estaListoCatalogo } = usarCatalogo()
-  const { abrirModalPersonalizacion, turnoActivo, esDomingoCerrado } = usarCarrito()
   const { configuracion } = usarConfiguracionTienda()
 
   const configPromo = configuracion?.promo_popup || PROMO_POPUP_DEFAULT
   const promoActiva = configPromo.activo !== false
 
-  // Buscar los productos oficiales de referencia en el catálogo
-  const productoBurger = productos.find(
-    (p) => p.id === 'patys-especial' || (p.nombre.toLowerCase().includes('burger especial') && !p.esCombo && !p.nombre.includes('+'))
-  )
-  const productoLomo = productos.find(
-    (p) => p.id === 'prod-1780506120462-538' || (p.nombre.toLowerCase().includes('lomo especial') && !p.esCombo && !p.nombre.includes('+'))
-  ) || productos.find(
-    (p) => p.id === 'prod-1779840756425-936' || (p.nombre.toLowerCase().includes('lomito de pollo') && !p.esCombo && !p.nombre.includes('+'))
-  )
-  const productoMila = productos.find(
-    (p) => p.id === 'lomos-y-milas-especial' || (p.nombre.toLowerCase().includes('mila especial') && !p.esCombo && !p.nombre.includes('+'))
-  )
+  // Sanitización de textos para evitar mayúsculas agresivas o textos desactualizados de caché
+  const rawTitulo = configPromo.titulo?.trim() || ''
+  const tituloLimpio = (!rawTitulo || rawTitulo.toUpperCase() === 'PROMO DE HOY')
+    ? 'Promo del día'
+    : rawTitulo
+
+  const rawDesc = configPromo.descripcion?.trim() || ''
+  const esDescDesactualizada =
+    rawDesc.includes('Burger Especial') ||
+    rawDesc.includes('Lomito de Pollo') ||
+    rawDesc.includes('Coca-Cola')
+  const descripcionLimpia = esDescDesactualizada || !rawDesc
+    ? 'Elegí cualquier burger, lomo o milanesa individual de la carta y sumás una Fanta o Sprite de 375cc de regalo.'
+    : rawDesc
 
   // Abrir cartel al ingresar
   useEffect(() => {
@@ -45,9 +42,9 @@ export default function CartelPromoDelDia() {
       return () => clearTimeout(timer)
     }
 
-    // Si ya vio el popup en esta sesión, no volver a interrumpir
+    // Si ya vio el popup en esta versión de la promo, no volver a interrumpir
     try {
-      const yaVisto = sessionStorage.getItem('chefsy_promo_popup_vista')
+      const yaVisto = sessionStorage.getItem('chefsy_promo_popup_vista_v2')
       if (!yaVisto) {
         const timer = setTimeout(() => setAbierto(true), 450)
         return () => clearTimeout(timer)
@@ -72,29 +69,20 @@ export default function CartelPromoDelDia() {
   const cerrarModal = useCallback(() => {
     setAbierto(false)
     try {
-      sessionStorage.setItem('chefsy_promo_popup_vista', '1')
+      sessionStorage.setItem('chefsy_promo_popup_vista_v2', '1')
     } catch (_) {}
   }, [])
 
-  const handleElegirProducto = (prod: ProductoCatalogo | undefined, fallbackId: string, fallbackNombre: string, fallbackPrecio: number) => {
+  const handleElegirCategoria = (categoriaId: string) => {
     cerrarModal()
-    const targetProd = prod || {
-      id: fallbackId,
-      nombre: fallbackNombre,
-      precio: fallbackPrecio,
-      categoriaId: 'patys',
-      esCombo: false,
-    } as ProductoCatalogo
-
-    // Pequeño timeout para transición suave entre modal de promo y modal de producto
     setTimeout(() => {
-      abrirModalPersonalizacion(targetProd, true)
-    }, 150)
+      scrollHaciaCategoria(categoriaId)
+    }, 120)
   }
 
   if (!abierto || !promoActiva) return null
 
-  // Fotos de referencia de los productos
+  // Fotos oficiales de referencia de las categorías
   const fotoBurger = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009810/btwjx7btqxu4i28p0rzc.jpg'
   const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346931837_5lgxt.jpeg'
   const fotoMila = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346979850_ojawu.jpeg'
@@ -107,167 +95,173 @@ export default function CartelPromoDelDia() {
       aria-modal="true"
     >
       <div 
-        className="relative w-full max-w-xl sm:max-w-2xl md:max-w-4xl bg-[#181818] border border-[#2e2e2e] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-xl sm:max-w-2xl md:max-w-3xl bg-[#161616] border border-[#2a2a2a] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Botón cerrar X */}
         <button
           type="button"
           onClick={cerrarModal}
-          className="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-[#242424] hover:bg-[#303030] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer z-20 border border-[#383838] active:scale-95"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-[#222222] hover:bg-[#2e2e2e] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer z-20 border border-[#333333] active:scale-95"
           aria-label="Cerrar cartel de promo"
         >
           <X size={16} />
         </button>
 
         {/* Encabezado del Cartel */}
-        <div className="flex flex-col items-center space-y-1.5 max-w-lg mx-auto">
-          {/* Título Principal de Impacto */}
-          <h2 className="font-bebas text-4xl sm:text-5xl md:text-6xl text-white tracking-wide leading-none uppercase">
-            {configPromo.titulo || 'PROMO DE HOY'}
+        <div className="flex flex-col items-center space-y-2 max-w-lg mx-auto">
+          {/* Badge sutil */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
+            <Sparkles size={12} className="text-emerald-400 shrink-0" />
+            <span>Bebida sin cargo</span>
+          </div>
+
+          {/* Título Principal */}
+          <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight">
+            {tituloLimpio}
           </h2>
 
           {/* Subtítulo / Descripción */}
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
-            {configPromo.descripcion || 'Comprando cualquier Burger, Lomo o Mila individual de la carta, sumás una Fanta o Sprite de 375cc de regalo (no incluye combos ni milas al plato).'}
+            {descripcionLimpia}
           </p>
         </div>
 
-        {/* CONTENEDOR DE PRODUCTOS (Cards alineadas a la estética Chefsy) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-3.5 mt-5 text-left">
+        {/* CONTENEDOR DE CATEGORÍAS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 text-left">
           
-          {/* TARJETA 1: BURGER ESPECIAL */}
+          {/* CATEGORÍA 1: BURGERS */}
           <div 
-            onClick={() => handleElegirProducto(productoBurger, 'patys-especial', 'Burger Especial', 7500)}
-            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+            onClick={() => handleElegirCategoria('patys')}
+            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
-            <div className="flex items-start gap-3">
-              {/* Imagen del plato */}
-              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+            <div className="flex sm:flex-col items-start gap-3">
+              {/* Imagen de la categoría */}
+              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
                 <Image
                   src={fotoBurger}
-                  alt="Burger Especial"
+                  alt="Burgers individuales"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="64px"
+                  sizes="(max-width: 640px) 64px, 240px"
                   priority
                 />
               </div>
 
               {/* Textos */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 sm:pt-1">
                 <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
-                    Burger Especial
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                    Burgers
                   </h3>
-                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
-                    {productoBurger ? formatearPrecio(productoBurger.precio) : '$7.500'}
+                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                    Bebida gratis
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Medallón de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
+                  Común, Especial, Chefsy, American y 4 Quesos.
                 </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
-                  Sale con Fanta o Sprite 375cc de regalo.
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                  Con Fanta o Sprite gratis
                 </p>
               </div>
             </div>
 
-            {/* Botón Acción Card */}
-            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
-              <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
+            {/* Botón Acción */}
+            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+              <span className="text-[11px] font-medium">Ver opciones</span>
               <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
                 <ArrowRight size={13} />
               </div>
             </div>
           </div>
 
-          {/* TARJETA 2: LOMO ESPECIAL */}
+          {/* CATEGORÍA 2: LOMOS */}
           <div 
-            onClick={() => handleElegirProducto(productoLomo, 'prod-1780506120462-538', 'Lomo Especial', 11500)}
-            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+            onClick={() => handleElegirCategoria('lomos')}
+            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
-            <div className="flex items-start gap-3">
-              {/* Imagen del plato */}
-              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+            <div className="flex sm:flex-col items-start gap-3">
+              {/* Imagen de la categoría */}
+              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
                 <Image
                   src={fotoLomo}
-                  alt="Lomo Especial"
+                  alt="Lomos individuales"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="64px"
+                  sizes="(max-width: 640px) 64px, 240px"
                   priority
                 />
               </div>
 
               {/* Textos */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 sm:pt-1">
                 <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
-                    Lomo Especial
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                    Lomos
                   </h3>
-                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
-                    {productoLomo ? formatearPrecio(productoLomo.precio) : '$11.500'}
+                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                    Bebida gratis
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Bife de lomo, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
+                  Lomito de pollo, Especial, Chefsy, American y más.
                 </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
-                  Sale con Fanta o Sprite 375cc de regalo.
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                  Con Fanta o Sprite gratis
                 </p>
               </div>
             </div>
 
-            {/* Botón Acción Card */}
-            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
-              <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
+            {/* Botón Acción */}
+            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+              <span className="text-[11px] font-medium">Ver opciones</span>
               <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
                 <ArrowRight size={13} />
               </div>
             </div>
           </div>
 
-          {/* TARJETA 3: MILA ESPECIAL */}
+          {/* CATEGORÍA 3: MILAS */}
           <div 
-            onClick={() => handleElegirProducto(productoMila, 'lomos-y-milas-especial', 'Mila Especial', 11500)}
-            className="group relative bg-[#131313] hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+            onClick={() => handleElegirCategoria('lomos-y-milas')}
+            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
           >
-            <div className="flex items-start gap-3">
-              {/* Imagen del plato */}
-              <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/60 border border-[#282828] shrink-0">
+            <div className="flex sm:flex-col items-start gap-3">
+              {/* Imagen de la categoría */}
+              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
                 <Image
                   src={fotoMila}
-                  alt="Mila Especial"
+                  alt="Milas en sándwich"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="64px"
+                  sizes="(max-width: 640px) 64px, 240px"
                   priority
                 />
               </div>
 
               {/* Textos */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 sm:pt-1">
                 <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors truncate">
-                    Mila Especial
+                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                    Milas
                   </h3>
-                  <span className="font-bebas text-base sm:text-lg text-emerald-400 shrink-0">
-                    {productoMila ? formatearPrecio(productoMila.precio) : '$11.500'}
+                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                    Bebida gratis
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Milanesa de carne, jamón, queso, huevo, lechuga, tomate y mayo casera. Con papas fritas.
+                  En sándwich: Común, Especial, Chefsy y 4 Quesos.
                 </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight">
-                  Sale con Fanta o Sprite 375cc de regalo.
+                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                  Con Fanta o Sprite gratis
                 </p>
               </div>
             </div>
 
-            {/* Botón Acción Card */}
-            <div className="mt-3 pt-2 border-t border-[#242424] flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
-              <span className="uppercase tracking-wider text-[11px] font-bebas text-sm">Pedir con promo</span>
+            {/* Botón Acción */}
+            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+              <span className="text-[11px] font-medium">Ver opciones</span>
               <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
                 <ArrowRight size={13} />
               </div>
@@ -277,16 +271,16 @@ export default function CartelPromoDelDia() {
         </div>
 
         {/* Footer del Popup */}
-        <div className="mt-5 pt-3.5 border-t border-[#262626] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="mt-6 pt-4 border-t border-[#242424] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p className="text-[11px] text-slate-400">
-            * Aplica a cualquier Burger, Lomo o Mila individual de la carta. No incluye combos ni milanesas al plato.
+            * Aplica a variedades individuales en sándwich. No incluye combos ni milanesas al plato.
           </p>
           <button
             type="button"
             onClick={cerrarModal}
-            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer shrink-0 underline underline-offset-2"
+            className="text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            Ver toda la carta
+            Explorar toda la carta
           </button>
         </div>
 
