@@ -133,35 +133,14 @@ export default function ModalPersonalizacion({
   }, [lightboxAbierto])
 
   useEffect(() => {
-    // Interceptar gesto o botón Atrás (iPhone/Android)
-    window.history.pushState({ modalProducto: true }, '', window.location.href)
-
-    const handlePopState = () => {
-      // Si el visor fullscreen está abierto, el botón Atrás de Android solo cierra el fullscreen
-      if (lightboxAbiertoRef.current) {
-        setLightboxAbierto(false)
-        window.history.pushState({ modalProducto: true }, '', window.location.href)
-        return
-      }
-
-      cerradoPorAtrasRef.current = true
-      onCerrarRef.current()
-    }
-
-    window.addEventListener('popstate', handlePopState)
-
     // Deshabilitar scroll de html y body al montar para evitar que el fondo se mueva
     const origHtmlOverflow = document.documentElement.style.overflow
     const origBodyOverflow = document.body.style.overflow
     document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     return () => {
-      window.removeEventListener('popstate', handlePopState)
       document.documentElement.style.overflow = origHtmlOverflow
       document.body.style.overflow = origBodyOverflow
-      if (!cerradoPorAtrasRef.current && window.history.state?.modalProducto) {
-        window.history.back()
-      }
     }
   }, [])
 
@@ -712,8 +691,10 @@ export default function ModalPersonalizacion({
                     {copiadoLink ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
                   </button>
                   <button
+                    type="button"
                     onClick={onCerrar}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252525] border border-[#3d3d3d] text-slate-400 hover:text-white transition-colors focus:outline-none shrink-0 cursor-pointer"
+                    aria-label="Cerrar modal"
                   >
                     <X size={16} />
                   </button>

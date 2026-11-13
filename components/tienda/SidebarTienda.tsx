@@ -21,7 +21,8 @@ import {
   ChefHat,
   Utensils,
   User,
-  Receipt
+  Receipt,
+  Sparkles
 } from 'lucide-react'
 import { cn, generarIdentificadorPedido } from '@/lib/utils'
 
@@ -260,6 +261,22 @@ export default function SidebarTienda({
               Menú & Categorías
             </span>
             <div className="space-y-1">
+              {/* Botón directo a Promo del Día */}
+              <button
+                type="button"
+                onClick={() => {
+                  onCerrar()
+                  window.dispatchEvent(new CustomEvent('chefsy:abrir-promo'))
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold flex items-center justify-between transition-all cursor-pointer bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 mb-1.5 shadow-sm active:scale-95"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles size={15} className="text-emerald-400 shrink-0" />
+                  <span>Promo del día: Bebida gratis</span>
+                </div>
+                <ChevronRight size={14} className="text-emerald-400/80 shrink-0" />
+              </button>
+
               {/* Opción Todos */}
               <button
                 type="button"

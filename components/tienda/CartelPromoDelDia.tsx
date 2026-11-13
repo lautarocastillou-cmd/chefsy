@@ -75,6 +75,7 @@ export default function CartelPromoDelDia() {
 
   const handleElegirCategoria = (categoriaId: string) => {
     cerrarModal()
+    window.dispatchEvent(new CustomEvent('chefsy:seleccionar-categoria', { detail: categoriaId }))
     setTimeout(() => {
       scrollHaciaCategoria(categoriaId)
     }, 120)
@@ -93,6 +94,7 @@ export default function CartelPromoDelDia() {
       onClick={cerrarModal}
       role="dialog"
       aria-modal="true"
+      data-lenis-prevent="true"
     >
       <div 
         className="relative w-full max-w-xl sm:max-w-2xl md:max-w-3xl bg-[#161616] border border-[#2a2a2a] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"

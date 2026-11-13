@@ -203,16 +203,16 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setNotaPersonalizacion('')
   }, [turnoActivo, esDomingoCerrado, mensajeCierre, promoActiva])
 
-  // Detección automática de enlaces profundos (?p=... o ?producto=... o ?promo=...)
+  // Detección automática de enlaces profundos (?p=... o ?producto=...)
   useEffect(() => {
     if (typeof window === 'undefined' || !estaListoCatalogo || productos.length === 0) return
 
     const params = new URLSearchParams(window.location.search)
-    const idProdUrl = params.get('p') || params.get('producto') || params.get('promo')
-    if (!idProdUrl) return
+    const idProdUrl = params.get('p') || params.get('producto')
+    if (!idProdUrl || idProdUrl.toLowerCase().trim() === 'promo') return
 
     const buscado = decodeURIComponent(idProdUrl).trim().toLowerCase()
-    if (!buscado || productoUrlProcesadoRef.current === buscado) return
+    if (!buscado || buscado.length < 2 || productoUrlProcesadoRef.current === buscado) return
 
     const encontrado =
       productos.find(p => p.id.toLowerCase() === buscado) ||

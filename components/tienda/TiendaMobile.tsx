@@ -28,6 +28,8 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroManager from '@/components/tienda/hero/HeroManager'
 import SidebarTienda, { BotonHamburguesa } from '@/components/tienda/SidebarTienda'
+import ModalPersonalizacion from '@/components/tienda/ModalPersonalizacion'
+import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
 import dynamic from 'next/dynamic'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
@@ -36,7 +38,6 @@ const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHis
 const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfilCliente'), { ssr: false })
 
 const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
-const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
 const CartelPromoDelDia = dynamic(() => import('@/components/tienda/CartelPromoDelDia'), { ssr: false })
 const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
 
@@ -60,6 +61,7 @@ export default function TiendaMobile() {
   const [selectorAbierto, setSelectorAbierto] = useState(false)
   
   const { configuracion } = usarConfiguracionTienda()
+  const promoActiva = (configuracion?.promo_popup || PROMO_POPUP_DEFAULT).activo !== false
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [buscadorIluminado, setBuscadorIluminado] = useState(false)
@@ -212,7 +214,20 @@ export default function TiendaMobile() {
     if (busqueda) {
       setBusqueda('')
     }
-    const targetId = (!id || id === 'todos') ? null : id
+    let targetId = (!id || id === 'todos') ? null : id
+    if (targetId) {
+      const lower = targetId.toLowerCase()
+      if (lower === 'lomos') {
+        const catLomo = categoriasActivas.find(c => c.nombre.toLowerCase().includes('lomo'))
+        if (catLomo) targetId = catLomo.id
+      } else if (lower === 'patys' || lower === 'burgers') {
+        const catBurger = categoriasActivas.find(c => c.nombre.toLowerCase().includes('burger') || c.nombre.toLowerCase().includes('paty'))
+        if (catBurger) targetId = catBurger.id
+      } else if (lower === 'milas' || lower === 'lomos-y-milas') {
+        const catMila = categoriasActivas.find(c => c.nombre.toLowerCase().includes('mila') && !c.nombre.toLowerCase().includes('plato'))
+        if (catMila) targetId = catMila.id
+      }
+    }
     setCategoriaActivaNav(targetId)
     // No filtramos destructivamente los productos para no colapsar la altura de la página
     setCategoriaSeleccionada(null)
@@ -221,7 +236,22 @@ export default function TiendaMobile() {
     setTimeout(() => {
       scrollHaciaCategoria(targetId)
     }, 80)
-  }, [busqueda])
+  }, [busqueda, categoriasActivas])
+
+  // Escuchar evento de selección de categoría desde el cartel de promo u otros módulos
+  useEffect(() => {
+    const handleSeleccionar = (e: Event) => {
+      const customEvt = e as CustomEvent<string>
+      const catId = customEvt.detail
+      if (catId) {
+        handleSeleccionarCategoria(catId)
+      }
+    }
+    window.addEventListener('chefsy:seleccionar-categoria', handleSeleccionar)
+    return () => {
+      window.removeEventListener('chefsy:seleccionar-categoria', handleSeleccionar)
+    }
+  }, [handleSeleccionarCategoria])
 
   const handleNavClick = (tab: 'home' | 'search' | 'profile' | 'cart') => {
     if (tab !== 'cart') {
@@ -446,6 +476,28 @@ export default function TiendaMobile() {
           <FooterTienda />
       </div>
 
+      {/* Pill flotante de Promo del Día (Mobile) */}
+      {promoActiva && (
+        <div 
+          className="fixed bottom-[74px] left-1/2 -translate-x-1/2 z-30 max-w-[92vw] pointer-events-auto"
+        >
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('chefsy:abrir-promo'))}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181818]/95 hover:bg-[#222222] text-white border border-emerald-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_12px_rgba(16,185,129,0.25)] backdrop-blur-md active:scale-95 transition-all text-xs font-semibold cursor-pointer group"
+            aria-label="Ver promoción del día"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-white font-medium text-[11px]">
+              Promo del día: <strong className="text-emerald-400 font-bold">Bebida gratis</strong>
+            </span>
+            <span className="text-[10px] text-slate-400 group-hover:text-white transition-colors flex items-center ml-0.5">
+              Ver promo <ChevronRight size={12} className="ml-0.5 text-emerald-400/80" />
+            </span>
+          </button>
+        </div>
+      )}
+
       <BottomNav activeTab={activeTab} onNavClick={handleNavClick} />
 
       {cartAbierto && (
@@ -455,33 +507,31 @@ export default function TiendaMobile() {
       )}
 
       {productoAPersonalizar && (
-        <Suspense fallback={null}>
-          <ModalPersonalizacion
-            producto={productoAPersonalizar}
-            imagenFinal={resolverImagen(
-              metadata[productoAPersonalizar.id]?.imagen_url,
-              OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
-            )}
-            descripcion={
-              metadata[productoAPersonalizar.id]?.descripcion_publica ||
-              OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).desc
-            }
-            modificadoresDisponibles={
-              (productoAPersonalizar.modificadoresIds ?? [])
-                .map(id => modificadores.find(m => m.id === id))
-                .filter(Boolean) as ModificadorCatalogo[]
-            }
-            modsSeleccionados={modsSeleccionados}
-            cantidadModal={cantidadModal}
-            notaPersonalizacion={notaPersonalizacion}
-            precioUnitarioTotal={calcularPrecioUnitarioModal()}
-            onCerrar={() => setProductoAPersonalizar(null)}
-            onAlternarModificador={alternarModificador}
-            onSetCantidad={setCantidadModal}
-            onSetNota={setNotaPersonalizacion}
-            onAgregar={agregarAlCarritoDesdeModal}
-          />
-        </Suspense>
+        <ModalPersonalizacion
+          producto={productoAPersonalizar}
+          imagenFinal={resolverImagen(
+            metadata[productoAPersonalizar.id]?.imagen_url,
+            OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).img
+          )}
+          descripcion={
+            metadata[productoAPersonalizar.id]?.descripcion_publica ||
+            OBTENER_DETALLES_COMPLEMENTARIOS(productoAPersonalizar.categoriaId, productoAPersonalizar.nombre, productoAPersonalizar.id).desc
+          }
+          modificadoresDisponibles={
+            (productoAPersonalizar.modificadoresIds ?? [])
+              .map(id => modificadores.find(m => m.id === id))
+              .filter(Boolean) as ModificadorCatalogo[]
+          }
+          modsSeleccionados={modsSeleccionados}
+          cantidadModal={cantidadModal}
+          notaPersonalizacion={notaPersonalizacion}
+          precioUnitarioTotal={calcularPrecioUnitarioModal()}
+          onCerrar={() => setProductoAPersonalizar(null)}
+          onAlternarModificador={alternarModificador}
+          onSetCantidad={setCantidadModal}
+          onSetNota={setNotaPersonalizacion}
+          onAgregar={agregarAlCarritoDesdeModal}
+        />
       )}
       {mostrarConfirmLogout && (
         <ModalLogout
