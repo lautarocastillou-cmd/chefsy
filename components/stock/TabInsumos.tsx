@@ -898,7 +898,7 @@ export function TabInsumos({
                             onKeyDown={(e) => {
                               if (e.key !== 'Enter') return
                               e.preventDefault()
-                              if (e.isComposing || e.keyCode === 229) return
+                              if (e.nativeEvent.isComposing || e.keyCode === 229) return
                               e.currentTarget.blur()
                               guardarStockRapido(ins.id)
                             }}
