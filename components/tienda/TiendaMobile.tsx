@@ -350,7 +350,7 @@ export default function TiendaMobile() {
               onClick={() => setSidebarAbierto(!sidebarAbierto)}
             />
             <div className="w-8 h-8 rounded-lg overflow-hidden relative shadow-sm border border-white/10 shrink-0">
-              <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill priority sizes="32px" className="object-cover" />
+              <Image src={configuracion?.logo_url || "/logo.jpg"} alt="Logo" fill sizes="32px" className="object-cover" />
             </div>
             <span className="font-bebas text-xl text-white tracking-wider">CHEFSY</span>
           </div>

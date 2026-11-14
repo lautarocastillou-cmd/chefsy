@@ -175,7 +175,7 @@ export default function HeroCarruselPromo({
                 src={slideActual.imagen_url || '/burger-loca.webp'}
                 alt={slideActual.titulo}
                 fill
-                priority
+                priority={indiceActual === 0}
                 sizes="(max-width: 768px) 200px, 380px"
                 className="object-contain drop-shadow-xl"
               />

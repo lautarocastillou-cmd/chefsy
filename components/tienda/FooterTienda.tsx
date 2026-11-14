@@ -46,6 +46,10 @@ export default function FooterTienda() {
               <img
                 src="/ubicacion-chefsy.png"
                 alt="Chefsy Mapa"
+                loading="lazy"
+                decoding="async"
+                width={384}
+                height={224}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />

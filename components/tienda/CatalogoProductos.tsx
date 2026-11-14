@@ -69,9 +69,9 @@ function CatalogoProductosComponente({
           <div>
             <h3 className="text-5xl md:text-6xl font-bebas tracking-wide text-white flex items-center gap-3.5 leading-none">
               {catDetalles.icono?.toLowerCase().includes('burger') ? (
-                <img src="/burger-icon.png" alt="Burger" className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
+                <img src="/burger-icon.png" alt="Burger" loading="lazy" decoding="async" width={96} height={96} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
               ) : catDetalles.icono && catDetalles.icono.startsWith('/') ? (
-                <img src={catDetalles.icono} alt={catDetalles.nombre} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
+                <img src={catDetalles.icono} alt={catDetalles.nombre} loading="lazy" decoding="async" width={96} height={96} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-md -translate-y-[2px]" />
               ) : null}
               {catDetalles.nombre === 'Menú Especial'
                 ? (categoriasActivas.find(c => c.id === categoriaSeleccionada)?.nombre.toUpperCase() || catDetalles.nombre)

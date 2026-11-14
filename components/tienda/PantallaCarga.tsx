@@ -71,6 +71,8 @@ export default function PantallaCarga() {
             <img 
               src="/logo.jpg" 
               alt="Chefsy Logo" 
+              width={160}
+              height={160}
               className="w-32 h-32 md:w-40 md:h-40 rounded-3xl shadow-2xl relative z-10 bg-white p-1"
             />
           </motion.div>
