@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Suspense, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import BottomNavMobile from '@/components/layout/BottomNavMobile'
 import { Menu, X, FlaskConical } from 'lucide-react'
@@ -18,14 +19,18 @@ import AccesoRestringido from '@/components/auth/AccesoRestringido'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { usarPedidos } from '@/contexto/PedidosContexto'
-import FormularioPedido from '@/components/pedidos/FormularioPedido'
-import NotitaFlotante from '@/components/herramientas/NotitaFlotante'
-import CalculadoraFlotante from '@/components/herramientas/CalculadoraFlotante'
-import ConsumoPersonalFlotante from '@/components/herramientas/ConsumoPersonalFlotante'
 import AlertaPedidosDemoradosFlotante from '@/components/pedidos/AlertaPedidosDemoradosFlotante'
 import AutoImpresionPedidos from '@/components/pedidos/AutoImpresionPedidos'
-import ModalHerramientasTesteo from '@/components/dev/ModalHerramientasTesteo'
 import { useAtajoNuevoPedido } from '@/hooks/useAtajoNuevoPedido'
+
+const FormularioPedido = dynamic(() => import('@/components/pedidos/FormularioPedido'), {
+  loading: () => <div className="p-8 text-center text-slate-400">Cargando formulario...</div>,
+  ssr: false,
+})
+const NotitaFlotante = dynamic(() => import('@/components/herramientas/NotitaFlotante'), { ssr: false })
+const CalculadoraFlotante = dynamic(() => import('@/components/herramientas/CalculadoraFlotante'), { ssr: false })
+const ConsumoPersonalFlotante = dynamic(() => import('@/components/herramientas/ConsumoPersonalFlotante'), { ssr: false })
+const ModalHerramientasTesteo = dynamic(() => import('@/components/dev/ModalHerramientasTesteo'), { ssr: false })
 
 function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
