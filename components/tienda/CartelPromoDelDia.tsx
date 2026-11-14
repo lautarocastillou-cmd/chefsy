@@ -142,7 +142,7 @@ export default function CartelPromoDelDia() {
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
                   sizes="(max-width: 640px) 64px, 240px"
-                  priority
+                  loading="lazy"
                 />
               </div>
 
@@ -188,7 +188,7 @@ export default function CartelPromoDelDia() {
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
                   sizes="(max-width: 640px) 64px, 240px"
-                  priority
+                  loading="lazy"
                 />
               </div>
 
@@ -234,7 +234,7 @@ export default function CartelPromoDelDia() {
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-200"
                   sizes="(max-width: 640px) 64px, 240px"
-                  priority
+                  loading="lazy"
                 />
               </div>
 
