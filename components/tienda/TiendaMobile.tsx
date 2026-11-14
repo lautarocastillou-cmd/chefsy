@@ -28,7 +28,6 @@ import { usarClienteAuth } from '@/contexto/ClienteAuthContexto'
 import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroManager from '@/components/tienda/hero/HeroManager'
 import SidebarTienda, { BotonHamburguesa } from '@/components/tienda/SidebarTienda'
-import ModalPersonalizacion from '@/components/tienda/ModalPersonalizacion'
 import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
 import dynamic from 'next/dynamic'
 
@@ -40,6 +39,7 @@ const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfil
 const CartDrawer = dynamic(() => import('@/components/tienda/CartDrawer'), { ssr: false })
 const CartelPromoDelDia = dynamic(() => import('@/components/tienda/CartelPromoDelDia'), { ssr: false })
 const PantallaExito = dynamic(() => import('@/components/tienda/PantallaExito'), { ssr: false })
+const ModalPersonalizacion = dynamic(() => import('@/components/tienda/ModalPersonalizacion'), { ssr: false })
 
 export default function TiendaMobile() {
   const { productos, categorias, modificadores } = usarCatalogo()
