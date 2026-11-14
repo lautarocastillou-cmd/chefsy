@@ -171,34 +171,44 @@ function PestanaUsuarios() {
 
         <form onSubmit={manejarCrear} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold mb-1">Usuario (Login)</label>
+            <label htmlFor="nuevo-empleado-usuario" className="block text-xs font-bold mb-1">Usuario (Login)</label>
             <input
+              id="nuevo-empleado-usuario"
+              name="username"
               type="text"
               value={nuevoUsuario.usuario}
               onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, usuario: e.target.value.toLowerCase().replace(/\s+/g, '') })}
               placeholder="ej: mario"
+              autoComplete="username"
+              spellCheck={false}
               className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-chefsy/50 lowercase"
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-bold mb-1">Nombre Real</label>
+            <label htmlFor="nuevo-empleado-nombre" className="block text-xs font-bold mb-1">Nombre Real</label>
             <input
+              id="nuevo-empleado-nombre"
+              name="name"
               type="text"
               value={nuevoUsuario.nombre}
               onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
               placeholder="Ej: Mario Gómez"
+              autoComplete="name"
               className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-chefsy/50"
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-bold mb-1">Contraseña</label>
+            <label htmlFor="nuevo-empleado-clave" className="block text-xs font-bold mb-1">Contraseña</label>
             <input
+              id="nuevo-empleado-clave"
+              name="new-password"
               type="password"
               value={nuevoUsuario.clave}
               onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, clave: e.target.value })}
               className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-chefsy/50"
+              autoComplete="new-password"
               required
               minLength={4}
             />

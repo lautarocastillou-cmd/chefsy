@@ -78,17 +78,21 @@ export default function LoginPage() {
         <form onSubmit={manejarEnvio} className="space-y-4">
           {/* Campo Usuario */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-450 dark:text-slate-350 uppercase tracking-wider block">
+            <label htmlFor="login-usuario" className="text-xs font-bold text-slate-450 dark:text-slate-350 uppercase tracking-wider block">
               Usuario
             </label>
             <div className="relative flex items-center">
               <User size={16} className="absolute left-3.5 text-slate-400 dark:text-slate-500" />
               <input
+                id="login-usuario"
+                name="username"
                 type="text"
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
                 placeholder="Ingresá tu usuario"
                 disabled={cargando}
+                autoComplete="username"
+                spellCheck={false}
                 className="w-full border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 disabled:opacity-50 transition-all"
               />
             </div>
@@ -96,17 +100,20 @@ export default function LoginPage() {
 
           {/* Campo Contraseña */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-450 dark:text-slate-350 uppercase tracking-wider block">
+            <label htmlFor="login-clave" className="text-xs font-bold text-slate-450 dark:text-slate-350 uppercase tracking-wider block">
               Contraseña
             </label>
             <div className="relative flex items-center">
               <Lock size={16} className="absolute left-3.5 text-slate-400 dark:text-slate-500" />
               <input
+                id="login-clave"
+                name="password"
                 type="password"
                 value={clave}
                 onChange={(e) => setClave(e.target.value)}
                 placeholder="••••••••"
                 disabled={cargando}
+                autoComplete="current-password"
                 className="w-full border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 disabled:opacity-50 transition-all"
               />
             </div>

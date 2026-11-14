@@ -896,10 +896,11 @@ export function TabInsumos({
                             value={stockEdit}
                             onChange={(e) => setStockRapido({ ...stockRapido, [ins.id]: Number(e.target.value) })}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.currentTarget.blur()
-                                guardarStockRapido(ins.id)
-                              }
+                              if (e.key !== 'Enter') return
+                              e.preventDefault()
+                              if (e.isComposing || e.keyCode === 229) return
+                              e.currentTarget.blur()
+                              guardarStockRapido(ins.id)
                             }}
                             onBlur={() => {
                               if (isModified) {
