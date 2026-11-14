@@ -94,6 +94,8 @@ export default function CartelPromoDelDia() {
       onClick={cerrarModal}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="promo-dia-titulo"
+      aria-describedby="promo-dia-descripcion"
       data-lenis-prevent="true"
     >
       <div 
@@ -113,12 +115,12 @@ export default function CartelPromoDelDia() {
         {/* Encabezado del Cartel */}
         <div className="flex flex-col items-center space-y-2 max-w-lg mx-auto">
           {/* Título Principal */}
-          <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight">
+          <h2 id="promo-dia-titulo" className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight">
             {tituloLimpio}
           </h2>
 
           {/* Subtítulo / Descripción */}
-          <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
+          <p id="promo-dia-descripcion" className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
             {descripcionLimpia}
           </p>
         </div>

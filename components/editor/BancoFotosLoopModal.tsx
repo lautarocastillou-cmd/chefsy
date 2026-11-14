@@ -80,7 +80,7 @@ export default function BancoFotosLoopModal({
         if (evento.target === evento.currentTarget) onCerrar()
       }}
     >
-      <div className="flex max-h-[min(780px,92vh)] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-700/80 bg-zinc-950 shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-200">
+      <div className="flex max-h-[min(780px,92vh)] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-700/80 bg-zinc-950 shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-200" onClick={(evento) => evento.stopPropagation()}>
         <header className="flex shrink-0 items-center justify-between border-b border-slate-800 bg-gradient-to-r from-indigo-950/40 via-zinc-900 to-emerald-950/30 p-5 sm:p-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-indigo-400/20 bg-indigo-500/15 text-indigo-300">

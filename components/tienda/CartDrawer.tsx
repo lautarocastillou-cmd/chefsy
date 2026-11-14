@@ -445,7 +445,7 @@ export default function CartDrawer() {
       <motion.div 
         role="dialog"
         aria-modal="true"
-        aria-label="Carrito de compras"
+            aria-labelledby="carrito-titulo"
         initial={
           esMobile
             ? { y: 70, scale: 0.93, opacity: 0, filter: 'blur(6px)' }
@@ -489,7 +489,7 @@ export default function CartDrawer() {
             >
               <ShoppingCart className="text-chefsy-500" size={20} />
             </motion.div>
-            <h2 className="font-extrabold text-white text-sm">Tu Carrito</h2>
+            <h2 id="carrito-titulo" className="font-extrabold text-white text-sm">Tu Carrito</h2>
             <motion.span 
               initial={{ scale: 0.75, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

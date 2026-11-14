@@ -119,7 +119,7 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in" onClick={onCerrar}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in" onClick={onCerrar} role="dialog" aria-modal="true" aria-labelledby="historial-pedidos-titulo">
       <div className="bg-[#121418] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 will-change-transform" onClick={(e) => e.stopPropagation()}>
         
         {/* Cabecera */}
@@ -129,7 +129,7 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
               <ShoppingBag size={22} />
             </div>
             <div>
-              <h3 className="font-bebas text-3xl sm:text-4xl text-white tracking-wide leading-none">
+              <h3 id="historial-pedidos-titulo" className="font-bebas text-3xl sm:text-4xl text-white tracking-wide leading-none">
                 HISTORIAL DE PEDIDOS
               </h3>
               <p className="text-xs sm:text-sm text-slate-400">
@@ -138,7 +138,9 @@ export default function ModalHistorialPedidos({ abierto, onCerrar }: Props) {
             </div>
           </div>
           <button
+            type="button"
             onClick={onCerrar}
+            aria-label="Cerrar historial de pedidos"
             className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
           >
             <X size={20} />

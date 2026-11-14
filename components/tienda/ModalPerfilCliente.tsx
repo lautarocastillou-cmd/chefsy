@@ -17,14 +17,16 @@ export default function ModalPerfilCliente({ abierto, onCerrar, onAbrirHistorial
   if (!abierto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in" onClick={onCerrar}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 transition-opacity duration-200 will-change-opacity animate-in fade-in" onClick={onCerrar} role="dialog" aria-modal="true" aria-labelledby="perfil-cliente-titulo">
       <div 
         className="bg-[#141414] border border-white/10 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative overflow-hidden text-center text-white font-sans flex flex-col items-center animate-in zoom-in-95 duration-200 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Botón cerrar */}
-        <button
-          onClick={onCerrar}
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar perfil"
           className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white p-2 rounded-full transition-colors cursor-pointer"
         >
           <X size={18} />
@@ -38,7 +40,7 @@ export default function ModalPerfilCliente({ abierto, onCerrar, onAbrirHistorial
         </div>
 
         {/* Saludo */}
-        <h2 className="text-2xl md:text-3xl font-bebas text-white tracking-wider mb-1">
+        <h2 id="perfil-cliente-titulo" className="text-2xl md:text-3xl font-bebas text-white tracking-wider mb-1">
           ¡HOLA, {perfil?.nombre?.toUpperCase() || 'CLIENTE'}!
         </h2>
         <p className="text-slate-400 text-sm mb-6">
@@ -48,6 +50,7 @@ export default function ModalPerfilCliente({ abierto, onCerrar, onAbrirHistorial
         {/* Botón Historial */}
         <div className="w-full">
           <button
+            type="button"
             onClick={() => {
               onCerrar()
               onAbrirHistorial()

@@ -59,6 +59,8 @@ export default function CartelAvisoGlobal() {
       onClick={() => cerrar(false)}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="cartel-aviso-titulo"
+      aria-describedby="cartel-aviso-mensaje"
     >
       <div
         className="relative w-full max-w-sm sm:max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-center flex flex-col items-center animate-in zoom-in-95 duration-150"
@@ -94,12 +96,12 @@ export default function CartelAvisoGlobal() {
         </div>
 
         {/* Título */}
-        <h3 className="text-xl font-bold text-white tracking-tight leading-snug">
+        <h3 id="cartel-aviso-titulo" className="text-xl font-bold text-white tracking-tight leading-snug">
           {titulo}
         </h3>
 
         {/* Mensaje descriptivo */}
-        <p className="text-sm sm:text-[15px] text-slate-300 font-normal leading-relaxed mt-2 mb-6 max-w-xs sm:max-w-sm whitespace-pre-line">
+        <p id="cartel-aviso-mensaje" className="text-sm sm:text-[15px] text-slate-300 font-normal leading-relaxed mt-2 mb-6 max-w-xs sm:max-w-sm whitespace-pre-line">
           {cartel.mensaje}
         </p>
 

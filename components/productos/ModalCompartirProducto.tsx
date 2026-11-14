@@ -84,6 +84,8 @@ export default function ModalCompartirProducto({
         className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-slate-800 dark:text-slate-100"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="compartir-producto-titulo"
+        aria-describedby="compartir-producto-descripcion"
       >
         {/* Cabecera */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
@@ -93,15 +95,17 @@ export default function ModalCompartirProducto({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">
-                Generar enlace directo
+                <span id="compartir-producto-titulo">Generar enlace directo</span>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p id="compartir-producto-descripcion" className="text-xs text-slate-500 dark:text-slate-400">
                 Para Instagram Stories, Bio, Anuncios o WhatsApp
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
+            type="button"
+            aria-label="Cerrar diálogo de enlace directo"
             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
           >
             <X size={16} />

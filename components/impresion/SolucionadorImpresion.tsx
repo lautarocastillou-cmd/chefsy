@@ -125,7 +125,7 @@ export default function SolucionadorImpresion({ abierto, onCerrar }: Props) {
       onClick={onCerrar}
       role="dialog"
       aria-modal="true"
-      aria-label="Solucionador de problemas de impresión"
+      aria-labelledby="solucionador-impresion-titulo"
     >
       <div
         className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
@@ -138,7 +138,7 @@ export default function SolucionadorImpresion({ abierto, onCerrar }: Props) {
               <Wrench size={20} />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-white">Solucionar problemas de impresión</h2>
+             <h2 id="solucionador-impresion-titulo" className="text-base sm:text-lg font-black text-white">Solucionar problemas de impresión</h2>
               <p className="text-xs text-slate-400">
                 Verifica el navegador, el agente local y la comandera de Windows.
               </p>

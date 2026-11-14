@@ -90,7 +90,9 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
             {/* Botón de Cierre dentro del Drawer */}
             <div className="absolute top-4 right-4 z-10">
               <button
+                type="button"
                 onClick={() => setMenuAbierto(false)}
+                aria-label="Cerrar menú"
                 className="p-1.5 rounded-lg text-chefsy-200 hover:text-white hover:bg-chefsy-700/60 transition-colors focus:outline-none"
               >
                 <X size={20} />
@@ -108,7 +110,9 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
         <header className="md:hidden sticky top-0 bg-chefsy text-white px-4 py-3 flex items-center justify-between shadow-md shrink-0 z-40">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setMenuAbierto(true)}
+              aria-label="Abrir menú"
               className="p-1 rounded-lg hover:bg-chefsy-700/60 transition-colors focus:outline-none"
               title="Abrir menú"
             >

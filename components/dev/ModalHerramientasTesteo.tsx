@@ -827,6 +827,9 @@ export default function ModalHerramientasTesteo() {
         left: 0,
         zIndex: 9999998,
       }}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="herramientas-testeo-titulo"
       className="w-84 sm:w-[425px] bg-[#0f172a] text-slate-100 border border-white/15 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150"
     >
       {/* ── Barra Superior Draggable ────────────────────────────────────────── */}
@@ -838,7 +841,7 @@ export default function ModalHerramientasTesteo() {
           <GripHorizontal size={14} className="text-slate-500" />
           <div className="flex items-center gap-1.5">
             <Wrench size={13} className="text-amber-400" />
-            <span className="font-bold text-xs tracking-tight text-white">
+              <span id="herramientas-testeo-titulo" className="font-bold text-xs tracking-tight text-white">
               Herramientas de Testeo
             </span>
           </div>
