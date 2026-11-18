@@ -76,6 +76,7 @@ interface InfoImpresora {
   pausada: boolean;
   predeterminada: boolean;
   configurada: boolean;
+  virtual: boolean;
 }
 
 interface Check {
@@ -149,6 +150,7 @@ export default function App() {
   const [lanBuscando, setLanBuscando] = useState(false);
   const [lanAviso, setLanAviso] = useState('');
   const [lanManual, setLanManual] = useState('');
+  const [mostrarTodas, setMostrarTodas] = useState(false);
 
   const refrescar = () => {
     cargarEstado();
@@ -314,6 +316,7 @@ export default function App() {
 
   const sinToken = !T;
   const impresoraLista = !!estado?.impresoraResuelta && (!estado.esRed || !!estado.disponibleRed);
+  const impresorasFiltradas = mostrarTodas ? impresoras : impresoras.filter((p) => !p.virtual);
 
   return (
     <div className="min-h-screen">
@@ -430,9 +433,18 @@ export default function App() {
             <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
               Impresoras
             </h2>
-            <Button variant="outline" size="sm" onClick={cargarImpresoras}>
-              <RefreshCw /> Refrescar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={cargarImpresoras}>
+                <RefreshCw /> Refrescar
+              </Button>
+              <Button
+                variant={mostrarTodas ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => setMostrarTodas(!mostrarTodas)}
+              >
+                {mostrarTodas ? 'Ocultar virtuales' : 'Mostrar todas'}
+              </Button>
+            </div>
           </div>
           <Card>
             <CardHeader>
@@ -442,10 +454,14 @@ export default function App() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {impresoras.length === 0 && (
-                <p className="text-sm text-muted-foreground">Cargando...</p>
+              {impresorasFiltradas.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {mostrarTodas
+                    ? 'No se encontraron impresoras.'
+                    : 'No hay impresoras reales. Mostrá todas las de Windows.'}
+                </p>
               )}
-              {impresoras.map((p) => (
+              {impresorasFiltradas.map((p) => (
                 <div
                   key={p.nombre}
                   className="flex flex-wrap items-center gap-3 rounded-lg border bg-secondary/40 p-3"
@@ -455,6 +471,7 @@ export default function App() {
                       {p.nombre}
                       {p.configurada && <Badge variant="success">En uso</Badge>}
                       {p.predeterminada && <Badge variant="secondary">Predeterminada</Badge>}
+                      {p.virtual && <Badge variant="outline">Virtual</Badge>}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Puerto {esc(p.puerto) || '?'} · Driver {esc(p.driver) || '?'} ·{' '}
