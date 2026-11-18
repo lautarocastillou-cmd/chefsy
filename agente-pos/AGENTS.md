@@ -29,6 +29,9 @@ Instrucciones para agentes de IA (y humanos) que trabajen en este proyecto.
 
 ## Otros acuerdos
 
+- **Al terminar cada trabajo o prompt, actualizar `CONTEXTO-IA.md`**: es la
+  fuente de verdad del estado del proyecto (versión, estado, gotchas,
+  roadmap). Un handoff desactualizado es peor que ninguno.
 - El ejecutable es C# puro (.NET Framework 4, `csc` del sistema), sin
   dependencias externas; el costo de Node es solo de build del panel.
 - Puerto por defecto 9191 (deja libre el 9187 del agente de Chefsy).

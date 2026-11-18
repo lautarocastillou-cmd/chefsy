@@ -212,8 +212,9 @@ auto_sanar=1                     ; reparación automática del spooler
   envío TCP directo, sin instalar nada en Windows.
 - **v2.2 — USB directo (WinUSB)**: impresión por USB sin driver (estilo Zadig)
   como fallback cuando el driver del local está roto.
-- **v2.3 — Servidor de distribución**: hosting de `dist/` con manifiesto
-  firmado y canal de actualización por canal (estable/beta).
+
+El estado real y el plan detallado viven en [`CONTEXTO-IA.md`](CONTEXTO-IA.md)
+— documento que se actualiza al final de cada trabajo.
 
 ## Notas técnicas
 
