@@ -15,19 +15,22 @@ namespace AgentePOS
         // seguido y no queremos pagar 350 ms de conexion en cada /api/estado.
         private static readonly object CandadoRed = new object();
         private static DateTime _redComprobado = DateTime.MinValue;
+        private static string _redDireccion = "";
         private static bool _redDisponible;
 
         private static bool RedDisponible(string direccion)
         {
             lock (CandadoRed)
             {
-                if (DateTime.Now - _redComprobado < TimeSpan.FromSeconds(5))
+                if (string.Equals(_redDireccion, direccion, StringComparison.OrdinalIgnoreCase)
+                    && DateTime.Now - _redComprobado < TimeSpan.FromSeconds(5))
                 {
                     return _redDisponible;
                 }
 
                 string error;
                 _redDisponible = ImpresoraRed.Disponible(direccion, out error);
+                _redDireccion = direccion;
                 _redComprobado = DateTime.Now;
                 return _redDisponible;
             }
