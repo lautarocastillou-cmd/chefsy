@@ -20,13 +20,30 @@ namespace AgentePOS
         {
             var usaPredeterminada = string.IsNullOrEmpty(Estado.Impresora);
             var nombre = usaPredeterminada ? RawPrinter.ObtenerImpresoraPredeterminada() : Estado.Impresora;
+            var esRed = ImpresoraRed.EsDireccion(nombre);
 
             var respuesta = new StringBuilder();
             respuesta.Append("{\"ok\":").Append(string.IsNullOrEmpty(nombre) ? "false" : "true");
             respuesta.Append(",\"agente\":true");
             respuesta.Append(",\"version\":\"").Append(ServidorHttp.EscapeJson(Estado.Version)).Append("\"");
 
-            if (string.IsNullOrEmpty(nombre))
+            if (esRed)
+            {
+                // Impresora de red: no hay driver ni cola de Windows que mirar.
+                // Se prueba el puerto TCP para saber si responde ahora mismo.
+                string errorRed;
+                var disponible = ImpresoraRed.Disponible(nombre, out errorRed);
+                respuesta.Append(",\"printer\":\"").Append(ServidorHttp.EscapeJson(nombre)).Append("\"");
+                respuesta.Append(",\"red\":true");
+                respuesta.Append(",\"defaultPrinter\":false");
+                respuesta.Append(",\"disponible\":").Append(disponible ? "true" : "false");
+                respuesta.Append(",\"estado\":\"").Append(disponible ? "En red (TCP " + ImpresoraRed.PuertoPorDefecto.ToString(CultureInfo.InvariantCulture) + ")" : "Sin respuesta").Append("\"");
+                if (!disponible && !string.IsNullOrEmpty(errorRed))
+                {
+                    respuesta.Append(",\"error\":\"").Append(ServidorHttp.EscapeJson(errorRed)).Append("\"");
+                }
+            }
+            else if (string.IsNullOrEmpty(nombre))
             {
                 respuesta.Append(",\"error\":\"No hay impresora configurada ni predeterminada en Windows.\"");
             }
@@ -156,6 +173,31 @@ namespace AgentePOS
             }
 
             string error;
+            if (ImpresoraRed.EsDireccion(impresora))
+            {
+                // Impresion directa TCP 9100: no pasa por el spooler, no hay
+                // error 1722 que sanar y no hace falta driver instalado.
+                if (!ImpresoraRed.Enviar(impresora, body, out error))
+                {
+                    Estado.RegistrarError("Impresion LAN en '" + impresora + "': " + error);
+                    Estado.Log("Error imprimiendo por red en '" + impresora + "': " + error);
+                    ServidorHttp.ResponderError(stream, 500, error);
+                    return;
+                }
+
+                Estado.Log("Impresion LAN enviada a '" + impresora + "' ("
+                    + body.Length.ToString(CultureInfo.InvariantCulture) + " bytes).");
+
+                var respuestaRed = new StringBuilder();
+                respuestaRed.Append("{\"ok\":true");
+                respuestaRed.Append(",\"printer\":\"").Append(ServidorHttp.EscapeJson(impresora)).Append("\"");
+                respuestaRed.Append(",\"red\":true");
+                respuestaRed.Append(",\"bytes\":").Append(body.Length.ToString(CultureInfo.InvariantCulture));
+                respuestaRed.Append("}");
+                ServidorHttp.ResponderJson(stream, 200, respuestaRed.ToString());
+                return;
+            }
+
             int codigoWin32;
             if (!RawPrinter.Enviar(body, impresora, out error, out codigoWin32))
             {
@@ -205,8 +247,23 @@ namespace AgentePOS
                 return false;
             }
 
-            int codigoWin32;
             var bytes = ConstruirPrueba();
+            if (ImpresoraRed.EsDireccion(impresora))
+            {
+                if (!ImpresoraRed.Enviar(impresora, bytes, out error))
+                {
+                    Estado.RegistrarError("Prueba LAN en '" + impresora + "': " + error);
+                    Estado.Log("Error imprimiendo prueba por red en '" + impresora + "': " + error);
+                    return false;
+                }
+
+                Estado.Log("Prueba LAN enviada a '" + impresora + "' ("
+                    + bytes.Length.ToString(CultureInfo.InvariantCulture) + " bytes).");
+                error = null;
+                return true;
+            }
+
+            int codigoWin32;
             if (!RawPrinter.Enviar(bytes, impresora, out error, out codigoWin32))
             {
                 Estado.RegistrarError("Prueba en '" + impresora + "': " + error);
@@ -361,68 +418,90 @@ namespace AgentePOS
             }
             else
             {
-                string errorInfo;
-                var info = RawPrinter.ObtenerInfo(nombre, out errorInfo);
-                if (info == null)
+                if (ImpresoraRed.EsDireccion(nombre))
                 {
-                    hayError = true;
-                    checks.Add(CheckJson(
-                        "impresora", "Impresora configurada", "error",
-                        "No se pudo abrir '" + nombre + "': " + errorInfo,
-                        "Verifica que la impresora exista en Windows, que el cable este conectado y que el servicio Cola de impresion este corriendo (toca 'Sanar')."));
-                }
-                else
-                {
-                    var detalle = "'" + nombre + "' en puerto "
-                        + (string.IsNullOrEmpty(info.Puerto) ? "desconocido" : info.Puerto)
-                        + ", driver " + (string.IsNullOrEmpty(info.Driver) ? "desconocido" : info.Driver)
-                        + ", " + info.Trabajos.ToString(CultureInfo.InvariantCulture) + " trabajo(s) en cola.";
-                    var estado = RawPrinter.DescribirEstado(info.Estado);
-
-                    if (RawPrinter.EstaOffline(info.Estado))
-                    {
-                        hayError = true;
-                        checks.Add(CheckJson(
-                            "impresora", "Impresora configurada", "error",
-                            detalle + " Estado: " + estado + ".",
-                            "Revisa el cable USB, la alimentacion y el puerto. Si es USB, proba en otro puerto."));
-                    }
-                    else if (RawPrinter.TienePapelAgotado(info.Estado))
-                    {
-                        hayError = true;
-                        checks.Add(CheckJson(
-                            "impresora", "Impresora configurada", "error",
-                            detalle + " Estado: " + estado + ".",
-                            "Carga un rollo nuevo y presiona el boton de avance (feed) de la impresora."));
-                    }
-                    else if (RawPrinter.TieneAtasco(info.Estado))
-                    {
-                        hayError = true;
-                        checks.Add(CheckJson(
-                            "impresora", "Impresora configurada", "error",
-                            detalle + " Estado: " + estado + ".",
-                            "Abre la tapa, retira el papel atascado y vuelve a cerrarla."));
-                    }
-                    else if (RawPrinter.EstaPausada(info.Estado))
-                    {
-                        checks.Add(CheckJson(
-                            "impresora", "Impresora configurada", "aviso",
-                            detalle + " Estado: " + estado + ".",
-                            "En Configuracion > Impresoras, abre la cola y toca 'Reanudar'."));
-                    }
-                    else
+                    string errorRed;
+                    if (ImpresoraRed.Disponible(nombre, out errorRed))
                     {
                         checks.Add(CheckJson(
                             "impresora", "Impresora configurada", "ok",
-                            detalle + " Estado: " + estado + ".", null));
+                            "'" + nombre + "' responde en la red (TCP " + ImpresoraRed.PuertoPorDefecto.ToString(CultureInfo.InvariantCulture) + ").",
+                            null));
                     }
-
-                    if (info.Trabajos > 5)
+                    else
                     {
+                        hayError = true;
                         checks.Add(CheckJson(
-                            "cola", "Cola de impresion", "aviso",
-                            "Hay " + info.Trabajos.ToString(CultureInfo.InvariantCulture) + " trabajos esperando.",
-                            "Si la impresora ya imprimio, cancela los trabajos viejos desde la cola de Windows para liberar la comandera."));
+                            "impresora", "Impresora configurada", "error",
+                            "'" + nombre + "': " + errorRed,
+                            "Revisa que la comandera este encendida, con cable de red o Wi-Fi, y en la misma red que esta PC."));
+                    }
+                }
+                else
+                {
+                    string errorInfo;
+                    var info = RawPrinter.ObtenerInfo(nombre, out errorInfo);
+                    if (info == null)
+                    {
+                        hayError = true;
+                        checks.Add(CheckJson(
+                            "impresora", "Impresora configurada", "error",
+                            "No se pudo abrir '" + nombre + "': " + errorInfo,
+                            "Verifica que la impresora exista en Windows, que el cable este conectado y que el servicio Cola de impresion este corriendo (toca 'Sanar')."));
+                    }
+                    else
+                    {
+                        var detalle = "'" + nombre + "' en puerto "
+                            + (string.IsNullOrEmpty(info.Puerto) ? "desconocido" : info.Puerto)
+                            + ", driver " + (string.IsNullOrEmpty(info.Driver) ? "desconocido" : info.Driver)
+                            + ", " + info.Trabajos.ToString(CultureInfo.InvariantCulture) + " trabajo(s) en cola.";
+                        var estado = RawPrinter.DescribirEstado(info.Estado);
+
+                        if (RawPrinter.EstaOffline(info.Estado))
+                        {
+                            hayError = true;
+                            checks.Add(CheckJson(
+                                "impresora", "Impresora configurada", "error",
+                                detalle + " Estado: " + estado + ".",
+                                "Revisa el cable USB, la alimentacion y el puerto. Si es USB, proba en otro puerto."));
+                        }
+                        else if (RawPrinter.TienePapelAgotado(info.Estado))
+                        {
+                            hayError = true;
+                            checks.Add(CheckJson(
+                                "impresora", "Impresora configurada", "error",
+                                detalle + " Estado: " + estado + ".",
+                                "Carga un rollo nuevo y presiona el boton de avance (feed) de la impresora."));
+                        }
+                        else if (RawPrinter.TieneAtasco(info.Estado))
+                        {
+                            hayError = true;
+                            checks.Add(CheckJson(
+                                "impresora", "Impresora configurada", "error",
+                                detalle + " Estado: " + estado + ".",
+                                "Abre la tapa, retira el papel atascado y vuelve a cerrarla."));
+                        }
+                        else if (RawPrinter.EstaPausada(info.Estado))
+                        {
+                            checks.Add(CheckJson(
+                                "impresora", "Impresora configurada", "aviso",
+                                detalle + " Estado: " + estado + ".",
+                                "En Configuracion > Impresoras, abre la cola y toca 'Reanudar'."));
+                        }
+                        else
+                        {
+                            checks.Add(CheckJson(
+                                "impresora", "Impresora configurada", "ok",
+                                detalle + " Estado: " + estado + ".", null));
+                        }
+
+                        if (info.Trabajos > 5)
+                        {
+                            checks.Add(CheckJson(
+                                "cola", "Cola de impresion", "aviso",
+                                "Hay " + info.Trabajos.ToString(CultureInfo.InvariantCulture) + " trabajos esperando.",
+                                "Si la impresora ya imprimio, cancela los trabajos viejos desde la cola de Windows para liberar la comandera."));
+                        }
                     }
                 }
             }

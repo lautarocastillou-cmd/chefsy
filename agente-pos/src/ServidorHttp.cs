@@ -24,6 +24,7 @@ namespace AgentePOS
     //   POST /api/prueba      imprimir pagina de prueba (token)
     //   POST /api/sanar       reparar spooler con elevacion (token)
     //   GET  /api/spooler     estado del servicio de cola (token)
+    //   GET  /api/lan-scan    descubrir impresoras de red 9100 (token)
     //   POST /api/ajustes     auto_sanar (token)
     internal static class ServidorHttp
     {
@@ -191,6 +192,10 @@ namespace AgentePOS
 
                     case "/api/spooler":
                         if (metodo == "GET") { ApiPanel.ResponderSpooler(stream); return; }
+                        break;
+
+                    case "/api/lan-scan":
+                        if (metodo == "GET") { ApiPanel.ResponderLanScan(stream); return; }
                         break;
 
                     case "/api/ajustes":

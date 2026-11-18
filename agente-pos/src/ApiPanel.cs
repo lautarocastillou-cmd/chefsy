@@ -24,6 +24,7 @@ namespace AgentePOS
             respuesta.Append(",\"puerto\":").Append(Estado.Puerto.ToString(CultureInfo.InvariantCulture));
             respuesta.Append(",\"impresora\":\"").Append(ServidorHttp.EscapeJson(Estado.Impresora)).Append("\"");
             respuesta.Append(",\"impresoraResuelta\":\"").Append(ServidorHttp.EscapeJson(nombre ?? "")).Append("\"");
+            respuesta.Append(",\"esRed\":").Append(ImpresoraRed.EsDireccion(nombre) ? "true" : "false");
             respuesta.Append(",\"usaPredeterminada\":").Append(usaPredeterminada ? "true" : "false");
             respuesta.Append(",\"spoolerCorriendo\":").Append(spooler == 4 ? "true" : "false");
             respuesta.Append(",\"spoolerEstado\":\"").Append(ServidorHttp.EscapeJson(RawPrinter.DescribirServicioSpooler())).Append("\"");
@@ -107,6 +108,28 @@ namespace AgentePOS
             if (nombre.Length == 0 || nombre.Length > 200)
             {
                 ServidorHttp.ResponderError(stream, 400, "El nombre de la impresora no es valido.");
+                return;
+            }
+
+            // Impresora de red: no tiene que existir en Windows. Se valida el
+            // formato LAN://ip:puerto y se normaliza (IP y puerto canonicos).
+            if (ImpresoraRed.EsDireccion(nombre))
+            {
+                ImpresoraRed.Destino destino;
+                string errorRed;
+                if (!ImpresoraRed.Parsear(nombre, out destino, out errorRed))
+                {
+                    ServidorHttp.ResponderError(stream, 400, errorRed);
+                    return;
+                }
+
+                nombre = ImpresoraRed.Formatear(destino.Ip, destino.Puerto);
+                Estado.Impresora = nombre;
+                Estado.GuardarConfiguracion();
+                Estado.Log("Impresora de red configurada desde el panel: '" + nombre + "'.");
+
+                ServidorHttp.ResponderJson(stream, 200,
+                    "{\"ok\":true,\"impresora\":\"" + ServidorHttp.EscapeJson(nombre) + "\",\"red\":true}");
                 return;
             }
 
@@ -203,8 +226,47 @@ namespace AgentePOS
             }
         }
 
-        public static void ResponderSpooler(NetworkStream stream)
+        // Descubre comanderas en la red local probando el puerto 9100.
+        // Bloqueante: el panel muestra "Buscando..." mientras responde.
+        public static void ResponderLanScan(NetworkStream stream)
         {
+            string error;
+            var hallazgos = ImpresoraRed.Escanear(out error);
+            if (hallazgos == null)
+            {
+                ServidorHttp.ResponderError(stream, 500, error);
+                return;
+            }
+
+            var respuesta = new StringBuilder();
+            respuesta.Append("{\"ok\":true");
+            if (!string.IsNullOrEmpty(error))
+            {
+                // Escaneo valido pero sin redes: el panel lo muestra como aviso.
+                respuesta.Append(",\"aviso\":\"").Append(ServidorHttp.EscapeJson(error)).Append("\"");
+            }
+            respuesta.Append(",\"hallazgos\":[");
+            for (var i = 0; i < hallazgos.Count; i++)
+            {
+                var hallazgo = hallazgos[i];
+                if (i > 0)
+                {
+                    respuesta.Append(",");
+                }
+                respuesta.Append("{\"ip\":\"").Append(ServidorHttp.EscapeJson(hallazgo.Ip)).Append("\"");
+                respuesta.Append(",\"puerto\":").Append(hallazgo.Puerto.ToString(CultureInfo.InvariantCulture));
+                respuesta.Append(",\"direccion\":\"").Append(ServidorHttp.EscapeJson(hallazgo.Direccion)).Append("\"");
+                respuesta.Append(",\"configurada\":").Append(
+                    string.Equals(hallazgo.Direccion, Estado.Impresora, StringComparison.OrdinalIgnoreCase) ? "true" : "false");
+                respuesta.Append("}");
+            }
+            respuesta.Append("]}");
+
+            Estado.Log("Escaneo LAN: " + hallazgos.Count.ToString(CultureInfo.InvariantCulture) + " hallazgo(s).");
+            ServidorHttp.ResponderJson(stream, 200, respuesta.ToString());
+        }
+
+        public static void ResponderSpooler(NetworkStream stream)        {
             var codigo = RawPrinter.EstadoServicioSpooler();
             var respuesta = new StringBuilder();
             respuesta.Append("{\"ok\":true");
