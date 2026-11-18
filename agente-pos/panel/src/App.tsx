@@ -4,10 +4,13 @@ import {
   CheckCircle2,
   Copy,
   Lightbulb,
+  Loader2,
+  Network,
   Play,
   Printer,
   RefreshCw,
   Save,
+  Search,
   Usb,
   Wifi,
   Wrench,
@@ -49,6 +52,7 @@ interface EstadoAgente {
   puerto: number;
   impresora: string;
   impresoraResuelta: string;
+  esRed: boolean;
   usaPredeterminada: boolean;
   spoolerCorriendo: boolean;
   spoolerEstado: string;
@@ -79,6 +83,13 @@ interface Check {
   estado: 'ok' | 'error' | 'aviso';
   detalle: string;
   sugerencia: string | null;
+}
+
+interface HallazgoLan {
+  ip: string;
+  puerto: number;
+  direccion: string;
+  configurada: boolean;
 }
 
 interface Doc {
@@ -133,6 +144,10 @@ export default function App() {
   const [ticket, setTicket] = useState<Doc>(DOC_DEFAULT(false));
   const [tipografiaFecha, setTipografiaFecha] = useState('');
   const [autoSanar, setAutoSanar] = useState(true);
+  const [lan, setLan] = useState<HallazgoLan[]>([]);
+  const [lanBuscando, setLanBuscando] = useState(false);
+  const [lanAviso, setLanAviso] = useState('');
+  const [lanManual, setLanManual] = useState('');
 
   const refrescar = () => {
     cargarEstado();
@@ -199,6 +214,43 @@ export default function App() {
     const d = await api('/api/predeterminada', JSON.stringify({ nombre }));
     if (d.ok) {
       toast.success(`${nombre} es la predeterminada de Windows`);
+      refrescar();
+    } else {
+      toast.error(d.error ?? 'Error');
+    }
+  }
+
+  async function escanearLan() {
+    setLanBuscando(true);
+    setLanAviso('');
+    try {
+      const d = await api('/api/lan-scan');
+      if (!d.ok) {
+        toast.error(d.error ?? 'No se pudo escanear la red');
+        return;
+      }
+      const hallazgos: HallazgoLan[] = d.hallazgos ?? [];
+      setLan(hallazgos);
+      if (d.aviso) {
+        setLanAviso(d.aviso);
+      } else if (hallazgos.length === 0) {
+        setLanAviso(
+          'No se encontraron impresoras con el puerto 9100 abierto. Revisá que estén encendidas y en la misma red.',
+        );
+      }
+    } finally {
+      setLanBuscando(false);
+    }
+  }
+
+  async function usarLan(direccion: string) {
+    const limpia = direccion.trim();
+    if (!limpia) return;
+    toast(`Configurando ${limpia}...`);
+    const d = await api('/api/impresora', JSON.stringify({ nombre: limpia }));
+    if (d.ok) {
+      toast.success(`El agente imprime en: ${d.impresora ?? limpia}`);
+      setLanManual('');
       refrescar();
     } else {
       toast.error(d.error ?? 'Error');
@@ -275,6 +327,7 @@ export default function App() {
             {[
               ['#estado', 'Estado'],
               ['#impresoras', 'Impresoras'],
+              ['#red', 'Red LAN'],
               ['#tipografia', 'Tipografía'],
               ['#diagnostico', 'Diagnóstico'],
               ['#api', 'API universal'],
@@ -322,6 +375,7 @@ export default function App() {
                   <Badge variant={estado?.impresoraResuelta ? 'success' : 'danger'}>
                     {estado?.impresoraResuelta ? 'Impresora lista' : 'Sin impresora'}
                   </Badge>
+                  {estado?.esRed && <Badge variant="secondary">Red (LAN)</Badge>}
                   <Badge variant={estado?.spoolerCorriendo ? 'success' : 'danger'}>
                     Spooler: {estado?.spoolerEstado ?? '...'}
                   </Badge>
@@ -362,8 +416,8 @@ export default function App() {
           <Card>
             <CardHeader>
               <CardDescription>
-                Elegí la comandera que usa el agente. También podés definirla como
-                predeterminada de Windows.
+                Elegí la comandera que usa el agente entre las instaladas en
+                Windows. También podés definirla como predeterminada del sistema.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -402,6 +456,73 @@ export default function App() {
                   </Button>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* ── Impresoras de red (LAN) ──────────────────────────────────── */}
+        <section id="red" className="scroll-mt-20 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
+              Impresoras de red (LAN)
+            </h2>
+            <Button variant="outline" size="sm" onClick={escanearLan} disabled={lanBuscando}>
+              {lanBuscando ? <Loader2 className="animate-spin" /> : <Search />}
+              {lanBuscando ? 'Buscando...' : 'Buscar en la red'}
+            </Button>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardDescription>
+                Comanderas conectadas por red (TCP 9100) que no están instaladas en
+                Windows. El agente les manda ESC/POS directo, sin drivers ni spooler.
+                También podés escribir la dirección a mano.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {lanAviso && (
+                <p className="text-sm text-muted-foreground">{lanAviso}</p>
+              )}
+              {lan.map((h) => (
+                <div
+                  key={h.direccion}
+                  className="flex flex-wrap items-center gap-3 rounded-lg border bg-secondary/40 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 font-medium">
+                      <Network className="h-4 w-4 text-primary" />
+                      {h.direccion}
+                      {h.configurada && <Badge variant="success">En uso</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Puerto {h.puerto} abierto · ESC/POS directo
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={h.configurada ? 'secondary' : 'default'}
+                    onClick={() => usarLan(h.direccion)}
+                  >
+                    {h.configurada ? 'En uso' : 'Usar en el agente'}
+                  </Button>
+                </div>
+              ))}
+              {lan.length > 0 && <Separator />}
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-56 flex-1 space-y-1.5">
+                  <Label htmlFor="lan-manual">Dirección manual</Label>
+                  <Input
+                    id="lan-manual"
+                    placeholder="LAN://192.168.1.50:9100"
+                    value={lanManual}
+                    onChange={(e) => setLanManual(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <Button onClick={() => usarLan(lanManual)} disabled={!lanManual.trim()}>
+                  <Wifi /> Usar esta dirección
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </section>
@@ -559,18 +680,6 @@ export default function App() {
             Próximamente
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Wifi className="h-4 w-4 text-primary" /> Impresoras de red (LAN)
-                  <Badge>v2.1</Badge>
-                </CardTitle>
-                <CardDescription>
-                  Descubrimiento de comanderas en la red (puerto 9100 / mDNS) y envío
-                  directo TCP sin instalar nada en Windows.
-                </CardDescription>
-              </CardHeader>
-            </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
