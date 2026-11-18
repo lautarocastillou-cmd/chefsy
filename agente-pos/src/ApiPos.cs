@@ -37,7 +37,7 @@ namespace AgentePOS
                 respuesta.Append(",\"red\":true");
                 respuesta.Append(",\"defaultPrinter\":false");
                 respuesta.Append(",\"disponible\":").Append(disponible ? "true" : "false");
-                respuesta.Append(",\"estado\":\"").Append(disponible ? "En red (TCP " + ImpresoraRed.PuertoPorDefecto.ToString(CultureInfo.InvariantCulture) + ")" : "Sin respuesta").Append("\"");
+                respuesta.Append(",\"estado\":\"").Append(disponible ? "En red" : "Sin respuesta").Append("\"");
                 if (!disponible && !string.IsNullOrEmpty(errorRed))
                 {
                     respuesta.Append(",\"error\":\"").Append(ServidorHttp.EscapeJson(errorRed)).Append("\"");
@@ -370,8 +370,19 @@ namespace AgentePOS
                 hayError = true;
             }
 
+            var nombre = string.IsNullOrEmpty(Estado.Impresora) ? RawPrinter.ObtenerImpresoraPredeterminada() : Estado.Impresora;
+            var esRed = ImpresoraRed.EsDireccion(nombre);
+
             var spooler = RawPrinter.EstadoServicioSpooler();
-            if (spooler == 4)
+            if (esRed)
+            {
+                // La impresora de red no usa el spooler: su estado no debe
+                // teñir el diagnostico de rojo ni sugerir un UAC de "Sanar".
+                checks.Add(CheckJson("spooler", "Servicio de cola de impresion", "aviso",
+                    "No aplica: la impresora configurada es de red (TCP directo).",
+                    null));
+            }
+            else if (spooler == 4)
             {
                 checks.Add(CheckJson("spooler", "Servicio de cola de impresion", "ok",
                     "El servicio Cola de impresion esta corriendo.", null));
@@ -392,7 +403,14 @@ namespace AgentePOS
 
             string errorLista;
             var impresoras = RawPrinter.ListarImpresoras(out errorLista);
-            if (impresoras == null)
+            if (esRed)
+            {
+                checks.Add(CheckJson(
+                    "enumeracion", "Impresoras instaladas", "aviso",
+                    "No aplica: la impresora configurada es de red.",
+                    null));
+            }
+            else if (impresoras == null)
             {
                 hayError = true;
                 checks.Add(CheckJson(
@@ -407,7 +425,6 @@ namespace AgentePOS
                     "Se encontraron " + impresoras.Count.ToString(CultureInfo.InvariantCulture) + " impresora(s).", null));
             }
 
-            var nombre = string.IsNullOrEmpty(Estado.Impresora) ? RawPrinter.ObtenerImpresoraPredeterminada() : Estado.Impresora;
             if (string.IsNullOrEmpty(nombre))
             {
                 hayError = true;
@@ -418,14 +435,14 @@ namespace AgentePOS
             }
             else
             {
-                if (ImpresoraRed.EsDireccion(nombre))
+                if (esRed)
                 {
                     string errorRed;
                     if (ImpresoraRed.Disponible(nombre, out errorRed))
                     {
                         checks.Add(CheckJson(
                             "impresora", "Impresora configurada", "ok",
-                            "'" + nombre + "' responde en la red (TCP " + ImpresoraRed.PuertoPorDefecto.ToString(CultureInfo.InvariantCulture) + ").",
+                            "'" + nombre + "' responde en la red.",
                             null));
                     }
                     else

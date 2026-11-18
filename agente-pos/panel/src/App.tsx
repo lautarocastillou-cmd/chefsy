@@ -53,6 +53,7 @@ interface EstadoAgente {
   impresora: string;
   impresoraResuelta: string;
   esRed: boolean;
+  disponibleRed?: boolean;
   usaPredeterminada: boolean;
   spoolerCorriendo: boolean;
   spoolerEstado: string;
@@ -238,6 +239,8 @@ export default function App() {
           'No se encontraron impresoras con el puerto 9100 abierto. Revisá que estén encendidas y en la misma red.',
         );
       }
+    } catch {
+      toast.error('No se pudo escanear la red: el agente no responde');
     } finally {
       setLanBuscando(false);
     }
@@ -247,13 +250,17 @@ export default function App() {
     const limpia = direccion.trim();
     if (!limpia) return;
     toast(`Configurando ${limpia}...`);
-    const d = await api('/api/impresora', JSON.stringify({ nombre: limpia }));
-    if (d.ok) {
-      toast.success(`El agente imprime en: ${d.impresora ?? limpia}`);
-      setLanManual('');
-      refrescar();
-    } else {
-      toast.error(d.error ?? 'Error');
+    try {
+      const d = await api('/api/impresora', JSON.stringify({ nombre: limpia }));
+      if (d.ok) {
+        toast.success(`El agente imprime en: ${d.impresora ?? limpia}`);
+        setLanManual('');
+        refrescar();
+      } else {
+        toast.error(d.error ?? 'Error');
+      }
+    } catch {
+      toast.error('No se pudo configurar la impresora: el agente no responde');
     }
   }
 
@@ -306,6 +313,7 @@ export default function App() {
   };
 
   const sinToken = !T;
+  const impresoraLista = !!estado?.impresoraResuelta && (!estado.esRed || !!estado.disponibleRed);
 
   return (
     <div className="min-h-screen">
@@ -366,19 +374,30 @@ export default function App() {
                     {estado?.impresoraResuelta || 'Sin impresora'}
                   </CardTitle>
                   <CardDescription>
-                    {estado?.usaPredeterminada
-                      ? 'Usando la predeterminada de Windows. Podés fijar una en Impresoras.'
-                      : `Configurada en el agente: ${estado?.impresora ?? ''}`}
+                    {estado?.esRed
+                      ? 'Impresora de red configurada: se imprime por TCP directo, sin spooler ni driver.'
+                      : estado?.usaPredeterminada
+                        ? 'Usando la predeterminada de Windows. Podés fijar una en Impresoras.'
+                        : `Configurada en el agente: ${estado?.impresora ?? ''}`}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Badge variant={estado?.impresoraResuelta ? 'success' : 'danger'}>
-                    {estado?.impresoraResuelta ? 'Impresora lista' : 'Sin impresora'}
+                  <Badge variant={impresoraLista ? 'success' : 'danger'}>
+                    {impresoraLista
+                      ? 'Impresora lista'
+                      : estado?.esRed
+                        ? 'Red sin respuesta'
+                        : 'Sin impresora'}
                   </Badge>
-                  {estado?.esRed && <Badge variant="secondary">Red (LAN)</Badge>}
-                  <Badge variant={estado?.spoolerCorriendo ? 'success' : 'danger'}>
-                    Spooler: {estado?.spoolerEstado ?? '...'}
-                  </Badge>
+                  {estado?.esRed ? (
+                    <Badge variant={estado.disponibleRed ? 'success' : 'warning'}>
+                      {estado.disponibleRed ? 'Red disponible' : 'Red sin respuesta'}
+                    </Badge>
+                  ) : (
+                    <Badge variant={estado?.spoolerCorriendo ? 'success' : 'danger'}>
+                      Spooler: {estado?.spoolerEstado ?? '...'}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -387,9 +406,11 @@ export default function App() {
                 <Button onClick={imprimirPrueba}>
                   <Printer /> Imprimir prueba
                 </Button>
-                <Button variant="secondary" onClick={sanar}>
-                  <Wrench /> Sanar impresora
-                </Button>
+                {!estado?.esRed && (
+                  <Button variant="secondary" onClick={sanar}>
+                    <Wrench /> Sanar impresora
+                  </Button>
+                )}
                 <Button variant="outline" onClick={refrescar}>
                   <RefreshCw /> Refrescar
                 </Button>

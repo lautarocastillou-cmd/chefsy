@@ -11,10 +11,33 @@ namespace AgentePOS
     // Todos exigen token (X-Pos-Token) como el resto de la API.
     internal static class ApiPanel
     {
+        // Cache corto de disponibilidad de la impresora LAN: el panel refresca
+        // seguido y no queremos pagar 350 ms de conexion en cada /api/estado.
+        private static readonly object CandadoRed = new object();
+        private static DateTime _redComprobado = DateTime.MinValue;
+        private static bool _redDisponible;
+
+        private static bool RedDisponible(string direccion)
+        {
+            lock (CandadoRed)
+            {
+                if (DateTime.Now - _redComprobado < TimeSpan.FromSeconds(5))
+                {
+                    return _redDisponible;
+                }
+
+                string error;
+                _redDisponible = ImpresoraRed.Disponible(direccion, out error);
+                _redComprobado = DateTime.Now;
+                return _redDisponible;
+            }
+        }
+
         public static void ResponderEstado(NetworkStream stream)
         {
             var usaPredeterminada = string.IsNullOrEmpty(Estado.Impresora);
             var nombre = usaPredeterminada ? RawPrinter.ObtenerImpresoraPredeterminada() : Estado.Impresora;
+            var esRed = ImpresoraRed.EsDireccion(nombre);
             var spooler = RawPrinter.EstadoServicioSpooler();
 
             var respuesta = new StringBuilder();
@@ -24,7 +47,11 @@ namespace AgentePOS
             respuesta.Append(",\"puerto\":").Append(Estado.Puerto.ToString(CultureInfo.InvariantCulture));
             respuesta.Append(",\"impresora\":\"").Append(ServidorHttp.EscapeJson(Estado.Impresora)).Append("\"");
             respuesta.Append(",\"impresoraResuelta\":\"").Append(ServidorHttp.EscapeJson(nombre ?? "")).Append("\"");
-            respuesta.Append(",\"esRed\":").Append(ImpresoraRed.EsDireccion(nombre) ? "true" : "false");
+            respuesta.Append(",\"esRed\":").Append(esRed ? "true" : "false");
+            if (esRed)
+            {
+                respuesta.Append(",\"disponibleRed\":").Append(RedDisponible(nombre) ? "true" : "false");
+            }
             respuesta.Append(",\"usaPredeterminada\":").Append(usaPredeterminada ? "true" : "false");
             respuesta.Append(",\"spoolerCorriendo\":").Append(spooler == 4 ? "true" : "false");
             respuesta.Append(",\"spoolerEstado\":\"").Append(ServidorHttp.EscapeJson(RawPrinter.DescribirServicioSpooler())).Append("\"");
