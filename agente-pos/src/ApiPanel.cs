@@ -112,6 +112,7 @@ namespace AgentePOS
                 respuesta.Append(",\"predeterminada\":").Append(info.Predeterminada ? "true" : "false");
                 respuesta.Append(",\"configurada\":").Append(
                     string.Equals(info.Nombre, Estado.Impresora, StringComparison.OrdinalIgnoreCase) ? "true" : "false");
+                respuesta.Append(",\"virtual\":").Append(info.Virtual ? "true" : "false");
                 respuesta.Append("}");
             }
             respuesta.Append("]}");
