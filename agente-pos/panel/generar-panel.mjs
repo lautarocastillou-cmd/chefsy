@@ -48,9 +48,13 @@ namespace AgentePOS
                 headers.TryGetValue("Origin", out origin);
             }
 
-            var propio = "http://127.0.0.1:" + Estado.Puerto.ToString(CultureInfo.InvariantCulture);
-            var incrustarToken = string.IsNullOrEmpty(origin)
-                || string.Equals(origin.TrimEnd('/'), propio, StringComparison.OrdinalIgnoreCase);
+            var puerto = Estado.Puerto.ToString(CultureInfo.InvariantCulture);
+            var propio = "http://127.0.0.1:" + puerto;
+            var propioLocalhost = "http://localhost:" + puerto;
+            var origen = origin == null ? "" : origin.TrimEnd('/');
+            var incrustarToken = string.IsNullOrEmpty(origen)
+                || string.Equals(origen, propio, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(origen, propioLocalhost, StringComparison.OrdinalIgnoreCase);
 
             var html = Plantilla
                 .Replace("__TOKEN__", incrustarToken ? Estado.Token : "")

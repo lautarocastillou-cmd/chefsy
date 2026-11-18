@@ -98,7 +98,9 @@ namespace AgentePOS
                 }
                 else if (clave == "auto_sanar")
                 {
-                    AutoSanar = valor != "0" && string.Equals(valor, "true", StringComparison.OrdinalIgnoreCase);
+                    // Acepta tanto "1"/"0" (lo que escribe el instalador y
+                    // GuardarConfiguracion) como "true"/"false" a mano.
+                    AutoSanar = valor == "1" || string.Equals(valor, "true", StringComparison.OrdinalIgnoreCase);
                 }
             }
         }

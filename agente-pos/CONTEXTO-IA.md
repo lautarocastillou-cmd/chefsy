@@ -43,6 +43,9 @@ etc.).
   `LAN://192.168.1.50:9100` (en `config.ini` o en `X-Pos-Printer`).
   Descubrimiento con `GET /api/lan-scan` (escaneo de la subred local, tope
   /24) y sección propia en el panel con alta manual de direcciones.
+  `/api/estado` informa `esRed` + `disponibleRed` (cache de 5 s) y el panel
+  distingue "Red disponible" de "Red sin respuesta"; el diagnóstico trata
+  spooler y enumeración como "no aplica" cuando la impresora es LAN.
 - **Auto-sanado**: si una impresión falla con código Win32 1722/1068/1062, el
   agente se relanza a sí mismo con elevación UAC en modo `--sanar`, que hace
   `sc config Spooler start= auto` + `net start Spooler` y sale. Limitado a un
@@ -172,6 +175,9 @@ Start-Process "$sandbox\AgentePOS.exe" -WorkingDirectory $sandbox
 - El HTML embebido en C# es un string verbatim: **cada `"` se duplica `""`**.
   `generar-panel.mjs` lo maneja; si se edita a mano, respetarlo (y recordar
   que una `"` suelta cierra el string y genera cascada de errores raros).
+- `auto_sanar` acepta `1`/`0` (lo que escriben el instalador y
+  `GuardarConfiguracion`) y también `true`/`false` a mano. Antes solo
+  entendía `true`, así que instalar o guardar ajustes lo dejaba apagado.
 - `config.ini` se escribe UTF-8 sin BOM y se parsea línea por línea
   (`clave=valor`, `#`/`;` comentarios). Claves: `puerto`, `token`,
   `impresora`, `origen_actualizacion`, `auto_sanar`.
@@ -181,14 +187,16 @@ Start-Process "$sandbox\AgentePOS.exe" -WorkingDirectory $sandbox
   estados de cola/offline que consultar. `/api/lan-scan` es **bloqueante**
   (hasta ~254 hosts con 32 hilos y timeout de 350 ms); si se agranda el
   alcance, moverlo a un hilo con polling desde el panel.
-- El escaneo recorre solo interfaces IPv4 `Up` con gateway y recorta
-  máscaras mayores a /24 a la /24 propia. Evita VPNs y adaptadores virtuales.
+- El escaneo recorre interfaces Ethernet y Wi-Fi activas con IPv4 (tengan o
+  no gateway: una LAN aislada con switch e IP fija es un caso típico) y
+  excluye adaptadores virtuales y VPN por tipo y descripción. Recorta
+  máscaras mayores a /24 a la /24 propia.
 - Log en `%LOCALAPPDATA%\AgentePOS\agent.log`, rota a 256 KB.
 - Códigos Win32 ya mapeados en `RawPrinter.MensajeWin32`: 1722 (RPC no
   disponible → spooler detenido), 1068 (dependencia), 1062 (no iniciado),
   1801 (nombre inválido), 5 (acceso denegado). Si agregás otro, mapealo acá
   para que el usuario vea algo útil.
-- `Estado.Version` ("2.0.1") lo lee `publicar.ps1` con una regex para el
+- `Estado.Version` ("2.1.0") lo lee `publicar.ps1` con una regex para el
   manifiesto: mantener el formato `public const string Version = "x.y.z";`.
 - PowerShell en esta PC es 5.1: no soporta `&&` entre comandos.
 - Historia que motivó el auto-sanado: una herramienta "optimizerDuck" dejó el
