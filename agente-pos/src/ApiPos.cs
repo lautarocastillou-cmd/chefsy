@@ -198,6 +198,20 @@ namespace AgentePOS
                 return;
             }
 
+            // No deja imprimir en impresoras virtuales de Windows (OneNote, XPS,
+            // Print to PDF, Fax, puertos archivo/nulo). No son comanderas térmicas
+            // y el usuario pensaría que imprimió cuando no echó papel.
+            string errorInfo;
+            var infoVirtual = RawPrinter.ObtenerInfo(impresora, out errorInfo);
+            if (infoVirtual != null && RawPrinter.EsImpresoraVirtual(infoVirtual.Nombre, infoVirtual.Puerto, infoVirtual.Driver))
+            {
+                Estado.RegistrarError("Impresion rechazada en '" + impresora + "': impresora virtual.");
+                Estado.Log("Impresion rechazada en '" + impresora + "': es una impresora virtual de Windows.");
+                ServidorHttp.ResponderError(stream, 400,
+                    "No se puede imprimir en '" + impresora + "'. No es una comandera térmica real. Elegí una impresora USB o de red desde el panel.");
+                return;
+            }
+
             int codigoWin32;
             if (!RawPrinter.Enviar(body, impresora, out error, out codigoWin32))
             {
@@ -261,6 +275,17 @@ namespace AgentePOS
                     + bytes.Length.ToString(CultureInfo.InvariantCulture) + " bytes).");
                 error = null;
                 return true;
+            }
+
+            // No deja imprimir prueba en impresoras virtuales de Windows.
+            string errorInfoPrueba;
+            var infoVirtualPrueba = RawPrinter.ObtenerInfo(impresora, out errorInfoPrueba);
+            if (infoVirtualPrueba != null && RawPrinter.EsImpresoraVirtual(infoVirtualPrueba.Nombre, infoVirtualPrueba.Puerto, infoVirtualPrueba.Driver))
+            {
+                Estado.RegistrarError("Prueba rechazada en '" + impresora + "': impresora virtual.");
+                Estado.Log("Prueba rechazada en '" + impresora + "': es una impresora virtual de Windows.");
+                error = "No se puede imprimir prueba en '" + impresora + "'. No es una comandera térmica real. Elegí una impresora USB o de red desde el panel.";
+                return false;
             }
 
             int codigoWin32;
