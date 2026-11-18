@@ -53,7 +53,9 @@ namespace AgentePOS
         }
 
         // Parsea "LAN://192.168.1.50:9100". Puerto opcional (default 9100).
-        // Devuelve false si la IP no es IPv4 valida o el puerto esta fuera de rango.
+        // Solo acepta IPv4 dotted-quad estricta y unicast imprimible: fuera
+        // loopback, 0.0.0.0, multicast y broadcast. Evita que un token valido
+        // se use para mandar bytes a servicios locales o a Internet.
         public static bool Parsear(string texto, out Destino destino, out string error)
         {
             destino = null;
@@ -69,6 +71,13 @@ namespace AgentePOS
             var ipTexto = resto;
             var puerto = PuertoPorDefecto;
 
+            // IPv6 no se soporta: el separador de puerto seria ambiguo.
+            if (resto.IndexOf(':') != resto.LastIndexOf(':'))
+            {
+                error = "Solo se aceptan direcciones IPv4 (por ejemplo LAN://192.168.1.50:9100).";
+                return false;
+            }
+
             var separador = resto.LastIndexOf(':');
             if (separador >= 0)
             {
@@ -76,13 +85,19 @@ namespace AgentePOS
                 var puertoTexto = resto.Substring(separador + 1).Trim();
                 if (puertoTexto.Length > 0)
                 {
-                    if (!int.TryParse(puertoTexto, NumberStyles.Integer, CultureInfo.InvariantCulture, out puerto)
+                    if (!int.TryParse(puertoTexto, NumberStyles.None, CultureInfo.InvariantCulture, out puerto)
                         || puerto <= 0 || puerto > 65535)
                     {
                         error = "El puerto de la impresora de red no es valido.";
                         return false;
                     }
                 }
+            }
+
+            if (!EsIpv4Estricta(ipTexto))
+            {
+                error = "La direccion IP de la impresora de red no es valida. Usa el formato 192.168.1.50.";
+                return false;
             }
 
             IPAddress ip;
@@ -92,8 +107,18 @@ namespace AgentePOS
                 return false;
             }
 
+            var bytes = ip.GetAddressBytes();
+            if (bytes[0] == 0 || bytes[0] == 127 || bytes[0] >= 224)
+            {
+                error = "La direccion debe ser una IP de red local (no loopback, multicast ni broadcast).";
+                return false;
+            }
+
             destino = new Destino();
-            destino.Ip = ip.ToString();
+            destino.Ip = bytes[0].ToString(CultureInfo.InvariantCulture) + "."
+                + bytes[1].ToString(CultureInfo.InvariantCulture) + "."
+                + bytes[2].ToString(CultureInfo.InvariantCulture) + "."
+                + bytes[3].ToString(CultureInfo.InvariantCulture);
             destino.Puerto = puerto;
             return true;
         }
@@ -112,16 +137,14 @@ namespace AgentePOS
             TcpClient cliente = null;
             try
             {
-                cliente = new TcpClient();
-                var conectado = cliente.BeginConnect(destino.Ip, destino.Puerto, null, null);
-                if (!conectado.AsyncWaitHandle.WaitOne(TimeoutEnvioMs))
+                cliente = ConectarAbierto(destino.Ip, destino.Puerto, TimeoutEnvioMs);
+                if (cliente == null)
                 {
                     error = "No se pudo conectar a " + Formatear(destino.Ip, destino.Puerto)
                         + ". Verifica que la comandera este encendida y en la misma red.";
                     return false;
                 }
 
-                cliente.EndConnect(conectado);
                 cliente.SendTimeout = TimeoutEnvioMs;
                 cliente.ReceiveTimeout = TimeoutEnvioMs;
 
@@ -137,16 +160,7 @@ namespace AgentePOS
             }
             finally
             {
-                if (cliente != null)
-                {
-                    try
-                    {
-                        cliente.Close();
-                    }
-                    catch
-                    {
-                    }
-                }
+                Cerrar(cliente);
             }
         }
 
@@ -172,8 +186,9 @@ namespace AgentePOS
         }
 
         // Escanea las subredes locales IPv4 buscando el puerto 9100 abierto.
-        // Solo interfaces operativas con gateway: evita VPNs raras y adaptadores
-        // virtuales sin salida real. Bloqueante: lo llama el hilo HTTP.
+        // Usa un CountdownEvent: encola un work item por host y espera a que
+        // todos terminen, con un tope de tiempo global para no colgar el
+        // hilo HTTP si el ThreadPool esta saturado. Bloqueante a proposito.
         public static List<Hallazgo> Escanear(out string error)
         {
             error = null;
@@ -193,70 +208,67 @@ namespace AgentePOS
 
             if (hosts.Count == 0)
             {
-                error = "No hay ninguna red local para escanear (sin interfaz IPv4 con gateway).";
+                error = "No hay ninguna red local para escanear (sin interfaz Ethernet o Wi-Fi activa).";
                 return encontrados;
             }
 
-            var indice = 0;
-            var pendientes = new List<ManualResetEvent>();
             var candado = new object();
+            var semaforo = new Semaphore(HilosScan, HilosScan);
+            var pendientes = new CountdownEvent(hosts.Count);
 
-            while (indice < hosts.Count || pendientes.Count > 0)
+            foreach (var ip in hosts)
             {
-                while (pendientes.Count < HilosScan && indice < hosts.Count)
+                ThreadPool.QueueUserWorkItem(delegate(object estado)
                 {
-                    var ip = hosts[indice];
-                    indice++;
-
-                    var hecho = new ManualResetEvent(false);
-                    pendientes.Add(hecho);
-
-                    ThreadPool.QueueUserWorkItem(delegate(object estado)
+                    var ipObjetivo = (string)estado;
+                    try
                     {
-                        var datos = (object[])estado;
-                        var ipObjetivo = (string)datos[0];
-                        var senal = (ManualResetEvent)datos[1];
-
-                        if (PuertoAbierto(ipObjetivo, PuertoPorDefecto))
+                        semaforo.WaitOne();
+                        try
                         {
-                            lock (candado)
+                            if (PuertoAbierto(ipObjetivo, PuertoPorDefecto))
                             {
-                                if (vistos.Add(ipObjetivo))
+                                lock (candado)
                                 {
-                                    var hallazgo = new Hallazgo();
-                                    hallazgo.Ip = ipObjetivo;
-                                    hallazgo.Puerto = PuertoPorDefecto;
-                                    hallazgo.Direccion = Formatear(ipObjetivo, PuertoPorDefecto);
-                                    encontrados.Add(hallazgo);
+                                    if (vistos.Add(ipObjetivo))
+                                    {
+                                        var hallazgo = new Hallazgo();
+                                        hallazgo.Ip = ipObjetivo;
+                                        hallazgo.Puerto = PuertoPorDefecto;
+                                        hallazgo.Direccion = Formatear(ipObjetivo, PuertoPorDefecto);
+                                        encontrados.Add(hallazgo);
+                                    }
                                 }
                             }
                         }
-
-                        senal.Set();
-                    }, new object[] { ip, hecho });
-                }
-
-                if (pendientes.Count > 0)
-                {
-                    var senales = pendientes.ToArray();
-                    var listo = WaitHandle.WaitAny(senales, 1000);
-                    if (listo != WaitHandle.WaitTimeout)
-                    {
-                        pendientes[listo].Close();
-                        pendientes.RemoveAt(listo);
-                    }
-                    else
-                    {
-                        for (var i = pendientes.Count - 1; i >= 0; i--)
+                        finally
                         {
-                            if (pendientes[i].WaitOne(0))
-                            {
-                                pendientes[i].Close();
-                                pendientes.RemoveAt(i);
-                            }
+                            semaforo.Release();
                         }
                     }
-                }
+                    catch
+                    {
+                        // Un host con problemas no debe abortar el escaneo.
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            pendientes.Signal();
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }, ip);
+            }
+
+            // Tope global: un poco mas que el peor caso teorico.
+            var topeMs = (hosts.Count / HilosScan + 2) * TimeoutConexionMs * 2;
+            if (!pendientes.Wait(topeMs))
+            {
+                Estado.Log("Escaneo LAN: se agoto el tiempo con "
+                    + pendientes.CurrentCount.ToString(CultureInfo.InvariantCulture) + " host(s) pendiente(s).");
             }
 
             encontrados.Sort(delegate(Hallazgo a, Hallazgo b)
@@ -267,32 +279,76 @@ namespace AgentePOS
             return encontrados;
         }
 
-        private static bool PuertoAbierto(string ip, int puerto)
+        private static bool EsIpv4Estricta(string texto)
         {
-            TcpClient cliente = null;
-            try
+            if (string.IsNullOrEmpty(texto))
             {
-                cliente = new TcpClient();
-                var conectado = cliente.BeginConnect(ip, puerto, null, null);
-                if (!conectado.AsyncWaitHandle.WaitOne(TimeoutConexionMs))
+                return false;
+            }
+
+            var partes = texto.Split('.');
+            if (partes.Length != 4)
+            {
+                return false;
+            }
+
+            foreach (var parte in partes)
+            {
+                if (parte.Length == 0 || parte.Length > 3)
                 {
                     return false;
                 }
 
+                foreach (var c in parte)
+                {
+                    if (c < '0' || c > '9')
+                    {
+                        return false;
+                    }
+                }
+
+                int valor;
+                if (!int.TryParse(parte, NumberStyles.None, CultureInfo.InvariantCulture, out valor)
+                    || valor < 0 || valor > 255)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Conecta y devuelve el cliente abierto, o null si no llego en el
+        // tiempo. Cierra siempre el wait handle del BeginConnect (si no, cada
+        // intento deja un handle hasta que pase el GC).
+        private static TcpClient ConectarAbierto(string ip, int puerto, int timeoutMs)
+        {
+            var cliente = new TcpClient();
+            IAsyncResult conectado = null;
+            try
+            {
+                conectado = cliente.BeginConnect(ip, puerto, null, null);
+                if (!conectado.AsyncWaitHandle.WaitOne(timeoutMs))
+                {
+                    Cerrar(cliente);
+                    return null;
+                }
+
                 cliente.EndConnect(conectado);
-                return cliente.Connected;
+                return cliente;
             }
             catch
             {
-                return false;
+                Cerrar(cliente);
+                return null;
             }
             finally
             {
-                if (cliente != null)
+                if (conectado != null)
                 {
                     try
                     {
-                        cliente.Close();
+                        conectado.AsyncWaitHandle.Close();
                     }
                     catch
                     {
@@ -301,9 +357,38 @@ namespace AgentePOS
             }
         }
 
-        // Hosts candidatos: por cada interfaz IPv4 operativa con gateway,
-        // recorre la subred derivada de la mascara. Se salta la propia IP,
-        // la de red y la de broadcast. Tope MaxHosts para no tardar de mas.
+        private static bool PuertoAbierto(string ip, int puerto)
+        {
+            var cliente = ConectarAbierto(ip, puerto, TimeoutConexionMs);
+            if (cliente == null)
+            {
+                return false;
+            }
+
+            Cerrar(cliente);
+            return true;
+        }
+
+        private static void Cerrar(TcpClient cliente)
+        {
+            if (cliente == null)
+            {
+                return;
+            }
+
+            try
+            {
+                cliente.Close();
+            }
+            catch
+            {
+            }
+        }
+
+        // Hosts candidatos: interfaces Ethernet o Wi-Fi activas, con IP IPv4.
+        // Se escanean aunque no tengan gateway (un local con switch e IP fija
+        // es un caso tipico); se excluyen adaptadores virtuales y VPN por tipo
+        // y descripcion. Tope MaxHosts para no tardar de mas.
         private static List<string> HostsAEscanear()
         {
             var hosts = new List<string>();
@@ -315,17 +400,26 @@ namespace AgentePOS
                 {
                     continue;
                 }
-                if (interfaz.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+
+                if (interfaz.NetworkInterfaceType != NetworkInterfaceType.Ethernet
+                    && interfaz.NetworkInterfaceType != NetworkInterfaceType.Wireless80211)
+                {
+                    continue;
+                }
+
+                var descripcion = (interfaz.Description ?? "").ToLowerInvariant();
+                if (descripcion.Contains("virtual")
+                    || descripcion.Contains("vmware")
+                    || descripcion.Contains("hyper-v")
+                    || descripcion.Contains("vbox")
+                    || descripcion.Contains("tap-")
+                    || descripcion.Contains("vpn")
+                    || descripcion.Contains("tunnel"))
                 {
                     continue;
                 }
 
                 var propiedades = interfaz.GetIPProperties();
-                if (propiedades.GatewayAddresses == null || propiedades.GatewayAddresses.Count == 0)
-                {
-                    continue;
-                }
-
                 foreach (var unicast in propiedades.UnicastAddresses)
                 {
                     if (unicast.Address.AddressFamily != AddressFamily.InterNetwork)
@@ -360,8 +454,11 @@ namespace AgentePOS
                         bitsHost = 8;
                     }
 
+                    // /31 (RFC 3021): las dos direcciones son usables.
+                    // Otras mascaras: se salta red y broadcast.
                     var total = 1 << bitsHost;
-                    for (var offset = 1; offset < total - 1; offset++)
+                    var limite = bitsHost == 1 ? total : total - 1;
+                    for (var offset = 1; offset < limite; offset++)
                     {
                         if (hosts.Count >= MaxHosts)
                         {
