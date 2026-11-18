@@ -20,6 +20,7 @@ namespace AgentePOS
             public int Interletrado = 1;
             public int Interlineado = 8;
             public int EspacioItems = 0;
+            public int AnchoPapel = 80; // 58 o 80 mm
         }
 
         public static Documento Comanda = PorDefecto(true);
@@ -36,6 +37,7 @@ namespace AgentePOS
             documento.Interletrado = 1;
             documento.Interlineado = 8;
             documento.EspacioItems = comanda ? 1 : 0;
+            documento.AnchoPapel = 80;
             return documento;
         }
 
@@ -103,6 +105,7 @@ namespace AgentePOS
             documento.Interletrado = Limitar(LeerEntero(datos, "interletrado", documento.Interletrado), 0, 8);
             documento.Interlineado = Limitar(LeerEntero(datos, "interlineado", documento.Interlineado), 0, 60);
             documento.EspacioItems = Limitar(LeerEntero(datos, "espacioItems", documento.EspacioItems), 0, 3);
+            documento.AnchoPapel = Limitar(LeerEntero(datos, "anchoPapel", documento.AnchoPapel), 58, 80);
             return documento;
         }
 
@@ -154,6 +157,7 @@ namespace AgentePOS
             datos["interletrado"] = documento.Interletrado;
             datos["interlineado"] = documento.Interlineado;
             datos["espacioItems"] = documento.EspacioItems;
+            datos["anchoPapel"] = documento.AnchoPapel;
             return datos;
         }
 

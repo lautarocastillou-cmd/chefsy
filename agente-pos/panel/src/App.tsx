@@ -101,6 +101,7 @@ interface Doc {
   interletrado: number;
   interlineado: number;
   espacioItems: number;
+  anchoPapel: '58' | '80';
 }
 
 const DOC_DEFAULT = (comanda: boolean): Doc => ({
@@ -110,6 +111,7 @@ const DOC_DEFAULT = (comanda: boolean): Doc => ({
   interletrado: 1,
   interlineado: 8,
   espacioItems: comanda ? 1 : 0,
+  anchoPapel: '80',
 });
 
 // ── API ──────────────────────────────────────────────────────────────────────
@@ -570,7 +572,7 @@ export default function App() {
           <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
             Tipografía
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <EditorDoc titulo="Comanda" doc={comanda} setDoc={setComanda} />
             <EditorDoc titulo="Ticket" doc={ticket} setDoc={setTicket} />
           </div>
@@ -767,33 +769,98 @@ function EditorDoc({
     </div>
   );
 
+  const fuenteClase = doc.fuente === 'B' ? 'text-xs' : 'text-sm';
+  const tamanoClase = `scale-[${doc.ancho * 100}%]`;
+  const interlineadoClase = `leading-[${1 + doc.interlineado / 10}]`;
+  const espacioItemsClase = `mb-${doc.espacioItems * 2}`;
+  const anchoPapelClase = doc.anchoPapel === '58' ? 'w-[58mm] max-w-[58mm]' : 'w-[80mm] max-w-[80mm]';
+
+  const linea = (texto: string) => (
+    <div
+      className={`${fuenteClase} ${tamanoClase} ${interlineadoClase} ${espacioItemsClase} font-mono leading-tight tracking-[${doc.interletrado}px]`}
+      style={{ letterSpacing: doc.interletrado }}
+    >
+      {texto}
+    </div>
+  );
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{titulo}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Fuente</Label>
-          <Select value={doc.fuente} onValueChange={(v) => setDoc({ ...doc, fuente: v })}>
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="A">A (12 columnas)</SelectItem>
-              <SelectItem value="B">B (18 columnas, chica)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {campo('ancho', 'Ancho', 1, 4)}
-          {campo('alto', 'Alto', 1, 4)}
-          {campo('interletrado', 'Interletrado', 0, 8)}
-          {campo('interlineado', 'Interlineado', 0, 60)}
-          {campo('espacioItems', 'Espacio items', 0, 3)}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-6">
+      {/* ── Controles ───────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{titulo}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Ancho de papel</Label>
+              <Select
+                value={doc.anchoPapel}
+                onValueChange={(v) => setDoc({ ...doc, anchoPapel: v })}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="58">58 mm</SelectItem>
+                  <SelectItem value="80">80 mm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Fuente</Label>
+              <Select value={doc.fuente} onValueChange={(v) => setDoc({ ...doc, fuente: v })}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A (12 columnas)</SelectItem>
+                  <SelectItem value="B">B (18 columnas, chica)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {campo('ancho', 'Ancho', 1, 4)}
+            {campo('alto', 'Alto', 1, 4)}
+            {campo('interletrado', 'Interletrado', 0, 8)}
+            {campo('interlineado', 'Interlineado', 0, 60)}
+            {campo('espacioItems', 'Espacio items', 0, 3)}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Vista previa ────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-base">Vista previa</CardTitle>
+          <Badge variant="secondary">{doc.anchoPapel} mm</Badge>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className={`flex items-end justify-center gap-4 ${anchoPapelClase} bg-border/30 rounded p-2 border border-border/50`}>
+            <div
+              className={`flex flex-col items-start ${fuenteClase} ${tamanoClase} ${interlineadoClase} ${espacioItemsClase} font-mono leading-tight tracking-[${doc.interletrado}px]`}
+              style={{ letterSpacing: doc.interletrado }}
+            >
+              <Printer className="h-3 w-3 mb-1 text-muted-foreground" />
+              <div className="text-center font-bold mb-2">COMANDA</div>
+              <div className="text-xs">Mesa 5                          14:30</div>
+              <div className="text-xs text-muted-foreground">--------------------------------</div>
+              <div className="text-xs">2 x Hamburguesa          $ 2.400</div>
+              <div className="text-xs">1 x Papas fritas           $   900</div>
+              <div className="text-xs">1 x Gaseosa 500cc          $   700</div>
+              <div className="text-xs text-muted-foreground">--------------------------------</div>
+              <div className="text-xs font-bold">Total                  $ 4.000</div>
+              <div className="text-xs mb-4">Gracias por su compra</div>
+              {/* Corte de papel */}
+              <div className="w-full h-px bg-border mb-1" />
+              <div className="text-xs text-muted-foreground">Agente POS v2.1.0</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
