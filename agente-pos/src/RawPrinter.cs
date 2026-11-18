@@ -125,6 +125,7 @@ namespace AgentePOS
             public uint Estado;
             public uint Trabajos;
             public bool Predeterminada;
+            public bool Virtual;
         }
 
         private static string TextoDesdePuntero(IntPtr puntero)
@@ -294,6 +295,7 @@ namespace AgentePOS
                     }
 
                     detalle.Predeterminada = string.Equals(nombre, predeterminada, StringComparison.OrdinalIgnoreCase);
+                    detalle.Virtual = EsImpresoraVirtual(nombre, detalle.Puerto, detalle.Driver);
                     lista.Add(detalle);
                 }
 
@@ -493,6 +495,53 @@ namespace AgentePOS
                     ClosePrinter(hPrinter);
                 }
             }
+        }
+
+        // Detecta impresoras virtuales de Windows que no son comanderas térmicas
+        // reales: OneNote, XPS, Print to PDF, Fax, puertos archivo/nulo, etc.
+        // Sirve para no ofrecer al usuario imprimir en algo que no echa papel.
+        public static bool EsImpresoraVirtual(string nombre, string puerto, string driver)
+        {
+            if (string.IsNullOrEmpty(nombre))
+            {
+                return true;
+            }
+
+            var n = nombre.ToLowerInvariant();
+            var p = (puerto ?? "").ToLowerInvariant();
+            var d = (driver ?? "").ToLowerInvariant();
+
+            // Puertos que no son impresoras reales
+            if (string.IsNullOrEmpty(p)
+                || p == "portprompt:"
+                || p == "file:"
+                || p == "nul:"
+                || p.StartsWith("onenote for windows 10 port", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Nombres de impresoras virtuales conocidas
+            if (n.Contains("onenote")
+                || n.Contains("xps document writer")
+                || n.Contains("print to pdf")
+                || n.Contains("microsoft print to pdf")
+                || n.Contains("microsoft shared fax")
+                || n.Contains(" fax ")
+                || n.StartsWith("fax", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Drivers de Microsoft que no envían a hardware real
+            if (d.Contains("microsoft xps document writer")
+                || d.Contains("microsoft print to pdf")
+                || d.Contains("microsoft shared fax"))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public static string MensajeWin32(int codigo)
