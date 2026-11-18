@@ -186,9 +186,9 @@ namespace AgentePOS
         }
 
         // Escanea las subredes locales IPv4 buscando el puerto 9100 abierto.
-        // Usa un CountdownEvent: encola un work item por host y espera a que
-        // todos terminen, con un tope de tiempo global para no colgar el
-        // hilo HTTP si el ThreadPool esta saturado. Bloqueante a proposito.
+        // Usa HilosScan hilos propios que consumen una cola de IPs y se unen
+        // con Join antes de devolver: el resultado siempre esta completo y
+        // ningun worker queda escribiendo sobre la lista devuelta.
         public static List<Hallazgo> Escanear(out string error)
         {
             error = null;
@@ -213,62 +213,64 @@ namespace AgentePOS
             }
 
             var candado = new object();
-            var semaforo = new Semaphore(HilosScan, HilosScan);
-            var pendientes = new CountdownEvent(hosts.Count);
+            var cola = new Queue<string>(hosts);
+            var hilos = new List<Thread>();
+            var cantidad = Math.Min(HilosScan, hosts.Count);
 
-            foreach (var ip in hosts)
+            for (var i = 0; i < cantidad; i++)
             {
-                ThreadPool.QueueUserWorkItem(delegate(object estado)
+                var hilo = new Thread(delegate()
                 {
-                    var ipObjetivo = (string)estado;
-                    try
+                    while (true)
                     {
-                        semaforo.WaitOne();
+                        string ip;
+                        lock (candado)
+                        {
+                            if (cola.Count == 0)
+                            {
+                                break;
+                            }
+                            ip = cola.Dequeue();
+                        }
+
                         try
                         {
-                            if (PuertoAbierto(ipObjetivo, PuertoPorDefecto))
+                            if (PuertoAbierto(ip, PuertoPorDefecto))
                             {
                                 lock (candado)
                                 {
-                                    if (vistos.Add(ipObjetivo))
+                                    if (vistos.Add(ip))
                                     {
                                         var hallazgo = new Hallazgo();
-                                        hallazgo.Ip = ipObjetivo;
+                                        hallazgo.Ip = ip;
                                         hallazgo.Puerto = PuertoPorDefecto;
-                                        hallazgo.Direccion = Formatear(ipObjetivo, PuertoPorDefecto);
+                                        hallazgo.Direccion = Formatear(ip, PuertoPorDefecto);
                                         encontrados.Add(hallazgo);
                                     }
                                 }
                             }
                         }
-                        finally
-                        {
-                            semaforo.Release();
-                        }
-                    }
-                    catch
-                    {
-                        // Un host con problemas no debe abortar el escaneo.
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            pendientes.Signal();
-                        }
                         catch
                         {
+                            // Un host con problemas no debe abortar el escaneo.
                         }
                     }
-                }, ip);
+                });
+
+                hilo.IsBackground = true;
+                hilo.Start();
+                hilos.Add(hilo);
             }
 
-            // Tope global: un poco mas que el peor caso teorico.
-            var topeMs = (hosts.Count / HilosScan + 2) * TimeoutConexionMs * 2;
-            if (!pendientes.Wait(topeMs))
+            foreach (var hilo in hilos)
             {
-                Estado.Log("Escaneo LAN: se agoto el tiempo con "
-                    + pendientes.CurrentCount.ToString(CultureInfo.InvariantCulture) + " host(s) pendiente(s).");
+                try
+                {
+                    hilo.Join();
+                }
+                catch
+                {
+                }
             }
 
             encontrados.Sort(delegate(Hallazgo a, Hallazgo b)
@@ -454,11 +456,12 @@ namespace AgentePOS
                         bitsHost = 8;
                     }
 
-                    // /31 (RFC 3021): las dos direcciones son usables.
-                    // Otras mascaras: se salta red y broadcast.
+                    // /31 (RFC 3021): las dos direcciones son usables, incluso
+                    // la 0. Otras mascaras: se salta red y broadcast.
                     var total = 1 << bitsHost;
-                    var limite = bitsHost == 1 ? total : total - 1;
-                    for (var offset = 1; offset < limite; offset++)
+                    var desde = bitsHost == 1 ? 0 : 1;
+                    var hasta = bitsHost == 1 ? total : total - 1;
+                    for (var offset = desde; offset < hasta; offset++)
                     {
                         if (hosts.Count >= MaxHosts)
                         {
