@@ -29,6 +29,9 @@ impresión pidiendo permiso de administrador solo cuando hace falta.
 - 🖨 **Impresión RAW sin diálogos**: recibe bytes ESC/POS por HTTP local y los
   manda al spooler. Funciona con cualquier comandera cuyo driver soporte RAW
   (la gran mayoría de las térmicas).
+- 🌐 **Impresoras de red (LAN)**: escanea la red local buscando el puerto 9100
+  y les imprime ESC/POS por TCP directo, **sin instalar driver ni pasar por el
+  spooler**. Ideal para comanderas de red que Windows no reconoce.
 - 🩺 **Auto-sanado**: si una impresión falla porque el spooler está caído
   (error 1722 *RPC no disponible*), el agente se relanza a sí mismo con
   elevación UAC, restaura el servicio a *automático*, lo inicia y sale.
@@ -136,6 +139,15 @@ requests.post(
 
 Para elegir impresora puntual: header `X-Pos-Printer: NOMBRE EXACTO`.
 
+Para una comandera de red (TCP 9100), el mismo header acepta la dirección:
+
+```bash
+curl -X POST http://127.0.0.1:9191/print \
+  -H "X-Pos-Token: TU_TOKEN" \
+  -H "X-Pos-Printer: LAN://192.168.1.50:9100" \
+  --data-binary @ticket.bin
+```
+
 ## Endpoints
 
 | Método | Ruta               | Descripción                                    |
@@ -154,6 +166,7 @@ Para elegir impresora puntual: header `X-Pos-Printer: NOMBRE EXACTO`.
 | POST   | `/api/prueba`      | Imprimir página de prueba                      |
 | POST   | `/api/sanar`       | Reparar servicio de impresión (UAC)            |
 | GET    | `/api/spooler`     | Estado del servicio Cola de impresión          |
+| GET    | `/api/lan-scan`    | Descubrir impresoras de red (puerto 9100)      |
 | POST   | `/api/ajustes`     | Ajustes (`autoSanar`)                          |
 
 Todas (excepto `/panel` y `OPTIONS`) exigen el header `X-Pos-Token`.
@@ -168,6 +181,7 @@ agente-pos/
 │   ├── ApiPos.cs               API universal (health, print, diagnostico, config, prueba)
 │   ├── ApiPanel.cs             Endpoints del panel (/api/*)
 │   ├── RawPrinter.cs           winspool.drv (RAW) + estado del servicio Spooler
+│   ├── ImpresoraRed.cs         TCP 9100 directo + descubrimiento de red (LAN)
 │   ├── Sanador.cs              Reparación con elevación UAC (--sanar)
 │   ├── Tipografia.cs           Tipografía por documento (comanda/ticket)
 │   ├── Actualizacion.cs        Auto-actualización con SHA-256
@@ -198,6 +212,7 @@ csc /nologo /target:winexe /optimize+ `
 puerto=9191
 token=...
 impresora=POS-80-Series (2)     ; vacío = predeterminada de Windows
+                                ; o LAN://192.168.1.50:9100 para red
 origen_actualizacion=            ; vacío = auto-actualización desactivada
 auto_sanar=1                     ; reparación automática del spooler
 ```
@@ -208,8 +223,8 @@ auto_sanar=1                     ; reparación automática del spooler
 
 ## Roadmap
 
-- **v2.1 — Impresoras de red (LAN)**: descubrimiento (puerto 9100 / mDNS) y
-  envío TCP directo, sin instalar nada en Windows.
+- ~~**v2.1 — Impresoras de red (LAN)**~~: descubrimiento del puerto 9100 y
+  envío TCP directo, sin instalar nada en Windows. **Completada.**
 - **v2.2 — USB directo (WinUSB)**: impresión por USB sin driver (estilo Zadig)
   como fallback cuando el driver del local está roto.
 

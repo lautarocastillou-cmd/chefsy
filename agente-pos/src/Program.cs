@@ -18,7 +18,7 @@ namespace AgentePOS
     // que imprime en cualquier comandera via el spooler de Windows.
     internal static class Estado
     {
-        public const string Version = "2.0.1";
+        public const string Version = "2.1.0";
         public const string NombreProducto = "AgentePOS";
         public const string TituloProducto = "Agente POS";
         public const int PuertoPorDefecto = 9191;

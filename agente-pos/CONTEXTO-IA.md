@@ -8,7 +8,7 @@
 > Léelo completo antes de tocar código.
 
 Documento de traspaso: explica qué es el proyecto, qué reglas NO romper, en
-qué estado está y por dónde continuar. Última actualización: v2.0.1
+qué estado está y por dónde continuar. Última actualización: v2.1.0
 (2026-11-18).
 
 ## 1. Qué es
@@ -22,7 +22,7 @@ de imprimir (spooler detenido, tipo de inicio en "manual" por optimizadores,
 etc.).
 
 - Repo: `github.com/lautarocastillou-cmd/chefsy`, carpeta `agente-pos/`
-  (commit base: `f687153`, rama `main`).
+  (rama `main`; v2.1.0).
 - Es un proyecto **independiente** del agente de impresión de Chefsy
   (`agente-impresion/`). **No tocar nada de Chefsy** (`agente-impresion/`,
   `public/agente/`). Coexisten en la misma máquina: Agente POS escucha en
@@ -34,10 +34,15 @@ etc.).
 - Etapa: **desarrollo temprano**. Prioridad de features core antes de
   considerar distribución pública.
 
-## 2. Estado actual (v2.0.1, commiteado y pusheado)
+## 2. Estado actual (v2.1.0, commiteado y pusheado)
 
 - Impresión RAW sin diálogos, con resolución de impresora (configurada →
   header `X-Pos-Printer` → predeterminada de Windows).
+- **Impresoras de red LAN (v2.1)**: `ImpresoraRed` habla TCP al puerto 9100
+  con ESC/POS crudo, sin driver ni spooler. Dirección canónica
+  `LAN://192.168.1.50:9100` (en `config.ini` o en `X-Pos-Printer`).
+  Descubrimiento con `GET /api/lan-scan` (escaneo de la subred local, tope
+  /24) y sección propia en el panel con alta manual de direcciones.
 - **Auto-sanado**: si una impresión falla con código Win32 1722/1068/1062, el
   agente se relanza a sí mismo con elevación UAC en modo `--sanar`, que hace
   `sc config Spooler start= auto` + `net start Spooler` y sale. Limitado a un
@@ -78,6 +83,7 @@ agente-pos/
 │   ├── RawPrinter.cs           winspool.drv (OpenPrinter/WritePrinter RAW),
 │   │                           EnumPrinters, GetPrinter, SetDefaultPrinter,
 │   │                           estado del servicio Spooler via advapi32
+│   ├── ImpresoraRed.cs         TCP 9100 (envío ESC/POS) + escaneo de subred
 │   ├── Sanador.cs              elevación UAC (--sanar) + rate-limit
 │   ├── Tipografia.cs           modelo comanda/ticket + persistencia JSON
 │   ├── Actualizacion.cs        /update: manifiesto + SHA-256 + reemplazo
@@ -154,6 +160,7 @@ Start-Process "$sandbox\AgentePOS.exe" -WorkingDirectory $sandbox
 #   GET /panel -> HTML con token (navegación local) y root de React
 #   GET /panel con header Origin: http://evil.com -> SIN token
 #   /api/* sin token -> 401
+#   GET /api/lan-scan -> 200 con hallazgos (puede tardar unos segundos)
 # Matar el proceso y borrar el sandbox.
 ```
 
@@ -168,6 +175,14 @@ Start-Process "$sandbox\AgentePOS.exe" -WorkingDirectory $sandbox
 - `config.ini` se escribe UTF-8 sin BOM y se parsea línea por línea
   (`clave=valor`, `#`/`;` comentarios). Claves: `puerto`, `token`,
   `impresora`, `origen_actualizacion`, `auto_sanar`.
+- **LAN**: `impresora` puede ser `LAN://ip:puerto` (puerto opcional, default
+  9100). `ImpresoraRed.Parsear` valida IPv4 y puerto; `Formatear` normaliza.
+  Las impresoras LAN no pasan por el spooler: no hay error 1722 que sanar ni
+  estados de cola/offline que consultar. `/api/lan-scan` es **bloqueante**
+  (hasta ~254 hosts con 32 hilos y timeout de 350 ms); si se agranda el
+  alcance, moverlo a un hilo con polling desde el panel.
+- El escaneo recorre solo interfaces IPv4 `Up` con gateway y recorta
+  máscaras mayores a /24 a la /24 propia. Evita VPNs y adaptadores virtuales.
 - Log en `%LOCALAPPDATA%\AgentePOS\agent.log`, rota a 256 KB.
 - Códigos Win32 ya mapeados en `RawPrinter.MensajeWin32`: 1722 (RPC no
   disponible → spooler detenido), 1068 (dependencia), 1062 (no iniciado),
@@ -190,17 +205,16 @@ Start-Process "$sandbox\AgentePOS.exe" -WorkingDirectory $sandbox
 > En etapa de desarrollo temprano: primero features core para el usuario del
 > local. Distribución/canal de actualización queda postergado.
 
-### v2.1 — Impresoras de red LAN (siguiente paso, en diseño)
-- Descubrimiento de comanderas en la red local: escaneo TCP del puerto 9100
-  por subred (lo más simple y confiable), opcional mDNS/zeroconf después.
-- Envío directo TCP 9100 (ESC/POS raw) sin instalar nada en Windows: nueva
-  clase `ImpresoraRed` al lado de `RawPrinter`, endpoint `/api/lan-scan`,
-  integración en el panel (sección Impresoras) y en `/print` con
-  `X-Pos-Printer: LAN://192.168.1.50:9100`.
-- Nota: las impresoras de red YA instaladas en Windows aparecen en
-  EnumPrinters y hoy funcionan via spooler; esto cubre las NO instaladas.
+### v2.1 — Impresoras de red LAN (COMPLETADA en v2.1.0)
+- ~~Descubrimiento de comanderas en la red local: escaneo TCP del puerto 9100
+  por subred.~~
+- ~~Envío directo TCP 9100 (ESC/POS raw) sin instalar nada en Windows: clase
+  `ImpresoraRed`, endpoint `/api/lan-scan`, sección en el panel y `/print` con
+  `X-Pos-Printer: LAN://192.168.1.50:9100`.~~
+- Pendiente menor si aparece la necesidad: mDNS/zeroconf, escaneo de puertos
+  alternativos y sondeo asíncrono para redes más grandes.
 
-### v2.2 — USB directo (WinUSB, estilo Zadig)
+### v2.2 — USB directo (WinUSB, siguiente paso)
 - Fallback cuando el driver del local está roto: hablar directo con el
   dispositivo USB vía P/Invoke (`SetupDi*` + `WinUSB.dll`:
   `WinUsb_Initialize`, `WinUsb_WritePipe`). Interface GUID de impresoras:
