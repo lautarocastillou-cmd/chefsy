@@ -1,0 +1,278 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Sockets;
+using System.Text;
+using System.Web.Script.Serialization;
+
+namespace AgentePOS
+{
+    // Endpoints que consume el panel web servido por el propio agente.
+    // Todos exigen token (X-Pos-Token) como el resto de la API.
+    internal static class ApiPanel
+    {
+        public static void ResponderEstado(NetworkStream stream)
+        {
+            var usaPredeterminada = string.IsNullOrEmpty(Estado.Impresora);
+            var nombre = usaPredeterminada ? RawPrinter.ObtenerImpresoraPredeterminada() : Estado.Impresora;
+            var spooler = RawPrinter.EstadoServicioSpooler();
+
+            var respuesta = new StringBuilder();
+            respuesta.Append("{\"ok\":true");
+            respuesta.Append(",\"version\":\"").Append(ServidorHttp.EscapeJson(Estado.Version)).Append("\"");
+            respuesta.Append(",\"titulo\":\"").Append(ServidorHttp.EscapeJson(Estado.TituloProducto)).Append("\"");
+            respuesta.Append(",\"puerto\":").Append(Estado.Puerto.ToString(CultureInfo.InvariantCulture));
+            respuesta.Append(",\"impresora\":\"").Append(ServidorHttp.EscapeJson(Estado.Impresora)).Append("\"");
+            respuesta.Append(",\"impresoraResuelta\":\"").Append(ServidorHttp.EscapeJson(nombre ?? "")).Append("\"");
+            respuesta.Append(",\"usaPredeterminada\":").Append(usaPredeterminada ? "true" : "false");
+            respuesta.Append(",\"spoolerCorriendo\":").Append(spooler == 4 ? "true" : "false");
+            respuesta.Append(",\"spoolerEstado\":\"").Append(ServidorHttp.EscapeJson(RawPrinter.DescribirServicioSpooler())).Append("\"");
+            respuesta.Append(",\"autoSanar\":").Append(Estado.AutoSanar ? "true" : "false");
+            respuesta.Append(",\"baseDir\":\"").Append(ServidorHttp.EscapeJson(Estado.BaseDir)).Append("\"");
+            respuesta.Append(",\"uptimeSegundos\":")
+                .Append(((long)(DateTime.Now - Estado.Inicio).TotalSeconds).ToString(CultureInfo.InvariantCulture));
+            respuesta.Append(",\"tipografia\":{\"configurada\":").Append(string.IsNullOrEmpty(Tipografia.Json) ? "false" : "true");
+            if (!string.IsNullOrEmpty(Tipografia.Actualizada))
+            {
+                respuesta.Append(",\"actualizada\":\"").Append(ServidorHttp.EscapeJson(Tipografia.Actualizada)).Append("\"");
+            }
+            respuesta.Append("}");
+
+            if (!string.IsNullOrEmpty(Estado.UltimoError))
+            {
+                respuesta.Append(",\"ultimoError\":\"").Append(ServidorHttp.EscapeJson(Estado.UltimoError)).Append("\"");
+                respuesta.Append(",\"ultimoErrorHora\":\"").Append(ServidorHttp.EscapeJson(Estado.UltimoErrorHora)).Append("\"");
+            }
+
+            respuesta.Append("}");
+            ServidorHttp.ResponderJson(stream, 200, respuesta.ToString());
+        }
+
+        public static void ResponderImpresoras(NetworkStream stream)
+        {
+            string errorLista;
+            var impresoras = RawPrinter.ListarImpresoras(out errorLista);
+            if (impresoras == null)
+            {
+                ServidorHttp.ResponderError(stream, 500, "No se pudieron listar las impresoras: " + errorLista);
+                return;
+            }
+
+            var respuesta = new StringBuilder();
+            respuesta.Append("{\"ok\":true,\"impresoras\":[");
+            for (var i = 0; i < impresoras.Count; i++)
+            {
+                var info = impresoras[i];
+                if (i > 0)
+                {
+                    respuesta.Append(",");
+                }
+
+                respuesta.Append("{\"nombre\":\"").Append(ServidorHttp.EscapeJson(info.Nombre)).Append("\"");
+                respuesta.Append(",\"puerto\":\"").Append(ServidorHttp.EscapeJson(info.Puerto)).Append("\"");
+                respuesta.Append(",\"driver\":\"").Append(ServidorHttp.EscapeJson(info.Driver)).Append("\"");
+                respuesta.Append(",\"trabajos\":").Append(info.Trabajos.ToString(CultureInfo.InvariantCulture));
+                respuesta.Append(",\"estadoCodigo\":").Append(info.Estado.ToString(CultureInfo.InvariantCulture));
+                respuesta.Append(",\"estado\":\"").Append(ServidorHttp.EscapeJson(RawPrinter.DescribirEstado(info.Estado))).Append("\"");
+                respuesta.Append(",\"offline\":").Append(RawPrinter.EstaOffline(info.Estado) ? "true" : "false");
+                respuesta.Append(",\"papelAgotado\":").Append(RawPrinter.TienePapelAgotado(info.Estado) ? "true" : "false");
+                respuesta.Append(",\"atasco\":").Append(RawPrinter.TieneAtasco(info.Estado) ? "true" : "false");
+                respuesta.Append(",\"pausada\":").Append(RawPrinter.EstaPausada(info.Estado) ? "true" : "false");
+                respuesta.Append(",\"predeterminada\":").Append(info.Predeterminada ? "true" : "false");
+                respuesta.Append(",\"configurada\":").Append(
+                    string.Equals(info.Nombre, Estado.Impresora, StringComparison.OrdinalIgnoreCase) ? "true" : "false");
+                respuesta.Append("}");
+            }
+            respuesta.Append("]}");
+            ServidorHttp.ResponderJson(stream, 200, respuesta.ToString());
+        }
+
+        public static void ElegirImpresora(NetworkStream stream, Dictionary<string, string> headers)
+        {
+            byte[] body;
+            if (!ServidorHttp.LeerCuerpo(stream, headers, Estado.MaxConfigBytes, out body))
+            {
+                return;
+            }
+
+            Dictionary<string, object> datos;
+            string nombre;
+            if (!LeerCuerpoJson(body, out datos) || !LeerTexto(datos, "nombre", out nombre))
+            {
+                ServidorHttp.ResponderError(stream, 400, "Falta el nombre de la impresora.");
+                return;
+            }
+
+            nombre = nombre.Trim();
+            if (nombre.Length == 0 || nombre.Length > 200)
+            {
+                ServidorHttp.ResponderError(stream, 400, "El nombre de la impresora no es valido.");
+                return;
+            }
+
+            // Solo se acepta una impresora que exista: evita tokens de nombre
+            // mal tipeados que despues no imprimen nada y nadie sabe por que.
+            string errorLista;
+            var impresoras = RawPrinter.ListarImpresoras(out errorLista);
+            var existe = false;
+            if (impresoras != null)
+            {
+                foreach (var info in impresoras)
+                {
+                    if (string.Equals(info.Nombre, nombre, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existe = true;
+                        nombre = info.Nombre; // nombre exacto tal como lo devuelve Windows
+                        break;
+                    }
+                }
+            }
+
+            if (!existe)
+            {
+                ServidorHttp.ResponderError(stream, 400,
+                    "La impresora '" + nombre + "' no aparece instalada en Windows. Toca Refrescar y elegila de la lista.");
+                return;
+            }
+
+            Estado.Impresora = nombre;
+            Estado.GuardarConfiguracion();
+            Estado.Log("Impresora configurada desde el panel: '" + nombre + "'.");
+
+            var respuesta = new StringBuilder();
+            respuesta.Append("{\"ok\":true");
+            respuesta.Append(",\"impresora\":\"").Append(ServidorHttp.EscapeJson(nombre)).Append("\"");
+            respuesta.Append("}");
+            ServidorHttp.ResponderJson(stream, 200, respuesta.ToString());
+        }
+
+        public static void DefinirPredeterminada(NetworkStream stream, Dictionary<string, string> headers)
+        {
+            byte[] body;
+            if (!ServidorHttp.LeerCuerpo(stream, headers, Estado.MaxConfigBytes, out body))
+            {
+                return;
+            }
+
+            Dictionary<string, object> datos;
+            string nombre;
+            if (!LeerCuerpoJson(body, out datos) || !LeerTexto(datos, "nombre", out nombre))
+            {
+                ServidorHttp.ResponderError(stream, 400, "Falta el nombre de la impresora.");
+                return;
+            }
+
+            string error;
+            if (!RawPrinter.DefinirPredeterminada(nombre.Trim(), out error))
+            {
+                ServidorHttp.ResponderError(stream, 500, error);
+                return;
+            }
+
+            Estado.Log("Predeterminada de Windows definida desde el panel: '" + nombre.Trim() + "'.");
+            ServidorHttp.ResponderJson(stream, 200,
+                "{\"ok\":true,\"predeterminada\":\"" + ServidorHttp.EscapeJson(nombre.Trim()) + "\"}");
+        }
+
+        public static void ResponderPrueba(NetworkStream stream)
+        {
+            string error;
+            if (ApiPos.ImprimirPrueba(out error))
+            {
+                ServidorHttp.ResponderJson(stream, 200,
+                    "{\"ok\":true,\"mensaje\":\"Prueba enviada a la impresora.\"}");
+                return;
+            }
+
+            ServidorHttp.ResponderError(stream, 500, error);
+        }
+
+        public static void ResponderSanar(NetworkStream stream)
+        {
+            try
+            {
+                Sanador.SolicitarSanacion();
+                ServidorHttp.ResponderJson(stream, 200,
+                    "{\"ok\":true,\"mensaje\":\"Acepta el permiso de administrador: el sanador repara el servicio de impresion y cierra.\"}");
+            }
+            catch (Exception ex)
+            {
+                Estado.Log("Sanacion rechazada o fallida: " + ex.Message);
+                ServidorHttp.ResponderError(stream, 500,
+                    "No se pudo iniciar la sanacion: " + ex.Message + ". Cancelaste el permiso de administrador?");
+            }
+        }
+
+        public static void ResponderSpooler(NetworkStream stream)
+        {
+            var codigo = RawPrinter.EstadoServicioSpooler();
+            var respuesta = new StringBuilder();
+            respuesta.Append("{\"ok\":true");
+            respuesta.Append(",\"codigo\":").Append(codigo.ToString(CultureInfo.InvariantCulture));
+            respuesta.Append(",\"corriendo\":").Append(codigo == 4 ? "true" : "false");
+            respuesta.Append(",\"estado\":\"").Append(ServidorHttp.EscapeJson(RawPrinter.DescribirServicioSpooler())).Append("\"");
+            respuesta.Append("}");
+            ServidorHttp.ResponderJson(stream, 200, respuesta.ToString());
+        }
+
+        public static void GuardarAjustes(NetworkStream stream, Dictionary<string, string> headers)
+        {
+            byte[] body;
+            if (!ServidorHttp.LeerCuerpo(stream, headers, Estado.MaxConfigBytes, out body))
+            {
+                return;
+            }
+
+            Dictionary<string, object> datos;
+            if (!LeerCuerpoJson(body, out datos))
+            {
+                ServidorHttp.ResponderError(stream, 400, "JSON invalido.");
+                return;
+            }
+
+            object nodo;
+            if (datos.TryGetValue("autoSanar", out nodo))
+            {
+                Estado.AutoSanar = Convert.ToBoolean(nodo, CultureInfo.InvariantCulture);
+            }
+
+            Estado.GuardarConfiguracion();
+            Estado.Log("Ajustes guardados desde el panel (autoSanar=" + (Estado.AutoSanar ? "1" : "0") + ").");
+            ServidorHttp.ResponderJson(stream, 200,
+                "{\"ok\":true,\"autoSanar\":" + (Estado.AutoSanar ? "true" : "false") + "}");
+        }
+
+        private static bool LeerCuerpoJson(byte[] body, out Dictionary<string, object> datos)
+        {
+            datos = null;
+            if (body == null || body.Length == 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                var serializer = new JavaScriptSerializer();
+                datos = serializer.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(body));
+                return datos != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool LeerTexto(Dictionary<string, object> datos, string clave, out string valor)
+        {
+            valor = null;
+            object nodo;
+            if (datos == null || !datos.TryGetValue(clave, out nodo) || nodo == null)
+            {
+                return false;
+            }
+
+            valor = Convert.ToString(nodo, CultureInfo.InvariantCulture);
+            return !string.IsNullOrEmpty(valor);
+        }
+    }
+}

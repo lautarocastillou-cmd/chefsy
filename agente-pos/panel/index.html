@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agente POS - Panel</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Inyectado por el agente al servir /panel. Navegacion local unicamente. -->
+    <script>window.__AGENTE_POS__ = { token: '__TOKEN__', puerto: '__PUERTO__' };</script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

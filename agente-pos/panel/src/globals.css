@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens shadcn/ui, paleta oscura con acento naranja Chefsy. */
+@layer base {
+  :root {
+    --background: 222 32% 6%;
+    --foreground: 220 22% 93%;
+    --card: 220 26% 10%;
+    --card-foreground: 220 22% 93%;
+    --popover: 220 26% 10%;
+    --popover-foreground: 220 22% 93%;
+    --primary: 26 100% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 16%;
+    --secondary-foreground: 220 22% 93%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 12% 66%;
+    --accent: 220 20% 16%;
+    --accent-foreground: 220 22% 93%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 18% 20%;
+    --input: 220 18% 20%;
+    --ring: 26 100% 55%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}

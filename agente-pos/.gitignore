@@ -1,0 +1,17 @@
+# Artefactos de compilacion y distribucion (se regeneran con publicar.ps1)
+build/
+dist/
+
+# Build del panel (React + shadcn/ui)
+panel/node_modules/
+panel/dist/
+
+# Configuracion local y logs (nunca commitear: contienen el token)
+config.ini
+agent.log
+sanador.log
+tipografia.json
+LEEME.txt
+*.nuevo.exe
+*.exe.bak
+actualizar.cmd
