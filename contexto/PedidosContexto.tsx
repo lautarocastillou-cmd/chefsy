@@ -209,19 +209,25 @@ export function obtenerCamposDeTiempoParaEstado(
     en_camino_at = null
     entregado_at = null
   } else if (nuevoEstado === 'listo') {
-    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
+    // Si venía de "nuevo", el tiempo acumulado es el de espera (N).
+    // Congelarlo con cocina_at = ahora evita que el timer N vuelva a 00:00.
+    if (!cocina_at) cocina_at = pedidoActual.estado === 'nuevo' ? ahora : (pedidoActual.created_at || ahora)
     if (!listo_at) listo_at = ahora
     en_camino_at = null
     entregado_at = null
   } else if (nuevoEstado === 'en_camino') {
-    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
-    if (!listo_at) listo_at = cocina_at || ahora
+    if (!cocina_at) cocina_at = pedidoActual.estado === 'nuevo' ? ahora : (pedidoActual.created_at || ahora)
+    // No usar cocina_at como listo_at: eso dejaba el timer C en 00:00
+    // cuando se copiaba el link de seguimiento desde "Nuevo" o "En Cocina".
+    if (!listo_at) listo_at = ahora
     if (!en_camino_at) en_camino_at = ahora
     entregado_at = null
   } else if (nuevoEstado === 'entregado' || nuevoEstado === 'cancelado') {
-    if (!cocina_at) cocina_at = pedidoActual.created_at || ahora
-    if (!listo_at) listo_at = cocina_at || ahora
-    if (pedidoActual.tipoEntrega === 'delivery' && !en_camino_at) en_camino_at = listo_at || ahora
+    if (!cocina_at) cocina_at = pedidoActual.estado === 'nuevo' ? ahora : (pedidoActual.created_at || ahora)
+    if (!listo_at) listo_at = ahora
+    // El viaje empieza ahora, no en listo_at: así el timer L conserva
+    // el tiempo que el pedido estuvo realmente en "Listo".
+    if (pedidoActual.tipoEntrega === 'delivery' && !en_camino_at) en_camino_at = ahora
     if (!entregado_at) entregado_at = ahora
   }
 

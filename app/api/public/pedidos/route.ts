@@ -176,9 +176,29 @@ export async function POST(request: Request) {
 
     const { data: pedidoPrevio } = await supabase
       .from('pedidos')
-      .select('estado, cadete_id')
+      .select('estado, cadete_id, created_at, cocina_at, listo_at, en_camino_at, entregado_at')
       .eq('id', id)
       .single()
+
+    // No pisar marcas de tiempo ya guardadas si la app reenvía el mismo
+    // estado (por ejemplo, un reintento de red). Sin esto, el cronómetro
+    // del viaje volvía a 00:00 en cada reenvío.
+    if (estado === 'en_camino') {
+      if (pedidoPrevio?.estado === 'en_camino' && pedidoPrevio.en_camino_at) {
+        updatePayload.en_camino_at = pedidoPrevio.en_camino_at
+      }
+      // Completar etapas anteriores para que los timers N/C no desaparezcan.
+      if (!pedidoPrevio?.cocina_at) {
+        updatePayload.cocina_at = pedidoPrevio?.created_at || new Date().toISOString()
+      }
+      if (!pedidoPrevio?.listo_at) {
+        updatePayload.listo_at = new Date().toISOString()
+      }
+    } else if (estado === 'listo' && pedidoPrevio?.estado === 'listo' && pedidoPrevio.listo_at) {
+      updatePayload.listo_at = pedidoPrevio.listo_at
+    } else if (estado === 'entregado' && pedidoPrevio?.estado === 'entregado' && pedidoPrevio.entregado_at) {
+      updatePayload.entregado_at = pedidoPrevio.entregado_at
+    }
 
     if (estado === 'en_camino' && pedidoPrevio?.cadete_id) {
       const { data: cadeteInfo } = await supabase

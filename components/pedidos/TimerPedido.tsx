@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Pedido } from '@/tipos'
-import { parsearFechaHora, calcularDiferenciaSegundos, formatearSegundos } from '@/lib/tiempo'
+import { parsearFechaHora, formatearSegundos } from '@/lib/tiempo'
 import { cn } from '@/lib/utils'
 import { useRelojGlobal } from '@/hooks/useRelojGlobal'
 
@@ -40,18 +40,20 @@ const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaComplet
 
   const tCocina = React.useMemo(() => parsearFechaMs(pedido.cocina_at), [pedido.cocina_at])
   const tListo = React.useMemo(() => parsearFechaMs(pedido.listo_at), [pedido.listo_at])
+  const tEnCamino = React.useMemo(() => parsearFechaMs(pedido.en_camino_at), [pedido.en_camino_at])
   const tEntregado = React.useMemo(() => parsearFechaMs(pedido.entregado_at), [pedido.entregado_at])
 
   // ── 1. Temporizador: NUEVO ──────────────────────────────
   let finNuevoMs = ahoraMs
   if (tCocina) finNuevoMs = tCocina
   else if (tListo) finNuevoMs = tListo
+  else if (tEnCamino) finNuevoMs = tEnCamino
   else if (tEntregado) finNuevoMs = tEntregado
   else if (pedido.estado !== 'nuevo') {
     finNuevoMs = tCreacion
   }
   const segNuevo = Math.max(0, Math.floor((finNuevoMs - tCreacion) / 1000))
-  const estaNuevoTicking = !tCocina && !tListo && !tEntregado && pedido.estado === 'nuevo'
+  const estaNuevoTicking = !tCocina && !tListo && !tEnCamino && !tEntregado && pedido.estado === 'nuevo'
 
   // ── 2. Temporizador: COCINA ──────────────────────────────
   const showCocina = !!tCocina || pedido.estado === 'en_cocina'
@@ -61,12 +63,13 @@ const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaComplet
     const inicioCocina = tCocina || tCreacion
     let finCocina = ahoraMs
     if (tListo) finCocina = tListo
+    else if (tEnCamino) finCocina = tEnCamino
     else if (tEntregado) finCocina = tEntregado
     else if (pedido.estado !== 'en_cocina') {
       finCocina = inicioCocina
     }
     segCocina = Math.max(0, Math.floor((finCocina - inicioCocina) / 1000))
-    estaCocinaTicking = !tListo && !tEntregado && pedido.estado === 'en_cocina'
+    estaCocinaTicking = !tListo && !tEnCamino && !tEntregado && pedido.estado === 'en_cocina'
   }
 
   // ── 3. Temporizador: LISTO ──────────────────────
@@ -76,12 +79,16 @@ const TimerPedido = React.memo(function TimerPedido({ pedido, mostrarFilaComplet
   if (showListo) {
     const inicioListo = tListo || tCocina || tCreacion
     let finListo = ahoraMs
-    if (tEntregado) finListo = tEntregado
+    // El tiempo en "Listo" termina cuando el cadete sale (en_camino_at),
+    // no cuando se entrega. Si no lo congelamos ahí, al pasar a "En Camino"
+    // el contador se reiniciaba a 00:00.
+    if (tEnCamino) finListo = tEnCamino
+    else if (tEntregado) finListo = tEntregado
     else if (pedido.estado !== 'listo') {
       finListo = inicioListo
     }
     segListo = Math.max(0, Math.floor((finListo - inicioListo) / 1000))
-    estaListoTicking = !tEntregado && pedido.estado === 'listo'
+    estaListoTicking = !tEnCamino && !tEntregado && pedido.estado === 'listo'
   }
 
   // Detección de atraso ultra liviana

@@ -94,6 +94,11 @@ const CAMPOS_PERMITIDOS_PEDIDO = [
   'observaciones',
   'hora',
   'fecha',
+  'created_at',
+  'cocina_at',
+  'listo_at',
+  'en_camino_at',
+  'entregado_at',
   'pago_confirmado',
   'cadete_id',
   'cadete_nombre',
@@ -309,6 +314,25 @@ async function procesarPOST(request: Request) {
           archivado: false,
         }
 
+        // Persistir las marcas de tiempo del ciclo de vida desde el momento
+        // de creación. Antes se descartaban y, al recargar, los timers de la
+        // tarjeta arrancaban desde cero. Si el cliente ya las envía (por
+        // ejemplo, un pedido creado offline), se respetan.
+        const ahora = new Date().toISOString()
+        if (!payload.created_at) payload.created_at = ahora
+
+        if (payload.estado === 'en_cocina' && !payload.cocina_at) {
+          payload.cocina_at = ahora
+        } else if (payload.estado === 'listo' || payload.estado === 'en_camino' || payload.estado === 'entregado') {
+          if (!payload.cocina_at) payload.cocina_at = ahora
+          if (!payload.listo_at) payload.listo_at = ahora
+          if (payload.estado === 'en_camino' && !payload.en_camino_at) payload.en_camino_at = ahora
+          if (payload.estado === 'entregado') {
+            if (payload.tipoEntrega === 'delivery' && !payload.en_camino_at) payload.en_camino_at = ahora
+            if (!payload.entregado_at) payload.entregado_at = ahora
+          }
+        }
+
         // 1. Ejecutar transacción de puntos si aplica (solo para pedidos reales, nunca en turnos de prueba)
         const esPedidoPrueba = Boolean(payload.es_prueba) || payload.turno_tipo === 'prueba'
         if (!esPedidoPrueba && payload.cliente_id && (payload.puntos_gastados > 0 || payload.puntos_ganados > 0)) {
@@ -418,9 +442,28 @@ async function procesarPOST(request: Request) {
         // Obtener estado anterior para evitar doble descuento y obtener cadete_id
         const { data: pedidoPrevio } = await supabaseAdmin
           .from('pedidos')
-          .select('estado, cadete_id')
+          .select('estado, cadete_id, created_at, cocina_at, listo_at, en_camino_at, entregado_at')
           .eq('id', id)
           .single()
+
+        // Si el cliente no envía las marcas de tiempo (o la app reintenta el
+        // mismo estado), preservarlas/completarlas en vez de reiniciar los
+        // cronómetros de la tarjeta a 00:00.
+        if (estado === 'en_camino') {
+          if (
+            en_camino_at === undefined &&
+            pedidoPrevio?.estado === 'en_camino' &&
+            pedidoPrevio.en_camino_at
+          ) {
+            updatePayload.en_camino_at = pedidoPrevio.en_camino_at
+          }
+          if (updatePayload.cocina_at == null && !pedidoPrevio?.cocina_at) {
+            updatePayload.cocina_at = pedidoPrevio?.created_at || new Date().toISOString()
+          }
+          if (updatePayload.listo_at == null && !pedidoPrevio?.listo_at) {
+            updatePayload.listo_at = new Date().toISOString()
+          }
+        }
 
         if (estado === 'en_camino' && pedidoPrevio?.cadete_id) {
           const { data: cadeteInfo } = await supabaseAdmin
