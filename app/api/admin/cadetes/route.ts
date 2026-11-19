@@ -32,19 +32,35 @@ export async function GET() {
       gpsMap.set(String(c.id || '').toLowerCase(), c)
     }
 
+    // Umbral para considerar que un cadete está "en vivo" (reportó GPS recientemente).
+    // Debe coincidir con el criterio de /api/admin/torre-control (180 s) para que el
+    // selector de cadetes de pedidos y la pantalla /cadeteria muestren el mismo estado.
+    const UMBRAL_ONLINE_SEG = 180
+    const ahora = Date.now()
+
     // 3. Mapear con información de turno / GPS
     const cadetes = (usuarios || []).map((u: any) => {
       const infoGps = gpsMap.get(String(u.usuario || '').toLowerCase())
-      const gpsActivo = Boolean(infoGps?.gps_activo)
+      const updatedAt = infoGps?.updated_at ? new Date(infoGps.updated_at).getTime() : 0
+      const haceSegundos = updatedAt ? (ahora - updatedAt) / 1000 : 999999
+      const numLat = infoGps?.lat != null ? Number(infoGps.lat) : null
+      const numLng = infoGps?.lng != null ? Number(infoGps.lng) : null
+      const tieneCoordsValidas =
+        numLat !== null && numLng !== null && Number.isFinite(numLat) && Number.isFinite(numLng)
+      // Online si reportó en los últimos 3 minutos, gps_activo es true y tiene coordenadas válidas.
+      // Solo leer el booleano de la BD (como se hacía antes) muestra online a cadetes que
+      // dejaron de emitir posición hace rato, lo que desincronizaba el selector con /cadeteria.
+      const gpsActivo = Boolean(infoGps?.gps_activo && haceSegundos < UMBRAL_ONLINE_SEG && tieneCoordsValidas)
 
       return {
         id: u.usuario,
         nombre: u.nombre,
         gps_activo: gpsActivo,
         online: gpsActivo,
+        segundos_offline: updatedAt ? Math.floor(haceSegundos) : null,
         bateria: infoGps?.bateria ?? null,
-        lat: infoGps?.lat ?? null,
-        lng: infoGps?.lng ?? null,
+        lat: tieneCoordsValidas ? numLat : null,
+        lng: tieneCoordsValidas ? numLng : null,
         updated_at: infoGps?.updated_at ?? null,
       }
     })
