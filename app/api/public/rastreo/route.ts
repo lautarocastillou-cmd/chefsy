@@ -184,51 +184,22 @@ export async function GET(request: Request) {
         const fechaHoy = data.fecha || new Date().toISOString().slice(0, 10)
 
         // Pedidos activos del cadete
-        const pedidosActivos = pedidosCadete.filter(
+        // Solo los pedidos pendientes forman el recorrido actual. Una entrega
+        // ya finalizada no debe conservar un número de parada ni hacer que el
+        // único domicilio pendiente parezca la tercera parada del viaje.
+        const pedidosPendientes = pedidosCadete.filter(
           (p) => ['en_cocina', 'listo', 'en_camino'].includes(p.estado)
         )
 
-        // Pedidos entregados en este mismo viaje/turno
-        const pedidosEntregadosRecientes = pedidosCadete.filter((p) => {
-          if (p.estado !== 'entregado') return false
-          if (p.fecha && p.fecha !== fechaHoy) return false
-
-          const entregadoMs = p.entregado_at ? new Date(p.entregado_at).getTime() : 0
-          if (!entregadoMs) return false
-
-          // Entregado en los últimos 90 minutos
-          if (ahora - entregadoMs > 90 * 60 * 1000) return false
-
-          // Si data tiene orden_entrega manual y p tiene orden_entrega manual:
-          if (data.orden_entrega != null && p.orden_entrega != null) {
-            return Number(p.orden_entrega) < Number(data.orden_entrega)
-          }
-
-          // Si este pedido tiene referencia de tiempo de salida o creación:
-          const refInicioTrip = data.en_camino_at
-            ? new Date(data.en_camino_at).getTime()
-            : (data.created_at ? new Date(data.created_at).getTime() : 0)
-
-          if (refInicioTrip > 0) {
-            if (entregadoMs < refInicioTrip - 20 * 60 * 1000) {
-              return false
-            }
-          }
-
-          return true
-        })
-
-        // Unificar pedidos del viaje garantizando que data esté incluido y sin duplicados
-        const mapaTodos = new Map<string, any>()
-        pedidosEntregadosRecientes.forEach((p) => mapaTodos.set(p.id, p))
-        pedidosActivos.forEach((p) => mapaTodos.set(p.id, p))
-        mapaTodos.set(data.id, {
+        const mapaPendientes = new Map<string, any>()
+        pedidosPendientes.forEach((p) => mapaPendientes.set(p.id, p))
+        mapaPendientes.set(data.id, {
           ...data,
           coordenadas: data.coordenadas,
           orden_entrega: data.orden_entrega,
         })
 
-        const todosDelViaje = Array.from(mapaTodos.values())
+        const todosDelViaje = Array.from(mapaPendientes.values())
         totalParadas = todosDelViaje.length
 
         // Ordenar la cola de entregas:

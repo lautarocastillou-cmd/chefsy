@@ -457,7 +457,7 @@ export default function MapaSeguimiento({ pedido }: Props) {
             }
           </div>
           <div style="margin-top:2px;background:${esEntregado ? '#065F46' : '#1e40af'};color:#ffffff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.25);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #ffffff;letter-spacing:0.2px;">
-            ${pedido.cliente || 'Tu Domicilio'} ${totalParadas > 1 && !esEntregado ? `(Parada ${paradaActual})` : ''} ${esEntregado ? '(Entregado ✓)' : ''}
+            ${pedido.cliente || 'Tu Domicilio'} ${totalParadas > 1 && paradasPrevias > 0 && !esEntregado ? `(Parada ${paradaActual})` : ''} ${esEntregado ? '(Entregado ✓)' : ''}
           </div>
         </div>
       `,

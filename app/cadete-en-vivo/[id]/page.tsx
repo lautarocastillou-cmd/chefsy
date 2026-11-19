@@ -417,9 +417,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
                     ? (previosEntregados > 0
                         ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado!`
                         : `¡${cadeteNombre} en viaje con paradas!`)
-                    : (totalPrevios > 0 && previosEntregados >= totalPrevios
-                        ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado!`
-                        : `¡${cadeteNombre} en camino!`))
+                    : `¡${cadeteNombre} en camino!`)
                 : cadeteOcupadoEnOtroViaje
                 ? `¡${cadeteNombre} en otra entrega!`
                 : isEnPreparacion
@@ -656,9 +654,7 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-xs font-black text-emerald-300">
-              {totalPrevios > 0 && previosEntregados >= totalPrevios
-                ? `¡Pedido ${previosEntregados} de ${totalPrevios} entregado! Va directo a tu casa`
-                : `¡${cadeteNombre} va directo a tu casa!`}
+              ¡{cadeteNombre} va directo a tu domicilio!
             </h3>
             <p className="text-[11px] text-emerald-200/90">Tu domicilio es el próximo destino en su recorrido.</p>
           </div>
