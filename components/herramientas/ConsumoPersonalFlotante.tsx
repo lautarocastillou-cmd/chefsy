@@ -80,19 +80,43 @@ export default function ConsumoPersonalFlotante() {
   const [filtroPersona, setFiltroPersona] = useState('todos')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendientes' | 'saldados'>('pendientes')
 
+  // Nombres de personas que ya no trabajan (se excluyen de sugerencias y deudas activas,
+  // pero se conservan sus consumos históricos)
+  const [nombresExcluidos, setNombresExcluidos] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('chefsy-consumos-excluidos') || '[]'))
+    } catch {
+      return new Set()
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('chefsy-consumos-excluidos', JSON.stringify(Array.from(nombresExcluidos)))
+  }, [nombresExcluidos])
+
   const selectorRef = useRef<HTMLDivElement>(null)
 
-  // Nombres sugeridos (cadetes + nombres frecuentes en consumos)
+  // Nombres sugeridos (cadetes activos + nombres frecuentes en consumos, sin excluidos)
   const nombresSugeridos = useMemo(() => {
     const setNombres = new Set<string>()
     cadetes.forEach((c) => {
-      if (c.nombre) setNombres.add(c.nombre.trim())
+      if (c.nombre && !nombresExcluidos.has(c.nombre.trim())) setNombres.add(c.nombre.trim())
     })
     consumos.forEach((c) => {
-      if (c.persona_nombre) setNombres.add(c.persona_nombre.trim())
+      if (c.persona_nombre && !nombresExcluidos.has(c.persona_nombre.trim())) setNombres.add(c.persona_nombre.trim())
     })
     return Array.from(setNombres).slice(0, 8)
-  }, [cadetes, consumos])
+  }, [cadetes, consumos, nombresExcluidos])
+
+  // Alternar exclusión de una persona (no borra sus consumos, solo la oculta del día a día)
+  const toggleExcluirPersona = (nombre: string) => {
+    setNombresExcluidos((prev) => {
+      const siguiente = new Set(prev)
+      if (siguiente.has(nombre)) siguiente.delete(nombre)
+      else siguiente.add(nombre)
+      return siguiente
+    })
+  }
 
   // Producto seleccionado actualmente
   const productoSeleccionado = useMemo(() => {
@@ -622,7 +646,7 @@ export default function ConsumoPersonalFlotante() {
                         <span>Deudas Pendientes por Empleado:</span>
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {deudasPorPersona.map((d) => (
+                        {deudasPorPersona.filter((d) => !nombresExcluidos.has(d.persona)).map((d) => (
                           <div
                             key={d.persona}
                             className="p-3 rounded-xl bg-slate-50 dark:bg-[#252525] border border-slate-200 dark:border-[#333] flex items-center justify-between gap-2"
@@ -652,6 +676,14 @@ export default function ConsumoPersonalFlotante() {
                               className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                             >
                               Saldar Sueldo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleExcluirPersona(d.persona)}
+                              className="px-2 py-1.5 bg-slate-100 dark:bg-[#333] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#444] rounded-lg text-[10px] font-bold transition-colors cursor-pointer whitespace-nowrap"
+                              title="Ocultar esta persona (no borra sus consumos)"
+                            >
+                              Excluir
                             </button>
                           </div>
                         ))}
