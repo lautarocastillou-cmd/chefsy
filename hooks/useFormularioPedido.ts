@@ -18,6 +18,10 @@ import {
 
 export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
 
+const limpiarTelefonoParaFormulario = (telefono: string | null | undefined): string => {
+  return telefono === 'Sin especificar' ? '' : telefono || ''
+}
+
 export interface BorradorPedido {
   cliente: string
   telefono: string
@@ -136,7 +140,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   useEffect(() => {
     if (pedidoInicial) {
       setCliente(pedidoInicial.cliente)
-      setTelefono(pedidoInicial.telefono)
+      setTelefono(limpiarTelefonoParaFormulario(pedidoInicial.telefono))
       setTipoEntrega(pedidoInicial.tipoEntrega)
       if (pedidoInicial.direccion) setDireccion(pedidoInicial.direccion)
       if (pedidoInicial.coordenadas) setCoordenadas(pedidoInicial.coordenadas)
@@ -335,9 +339,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   // 5. Acciones
   const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
     setCliente(sug.nombre)
-    if (sug.telefono && sug.telefono !== 'Sin especificar') {
-      setTelefono(sug.telefono)
-    }
+    setTelefono(limpiarTelefonoParaFormulario(sug.telefono))
     if (sug.tipoEntrega && ['delivery', 'retiro', 'consumo_local'].includes(sug.tipoEntrega)) {
       manejarTipoEntrega(sug.tipoEntrega as TipoEntrega)
     }
@@ -358,9 +360,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const aplicarDatosCRM = () => {
     if (clienteEncontrado) {
       setCliente(clienteEncontrado.cliente)
-      if (clienteEncontrado.telefono && clienteEncontrado.telefono !== 'Sin especificar') {
-        setTelefono(clienteEncontrado.telefono)
-      }
+      setTelefono(limpiarTelefonoParaFormulario(clienteEncontrado.telefono))
       manejarTipoEntrega(clienteEncontrado.tipoEntrega)
       if (clienteEncontrado.tipoEntrega === 'delivery') {
         if (clienteEncontrado.direccion) setDireccion(clienteEncontrado.direccion)
@@ -663,7 +663,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     if (!borradorGuardado) return
 
     setCliente(borradorGuardado.cliente || '')
-    setTelefono(borradorGuardado.telefono || '')
+    setTelefono(limpiarTelefonoParaFormulario(borradorGuardado.telefono))
     setTipoEntrega(borradorGuardado.tipoEntrega || 'delivery')
     setDireccion(borradorGuardado.direccion || '')
     setCoordenadas(borradorGuardado.coordenadas || null)
