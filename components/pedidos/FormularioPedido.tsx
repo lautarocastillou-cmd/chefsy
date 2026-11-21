@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Pedido, MetodoPago } from '@/tipos'
 import CampoUbicacion from '@/components/ubicacion/CampoUbicacion'
 import SeccionProductosPedido from '@/components/productos/SeccionProductosPedido'
@@ -9,7 +10,7 @@ import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2, X, MapPin } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { formatearTelefonoArgentino } from '@/lib/motor-clientes'
+import { formatearTelefonoArgentino, moverIndiceSugerencia, obtenerMotivoCoincidencia } from '@/lib/motor-clientes'
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -21,11 +22,12 @@ interface PropsFormularioPedido {
 }
 
 export default function FormularioPedido({ 
-  pedidoInicial, 
-  onClose, 
+  pedidoInicial,
+  onClose,
   conHeaderModal = false 
 }: PropsFormularioPedido = {}) {
   const router = useRouter()
+  const [indiceSugerenciaActiva, setIndiceSugerenciaActiva] = React.useState(-1)
   
   useEscapeKey(() => {
     if (onClose) onClose()
@@ -46,7 +48,7 @@ export default function FormularioPedido({
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
       setObservaciones, setFilasProductos, setEnvioManual, setCostoEnvioManualInput,
       setMontoEfectivo, setMontoTransferencia, setMontoTarjeta,
-      setMostrarDropdownSugerencias
+      setMostrarDropdownSugerencias, cambiarClienteManual, cambiarTelefonoManual, cambiarDireccionManual
     },
     derivados: { 
       subtotal, pideDireccion, costoEnvioFinal, total 
@@ -56,6 +58,9 @@ export default function FormularioPedido({
       guardarBorrador, restaurarBorrador, descartarBorrador
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
+
+  const motivoCoincidencia = obtenerMotivoCoincidencia({ nombre: cliente, telefono, direccion })
+  const puedeMostrarSinCoincidencias = autocompletadoHabilitado && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
 
   return (
     <div data-formulario-pedido="true" className="w-full max-w-6xl mx-auto flex flex-col flex-1">
@@ -201,10 +206,37 @@ export default function FormularioPedido({
                 <input
                   type="text"
                   value={cliente}
-                  onChange={(e) => setCliente(e.target.value)}
+                  onChange={(e) => {
+                    setIndiceSugerenciaActiva(-1)
+                    cambiarClienteManual(e.target.value)
+                  }}
+                  onKeyDown={(e) => {
+                    if (!autocompletadoHabilitado || sugerenciasActivas.length === 0) return
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setMostrarDropdownSugerencias(true)
+                      setIndiceSugerenciaActiva(i => moverIndiceSugerencia(i, sugerenciasActivas.length, 1))
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setMostrarDropdownSugerencias(true)
+                      setIndiceSugerenciaActiva(i => moverIndiceSugerencia(i, sugerenciasActivas.length, -1))
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const indice = indiceSugerenciaActiva >= 0 ? indiceSugerenciaActiva : 0
+                      seleccionarSugerenciaCliente(sugerenciasActivas[indice])
+                      setIndiceSugerenciaActiva(-1)
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setMostrarDropdownSugerencias(false)
+                      setIndiceSugerenciaActiva(-1)
+                    }
+                  }}
                   onFocus={() => {
                     if (autocompletadoHabilitado && sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
                   }}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={autocompletadoHabilitado && mostrarDropdownSugerencias && sugerenciasActivas.length > 0}
                   placeholder="Ej: Juan García"
                   className={claseInput}
                 />
@@ -215,6 +247,9 @@ export default function FormularioPedido({
                     <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1.5 text-chefsy-600 dark:text-chefsy-400">
                         <Sparkles size={12} /> Clientes sugeridos
+                      </span>
+                      <span className="text-[10px] font-normal text-slate-400 dark:text-slate-500 hidden sm:inline">
+                        ↑↓ elegir · Enter cargar · Esc cerrar
                       </span>
                       <button
                         type="button"
@@ -228,8 +263,13 @@ export default function FormularioPedido({
                       <button
                         key={`${sug.nombre}-${sug.telefono}-${idx}`}
                         type="button"
-                        onClick={() => seleccionarSugerenciaCliente(sug)}
-                        className="w-full px-3.5 py-2.5 flex items-start gap-3 text-left hover:bg-chefsy-50/80 dark:hover:bg-slate-800/80 transition-colors group cursor-pointer"
+                        aria-selected={idx === indiceSugerenciaActiva}
+                        onMouseEnter={() => setIndiceSugerenciaActiva(idx)}
+                        onClick={() => {
+                          seleccionarSugerenciaCliente(sug)
+                          setIndiceSugerenciaActiva(-1)
+                        }}
+                        className={`w-full px-3.5 py-2.5 flex items-start gap-3 text-left transition-colors group cursor-pointer ${idx === indiceSugerenciaActiva ? 'bg-chefsy-50 dark:bg-slate-800' : 'hover:bg-chefsy-50/80 dark:hover:bg-slate-800/80'}`}
                       >
                         <div className="w-8 h-8 rounded-full bg-chefsy-100 dark:bg-chefsy-950 text-chefsy-700 dark:text-chefsy-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                           {sug.nombre.slice(0, 2).toUpperCase()}
@@ -269,7 +309,7 @@ export default function FormularioPedido({
                 <input
                   type="tel"
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  onChange={(e) => cambiarTelefonoManual(e.target.value)}
                   placeholder="381-555-0000"
                   className={claseInput}
                 />
@@ -291,17 +331,23 @@ export default function FormularioPedido({
                     </div>
                     <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
                     <span className="block text-[10px] opacity-80 mt-1 truncate w-full">
-                      Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
+                      {motivoCoincidencia} · Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
                     </span>
                   </button>
                 )}
               </div>
 
+              {puedeMostrarSinCoincidencias && !mostrarDropdownSugerencias && (
+                <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+                  No encontramos un cliente registrado con esos datos. Podés continuar como cliente nuevo.
+                </p>
+              )}
+
               {pideDireccion ? (
                 <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 mt-4">
                   <CampoUbicacion
                     direccion={direccion}
-                    onDireccionChange={setDireccion}
+                    onDireccionChange={cambiarDireccionManual}
                     coordenadas={coordenadas}
                     onCoordenadasChange={setCoordenadas}
                     claseInput={claseInput}

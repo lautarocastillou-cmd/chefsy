@@ -13,7 +13,8 @@ import useSWR from 'swr'
 import {
   SugerenciaCliente,
   buscarClientesConFiltros,
-  normalizarTelefonoArgentino
+  normalizarTelefonoArgentino,
+  obtenerClaveCliente
 } from '@/lib/motor-clientes'
 
 export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
@@ -55,6 +56,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [clienteEncontrado, setClienteEncontrado] = useState<Pedido | null>(null)
   const [sugerenciasActivas, setSugerenciasActivas] = useState<SugerenciaCliente[]>([])
   const [mostrarDropdownSugerencias, setMostrarDropdownSugerencias] = useState(false)
+
+  const clienteConfirmadoRef = useRef<string | null>(null)
 
   // Cargar lista de sugerencias del servidor (cacheada)
   const { data: sugerenciasDb } = useSWR<SugerenciaCliente[]>(
@@ -296,6 +299,13 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     const buscarPor = queryNom.length > 0 ? 'nombre' : 'telefono'
     const terminoBusqueda = buscarPor === 'nombre' ? queryNom : queryTel
 
+    if (clienteConfirmadoRef.current) {
+      setSugerenciasActivas([])
+      setMostrarDropdownSugerencias(false)
+      setClienteEncontrado(null)
+      return
+    }
+
     // Mientras se escribe el nombre, no usamos un teléfono viejo como filtro.
     // El campo activo es la fuente de verdad para evitar clientes ajenos.
     if (!terminoBusqueda) {
@@ -339,10 +349,27 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     } else {
       setClienteEncontrado(null)
     }
-  }, [cliente, telefono, indiceClientes, pedidoInicial, autocompletadoHabilitado])
+  }, [cliente, telefono, direccion, indiceClientes, pedidoInicial, autocompletadoHabilitado])
 
   // 5. Acciones
+  const cambiarClienteManual = (valor: string) => {
+    clienteConfirmadoRef.current = null
+    setCliente(valor)
+  }
+
+  const cambiarTelefonoManual = (valor: string) => {
+    clienteConfirmadoRef.current = null
+    setTelefono(valor)
+  }
+
+  const cambiarDireccionManual = (valor: string) => {
+    clienteConfirmadoRef.current = null
+    setDireccion(valor)
+  }
+
   const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
+    clienteConfirmadoRef.current = obtenerClaveCliente(sug)
+
     setCliente(sug.nombre)
     setTelefono(limpiarTelefonoParaFormulario(sug.telefono))
     if (sug.tipoEntrega && ['delivery', 'retiro', 'consumo_local'].includes(sug.tipoEntrega)) {
@@ -364,6 +391,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   const aplicarDatosCRM = () => {
     if (clienteEncontrado) {
+      clienteConfirmadoRef.current = obtenerClaveCliente({
+        id: clienteEncontrado.id === 'crm-match' ? undefined : clienteEncontrado.id,
+        nombre: clienteEncontrado.cliente,
+        telefono: clienteEncontrado.telefono,
+        telefonoNormalizado: normalizarTelefonoArgentino(clienteEncontrado.telefono),
+      })
       setCliente(clienteEncontrado.cliente)
       setTelefono(limpiarTelefonoParaFormulario(clienteEncontrado.telefono))
       manejarTipoEntrega(clienteEncontrado.tipoEntrega)
@@ -718,7 +751,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
       setObservaciones, setFilasProductos, setEnvioManual: manejarSetEnvioManual, setCostoEnvioManualInput,
       setMontoEfectivo, setMontoTransferencia, setMontoTarjeta,
-      setMostrarDropdownSugerencias
+      setMostrarDropdownSugerencias, cambiarClienteManual, cambiarTelefonoManual, cambiarDireccionManual
     },
     derivados: {
       subtotal, pideDireccion, costoEnvioFinal, total

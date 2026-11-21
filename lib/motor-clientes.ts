@@ -311,6 +311,52 @@ export function buscarClientesConFiltros(
 }
 
 /**
+ * Clave estable para mantener seleccionada una sugerencia después de que
+ * React vuelva a ejecutar la búsqueda.
+ */
+export function obtenerClaveCliente(cliente: SugerenciaCliente): string {
+  return cliente.id || cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono) || limpiarNombre(cliente.nombre)
+}
+
+export function clienteCoincideConConfirmacion(
+  cliente: SugerenciaCliente,
+  claveConfirmada: string | null | undefined,
+): boolean {
+  return Boolean(claveConfirmada && obtenerClaveCliente(cliente) === claveConfirmada)
+}
+
+export function datosCoincidenConConfirmacion(
+  cliente: SugerenciaCliente,
+  datos: { nombre?: string; telefono?: string; direccion?: string },
+): boolean {
+  const nombreConsulta = limpiarNombre(datos.nombre)
+  const telefonoConsulta = normalizarTelefonoArgentino(datos.telefono)
+  const direccionConsulta = limpiarNombre(datos.direccion)
+  const nombreCoincide = !nombreConsulta || limpiarNombre(cliente.nombre) === nombreConsulta
+  const telefonoCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+  const telefonoCoincide = !telefonoConsulta || telefonoCliente === telefonoConsulta
+  const direccionCliente = limpiarNombre(cliente.direccion)
+  const direccionCoincide = !direccionConsulta || direccionCliente === direccionConsulta
+  return nombreCoincide && telefonoCoincide && direccionCoincide
+}
+
+export function obtenerMotivoCoincidencia(filtros: { nombre?: string; telefono?: string; direccion?: string }): string {
+  const tieneNombre = Boolean(filtros.nombre?.trim())
+  const tieneTelefono = Boolean(normalizarTelefonoArgentino(filtros.telefono))
+  const tieneDireccion = Boolean(limpiarNombre(filtros.direccion).length >= 3)
+  if (tieneNombre && tieneTelefono) return 'Nombre y teléfono'
+  if (tieneNombre && tieneDireccion) return 'Nombre y dirección'
+  if (tieneTelefono) return 'Teléfono exacto'
+  if (tieneDireccion) return 'Dirección'
+  return 'Coincide en el nombre'
+}
+
+export function moverIndiceSugerencia(indice: number, total: number, direccion: -1 | 1): number {
+  if (total <= 0) return -1
+  return (indice + direccion + total) % total
+}
+
+/**
  * Configura una instancia Fuse.js conservando búsquedas existentes de CRM.
  * Las búsquedas del formulario nuevo usan buscarClientesPorCampo para no
  * mezclar campos distintos.
