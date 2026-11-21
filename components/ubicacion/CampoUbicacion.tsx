@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Coordenadas } from '@/tipos'
-import { 
-  crearEnlaceGoogleMaps, 
+import {
   formatearCoordenadas,
   buscarSugerenciasDireccion,
   SugerenciaDireccion,
@@ -14,6 +13,7 @@ import {
 } from '@/lib/ubicacion'
 import { buscarSugerenciasLocales } from '@/lib/geo/matcher'
 import ModalSelectorUbicacion from './ModalSelectorUbicacion'
+import ModalVistaUbicacion from './ModalVistaUbicacion'
 import { MapPin, Pencil, Check } from 'lucide-react'
 
 interface PropsCampoUbicacion {
@@ -36,6 +36,7 @@ export default function CampoUbicacion({
   distanciaKm,
 }: PropsCampoUbicacion) {
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [vistaMapaAbierta, setVistaMapaAbierta] = useState(false)
 
   // Autocomplete
   const [sugerencias, setSugerencias] = useState<SugerenciaDireccion[]>([])
@@ -367,14 +368,21 @@ export default function CampoUbicacion({
             {distanciaKm !== undefined && distanciaKm > 0 && (
               <p className="mt-0.5 text-chefsy-700 font-medium text-[11px] uppercase tracking-wide">Distancia al local: <span className="font-bold text-chefsy-900">{distanciaKm} km</span></p>
             )}
-            <a
-              href={crearEnlaceGoogleMaps(coordenadas)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-chefsy-700 underline mt-0.5 inline-block"
+            <button
+              type="button"
+              onClick={() => setVistaMapaAbierta(true)}
+              className="text-chefsy-700 underline mt-0.5 inline-block cursor-pointer"
             >
               Ver en mapa
-            </a>
+            </button>
+            {vistaMapaAbierta && (
+              <ModalVistaUbicacion
+                coordenadas={coordenadas}
+                direccion={direccion}
+                distanciaKm={distanciaKm}
+                onClose={() => setVistaMapaAbierta(false)}
+              />
+            )}
           </div>
         </div>
       )}
