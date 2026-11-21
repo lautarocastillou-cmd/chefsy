@@ -203,6 +203,7 @@ export function buscarClientesPorCampo(
   clientes: SugerenciaCliente[],
   consulta: string,
   campo: 'nombre' | 'telefono',
+  limite = 4,
 ): SugerenciaCliente[] {
   const termino = campo === 'nombre'
     ? limpiarNombre(consulta)
@@ -264,7 +265,49 @@ export function buscarClientesPorCampo(
       a.indice - b.indice
     ))
 
-  return resultados.slice(0, 4).map(resultado => resultado.cliente)
+  return resultados.slice(0, limite).map(resultado => resultado.cliente)
+}
+
+export interface FiltrosBusquedaCliente {
+  nombre?: string
+  telefono?: string
+  direccion?: string
+}
+
+/**
+ * Busca por nombre, teléfono y dirección como filtros independientes.
+ * Cuando hay más de un filtro válido, todos deben coincidir en el mismo cliente.
+ */
+export function buscarClientesConFiltros(
+  clientes: SugerenciaCliente[],
+  filtros: FiltrosBusquedaCliente,
+): SugerenciaCliente[] {
+  const nombre = filtros.nombre?.trim() || ''
+  const telefono = filtros.telefono?.trim() || ''
+  const direccion = filtros.direccion?.trim() || ''
+
+  const resultadosNombre = nombre
+    ? buscarClientesPorCampo(clientes, nombre, 'nombre', clientes.length)
+    : clientes
+
+  const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
+  const usaTelefono = telefonoNormalizado.length >= 3
+  const direccionNormalizada = limpiarNombre(direccion)
+  const usaDireccion = direccionNormalizada.length >= 3
+
+  return resultadosNombre.filter(cliente => {
+    if (usaTelefono) {
+      const telefonoCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+      if (!telefonoCliente.includes(telefonoNormalizado)) return false
+    }
+
+    if (usaDireccion) {
+      const direccionCliente = limpiarNombre(cliente.direccion)
+      if (!direccionCliente.includes(direccionNormalizada)) return false
+    }
+
+    return true
+  })
 }
 
 /**

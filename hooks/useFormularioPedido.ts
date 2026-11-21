@@ -12,7 +12,7 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import useSWR from 'swr'
 import {
   SugerenciaCliente,
-  buscarClientesPorCampo,
+  buscarClientesConFiltros,
   normalizarTelefonoArgentino
 } from '@/lib/motor-clientes'
 
@@ -305,7 +305,11 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return
     }
 
-    const resultados = buscarClientesPorCampo(indiceClientes, terminoBusqueda, buscarPor)
+    const resultados = buscarClientesConFiltros(indiceClientes, {
+      nombre: queryNom,
+      telefono: queryTel,
+      direccion,
+    })
     setSugerenciasActivas(resultados)
     setMostrarDropdownSugerencias(resultados.length > 0)
 
