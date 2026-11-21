@@ -14,7 +14,8 @@ import {
   SugerenciaCliente,
   buscarClientesConFiltros,
   normalizarTelefonoArgentino,
-  obtenerClaveCliente
+  obtenerClaveCliente,
+  obtenerNivelCoincidencia,
 } from '@/lib/motor-clientes'
 
 export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
@@ -326,12 +327,11 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     // Un match difuso por nombre solo se muestra como sugerencia. El aviso
     // "Cliente registrado" queda reservado para teléfono exacto o nombre exacto.
     const mejor = resultados[0]
-    const nombreExacto = mejor && buscarPor === 'nombre'
-      ? mejor.nombre.trim().toLocaleLowerCase() === queryNom.trim().toLocaleLowerCase()
-      : false
-    const telefonoExacto = Boolean(mejor && queryTel && mejor.telefonoNormalizado === queryTel)
+    const nivelCoincidencia = mejor
+      ? obtenerNivelCoincidencia(mejor, { nombre: queryNom, telefono: queryTel })
+      : null
 
-    if (mejor && (nombreExacto || telefonoExacto)) {
+    if (mejor && nivelCoincidencia === 'exacta') {
       setClienteEncontrado({
         id: mejor.id || 'crm-match',
         cliente: mejor.nombre,

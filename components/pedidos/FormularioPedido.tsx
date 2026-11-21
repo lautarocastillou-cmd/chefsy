@@ -28,6 +28,7 @@ export default function FormularioPedido({
 }: PropsFormularioPedido = {}) {
   const router = useRouter()
   const [indiceSugerenciaActiva, setIndiceSugerenciaActiva] = React.useState(-1)
+  const [sugerenciasCerradasManualmente, setSugerenciasCerradasManualmente] = React.useState(false)
   
   useEscapeKey(() => {
     if (onClose) onClose()
@@ -208,10 +209,11 @@ export default function FormularioPedido({
                   value={cliente}
                   onChange={(e) => {
                     setIndiceSugerenciaActiva(-1)
+                    setSugerenciasCerradasManualmente(false)
                     cambiarClienteManual(e.target.value)
                   }}
                   onKeyDown={(e) => {
-                    if (!autocompletadoHabilitado || sugerenciasActivas.length === 0) return
+                    if (!autocompletadoHabilitado || !mostrarDropdownSugerencias || sugerenciasActivas.length === 0) return
                     if (e.key === 'ArrowDown') {
                       e.preventDefault()
                       setMostrarDropdownSugerencias(true)
@@ -232,7 +234,7 @@ export default function FormularioPedido({
                     }
                   }}
                   onFocus={() => {
-                    if (autocompletadoHabilitado && sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
+                    if (!sugerenciasCerradasManualmente && autocompletadoHabilitado && sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
                   }}
                   role="combobox"
                   aria-autocomplete="list"
@@ -253,7 +255,10 @@ export default function FormularioPedido({
                       </span>
                       <button
                         type="button"
-                        onClick={() => setMostrarDropdownSugerencias(false)}
+                        onClick={() => {
+                          setSugerenciasCerradasManualmente(true)
+                          setMostrarDropdownSugerencias(false)
+                        }}
                         className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] cursor-pointer"
                       >
                         Cerrar

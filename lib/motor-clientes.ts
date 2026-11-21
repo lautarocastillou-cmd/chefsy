@@ -274,6 +274,25 @@ export interface FiltrosBusquedaCliente {
   direccion?: string
 }
 
+export type NivelCoincidenciaCliente = 'exacta' | 'debil'
+
+/**
+ * Distingue el aviso de cliente registrado de una sugerencia aproximada.
+ * Solo nombre completo o teléfono completo confirman una coincidencia.
+ */
+export function obtenerNivelCoincidencia(
+  cliente: SugerenciaCliente,
+  filtros: FiltrosBusquedaCliente,
+): NivelCoincidenciaCliente {
+  const nombre = limpiarNombre(filtros.nombre)
+  const telefono = normalizarTelefonoArgentino(filtros.telefono)
+  const nombreExacto = Boolean(nombre && limpiarNombre(cliente.nombre) === nombre)
+  const telefonoCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+  const telefonoExacto = Boolean(telefono && telefonoCliente === telefono)
+
+  return nombreExacto || telefonoExacto ? 'exacta' : 'debil'
+}
+
 export interface CuentaClienteFuente {
   id?: string
   nombre?: string | null
@@ -356,7 +375,6 @@ export function consolidarSugerenciasClientes(
 
   return Array.from(mapa.values())
     .sort((a, b) => (b.totalPedidos || 0) - (a.totalPedidos || 0))
-    .slice(0, 1000)
 }
 
 /**
@@ -400,7 +418,7 @@ export function buscarClientesConFiltros(
  * React vuelva a ejecutar la búsqueda.
  */
 export function obtenerClaveCliente(cliente: SugerenciaCliente): string {
-  return cliente.id || cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono) || limpiarNombre(cliente.nombre)
+  return cliente.id || normalizarTelefonoArgentino(cliente.telefono) || cliente.telefonoNormalizado || limpiarNombre(cliente.nombre)
 }
 
 export function clienteCoincideConConfirmacion(
