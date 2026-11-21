@@ -274,6 +274,91 @@ export interface FiltrosBusquedaCliente {
   direccion?: string
 }
 
+export interface CuentaClienteFuente {
+  id?: string
+  nombre?: string | null
+  telefono?: string | null
+}
+
+export interface PedidoClienteFuente {
+  cliente?: string | null
+  telefono?: string | null
+  direccion?: string | null
+  coordenadas?: { latitud: number; longitud: number } | null
+  metodoPago?: string | null
+  tipoEntrega?: string | null
+  created_at?: string | null
+}
+
+/**
+ * Consolida cuentas formales y todo el historial de pedidos en un único índice.
+ * El orden más reciente gana para dirección, coordenadas y preferencias.
+ */
+export function consolidarSugerenciasClientes(
+  cuentas: CuentaClienteFuente[],
+  pedidos: PedidoClienteFuente[],
+): SugerenciaCliente[] {
+  const mapa = new Map<string, SugerenciaCliente>()
+  const clave = (nombre: string | null | undefined, telefono: string | null | undefined) => {
+    const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
+    return telefonoNormalizado || `nombre:${limpiarNombre(nombre)}`
+  }
+
+  for (const cuenta of cuentas) {
+    const nombre = cuenta.nombre?.trim()
+    if (!nombre) continue
+    const telefono = cuenta.telefono || ''
+    const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
+    mapa.set(clave(nombre, telefono), {
+      id: cuenta.id,
+      nombre,
+      telefono,
+      telefonoNormalizado,
+      totalPedidos: 0,
+    })
+  }
+
+  const pedidosOrdenados = [...pedidos]
+    .filter(p => Boolean(p.cliente?.trim() && p.cliente.trim().length >= 2))
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+
+  for (const pedido of pedidosOrdenados) {
+    const nombre = pedido.cliente!.trim()
+    const telefono = pedido.telefono || ''
+    const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
+    const clavePedido = clave(nombre, telefono)
+    const existente = mapa.get(clavePedido)
+
+    if (existente) {
+      existente.totalPedidos = (existente.totalPedidos || 0) + 1
+      if (!existente.direccion && pedido.direccion) {
+        existente.direccion = pedido.direccion
+        existente.coordenadas = pedido.coordenadas || null
+      }
+      if (!existente.metodoPago && pedido.metodoPago) existente.metodoPago = pedido.metodoPago
+      if (!existente.tipoEntrega && pedido.tipoEntrega) existente.tipoEntrega = pedido.tipoEntrega
+      if (!existente.ultimaFecha && pedido.created_at) existente.ultimaFecha = pedido.created_at
+      continue
+    }
+
+    mapa.set(clavePedido, {
+      nombre,
+      telefono,
+      telefonoNormalizado,
+      direccion: pedido.direccion || '',
+      coordenadas: pedido.coordenadas || null,
+      metodoPago: pedido.metodoPago || 'efectivo',
+      tipoEntrega: pedido.tipoEntrega || 'delivery',
+      totalPedidos: 1,
+      ultimaFecha: pedido.created_at || undefined,
+    })
+  }
+
+  return Array.from(mapa.values())
+    .sort((a, b) => (b.totalPedidos || 0) - (a.totalPedidos || 0))
+    .slice(0, 1000)
+}
+
 /**
  * Busca por nombre, teléfono y dirección como filtros independientes.
  * Cuando hay más de un filtro válido, todos deben coincidir en el mismo cliente.
