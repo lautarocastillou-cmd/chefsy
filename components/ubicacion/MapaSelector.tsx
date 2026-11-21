@@ -54,6 +54,7 @@ export default function MapaSelector({
 
       try {
         mapa = L.map(contenedorRef.current, {
+          // Canvas se mantiene para optimizar el renderizado de Leaflet.
           preferCanvas: true,
           center: [posicionInicial.latitud, posicionInicial.longitud],
           zoom: coordenadas ? 17 : 14,
@@ -63,8 +64,13 @@ export default function MapaSelector({
         return
       }
 
+      // Registrar el mapa inmediatamente. Si el modal se desmonta mientras
+      // Leaflet está configurando las capas, la limpieza debe poder removerlo.
+      mapaRef.current = mapa
+
       if (estaDesmontadoRef.current) {
         mapa.remove()
+        mapaRef.current = null
         return
       }
 
