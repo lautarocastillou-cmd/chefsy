@@ -194,21 +194,6 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   }, [pedidoInicial, productos, categorias])
 
 
-  // 2. CRM Express
-  useEffect(() => {
-    const telLimpio = telefono.replace(/\D/g, '')
-    if (telLimpio.length >= 6) {
-      const match = pedidos.find(p => p.telefono.replace(/\D/g, '') === telLimpio)
-      if (match) {
-        setClienteEncontrado(match)
-      } else {
-        setClienteEncontrado(null)
-      }
-    } else {
-      setClienteEncontrado(null)
-    }
-  }, [telefono, pedidos])
-
   // 3. Cálculos Derivados con Blindaje de Envío
   const subtotal = calcularTotalFilas(filasProductos)
   const pideDireccion = requiereDireccion(tipoEntrega)
@@ -247,43 +232,24 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     return () => controller.abort()
   }, [coordenadas, pideDireccion, envioManual])
 
-  // ── Índice Fuse.js en memoria que combina sugerencias del servidor con pedidos activos ──
+  // Índice único provisto por la API: cuentas formales + historial completo.
+  // Los pedidos locales se incorporan solo como fallback mientras carga la API.
   const indiceClientes = React.useMemo(() => {
-    const mapa = new Map<string, SugerenciaCliente>()
-
-    if (Array.isArray(sugerenciasDb)) {
-      sugerenciasDb.forEach(s => {
-        const key = s.telefonoNormalizado || s.nombre.toLowerCase().trim()
-        mapa.set(key, { ...s })
-      })
+    if (Array.isArray(sugerenciasDb) && sugerenciasDb.length > 0) {
+      return sugerenciasDb
     }
 
-    if (Array.isArray(pedidos)) {
-      pedidos.forEach(p => {
-        if (!p.cliente || p.cliente.trim().length < 2) return
-        const telNorm = normalizarTelefonoArgentino(p.telefono)
-        const key = telNorm || p.cliente.toLowerCase().trim()
-        const existente = mapa.get(key)
-        if (existente) {
-          if (!existente.direccion && p.direccion) {
-            existente.direccion = p.direccion
-            existente.coordenadas = p.coordenadas
-          }
-        } else {
-          mapa.set(key, {
-            nombre: p.cliente.trim(),
-            telefono: p.telefono || '',
-            telefonoNormalizado: telNorm,
-            direccion: p.direccion || '',
-            coordenadas: p.coordenadas || null,
-            metodoPago: p.metodoPago || 'efectivo',
-            tipoEntrega: p.tipoEntrega || 'delivery',
-          })
-        }
-      })
-    }
-
-    return Array.from(mapa.values())
+    return pedidos
+      .filter(p => Boolean(p.cliente && p.cliente.trim().length >= 2))
+      .map(p => ({
+        nombre: p.cliente.trim(),
+        telefono: p.telefono || '',
+        telefonoNormalizado: normalizarTelefonoArgentino(p.telefono),
+        direccion: p.direccion || '',
+        coordenadas: p.coordenadas || null,
+        metodoPago: p.metodoPago || 'efectivo',
+        tipoEntrega: p.tipoEntrega || 'delivery',
+      }))
   }, [sugerenciasDb, pedidos])
 
   // ── Búsqueda reactiva en tiempo real al escribir Nombre o Celular ──────────
@@ -318,7 +284,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
     const resultados = buscarClientesConFiltros(indiceClientes, {
       nombre: queryNom,
-      telefono: queryTel,
+      telefono: buscarPor === 'telefono' ? queryTel : '',
       direccion,
     })
     setSugerenciasActivas(resultados)
@@ -328,7 +294,10 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     // "Cliente registrado" queda reservado para teléfono exacto o nombre exacto.
     const mejor = resultados[0]
     const nivelCoincidencia = mejor
-      ? obtenerNivelCoincidencia(mejor, { nombre: queryNom, telefono: queryTel })
+      ? obtenerNivelCoincidencia(mejor, {
+          nombre: buscarPor === 'nombre' ? queryNom : '',
+          telefono: buscarPor === 'telefono' ? queryTel : '',
+        })
       : null
 
     if (mejor && nivelCoincidencia === 'exacta') {
