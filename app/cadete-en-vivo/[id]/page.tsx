@@ -4,6 +4,7 @@ import { use, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Pedido } from '@/tipos'
 import { CANAL_PEDIDOS, crearClienteEscucha } from '@/lib/pedidos-broadcast'
+import { debeMostrarDestinoDirecto } from '@/lib/rastreo-estado'
 import { formatearPrecio, extraerIdPedido } from '@/lib/utils'
 import { resolverDireccionHumana, esEnlaceOCoordenadas } from '@/lib/ubicacion'
 import { limpiarPedidoActivo, guardarPedidoActivo, leerTodosPedidosActivos } from '@/components/tienda/BotonPedidoFlotante'
@@ -647,7 +648,12 @@ export default function CadeteEnVivoPage({ params }: { params: Promise<{ id: str
             </p>
           </div>
         </div>
-      ) : esProximaEntrega && isEnCamino && !gpsApagado ? (
+      ) : debeMostrarDestinoDirecto({
+        estado: pedido.estado,
+        esProximaEntrega,
+        gpsActivo: !gpsApagado,
+        tieneCoordenadasCadete: Boolean(pedido.cadete_coordenadas),
+      }) ? (
         <div className="bg-emerald-950 text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-500/30 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <Bike size={22} />

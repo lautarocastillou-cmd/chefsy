@@ -158,7 +158,10 @@ export async function GET(request: Request) {
     let totalPrevios = 0
     let previosEntregados = 0
     let cadeteOcupadoEnOtroViaje = false
-    let esProximaEntrega = true
+    // No afirmar que va directo hasta confirmar la cola real del cadete.
+    // Si la consulta de pedidos del viaje falla o no devuelve datos, ocultamos
+    // el mensaje antes que mostrar una promesa incorrecta al cliente.
+    let esProximaEntrega = false
 
     let itinerarioParadas: Array<{
       id: string
@@ -248,7 +251,7 @@ export async function GET(request: Request) {
           totalPrevios = 0
           previosEntregados = 0
           paradasPrevias = 0
-          esProximaEntrega = true
+          esProximaEntrega = false
           cadeteOcupadoEnOtroViaje = false
         }
 
