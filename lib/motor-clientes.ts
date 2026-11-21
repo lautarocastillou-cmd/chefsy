@@ -195,7 +195,82 @@ export function calcularSimilitudNombres(nombreA: string, nombreB: string): numb
 }
 
 /**
- * Configura una instancia de Fuse.js optimizada para búsqueda difusa de clientes.
+ * Busca clientes usando únicamente el campo que el usuario está completando.
+ * Esto evita que una coincidencia débil en dirección o teléfono aparezca como
+ * sugerencia cuando la búsqueda era por nombre.
+ */
+export function buscarClientesPorCampo(
+  clientes: SugerenciaCliente[],
+  consulta: string,
+  campo: 'nombre' | 'telefono',
+): SugerenciaCliente[] {
+  const termino = campo === 'nombre'
+    ? limpiarNombre(consulta)
+    : normalizarTelefonoArgentino(consulta)
+
+  const minimo = campo === 'nombre' ? 3 : 3
+  if (termino.length < minimo) return []
+
+  const resultados = clientes
+    .map((cliente, indice) => {
+      const valor = campo === 'nombre'
+        ? limpiarNombre(cliente.nombre)
+        : cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+
+      if (!valor) return null
+
+      if (campo === 'nombre') {
+        const palabras = termino.split(' ').filter(Boolean)
+        const palabrasCliente = valor.split(' ').filter(Boolean)
+        const coincidePorPalabra = palabras.every(palabra => {
+          if (palabrasCliente.some(nombre => nombre.includes(palabra))) return true
+
+          // Tolerar un error de tipeo pequeño, pero solo dentro del nombre.
+          // No se usa para teléfono ni dirección: evita falsos positivos.
+          return palabrasCliente.some(nombre => {
+            const distancia = distanciaLevenshtein(palabra, nombre)
+            const maxErrores = palabra.length >= 6 ? 2 : 1
+            return distancia <= maxErrores && distancia / Math.max(palabra.length, nombre.length) <= 0.34
+          })
+        })
+        if (!coincidePorPalabra) return null
+
+        const exacto = valor === termino
+        const empiezaConTermino = valor.startsWith(termino)
+        const posicion = valor.indexOf(termino)
+        return {
+          cliente,
+          indice,
+          prioridad: exacto ? 0 : empiezaConTermino ? 1 : 2,
+          distancia: Math.max(0, valor.length - termino.length),
+          posicion,
+        }
+      }
+
+      if (valor !== termino && !valor.includes(termino)) return null
+      return {
+        cliente,
+        indice,
+        prioridad: valor === termino ? 0 : 1,
+        distancia: Math.max(0, valor.length - termino.length),
+        posicion: valor.indexOf(termino),
+      }
+    })
+    .filter((resultado): resultado is NonNullable<typeof resultado> => resultado !== null)
+    .sort((a, b) => (
+      a.prioridad - b.prioridad ||
+      a.distancia - b.distancia ||
+      a.posicion - b.posicion ||
+      a.indice - b.indice
+    ))
+
+  return resultados.slice(0, 4).map(resultado => resultado.cliente)
+}
+
+/**
+ * Configura una instancia Fuse.js conservando búsquedas existentes de CRM.
+ * Las búsquedas del formulario nuevo usan buscarClientesPorCampo para no
+ * mezclar campos distintos.
  */
 export function crearIndiceBuscadorClientes(clientes: SugerenciaCliente[]): Fuse<SugerenciaCliente> {
   return new Fuse(clientes, {
@@ -204,7 +279,7 @@ export function crearIndiceBuscadorClientes(clientes: SugerenciaCliente[]): Fuse
       { name: 'telefonoNormalizado', weight: 0.25 },
       { name: 'direccion', weight: 0.1 }
     ],
-    threshold: 0.38, // Balance óptimo entre tolerancia a typos y precisión
+    threshold: 0.38,
     includeScore: true,
     minMatchCharLength: 2,
     shouldSort: true,
