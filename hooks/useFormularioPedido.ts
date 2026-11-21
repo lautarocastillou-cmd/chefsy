@@ -12,7 +12,7 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import useSWR from 'swr'
 import {
   SugerenciaCliente,
-  crearIndiceBuscadorClientes,
+  buscarClientesPorCampo,
   normalizarTelefonoArgentino
 } from '@/lib/motor-clientes'
 
@@ -279,7 +279,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       })
     }
 
-    return crearIndiceBuscadorClientes(Array.from(mapa.values()))
+    return Array.from(mapa.values())
   }, [sugerenciasDb, pedidos])
 
   // ── Búsqueda reactiva en tiempo real al escribir Nombre o Celular ──────────
@@ -292,11 +292,12 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
 
     const queryNom = (cliente || '').trim()
-    const queryTel = normalizarTelefonoArgentino(telefono) || (telefono || '').trim()
+    const queryTel = normalizarTelefonoArgentino(telefono)
+    const buscarPor = queryNom.length > 0 ? 'nombre' : 'telefono'
+    const terminoBusqueda = buscarPor === 'nombre' ? queryNom : queryTel
 
-    // Activar sugerencias a partir de 2 letras de nombre o 3 dígitos de celular
-    const terminoBusqueda = queryNom.length >= 2 ? queryNom : (queryTel.length >= 3 ? queryTel : '')
-
+    // Mientras se escribe el nombre, no usamos un teléfono viejo como filtro.
+    // El campo activo es la fuente de verdad para evitar clientes ajenos.
     if (!terminoBusqueda) {
       setSugerenciasActivas([])
       setMostrarDropdownSugerencias(false)
@@ -304,34 +305,34 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return
     }
 
-    const resultados = indiceClientes.search(terminoBusqueda)
-    if (resultados.length > 0) {
-      const top = resultados.slice(0, 4).map(r => r.item)
-      setSugerenciasActivas(top)
-      setMostrarDropdownSugerencias(true)
+    const resultados = buscarClientesPorCampo(indiceClientes, terminoBusqueda, buscarPor)
+    setSugerenciasActivas(resultados)
+    setMostrarDropdownSugerencias(resultados.length > 0)
 
-      const mejor = resultados[0]
-      if (mejor && ((mejor.score !== undefined && mejor.score < 0.3) || (queryTel && mejor.item.telefonoNormalizado === queryTel))) {
-        setClienteEncontrado({
-          id: mejor.item.id || 'crm-match',
-          cliente: mejor.item.nombre,
-          telefono: mejor.item.telefono,
-          direccion: mejor.item.direccion || '',
-          coordenadas: mejor.item.coordenadas || undefined,
-          tipoEntrega: (mejor.item.tipoEntrega as TipoEntrega) || 'delivery',
-          metodoPago: (mejor.item.metodoPago as MetodoPago) || 'efectivo',
-          productos: [],
-          total: 0,
-          estado: 'en_cocina',
-          hora: '',
-          fecha: '',
-        })
-      } else {
-        setClienteEncontrado(null)
-      }
+    // Un match difuso por nombre solo se muestra como sugerencia. El aviso
+    // "Cliente registrado" queda reservado para teléfono exacto o nombre exacto.
+    const mejor = resultados[0]
+    const nombreExacto = mejor && buscarPor === 'nombre'
+      ? mejor.nombre.trim().toLocaleLowerCase() === queryNom.trim().toLocaleLowerCase()
+      : false
+    const telefonoExacto = Boolean(mejor && queryTel && mejor.telefonoNormalizado === queryTel)
+
+    if (mejor && (nombreExacto || telefonoExacto)) {
+      setClienteEncontrado({
+        id: mejor.id || 'crm-match',
+        cliente: mejor.nombre,
+        telefono: mejor.telefono,
+        direccion: mejor.direccion || '',
+        coordenadas: mejor.coordenadas || undefined,
+        tipoEntrega: (mejor.tipoEntrega as TipoEntrega) || 'delivery',
+        metodoPago: (mejor.metodoPago as MetodoPago) || 'efectivo',
+        productos: [],
+        total: 0,
+        estado: 'en_cocina',
+        hora: '',
+        fecha: '',
+      })
     } else {
-      setSugerenciasActivas([])
-      setMostrarDropdownSugerencias(false)
       setClienteEncontrado(null)
     }
   }, [cliente, telefono, indiceClientes, pedidoInicial, autocompletadoHabilitado])
