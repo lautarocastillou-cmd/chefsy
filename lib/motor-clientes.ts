@@ -443,6 +443,136 @@ export function datosCoincidenConConfirmacion(
   return nombreCoincide && telefonoCoincide && direccionCoincide
 }
 
+/**
+ * Calcula un puntaje de calidad (0-100) para una sugerencia de cliente
+ * dada la consulta del usuario. Solo se ponderan los campos que el
+ * usuario efectivamente completó.
+ * - Nombre: 50 puntos (similitud difusa)
+ * - Teléfono: 30 puntos (exacto o incluido)
+ * - Dirección: 20 puntos (exacta o incluida)
+ */
+export function calcularScoreSugerencia(
+  cliente: SugerenciaCliente,
+  filtros: FiltrosBusquedaCliente,
+): number {
+  const nombreConsulta = limpiarNombre(filtros.nombre || '')
+  const telefonoConsulta = normalizarTelefonoArgentino(filtros.telefono || '')
+  const direccionConsulta = limpiarNombre(filtros.direccion || '')
+
+  let puntos = 0
+  let totalCampos = 0
+
+  // Nombre (peso 50)
+  if (nombreConsulta) {
+    totalCampos += 50
+    const sim = calcularSimilitudNombres(cliente.nombre, nombreConsulta)
+    puntos += sim * 50
+  }
+
+  // Teléfono (peso 30)
+  if (telefonoConsulta) {
+    totalCampos += 30
+    const telCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+    if (telCliente === telefonoConsulta) puntos += 30
+    else if (telCliente.includes(telefonoConsulta) || telefonoConsulta.includes(telCliente)) puntos += 15
+  }
+
+  // Dirección (peso 20)
+  if (direccionConsulta) {
+    totalCampos += 20
+    const dirCliente = limpiarNombre(cliente.direccion || '')
+    if (dirCliente === direccionConsulta) puntos += 20
+    else if (dirCliente.includes(direccionConsulta) || direccionConsulta.includes(dirCliente)) puntos += 10
+  }
+
+  if (totalCampos === 0) return 0
+  return Math.round((puntos / totalCampos) * 100)
+}
+
+/**
+ * Filtra sugerencias por un umbral mínimo de calidad.
+ * Solo devuelve clientes cuyo score supere el umbral, ordenados de mayor a menor score.
+ */
+export function filtrarSugerenciasPorCalidad(
+  clientes: SugerenciaCliente[],
+  filtros: FiltrosBusquedaCliente,
+  umbralMinimo = 40,
+): { cliente: SugerenciaCliente; score: number }[] {
+  if (clientes.length === 0) return []
+
+  return clientes
+    .map((c) => ({ cliente: c, score: calcularScoreSugerencia(c, filtros) }))
+    .filter((item) => item.score >= umbralMinimo)
+    .sort((a, b) => b.score - a.score)
+}
+
+/**
+ * Ordena clientes por frecuencia (totalPedidos) y recencia (ultimaFecha).
+ * Los clientes con más pedidos y más recientes van primero.
+ */
+export function ordenarClientesPorFrecuencia(clientes: SugerenciaCliente[]): SugerenciaCliente[] {
+  return [...clientes].sort((a, b) => {
+    const pedidosA = a.totalPedidos || 0
+    const pedidosB = b.totalPedidos || 0
+    if (pedidosB !== pedidosA) return pedidosB - pedidosA
+
+    const fechaA = a.ultimaFecha || ''
+    const fechaB = b.ultimaFecha || ''
+    return fechaB.localeCompare(fechaA)
+  })
+}
+
+/**
+ * Extrae el barrio de una dirección. Toma las palabras después del número
+ * de calle (si lo hay) como candidato a barrio.
+ */
+export function extraerBarrio(direccion: string | null | undefined): string {
+  if (!direccion) return ''
+  const partes = direccion.trim().split(/\s+/)
+  let inicio = 0
+  if (/^\d+/.test(partes[0] || '')) inicio = 1
+  const barrio = partes.slice(inicio, inicio + 2).join(' ').toLowerCase()
+  return limpiarNombre(barrio)
+}
+
+/**
+ * Prepara la lista final de sugerencias para el CRM:
+ * 1. Filtro por calidad mínima (no mostrar clientes al azar)
+ * 2. Agrupamiento estable por barrio (si hay dirección cargada)
+ * 3. Orden por frecuencia y recencia dentro de cada grupo
+ */
+export interface OpcionesPrepararCRM {
+  umbralCalidad?: number
+  priorizarBarrio?: boolean
+}
+
+export function prepararSugerenciasCRM(
+  clientes: SugerenciaCliente[],
+  filtros: FiltrosBusquedaCliente,
+  opciones: OpcionesPrepararCRM = {},
+): SugerenciaCliente[] {
+  const { umbralCalidad = 40, priorizarBarrio = true } = opciones
+
+  // 1. Filtro por calidad (con scores)
+  const conScore = filtrarSugerenciasPorCalidad(clientes, filtros, umbralCalidad)
+
+  // 2. Orden estable por frecuencia antes de agrupar por barrio
+  const ordenadosPorFrecuencia = conScore.map((item) => item.cliente)
+  const porFrecuencia = ordenarClientesPorFrecuencia(ordenadosPorFrecuencia)
+
+  // 3. Si hay dirección, priorizar mismo barrio manteniendo orden relativo
+  if (priorizarBarrio && filtros.direccion?.trim()) {
+    const barrioConsulta = extraerBarrio(filtros.direccion)
+    if (barrioConsulta) {
+      const mismosBarrio = porFrecuencia.filter((c) => extraerBarrio(c.direccion) === barrioConsulta)
+      const otrosBarrio = porFrecuencia.filter((c) => extraerBarrio(c.direccion) !== barrioConsulta)
+      return [...mismosBarrio, ...otrosBarrio]
+    }
+  }
+
+  return porFrecuencia
+}
+
 export function obtenerMotivoCoincidencia(filtros: { nombre?: string; telefono?: string; direccion?: string }): string {
   const tieneNombre = Boolean(filtros.nombre?.trim())
   const tieneTelefono = Boolean(normalizarTelefonoArgentino(filtros.telefono))

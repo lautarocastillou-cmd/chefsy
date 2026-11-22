@@ -43,7 +43,7 @@ export default function FormularioPedido({
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
       sugerenciasActivas, mostrarDropdownSugerencias,
-      autocompletadoHabilitado
+      autocompletadoHabilitado, modoClienteNuevo
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
@@ -55,7 +55,7 @@ export default function FormularioPedido({
       subtotal, pideDireccion, costoEnvioFinal, total 
     },
     acciones: { 
-      aplicarDatosCRM, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
       guardarBorrador, restaurarBorrador, descartarBorrador
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
@@ -236,9 +236,19 @@ export default function FormularioPedido({
                   ))}
                 </div>
               )}
-              {!clienteEncontrado && sugerenciasActivas.length === 0 && puedeMostrarSinCoincidencias && (
-                <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-                  No encontramos un cliente registrado con esos datos. Podés continuar como cliente nuevo.
+              {!clienteEncontrado && sugerenciasActivas.length === 0 && puedeMostrarSinCoincidencias && !modoClienteNuevo && (
+                <button
+                  type="button"
+                  onClick={activarModoClienteNuevo}
+                  className="w-full mt-2 px-3 py-2 flex items-center justify-center gap-2 text-xs font-bold text-chefsy-600 dark:text-chefsy-400 border border-chefsy-200 dark:border-chefsy-900/50 rounded-xl bg-chefsy-50 dark:bg-chefsy-950/20 hover:bg-chefsy-100 dark:hover:bg-chefsy-900/30 transition-colors cursor-pointer"
+                >
+                  <ArrowRight size={14} className="shrink-0" />
+                  Continuar como cliente nuevo
+                </button>
+              )}
+              {modoClienteNuevo && (
+                <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Se cargará como cliente nuevo con los datos ingresados.
                 </p>
               )}
             </div>

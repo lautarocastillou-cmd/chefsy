@@ -12,10 +12,13 @@ import { obtenerFechaNegocio } from '@/lib/tiempo'
 import useSWR from 'swr'
 import {
   SugerenciaCliente,
+  FiltrosBusquedaCliente,
   buscarClientesConFiltros,
   normalizarTelefonoArgentino,
   obtenerClaveCliente,
   obtenerNivelCoincidencia,
+  prepararSugerenciasCRM,
+  calcularScoreSugerencia,
 } from '@/lib/motor-clientes'
 
 export const STORAGE_KEY_BORRADOR_PEDIDO = 'chefsy_borrador_nuevo_pedido'
@@ -59,6 +62,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [mostrarDropdownSugerencias, setMostrarDropdownSugerencias] = useState(false)
 
   const clienteConfirmadoRef = useRef<string | null>(null)
+  const [modoClienteNuevo, setModoClienteNuevo] = useState(false)
 
   // Cargar lista de sugerencias del servidor (cacheada)
   const { data: sugerenciasDb } = useSWR<SugerenciaCliente[]>(
@@ -282,13 +286,24 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return
     }
 
-    const resultados = buscarClientesConFiltros(indiceClientes, {
+    // Usar el preparador inteligente de CRM: filtro por calidad + barrio + frecuencia
+    const filtrosBusqueda: FiltrosBusquedaCliente = {
       nombre: queryNom,
       telefono: buscarPor === 'telefono' ? queryTel : '',
       direccion,
+    }
+
+    const resultados = prepararSugerenciasCRM(indiceClientes, filtrosBusqueda, {
+      umbralCalidad: 40,
+      priorizarBarrio: true,
     })
     setSugerenciasActivas(resultados)
     setMostrarDropdownSugerencias(resultados.length > 0)
+
+    // Si hay resultados de calidad, salir de modo cliente nuevo
+    if (resultados.length > 0) {
+      setModoClienteNuevo(false)
+    }
 
     // Un match difuso por nombre solo se muestra como sugerencia. El aviso
     // "Cliente registrado" queda reservado para teléfono exacto o nombre exacto.
@@ -324,20 +339,24 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const cambiarClienteManual = (valor: string) => {
     clienteConfirmadoRef.current = null
     setCliente(valor)
+    setModoClienteNuevo(false)
   }
 
   const cambiarTelefonoManual = (valor: string) => {
     clienteConfirmadoRef.current = null
     setTelefono(valor)
+    setModoClienteNuevo(false)
   }
 
   const cambiarDireccionManual = (valor: string) => {
     clienteConfirmadoRef.current = null
     setDireccion(valor)
+    setModoClienteNuevo(false)
   }
 
   const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
     clienteConfirmadoRef.current = obtenerClaveCliente(sug)
+    setModoClienteNuevo(false)
 
     setCliente(sug.nombre)
     setTelefono(limpiarTelefonoParaFormulario(sug.telefono))
@@ -355,6 +374,13 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     }
     setMostrarDropdownSugerencias(false)
     setSugerenciasActivas([])
+    setClienteEncontrado(null)
+  }
+
+  const activarModoClienteNuevo = () => {
+    setModoClienteNuevo(true)
+    setSugerenciasActivas([])
+    setMostrarDropdownSugerencias(false)
     setClienteEncontrado(null)
   }
 
@@ -714,7 +740,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
       sugerenciasActivas, mostrarDropdownSugerencias,
-      autocompletadoHabilitado
+      autocompletadoHabilitado, modoClienteNuevo
     },
     setters: {
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago,
@@ -726,7 +752,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       subtotal, pideDireccion, costoEnvioFinal, total
     },
     acciones: {
-      aplicarDatosCRM, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
       guardarBorrador, restaurarBorrador, descartarBorrador
     }
   }
