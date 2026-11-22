@@ -180,11 +180,85 @@ export default function FormularioPedido({
           </div>
         )}
 
-      {/* DISEÑO DE 2 COLUMNAS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      {/* ── DISEÑO DE 3 COLUMNAS: Autocomplete | Cliente | Productos */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-12">
         
-        {/* COLUMNA IZQUIERDA: Entrega y Cliente */}
-        <div className="space-y-8">
+        {/* COLUMNA IZQUIERDA: Autocomplete de clientes */}
+        <div className="lg:col-span-1 space-y-4 min-w-0">
+          <section className="bg-slate-50/50 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 sticky top-4">
+            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400">
+                🔍
+              </span>
+              Clientes sugeridos
+            </h3>
+            <div className="space-y-2">
+              {autocompletadoHabilitado && clienteEncontrado && (
+                <button
+                  type="button"
+                  onClick={aplicarDatosCRM}
+                  className="w-full bg-chefsy-50 hover:bg-chefsy-100 dark:bg-chefsy-950/20 dark:hover:bg-chefsy-900/30 border border-chefsy-200 dark:border-chefsy-900/50 text-chefsy-800 dark:text-chefsy-300 rounded-xl p-3 flex flex-col items-start text-left transition-all shadow-sm active:scale-95 animate-[slideIn_0.2s_ease-out]"
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1 text-chefsy-700 dark:text-chefsy-400">
+                      <Sparkles className="w-3 h-3" /> Cliente registrado
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
+                  <span className="block text-[10px] opacity-80 mt-1 truncate w-full">
+                    {motivoCoincidencia} · Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
+                  </span>
+                </button>
+              )}
+              {!clienteEncontrado && sugerenciasActivas.length > 0 && (
+                <div>
+                  {sugerenciasActivas.map((sug, idx) => (
+                    <button
+                      key={`${sug.nombre}-${sug.telefono}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        seleccionarSugerenciaCliente(sug)
+                        setIndiceSugerenciaActiva(-1)
+                      }}
+                      className={`w-full px-3 py-2 flex items-start gap-2 text-left transition-colors group cursor-pointer rounded-lg border ${idx === indiceSugerenciaActiva ? 'bg-chefsy-50 dark:bg-slate-800 border-chefsy-200' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                    >
+                      <div className="w-6 h-6 rounded-full bg-chefsy-100 dark:bg-chefsy-950 text-chefsy-700 dark:text-chefsy-300 font-black text-[10px] flex items-center justify-center shrink-0">
+                        {sug.nombre.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-600 dark:group-hover:text-chefsy-400">
+                            {sug.nombre}
+                          </span>
+                          {sug.telefono && (
+                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
+                              {formatearTelefonoArgentino(sug.telefono)}
+                            </span>
+                          )}
+                        </div>
+                        {sug.direccion ? (
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {sug.direccion}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] italic opacity-70">Retiro en local</span>
+                        )}
+                      </div>
+                  </button>
+                  ))}
+                </div>
+              )}
+              {!clienteEncontrado && sugerenciasActivas.length === 0 && puedeMostrarSinCoincidencias && (
+                <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+                  No encontramos un cliente registrado con esos datos. Podés continuar como cliente nuevo.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* COLUMNA MEDIO: Entrega y Cliente */}
+        <div className="lg:col-span-2 space-y-8">
           
           <section className="bg-slate-50/50 dark:bg-slate-900/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -233,78 +307,10 @@ export default function FormularioPedido({
                       setIndiceSugerenciaActiva(-1)
                     }
                   }}
-                  onFocus={() => {
-                    if (!sugerenciasCerradasManualmente && autocompletadoHabilitado && sugerenciasActivas.length > 0) setMostrarDropdownSugerencias(true)
-                  }}
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={autocompletadoHabilitado && mostrarDropdownSugerencias && sugerenciasActivas.length > 0}
+
                   placeholder="Ej: Juan García"
                   className={claseInput}
                 />
-
-                {/* Dropdown flotante de sugerencias inteligentes con Fuse.js */}
-                {autocompletadoHabilitado && mostrarDropdownSugerencias && sugerenciasActivas.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-chefsy-300 dark:border-chefsy-800 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1.5 text-chefsy-600 dark:text-chefsy-400">
-                        <Sparkles size={12} /> Clientes sugeridos
-                      </span>
-                      <span className="text-[10px] font-normal text-slate-400 dark:text-slate-500 hidden sm:inline">
-                        ↑↓ elegir · Enter cargar · Esc cerrar
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSugerenciasCerradasManualmente(true)
-                          setMostrarDropdownSugerencias(false)
-                        }}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] cursor-pointer"
-                      >
-                        Cerrar
-                      </button>
-                    </div>
-                    {sugerenciasActivas.map((sug, idx) => (
-                      <button
-                        key={`${sug.nombre}-${sug.telefono}-${idx}`}
-                        type="button"
-                        aria-selected={idx === indiceSugerenciaActiva}
-                        onMouseEnter={() => setIndiceSugerenciaActiva(idx)}
-                        onClick={() => {
-                          seleccionarSugerenciaCliente(sug)
-                          setIndiceSugerenciaActiva(-1)
-                        }}
-                        className={`w-full px-3.5 py-2.5 flex items-start gap-3 text-left transition-colors group cursor-pointer ${idx === indiceSugerenciaActiva ? 'bg-chefsy-50 dark:bg-slate-800' : 'hover:bg-chefsy-50/80 dark:hover:bg-slate-800/80'}`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-chefsy-100 dark:bg-chefsy-950 text-chefsy-700 dark:text-chefsy-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                          {sug.nombre.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-600 dark:group-hover:text-chefsy-400 transition-colors">
-                              {sug.nombre}
-                            </span>
-                            {sug.telefono && (
-                              <span className="text-[11px] font-mono font-medium text-slate-400 dark:text-slate-400 shrink-0">
-                                {formatearTelefonoArgentino(sug.telefono)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            {sug.direccion ? (
-                              <span className="truncate flex items-center gap-1">
-                                <MapPin size={11} className="text-slate-400 shrink-0" />
-                                {sug.direccion}
-                              </span>
-                            ) : (
-                              <span className="italic opacity-70">Retiro en local</span>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div>
@@ -319,34 +325,8 @@ export default function FormularioPedido({
                   className={claseInput}
                 />
                 
-                {/* Alerta de Autocompletado CRM */}
-                {autocompletadoHabilitado && clienteEncontrado && (
-                  <button
-                    type="button"
-                    onClick={aplicarDatosCRM}
-                    className="mt-3 w-full bg-chefsy-50 hover:bg-chefsy-100 dark:bg-chefsy-950/20 dark:hover:bg-chefsy-900/30 border border-chefsy-200 dark:border-chefsy-900/50 text-chefsy-800 dark:text-chefsy-300 rounded-xl p-3 flex flex-col items-start text-left transition-all shadow-sm active:scale-95 animate-[slideIn_0.2s_ease-out]"
-                  >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 text-chefsy-700 dark:text-chefsy-400">
-                        <Sparkles className="w-3.5 h-3.5" /> Cliente registrado
-                      </span>
-                      <span className="text-[9px] font-black bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-sm">
-                        Cargar datos y dirección →
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
-                    <span className="block text-[10px] opacity-80 mt-1 truncate w-full">
-                      {motivoCoincidencia} · Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
-                    </span>
-                  </button>
-                )}
               </div>
 
-              {puedeMostrarSinCoincidencias && !mostrarDropdownSugerencias && (
-                <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-                  No encontramos un cliente registrado con esos datos. Podés continuar como cliente nuevo.
-                </p>
-              )}
 
               {pideDireccion ? (
                 <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 mt-4">
@@ -373,7 +353,7 @@ export default function FormularioPedido({
         </div>
 
         {/* COLUMNA DERECHA: Productos, Pago y Cierre */}
-        <div className="space-y-8">
+        <div className="lg:col-span-1 space-y-8">
           
           <section className="bg-slate-50/50 dark:bg-slate-900/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
