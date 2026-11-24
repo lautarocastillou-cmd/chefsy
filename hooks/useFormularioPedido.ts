@@ -238,7 +238,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   // Índice único provisto por la API: cuentas formales + historial completo.
   // Los pedidos locales se incorporan solo como fallback mientras carga la API.
-  const indiceClientes = React.useMemo(() => {
+  const indiceClientes = React.useMemo<SugerenciaCliente[]>(() => {
     if (Array.isArray(sugerenciasDb) && sugerenciasDb.length > 0) {
       return sugerenciasDb
     }
@@ -749,7 +749,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       setMostrarDropdownSugerencias, cambiarClienteManual, cambiarTelefonoManual, cambiarDireccionManual
     },
     derivados: {
-      subtotal, pideDireccion, costoEnvioFinal, total
+      subtotal, pideDireccion, costoEnvioFinal, total, indiceClientes
     },
     acciones: {
       aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,

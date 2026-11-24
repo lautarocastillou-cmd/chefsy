@@ -184,7 +184,7 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
       {/* ── Modal Flotante Universal de Nuevo Pedido ── */}
       {modalNuevoPedidoAbierto && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 lg:p-6 bg-slate-950/85 transition-opacity duration-200 will-change-opacity animate-in fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               cerrarModalNuevoPedido()
@@ -192,7 +192,7 @@ function ContenidoPrincipal({ children }: { children: React.ReactNode }) {
           }}
         >
           <div 
-            className="bg-white dark:bg-slate-900 border-0 md:border border-slate-200/50 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto scrollbar-hide animate-in zoom-in-95 duration-200 relative flex flex-col" 
+            className="w-full max-w-[1380px] h-full md:h-auto md:max-h-[92vh] flex items-stretch justify-center pointer-events-none relative"
             data-lenis-prevent="true"
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}

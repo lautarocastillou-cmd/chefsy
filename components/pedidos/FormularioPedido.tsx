@@ -8,9 +8,30 @@ import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { Settings, AlertCircle, Sparkles, Check, ArrowRight, PauseCircle, RotateCcw, Trash2, X, MapPin } from 'lucide-react'
+import {
+  Settings,
+  AlertCircle,
+  Sparkles,
+  Check,
+  ArrowRight,
+  PauseCircle,
+  RotateCcw,
+  Trash2,
+  X,
+  MapPin,
+  Search,
+  Users,
+  Phone,
+  UserPlus,
+  ShoppingBag,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { formatearTelefonoArgentino, moverIndiceSugerencia, obtenerMotivoCoincidencia } from '@/lib/motor-clientes'
+import {
+  formatearTelefonoArgentino,
+  moverIndiceSugerencia,
+  obtenerMotivoCoincidencia,
+  prepararSugerenciasCRM,
+} from '@/lib/motor-clientes'
 
 const claseInput =
   'w-full border border-gray-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-chefsy focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-shadow shadow-sm'
@@ -29,6 +50,7 @@ export default function FormularioPedido({
   const router = useRouter()
   const [indiceSugerenciaActiva, setIndiceSugerenciaActiva] = React.useState(-1)
   const [sugerenciasCerradasManualmente, setSugerenciasCerradasManualmente] = React.useState(false)
+  const [busquedaCrm, setBusquedaCrm] = React.useState('')
  
   useEscapeKey(() => {
     if (onClose) onClose()
@@ -52,7 +74,7 @@ export default function FormularioPedido({
       setMostrarDropdownSugerencias, cambiarClienteManual, cambiarTelefonoManual, cambiarDireccionManual
     },
     derivados: { 
-      subtotal, pideDireccion, costoEnvioFinal, total 
+      subtotal, pideDireccion, costoEnvioFinal, total, indiceClientes
     },
     acciones: { 
       aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
@@ -63,213 +85,510 @@ export default function FormularioPedido({
   const motivoCoincidencia = obtenerMotivoCoincidencia({ nombre: cliente, telefono, direccion })
   const puedeMostrarSinCoincidencias = autocompletadoHabilitado && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
 
-  return (
-    <div data-formulario-pedido="true" className="w-full max-w-7xl mx-auto flex flex-col flex-1 gap-4">
+  // Clientes frecuentes ordenados por cantidad de pedidos para mostrar cuando no hay búsqueda activa
+  const clientesFrecuentes = React.useMemo(() => {
+    if (!Array.isArray(indiceClientes) || indiceClientes.length === 0) return []
+    return [...indiceClientes]
+      .filter((c) => c.nombre && c.nombre.trim().length >= 2)
+      .sort((a, b) => (b.totalPedidos || 0) - (a.totalPedidos || 0))
+      .slice(0, 8)
+  }, [indiceClientes])
 
-      {/* ── Header Sticky del Modal (solo cuando se abre en modal) ──── */}
-      {conHeaderModal ? (
-        <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
-          <div className="min-w-0 pr-2">
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-              {pedidoInicial ? 'Editar Pedido' : 'Nuevo Pedido'}
-            </h2>
-            <p className="text-[11px] text-gray-400 dark:text-slate-400 truncate">
-              {pedidoInicial ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}
-            </p>
+  // Resultados del panel CRM: prioriza el buscador propio del CRM, si está vacío refleja la búsqueda del formulario
+  const resultadosCrm = React.useMemo(() => {
+    const q = busquedaCrm.trim()
+    if (q.length > 0) {
+      return prepararSugerenciasCRM(
+        indiceClientes,
+        { nombre: q, telefono: q, direccion: q },
+        { umbralCalidad: 25, priorizarBarrio: false }
+      )
+    }
+    return sugerenciasActivas
+  }, [busquedaCrm, indiceClientes, sugerenciasActivas])
+
+  const hayBusquedaCrm = busquedaCrm.trim().length > 0
+  const hayBusquedaFormulario = cliente.trim().length > 0 || telefono.trim().length > 0
+  const hayBusquedaActiva = hayBusquedaCrm || hayBusquedaFormulario
+  const mostrarPanelCrmSeparado = conHeaderModal && !pedidoInicial && autocompletadoHabilitado
+
+  return (
+    <div
+      data-formulario-pedido="true"
+      className={
+        conHeaderModal
+          ? 'w-full h-full md:h-auto md:max-h-[92vh] flex flex-col lg:flex-row items-stretch justify-center gap-4 xl:gap-5 pointer-events-none'
+          : 'w-full max-w-6xl mx-auto flex flex-col flex-1 gap-4'
+      }
+    >
+      {/* ═══════════════════════════════════════════════════════════════════════
+          PANEL IZQUIERDO INDEPENDIENTE: CRM DE CLIENTES (Desktop)
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {mostrarPanelCrmSeparado && (
+        <aside
+          data-lenis-prevent="true"
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          className="hidden lg:flex lg:flex-col w-[300px] xl:w-[325px] shrink-0 max-h-[90vh] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
+        >
+          {/* Header del Panel CRM */}
+          <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-chefsy/10 dark:bg-chefsy/20 text-chefsy dark:text-chefsy-400 flex items-center justify-center shrink-0">
+                <Users size={16} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight truncate">
+                  Clientes CRM
+                </h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                  Autocompletado rápido
+                </p>
+              </div>
+            </div>
+
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 tabular-nums shrink-0"
+              title="Clientes en historial"
+            >
+              {hayBusquedaActiva ? resultadosCrm.length : indiceClientes.length}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {!pedidoInicial && (
-              <>
-                {borradorGuardado && !borradorActivoCargado && (
-                  <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
-                    <button
-                      type="button"
-                      onClick={restaurarBorrador}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                      title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
-                    >
-                      <RotateCcw size={13} className="shrink-0" />
-                      <span className="hidden sm:inline">Restaurar guardado</span>
-                      <span className="sm:hidden">Restaurar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={descartarBorrador}
-                      className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                      title="Descartar borrador guardado"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                )}
-
+          {/* Buscador Rápido CRM */}
+          <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/30 shrink-0">
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={busquedaCrm}
+                onChange={(e) => setBusquedaCrm(e.target.value)}
+                placeholder="Buscar nombre, tel o dirección..."
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-8 pr-8 py-2 text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-chefsy/40 focus:border-chefsy transition-all"
+              />
+              {busquedaCrm && (
                 <button
                   type="button"
-                  onClick={guardarBorrador}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                  title="Guardar temporalmente los datos cargados"
+                  onClick={() => setBusquedaCrm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+                  aria-label="Limpiar búsqueda CRM"
                 >
-                  <PauseCircle size={14} className="shrink-0" />
-                  <span className="hidden sm:inline">Guardar temporalmente</span>
-                  <span className="sm:hidden">Guardar</span>
+                  <X size={13} />
                 </button>
-              </>
-            )}
+              )}
+            </div>
+          </div>
 
-            {onClose && (
+          {/* Contenido Scrolleable del Panel CRM */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-2.5">
+            {/* Coincidencia Exacta: Cliente Registrado */}
+            {clienteEncontrado && !hayBusquedaCrm && (
               <button
                 type="button"
-                onClick={onClose}
-                className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90 ml-1"
-                title="Cerrar ventana"
+                onClick={aplicarDatosCRM}
+                className="w-full bg-gradient-to-br from-chefsy-50 via-emerald-50/70 to-white dark:from-chefsy-950/50 dark:via-emerald-950/30 dark:to-slate-900 hover:from-chefsy-100/80 dark:hover:from-chefsy-900/40 border border-chefsy-200 dark:border-chefsy-800/70 rounded-2xl p-3.5 flex flex-col items-start text-left transition-all shadow-sm active:scale-[0.98] cursor-pointer group animate-[slideIn_0.2s_ease-out]"
               >
-                <X size={20} />
+                <div className="flex items-center justify-between w-full gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-chefsy-700 dark:text-chefsy-400">
+                    <Sparkles className="w-3 h-3" /> Cliente registrado
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-chefsy text-white group-hover:bg-chefsy-700 transition-colors">
+                    Aplicar
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 w-full">
+                  <div className="w-9 h-9 rounded-xl bg-chefsy text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    {clienteEncontrado.cliente.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 block truncate">
+                      {clienteEncontrado.cliente}
+                    </span>
+                    {clienteEncontrado.telefono && clienteEncontrado.telefono !== 'Sin especificar' && (
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                        <Phone size={10} className="shrink-0 text-chefsy-600 dark:text-chefsy-400" />
+                        {formatearTelefonoArgentino(clienteEncontrado.telefono)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-2.5 pt-2 border-t border-chefsy-200/60 dark:border-chefsy-800/40 w-full flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                  <MapPin size={11} className="shrink-0 text-chefsy-600 dark:text-chefsy-400" />
+                  <span className="truncate">
+                    {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate w-full">
+                  {motivoCoincidencia}
+                </span>
               </button>
             )}
-          </div>
-        </div>
-      ) : (
-        /* Si se renderiza en página estándar sin conHeaderModal (ej: /nuevo-pedido) */
-        !pedidoInicial && (
-          <div className="flex items-center justify-end w-full gap-2 mb-2">
-            {borradorGuardado && !borradorActivoCargado && (
-              <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
-                <button
-                  type="button"
-                  onClick={restaurarBorrador}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
-                  title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
-                >
-                  <RotateCcw size={13} className="shrink-0" />
-                  <span>Restaurar guardado</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={descartarBorrador}
-                  className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                  title="Descartar borrador guardado"
-                >
-                  <Trash2 size={13} />
-                </button>
+
+            {/* Lista de Resultados de Búsqueda */}
+            {resultadosCrm.length > 0 && (hayBusquedaCrm || !clienteEncontrado) && (
+              <div className="space-y-1.5">
+                <div className="px-1 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Coincidencias
+                  </span>
+                  <span className="text-[10px] font-semibold text-chefsy-600 dark:text-chefsy-400">
+                    {resultadosCrm.length} {resultadosCrm.length === 1 ? 'encontrado' : 'encontrados'}
+                  </span>
+                </div>
+                {resultadosCrm.map((sug, idx) => (
+                  <button
+                    key={`${sug.nombre}-${sug.telefono}-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      seleccionarSugerenciaCliente(sug)
+                      setBusquedaCrm('')
+                      setIndiceSugerenciaActiva(-1)
+                    }}
+                    className={`w-full p-2.5 flex items-start gap-2.5 text-left transition-all group cursor-pointer rounded-2xl border ${
+                      !hayBusquedaCrm && idx === indiceSugerenciaActiva
+                        ? 'bg-chefsy-50 dark:bg-chefsy-950/30 border-chefsy-300 dark:border-chefsy-700 shadow-xs'
+                        : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/80 hover:bg-chefsy-50/50 dark:hover:bg-slate-800 hover:border-chefsy-200 dark:hover:border-chefsy-800'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-chefsy/10 dark:bg-chefsy/20 text-chefsy-700 dark:text-chefsy-300 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-chefsy group-hover:text-white transition-colors">
+                      {sug.nombre.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-700 dark:group-hover:text-chefsy-400 transition-colors">
+                          {sug.nombre}
+                        </span>
+                        {sug.totalPedidos && sug.totalPedidos > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0 tabular-nums">
+                            <ShoppingBag size={8} />
+                            {sug.totalPedidos}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {sug.telefono && (
+                        <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                          <Phone size={9} className="shrink-0 opacity-70" />
+                          <span className="truncate">{formatearTelefonoArgentino(sug.telefono)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <MapPin size={9} className="shrink-0 opacity-70" />
+                        {sug.direccion ? (
+                          <span className="truncate">{sug.direccion}</span>
+                        ) : (
+                          <span className="italic opacity-75">Retiro en local</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={guardarBorrador}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-              title="Guardar temporalmente los datos cargados"
-            >
-              <PauseCircle size={14} className="shrink-0" />
-              <span>Guardar temporalmente</span>
-            </button>
-          </div>
-        )
-      )}
+            {/* Estado Sin Coincidencias */}
+            {((hayBusquedaCrm && resultadosCrm.length === 0) ||
+              (!hayBusquedaCrm && !clienteEncontrado && resultadosCrm.length === 0 && puedeMostrarSinCoincidencias)) && (
+              <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/30 p-4 text-center space-y-2.5">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <UserPlus size={16} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Sin coincidencias
+                  </p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-snug">
+                    No encontramos clientes registrados con esos datos.
+                  </p>
+                </div>
+                {!modoClienteNuevo && !hayBusquedaCrm && (
+                  <button
+                    type="button"
+                    onClick={activarModoClienteNuevo}
+                    className="w-full px-3 py-2 flex items-center justify-center gap-1.5 text-xs font-bold text-chefsy-700 dark:text-chefsy-400 border border-chefsy-200 dark:border-chefsy-800/70 rounded-xl bg-chefsy-50 dark:bg-chefsy-950/30 hover:bg-chefsy-100 dark:hover:bg-chefsy-900/40 transition-colors cursor-pointer"
+                  >
+                    <ArrowRight size={13} className="shrink-0" />
+                    Continuar como cliente nuevo
+                  </button>
+                )}
+              </div>
+            )}
 
-      {/* ── LAYOUT PRINCIPAL: CRM a la izquierda | Formulario de pedido a la derecha ── */}
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-
-        {/* PANEL IZQUIERDO: CRM de clientes (pestaña aparte, estrecha) */}
-        <div className="lg:w-72 shrink-0 space-y-4 flex-shrink-0">
-          <section className="bg-slate-50/50 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 sticky top-4">
-            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400">
-                🔍
-              </span>
-              Clientes sugeridos
-            </h3>
-            <div className="space-y-2">
-              {autocompletadoHabilitado && clienteEncontrado && (
-                <button
-                  type="button"
-                  onClick={aplicarDatosCRM}
-                  className="w-full bg-chefsy-50 hover:bg-chefsy-100 dark:bg-chefsy-950/20 dark:hover:bg-chefsy-900/30 border border-chefsy-200 dark:border-chefsy-900/50 text-chefsy-800 dark:text-chefsy-300 rounded-xl p-3 flex flex-col items-start text-left transition-all shadow-sm active:scale-95 animate-[slideIn_0.2s_ease-out]"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1 text-chefsy-700 dark:text-chefsy-400">
-                      <Sparkles className="w-3 h-3" /> Cliente registrado
+            {/* Estado Inicial (sin búsqueda): Clientes Frecuentes */}
+            {!hayBusquedaActiva && !clienteEncontrado && (
+              clientesFrecuentes.length > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="px-1 flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Clientes frecuentes
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      Top {clientesFrecuentes.length}
                     </span>
                   </div>
-                  <span className="text-sm font-bold block">{clienteEncontrado.cliente}</span>
-                  <span className="block text-[10px] opacity-80 mt-1 truncate w-full">
-                    {motivoCoincidencia} · Última vez: {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
-                  </span>
-                </button>
-              )}
-              {!clienteEncontrado && sugerenciasActivas.length > 0 && (
-                <div>
-                  {sugerenciasActivas.map((sug, idx) => (
+                  {clientesFrecuentes.map((sug, idx) => (
                     <button
-                      key={`${sug.nombre}-${sug.telefono}-${idx}`}
+                      key={`freq-${sug.nombre}-${sug.telefono}-${idx}`}
                       type="button"
                       onClick={() => {
                         seleccionarSugerenciaCliente(sug)
                         setIndiceSugerenciaActiva(-1)
                       }}
-                      className={`w-full px-3 py-2 flex items-start gap-2 text-left transition-colors group cursor-pointer rounded-lg border ${idx === indiceSugerenciaActiva ? 'bg-chefsy-50 dark:bg-slate-800 border-chefsy-200' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                      className="w-full p-2.5 flex items-start gap-2.5 text-left transition-all group cursor-pointer rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-chefsy-50/50 dark:hover:bg-slate-800 hover:border-chefsy-200 dark:hover:border-chefsy-800"
                     >
-                      <div className="w-6 h-6 rounded-full bg-chefsy-100 dark:bg-chefsy-950 text-chefsy-700 dark:text-chefsy-300 font-black text-[10px] flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-chefsy group-hover:text-white transition-colors">
                         {sug.nombre.slice(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-600 dark:group-hover:text-chefsy-400">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate group-hover:text-chefsy-700 dark:group-hover:text-chefsy-400 transition-colors">
                             {sug.nombre}
                           </span>
-                          {sug.telefono && (
-                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                              {formatearTelefonoArgentino(sug.telefono)}
+                          {sug.totalPedidos && sug.totalPedidos > 0 ? (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0 tabular-nums">
+                              <ShoppingBag size={8} />
+                              {sug.totalPedidos}
                             </span>
+                          ) : null}
+                        </div>
+
+                        {sug.telefono && (
+                          <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                            <Phone size={9} className="shrink-0 opacity-70" />
+                            <span className="truncate">{formatearTelefonoArgentino(sug.telefono)}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                          <MapPin size={9} className="shrink-0 opacity-70" />
+                          {sug.direccion ? (
+                            <span className="truncate">{sug.direccion}</span>
+                          ) : (
+                            <span className="italic opacity-75">Retiro en local</span>
                           )}
                         </div>
-                        {sug.direccion ? (
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                            {sug.direccion}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] italic opacity-70">Retiro en local</span>
-                        )}
                       </div>
                     </button>
                   ))}
                 </div>
-              )}
-              {!clienteEncontrado && sugerenciasActivas.length === 0 && puedeMostrarSinCoincidencias && !modoClienteNuevo && (
-                <button
-                  type="button"
-                  onClick={activarModoClienteNuevo}
-                  className="w-full mt-2 px-3 py-2 flex items-center justify-center gap-2 text-xs font-bold text-chefsy-600 dark:text-chefsy-400 border border-chefsy-200 dark:border-chefsy-900/50 rounded-xl bg-chefsy-50 dark:bg-chefsy-950/20 hover:bg-chefsy-100 dark:hover:bg-chefsy-900/30 transition-colors cursor-pointer"
-                >
-                  <ArrowRight size={14} className="shrink-0" />
-                  Continuar como cliente nuevo
-                </button>
-              )}
-              {modoClienteNuevo && (
-                <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                  Se cargará como cliente nuevo con los datos ingresados.
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* PANEL DERECHO: Formulario de pedido (ancho, el "modal") */}
-        <div className="flex-1 w-full min-w-0 space-y-8">
-          <div className={conHeaderModal ? "p-3 md:p-6 pb-28 md:pb-6 space-y-6 flex-1" : "space-y-6"}>
-
-            {error && (
-              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-                <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
-                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-                  <span>{error}</span>
+              ) : (
+                <div className="py-10 px-4 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                    <Search size={18} />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Buscá un cliente por nombre o teléfono
+                  </p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                    Al escribir en el pedido, las coincidencias aparecerán acá para autocompletar en un clic.
+                  </p>
                 </div>
-              </div>
+              )
             )}
 
-            {/* ── 2 COLUMNAS: Datos del cliente | Productos y pago ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+            {/* Confirmación Modo Cliente Nuevo */}
+            {modoClienteNuevo && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                <Check size={14} className="shrink-0" />
+                <span>Se cargará como cliente nuevo con los datos ingresados.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Sutil CRM */}
+          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/40 shrink-0">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+              Hacé clic en un cliente para completar sus datos
+            </p>
+          </div>
+        </aside>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          PANEL DERECHO INDEPENDIENTE: FORMULARIO NUEVO / EDITAR PEDIDO
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div
+        data-lenis-prevent={conHeaderModal ? 'true' : undefined}
+        onWheel={conHeaderModal ? (e) => e.stopPropagation() : undefined}
+        onTouchMove={conHeaderModal ? (e) => e.stopPropagation() : undefined}
+        className={
+          conHeaderModal
+            ? 'flex-1 min-w-0 w-full max-w-5xl h-full md:h-auto md:max-h-[90vh] bg-white dark:bg-slate-900 border-0 md:border border-slate-200/80 dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl overflow-y-auto scrollbar-hide pointer-events-auto animate-in zoom-in-95 duration-200 flex flex-col'
+            : 'w-full flex flex-col flex-1'
+        }
+      >
+        {/* ── Header Sticky del Modal (solo cuando se abre en modal) ──── */}
+        {conHeaderModal ? (
+          <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-between border-b border-gray-150 dark:border-slate-800 px-4 md:px-6 py-3 md:py-4 shrink-0">
+            <div className="min-w-0 pr-2">
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                {pedidoInicial ? 'Editar Pedido' : 'Nuevo Pedido'}
+              </h2>
+              <p className="text-[11px] text-gray-400 dark:text-slate-400 truncate">
+                {pedidoInicial ? 'Modificar productos, cliente o entrega' : 'Cargar comanda al sistema'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {!pedidoInicial && (
+                <>
+                  {borradorGuardado && !borradorActivoCargado && (
+                    <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
+                      <button
+                        type="button"
+                        onClick={restaurarBorrador}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                        title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
+                      >
+                        <RotateCcw size={13} className="shrink-0" />
+                        <span className="hidden sm:inline">Restaurar guardado</span>
+                        <span className="sm:hidden">Restaurar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={descartarBorrador}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Descartar borrador guardado"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={guardarBorrador}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    title="Guardar temporalmente los datos cargados"
+                  >
+                    <PauseCircle size={14} className="shrink-0" />
+                    <span className="hidden sm:inline">Guardar temporalmente</span>
+                    <span className="sm:hidden">Guardar</span>
+                  </button>
+                </>
+              )}
+
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90 ml-1"
+                  title="Cerrar ventana"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Si se renderiza en página estándar sin conHeaderModal (ej: Editar Pedido) */
+          !pedidoInicial && (
+            <div className="flex items-center justify-end w-full gap-2 mb-2">
+              {borradorGuardado && !borradorActivoCargado && (
+                <div className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl p-0.5">
+                  <button
+                    type="button"
+                    onClick={restaurarBorrador}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                    title={`Restaurar pedido guardado de ${borradorGuardado.cliente || 'cliente'}`}
+                  >
+                    <RotateCcw size={13} className="shrink-0" />
+                    <span>Restaurar guardado</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={descartarBorrador}
+                    className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                    title="Descartar borrador guardado"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={guardarBorrador}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                title="Guardar temporalmente los datos cargados"
+              >
+                <PauseCircle size={14} className="shrink-0" />
+                <span>Guardar temporalmente</span>
+              </button>
+            </div>
+          )
+        )}
+
+        {/* Contenido principal del formulario */}
+        <div className={conHeaderModal ? 'p-4 md:p-6 pb-28 md:pb-6 space-y-6 flex-1' : 'space-y-6'}>
+          {error && (
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+              <div className="flex items-center gap-2 text-sm font-bold text-red-400 bg-red-950 border border-red-900/80 rounded-2xl px-6 py-4 shadow-2xl shadow-red-900/20">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* CRM compacto solo para móvil / tablet (< lg) cuando hay coincidencias */}
+          {mostrarPanelCrmSeparado && (clienteEncontrado || sugerenciasActivas.length > 0 || puedeMostrarSinCoincidencias) && (
+            <div className="lg:hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-3 space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <Users size={12} className="text-chefsy" />
+                <span>Sugerencias CRM</span>
+              </div>
+              {clienteEncontrado && (
+                <button
+                  type="button"
+                  onClick={aplicarDatosCRM}
+                  className="w-full bg-chefsy-50 dark:bg-chefsy-950/40 border border-chefsy-200 dark:border-chefsy-800 rounded-xl p-2.5 flex items-center justify-between gap-2 text-left cursor-pointer"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black uppercase text-chefsy-700 dark:text-chefsy-400 flex items-center gap-1">
+                      <Sparkles size={11} /> Cliente registrado
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
+                      {clienteEncontrado.cliente}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-chefsy text-white shrink-0">
+                    Aplicar
+                  </span>
+                </button>
+              )}
+              {!clienteEncontrado && sugerenciasActivas.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                  {sugerenciasActivas.slice(0, 5).map((sug, idx) => (
+                    <button
+                      key={`mob-${sug.nombre}-${sug.telefono}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        seleccionarSugerenciaCliente(sug)
+                        setIndiceSugerenciaActiva(-1)
+                      }}
+                      className="shrink-0 max-w-[200px] px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-left cursor-pointer"
+                    >
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
+                        {sug.nombre}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {sug.direccion || 'Retiro en local'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── 2 COLUMNAS: Datos del cliente | Productos y pago ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8">
               
               {/* COLUMNA IZQUIERDA DEL MODAL: Entrega y Cliente */}
               <div className="lg:col-span-1 space-y-8">
@@ -581,13 +900,11 @@ export default function FormularioPedido({
               </div>
             )}
 
-          </div>
         </div>
-
       </div>
 
       {/* ── Barra de Confirmación Inferior Fija para Móvil ──────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950 border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950 border-t border-slate-800/80 p-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.6)] pointer-events-auto">
         <div className="flex items-center gap-3 max-w-md mx-auto">
           <div className="min-w-0 flex-1">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
