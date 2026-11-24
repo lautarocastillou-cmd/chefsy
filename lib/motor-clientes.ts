@@ -2,15 +2,24 @@ import Fuse from 'fuse.js'
 
 export interface SugerenciaCliente {
   id?: string
+  claveCliente?: string
   nombre: string
   telefono: string
   telefonoNormalizado: string
   direccion?: string
   coordenadas?: { latitud: number; longitud: number } | null
   metodoPago?: string
+  metodoPagoHabitual?: string
   tipoEntrega?: string
   totalPedidos?: number
+  totalCancelados?: number
+  totalGastado?: number
+  ticketPromedio?: number
+  platoFavorito?: string
+  ultimaObservacion?: string
   ultimaFecha?: string
+  notaFija?: string
+  etiquetas?: string[]
 }
 
 export interface GrupoDuplicado {
@@ -306,18 +315,33 @@ export interface PedidoClienteFuente {
   coordenadas?: { latitud: number; longitud: number } | null
   metodoPago?: string | null
   tipoEntrega?: string | null
+  total?: number | string | null
+  observaciones?: string | null
+  productos?: { nombre?: string; cantidad?: number }[] | null
+  estado?: string | null
   created_at?: string | null
+}
+
+export interface NotaCRMFuente {
+  notaFija?: string
+  etiquetas?: string[]
 }
 
 /**
  * Consolida cuentas formales y todo el historial de pedidos en un único índice.
- * El orden más reciente gana para dirección, coordenadas y preferencias.
+ * El orden más reciente gana para dirección, coordenadas y observaciones; además
+ * calcula métricas de mini-perfil (ticket promedio, pago habitual, plato favorito)
+ * y adjunta notas fijas/etiquetas persistentes del CRM.
  */
 export function consolidarSugerenciasClientes(
   cuentas: CuentaClienteFuente[],
   pedidos: PedidoClienteFuente[],
+  notasMap: Record<string, NotaCRMFuente> = {},
 ): SugerenciaCliente[] {
   const mapa = new Map<string, SugerenciaCliente>()
+  const conteosPago = new Map<string, Record<string, number>>()
+  const conteosPlatos = new Map<string, Record<string, number>>()
+
   const clave = (nombre: string | null | undefined, telefono: string | null | undefined) => {
     const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
     return telefonoNormalizado || `nombre:${limpiarNombre(nombre)}`
@@ -328,12 +352,16 @@ export function consolidarSugerenciasClientes(
     if (!nombre) continue
     const telefono = cuenta.telefono || ''
     const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
-    mapa.set(clave(nombre, telefono), {
+    const claveCuenta = clave(nombre, telefono)
+    mapa.set(claveCuenta, {
       id: cuenta.id,
+      claveCliente: claveCuenta,
       nombre,
       telefono,
       telefonoNormalizado,
       totalPedidos: 0,
+      totalCancelados: 0,
+      totalGastado: 0,
     })
   }
 
@@ -346,10 +374,29 @@ export function consolidarSugerenciasClientes(
     const telefono = pedido.telefono || ''
     const telefonoNormalizado = normalizarTelefonoArgentino(telefono)
     const clavePedido = clave(nombre, telefono)
-    const existente = mapa.get(clavePedido)
+    const esCancelado = pedido.estado === 'cancelado'
+    const montoPedido = Number(pedido.total) || 0
+    const obsLimpia = typeof pedido.observaciones === 'string' ? pedido.observaciones.trim() : ''
 
-    if (existente) {
-      existente.totalPedidos = (existente.totalPedidos || 0) + 1
+    let existente = mapa.get(clavePedido)
+
+    if (!existente) {
+      existente = {
+        claveCliente: clavePedido,
+        nombre,
+        telefono,
+        telefonoNormalizado,
+        direccion: pedido.direccion || '',
+        coordenadas: pedido.coordenadas || null,
+        metodoPago: pedido.metodoPago || 'efectivo',
+        tipoEntrega: pedido.tipoEntrega || 'delivery',
+        totalPedidos: 0,
+        totalCancelados: 0,
+        totalGastado: 0,
+        ultimaFecha: pedido.created_at || undefined,
+      }
+      mapa.set(clavePedido, existente)
+    } else {
       if (!existente.direccion && pedido.direccion) {
         existente.direccion = pedido.direccion
         existente.coordenadas = pedido.coordenadas || null
@@ -357,20 +404,65 @@ export function consolidarSugerenciasClientes(
       if (!existente.metodoPago && pedido.metodoPago) existente.metodoPago = pedido.metodoPago
       if (!existente.tipoEntrega && pedido.tipoEntrega) existente.tipoEntrega = pedido.tipoEntrega
       if (!existente.ultimaFecha && pedido.created_at) existente.ultimaFecha = pedido.created_at
-      continue
     }
 
-    mapa.set(clavePedido, {
-      nombre,
-      telefono,
-      telefonoNormalizado,
-      direccion: pedido.direccion || '',
-      coordenadas: pedido.coordenadas || null,
-      metodoPago: pedido.metodoPago || 'efectivo',
-      tipoEntrega: pedido.tipoEntrega || 'delivery',
-      totalPedidos: 1,
-      ultimaFecha: pedido.created_at || undefined,
-    })
+    if (esCancelado) {
+      existente.totalCancelados = (existente.totalCancelados || 0) + 1
+    } else {
+      existente.totalPedidos = (existente.totalPedidos || 0) + 1
+      existente.totalGastado = (existente.totalGastado || 0) + montoPedido
+
+      if (pedido.metodoPago && pedido.metodoPago !== 'sin_especificar') {
+        const pagos = conteosPago.get(clavePedido) || {}
+        pagos[pedido.metodoPago] = (pagos[pedido.metodoPago] || 0) + 1
+        conteosPago.set(clavePedido, pagos)
+      }
+
+      if (Array.isArray(pedido.productos)) {
+        const platos = conteosPlatos.get(clavePedido) || {}
+        for (const item of pedido.productos) {
+          const nomPlato = typeof item?.nombre === 'string' ? item.nombre.trim() : ''
+          if (!nomPlato) continue
+          const cant = Number(item?.cantidad) || 1
+          platos[nomPlato] = (platos[nomPlato] || 0) + cant
+        }
+        conteosPlatos.set(clavePedido, platos)
+      }
+    }
+
+    if (!existente.ultimaObservacion && obsLimpia) {
+      existente.ultimaObservacion = obsLimpia
+    }
+  }
+
+  // Calcular derivados finales y adjuntar notas/etiquetas CRM
+  for (const [claveCli, cliente] of mapa.entries()) {
+    const totalPed = cliente.totalPedidos || 0
+    const totalGast = cliente.totalGastado || 0
+    if (totalPed > 0 && totalGast > 0) {
+      cliente.ticketPromedio = Math.round(totalGast / totalPed)
+    }
+
+    const pagos = conteosPago.get(claveCli)
+    if (pagos) {
+      const topPago = Object.entries(pagos).sort((a, b) => b[1] - a[1])[0]
+      if (topPago) cliente.metodoPagoHabitual = topPago[0]
+    }
+
+    const platos = conteosPlatos.get(claveCli)
+    if (platos) {
+      const topPlato = Object.entries(platos).sort((a, b) => b[1] - a[1])[0]
+      if (topPlato) cliente.platoFavorito = topPlato[0]
+    }
+
+    const claveNombreFallback = `nombre:${limpiarNombre(cliente.nombre)}`
+    const notaCRM = notasMap[claveCli] || notasMap[claveNombreFallback]
+    if (notaCRM) {
+      if (notaCRM.notaFija) cliente.notaFija = notaCRM.notaFija
+      if (Array.isArray(notaCRM.etiquetas) && notaCRM.etiquetas.length > 0) {
+        cliente.etiquetas = notaCRM.etiquetas
+      }
+    }
   }
 
   return Array.from(mapa.values())

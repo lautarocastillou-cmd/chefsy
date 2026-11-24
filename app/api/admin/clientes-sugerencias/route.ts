@@ -8,6 +8,7 @@ import {
   SugerenciaCliente,
 } from '@/lib/motor-clientes'
 import { obtenerDeCache, guardarEnCache } from '@/lib/cache-servidor'
+import { obtenerMapaNotasCRM } from '@/lib/crm-notas-servidor'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,19 +34,27 @@ export async function GET() {
     const supabase = obtenerSupabaseAdmin()
 
     // El CRM necesita el historial completo para no perder clientes antiguos.
-    const { data: pedidos, error: errPedidos } = await supabase
-      .from('pedidos')
-      .select('cliente, telefono, direccion, coordenadas, metodoPago, tipoEntrega, created_at')
-      .order('created_at', { ascending: false })
+    const [resPedidos, resCuentas, notasMap] = await Promise.all([
+      supabase
+        .from('pedidos')
+        .select('cliente, telefono, direccion, coordenadas, metodoPago, tipoEntrega, total, observaciones, productos, estado, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('clientes')
+        .select('id, nombre, telefono'),
+      obtenerMapaNotasCRM().catch((err) => {
+        console.warn('[API Clientes Sugerencias] Error cargando notas CRM:', err)
+        return {}
+      }),
+    ])
+
+    const { data: pedidos, error: errPedidos } = resPedidos
+    const { data: cuentasClientes, error: errCuentas } = resCuentas
 
     if (errPedidos) {
       console.error('[API Clientes Sugerencias] Error en pedidos:', errPedidos)
       throw errPedidos
     }
-
-    const { data: cuentasClientes, error: errCuentas } = await supabase
-      .from('clientes')
-      .select('id, nombre, telefono')
 
     if (errCuentas) {
       console.error('[API Clientes Sugerencias] Error en cuentas:', errCuentas)
@@ -55,6 +64,7 @@ export async function GET() {
     const resultado = consolidarSugerenciasClientes(
       (cuentasClientes || []) as CuentaClienteFuente[],
       (pedidos || []) as PedidoClienteFuente[],
+      notasMap,
     )
 
     guardarEnCache(CACHE_KEY_SUGERENCIAS, resultado, 30) // 30s en caché de servidor

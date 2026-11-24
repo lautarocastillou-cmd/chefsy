@@ -5,6 +5,7 @@ import { Pedido, MetodoPago } from '@/tipos'
 import CampoUbicacion from '@/components/ubicacion/CampoUbicacion'
 import SeccionProductosPedido from '@/components/productos/SeccionProductosPedido'
 import SelectorTipoEntrega from '@/components/pedidos/SelectorTipoEntrega'
+import PanelCRMCliente, { estiloEtiquetaCRM } from '@/components/pedidos/PanelCRMCliente'
 import { formatearPrecio } from '@/lib/utils'
 import { useFormularioPedido } from '@/hooks/useFormularioPedido'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
@@ -18,19 +19,13 @@ import {
   RotateCcw,
   Trash2,
   X,
-  MapPin,
-  Search,
   Users,
-  Phone,
-  UserPlus,
-  ShoppingBag,
+  StickyNote,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
-  formatearTelefonoArgentino,
   moverIndiceSugerencia,
   obtenerMotivoCoincidencia,
-  prepararSugerenciasCRM,
 } from '@/lib/motor-clientes'
 
 const claseInput =
@@ -50,7 +45,6 @@ export default function FormularioPedido({
   const router = useRouter()
   const [indiceSugerenciaActiva, setIndiceSugerenciaActiva] = React.useState(-1)
   const [sugerenciasCerradasManualmente, setSugerenciasCerradasManualmente] = React.useState(false)
-  const [busquedaCrm, setBusquedaCrm] = React.useState('')
  
   useEscapeKey(() => {
     if (onClose) onClose()
@@ -59,7 +53,8 @@ export default function FormularioPedido({
 
   const {
     estado: { 
-      clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas, 
+      clienteEncontrado, clienteSeleccionadoCRM, guardandoNotaCRM,
+      tipoEntrega, cliente, telefono, direccion, coordenadas, 
       metodoPago, observaciones, filasProductos, error, cargandoEnvio, 
       envioManual, costoEnvioManualInput, distanciaKm,
       montoEfectivo, montoTransferencia, montoTarjeta,
@@ -78,38 +73,13 @@ export default function FormularioPedido({
     },
     acciones: { 
       aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
-      guardarBorrador, restaurarBorrador, descartarBorrador
+      guardarBorrador, restaurarBorrador, descartarBorrador,
+      limpiarClienteSeleccionadoCRM, aplicarObservacionSugerida, guardarNotasCRM
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
 
   const motivoCoincidencia = obtenerMotivoCoincidencia({ nombre: cliente, telefono, direccion })
   const puedeMostrarSinCoincidencias = autocompletadoHabilitado && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
-
-  // Clientes frecuentes ordenados por cantidad de pedidos para mostrar cuando no hay búsqueda activa
-  const clientesFrecuentes = React.useMemo(() => {
-    if (!Array.isArray(indiceClientes) || indiceClientes.length === 0) return []
-    return [...indiceClientes]
-      .filter((c) => c.nombre && c.nombre.trim().length >= 2)
-      .sort((a, b) => (b.totalPedidos || 0) - (a.totalPedidos || 0))
-      .slice(0, 8)
-  }, [indiceClientes])
-
-  // Resultados del panel CRM: prioriza el buscador propio del CRM, si está vacío refleja la búsqueda del formulario
-  const resultadosCrm = React.useMemo(() => {
-    const q = busquedaCrm.trim()
-    if (q.length > 0) {
-      return prepararSugerenciasCRM(
-        indiceClientes,
-        { nombre: q, telefono: q, direccion: q },
-        { umbralCalidad: 25, priorizarBarrio: false }
-      )
-    }
-    return sugerenciasActivas
-  }, [busquedaCrm, indiceClientes, sugerenciasActivas])
-
-  const hayBusquedaCrm = busquedaCrm.trim().length > 0
-  const hayBusquedaFormulario = cliente.trim().length > 0 || telefono.trim().length > 0
-  const hayBusquedaActiva = hayBusquedaCrm || hayBusquedaFormulario
   const mostrarPanelCrmSeparado = conHeaderModal && !pedidoInicial && autocompletadoHabilitado
 
   return (
@@ -125,289 +95,26 @@ export default function FormularioPedido({
           PANEL IZQUIERDO INDEPENDIENTE: CRM DE CLIENTES (Desktop)
           ═══════════════════════════════════════════════════════════════════════ */}
       {mostrarPanelCrmSeparado && (
-        <aside
-          data-lenis-prevent="true"
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          className="hidden lg:flex lg:flex-col w-[300px] xl:w-[325px] shrink-0 max-h-[90vh] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
-        >
-          {/* Header del Panel CRM */}
-          <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-chefsy/10 dark:bg-chefsy/20 text-chefsy dark:text-chefsy-400 flex items-center justify-center shrink-0">
-                <Users size={16} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight truncate">
-                  Clientes CRM
-                </h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-                  Autocompletado rápido
-                </p>
-              </div>
-            </div>
-
-            <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 tabular-nums shrink-0"
-              title="Clientes en historial"
-            >
-              {hayBusquedaActiva ? resultadosCrm.length : indiceClientes.length}
-            </span>
-          </div>
-
-          {/* Buscador Rápido CRM */}
-          <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/30 shrink-0">
-            <div className="relative">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              />
-              <input
-                type="text"
-                value={busquedaCrm}
-                onChange={(e) => setBusquedaCrm(e.target.value)}
-                placeholder="Buscar nombre, tel o dirección..."
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-8 pr-8 py-2 text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-chefsy/40 focus:border-chefsy transition-all"
-              />
-              {busquedaCrm && (
-                <button
-                  type="button"
-                  onClick={() => setBusquedaCrm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
-                  aria-label="Limpiar búsqueda CRM"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Contenido Scrolleable del Panel CRM */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-2.5">
-            {/* Coincidencia Exacta: Cliente Registrado */}
-            {clienteEncontrado && !hayBusquedaCrm && (
-              <button
-                type="button"
-                onClick={aplicarDatosCRM}
-                className="w-full bg-gradient-to-br from-chefsy-50 via-emerald-50/70 to-white dark:from-chefsy-950/50 dark:via-emerald-950/30 dark:to-slate-900 hover:from-chefsy-100/80 dark:hover:from-chefsy-900/40 border border-chefsy-200 dark:border-chefsy-800/70 rounded-2xl p-3.5 flex flex-col items-start text-left transition-all shadow-sm active:scale-[0.98] cursor-pointer group animate-[slideIn_0.2s_ease-out]"
-              >
-                <div className="flex items-center justify-between w-full gap-2 mb-2">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-chefsy-700 dark:text-chefsy-400">
-                    <Sparkles className="w-3 h-3" /> Cliente registrado
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-chefsy text-white group-hover:bg-chefsy-700 transition-colors">
-                    Aplicar
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2.5 w-full">
-                  <div className="w-9 h-9 rounded-xl bg-chefsy text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
-                    {clienteEncontrado.cliente.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 block truncate">
-                      {clienteEncontrado.cliente}
-                    </span>
-                    {clienteEncontrado.telefono && clienteEncontrado.telefono !== 'Sin especificar' && (
-                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Phone size={10} className="shrink-0 text-chefsy-600 dark:text-chefsy-400" />
-                        {formatearTelefonoArgentino(clienteEncontrado.telefono)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-2.5 pt-2 border-t border-chefsy-200/60 dark:border-chefsy-800/40 w-full flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-                  <MapPin size={11} className="shrink-0 text-chefsy-600 dark:text-chefsy-400" />
-                  <span className="truncate">
-                    {clienteEncontrado.direccion ? clienteEncontrado.direccion : 'Retiro en local'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate w-full">
-                  {motivoCoincidencia}
-                </span>
-              </button>
-            )}
-
-            {/* Lista de Resultados de Búsqueda */}
-            {resultadosCrm.length > 0 && (hayBusquedaCrm || !clienteEncontrado) && (
-              <div className="space-y-1.5">
-                <div className="px-1 flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Coincidencias
-                  </span>
-                  <span className="text-[10px] font-semibold text-chefsy-600 dark:text-chefsy-400">
-                    {resultadosCrm.length} {resultadosCrm.length === 1 ? 'encontrado' : 'encontrados'}
-                  </span>
-                </div>
-                {resultadosCrm.map((sug, idx) => (
-                  <button
-                    key={`${sug.nombre}-${sug.telefono}-${idx}`}
-                    type="button"
-                    onClick={() => {
-                      seleccionarSugerenciaCliente(sug)
-                      setBusquedaCrm('')
-                      setIndiceSugerenciaActiva(-1)
-                    }}
-                    className={`w-full p-2.5 flex items-start gap-2.5 text-left transition-all group cursor-pointer rounded-2xl border ${
-                      !hayBusquedaCrm && idx === indiceSugerenciaActiva
-                        ? 'bg-chefsy-50 dark:bg-chefsy-950/30 border-chefsy-300 dark:border-chefsy-700 shadow-xs'
-                        : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/80 hover:bg-chefsy-50/50 dark:hover:bg-slate-800 hover:border-chefsy-200 dark:hover:border-chefsy-800'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-chefsy/10 dark:bg-chefsy/20 text-chefsy-700 dark:text-chefsy-300 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-chefsy group-hover:text-white transition-colors">
-                      {sug.nombre.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1.5">
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-chefsy-700 dark:group-hover:text-chefsy-400 transition-colors">
-                          {sug.nombre}
-                        </span>
-                        {sug.totalPedidos && sug.totalPedidos > 0 ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0 tabular-nums">
-                            <ShoppingBag size={8} />
-                            {sug.totalPedidos}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {sug.telefono && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                          <Phone size={9} className="shrink-0 opacity-70" />
-                          <span className="truncate">{formatearTelefonoArgentino(sug.telefono)}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        <MapPin size={9} className="shrink-0 opacity-70" />
-                        {sug.direccion ? (
-                          <span className="truncate">{sug.direccion}</span>
-                        ) : (
-                          <span className="italic opacity-75">Retiro en local</span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Estado Sin Coincidencias */}
-            {((hayBusquedaCrm && resultadosCrm.length === 0) ||
-              (!hayBusquedaCrm && !clienteEncontrado && resultadosCrm.length === 0 && puedeMostrarSinCoincidencias)) && (
-              <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/30 p-4 text-center space-y-2.5">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
-                  <UserPlus size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    Sin coincidencias
-                  </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-snug">
-                    No encontramos clientes registrados con esos datos.
-                  </p>
-                </div>
-                {!modoClienteNuevo && !hayBusquedaCrm && (
-                  <button
-                    type="button"
-                    onClick={activarModoClienteNuevo}
-                    className="w-full px-3 py-2 flex items-center justify-center gap-1.5 text-xs font-bold text-chefsy-700 dark:text-chefsy-400 border border-chefsy-200 dark:border-chefsy-800/70 rounded-xl bg-chefsy-50 dark:bg-chefsy-950/30 hover:bg-chefsy-100 dark:hover:bg-chefsy-900/40 transition-colors cursor-pointer"
-                  >
-                    <ArrowRight size={13} className="shrink-0" />
-                    Continuar como cliente nuevo
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Estado Inicial (sin búsqueda): Clientes Frecuentes */}
-            {!hayBusquedaActiva && !clienteEncontrado && (
-              clientesFrecuentes.length > 0 ? (
-                <div className="space-y-1.5">
-                  <div className="px-1 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Clientes frecuentes
-                    </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                      Top {clientesFrecuentes.length}
-                    </span>
-                  </div>
-                  {clientesFrecuentes.map((sug, idx) => (
-                    <button
-                      key={`freq-${sug.nombre}-${sug.telefono}-${idx}`}
-                      type="button"
-                      onClick={() => {
-                        seleccionarSugerenciaCliente(sug)
-                        setIndiceSugerenciaActiva(-1)
-                      }}
-                      className="w-full p-2.5 flex items-start gap-2.5 text-left transition-all group cursor-pointer rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-chefsy-50/50 dark:hover:bg-slate-800 hover:border-chefsy-200 dark:hover:border-chefsy-800"
-                    >
-                      <div className="w-8 h-8 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-chefsy group-hover:text-white transition-colors">
-                        {sug.nombre.slice(0, 1).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate group-hover:text-chefsy-700 dark:group-hover:text-chefsy-400 transition-colors">
-                            {sug.nombre}
-                          </span>
-                          {sug.totalPedidos && sug.totalPedidos > 0 ? (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0 tabular-nums">
-                              <ShoppingBag size={8} />
-                              {sug.totalPedidos}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {sug.telefono && (
-                          <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                            <Phone size={9} className="shrink-0 opacity-70" />
-                            <span className="truncate">{formatearTelefonoArgentino(sug.telefono)}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                          <MapPin size={9} className="shrink-0 opacity-70" />
-                          {sug.direccion ? (
-                            <span className="truncate">{sug.direccion}</span>
-                          ) : (
-                            <span className="italic opacity-75">Retiro en local</span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-10 px-4 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
-                    <Search size={18} />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Buscá un cliente por nombre o teléfono
-                  </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                    Al escribir en el pedido, las coincidencias aparecerán acá para autocompletar en un clic.
-                  </p>
-                </div>
-              )
-            )}
-
-            {/* Confirmación Modo Cliente Nuevo */}
-            {modoClienteNuevo && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
-                <Check size={14} className="shrink-0" />
-                <span>Se cargará como cliente nuevo con los datos ingresados.</span>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Sutil CRM */}
-          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/40 shrink-0">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
-              Hacé clic en un cliente para completar sus datos
-            </p>
-          </div>
-        </aside>
+        <PanelCRMCliente
+          indiceClientes={indiceClientes}
+          sugerenciasActivas={sugerenciasActivas}
+          clienteEncontrado={clienteEncontrado}
+          clienteSeleccionadoCRM={clienteSeleccionadoCRM}
+          guardandoNotaCRM={guardandoNotaCRM}
+          clienteInput={cliente}
+          telefonoInput={telefono}
+          motivoCoincidencia={motivoCoincidencia}
+          puedeMostrarSinCoincidencias={puedeMostrarSinCoincidencias}
+          modoClienteNuevo={modoClienteNuevo}
+          indiceSugerenciaActiva={indiceSugerenciaActiva}
+          onSeleccionarSugerencia={seleccionarSugerenciaCliente}
+          onAplicarDatosCRM={aplicarDatosCRM}
+          onActivarModoClienteNuevo={activarModoClienteNuevo}
+          onLimpiarSeleccion={limpiarClienteSeleccionadoCRM}
+          onResetIndiceSugerencia={() => setIndiceSugerenciaActiva(-1)}
+          onAplicarObservacion={aplicarObservacionSugerida}
+          onGuardarNotasCRM={guardarNotasCRM}
+        />
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -535,6 +242,45 @@ export default function FormularioPedido({
               </div>
             </div>
           )}
+
+          {/* Nota fija / etiquetas CRM en móvil cuando hay cliente seleccionado */}
+          {mostrarPanelCrmSeparado &&
+            clienteSeleccionadoCRM &&
+            (clienteSeleccionadoCRM.notaFija?.trim() || (clienteSeleccionadoCRM.etiquetas?.length || 0) > 0) && (
+              <div className="lg:hidden rounded-2xl border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1">
+                    <StickyNote size={12} /> Notas del cliente ({clienteSeleccionadoCRM.nombre})
+                  </span>
+                  {clienteSeleccionadoCRM.notaFija?.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => aplicarObservacionSugerida(clienteSeleccionadoCRM.notaFija!)}
+                      className="text-[10px] font-bold text-chefsy-700 dark:text-chefsy-400 hover:underline cursor-pointer"
+                    >
+                      + Copiar a obs.
+                    </button>
+                  )}
+                </div>
+                {(clienteSeleccionadoCRM.etiquetas?.length || 0) > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {clienteSeleccionadoCRM.etiquetas!.map((tag) => (
+                      <span
+                        key={tag}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${estiloEtiquetaCRM(tag)}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {clienteSeleccionadoCRM.notaFija?.trim() && (
+                  <p className="text-xs text-slate-700 dark:text-slate-200 leading-snug">
+                    {clienteSeleccionadoCRM.notaFija}
+                  </p>
+                )}
+              </div>
+            )}
 
           {/* CRM compacto solo para móvil / tablet (< lg) cuando hay coincidencias */}
           {mostrarPanelCrmSeparado && (clienteEncontrado || sugerenciasActivas.length > 0 || puedeMostrarSinCoincidencias) && (

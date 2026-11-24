@@ -58,6 +58,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const autocompletadoHabilitado = (configuracionOperativa as any)?.autocompletadoClientesHabilitado !== false
 
   const [clienteEncontrado, setClienteEncontrado] = useState<Pedido | null>(null)
+  const [clienteSeleccionadoCRM, setClienteSeleccionadoCRM] = useState<SugerenciaCliente | null>(null)
+  const [guardandoNotaCRM, setGuardandoNotaCRM] = useState(false)
   const [sugerenciasActivas, setSugerenciasActivas] = useState<SugerenciaCliente[]>([])
   const [mostrarDropdownSugerencias, setMostrarDropdownSugerencias] = useState(false)
 
@@ -65,7 +67,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const [modoClienteNuevo, setModoClienteNuevo] = useState(false)
 
   // Cargar lista de sugerencias del servidor (cacheada)
-  const { data: sugerenciasDb } = useSWR<SugerenciaCliente[]>(
+  const { data: sugerenciasDb, mutate: mutarSugerenciasDb } = useSWR<SugerenciaCliente[]>(
     '/api/admin/clientes-sugerencias',
     async (url: string) => {
       const res = await fetch(url)
@@ -340,6 +342,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     clienteConfirmadoRef.current = null
     setCliente(valor)
     setModoClienteNuevo(false)
+    if (!valor.trim()) setClienteSeleccionadoCRM(null)
   }
 
   const cambiarTelefonoManual = (valor: string) => {
@@ -357,6 +360,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   const seleccionarSugerenciaCliente = (sug: SugerenciaCliente) => {
     clienteConfirmadoRef.current = obtenerClaveCliente(sug)
     setModoClienteNuevo(false)
+    setClienteSeleccionadoCRM(sug)
 
     setCliente(sug.nombre)
     setTelefono(limpiarTelefonoParaFormulario(sug.telefono))
@@ -379,6 +383,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   const activarModoClienteNuevo = () => {
     setModoClienteNuevo(true)
+    setClienteSeleccionadoCRM(null)
     setSugerenciasActivas([])
     setMostrarDropdownSugerencias(false)
     setClienteEncontrado(null)
@@ -386,12 +391,30 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   const aplicarDatosCRM = () => {
     if (clienteEncontrado) {
-      clienteConfirmadoRef.current = obtenerClaveCliente({
+      const claveMatch = obtenerClaveCliente({
         id: clienteEncontrado.id === 'crm-match' ? undefined : clienteEncontrado.id,
         nombre: clienteEncontrado.cliente,
         telefono: clienteEncontrado.telefono,
         telefonoNormalizado: normalizarTelefonoArgentino(clienteEncontrado.telefono),
       })
+      clienteConfirmadoRef.current = claveMatch
+
+      const perfilEnIndice = indiceClientes.find(
+        (c) => obtenerClaveCliente(c) === claveMatch || c.claveCliente === claveMatch
+      )
+      setClienteSeleccionadoCRM(
+        perfilEnIndice || {
+          claveCliente: claveMatch,
+          nombre: clienteEncontrado.cliente,
+          telefono: clienteEncontrado.telefono || '',
+          telefonoNormalizado: normalizarTelefonoArgentino(clienteEncontrado.telefono),
+          direccion: clienteEncontrado.direccion,
+          coordenadas: clienteEncontrado.coordenadas || null,
+          metodoPago: clienteEncontrado.metodoPago,
+          tipoEntrega: clienteEncontrado.tipoEntrega,
+        }
+      )
+
       setCliente(clienteEncontrado.cliente)
       setTelefono(limpiarTelefonoParaFormulario(clienteEncontrado.telefono))
       manejarTipoEntrega(clienteEncontrado.tipoEntrega)
@@ -403,6 +426,77 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       setClienteEncontrado(null)
       setMostrarDropdownSugerencias(false)
       setSugerenciasActivas([])
+    }
+  }
+
+  const limpiarClienteSeleccionadoCRM = () => {
+    setClienteSeleccionadoCRM(null)
+  }
+
+  const aplicarObservacionSugerida = (texto: string) => {
+    const limpio = texto.trim()
+    if (!limpio) return
+    setObservaciones((prev) => {
+      const actual = prev.trim()
+      if (!actual) return limpio
+      if (actual.toLowerCase().includes(limpio.toLowerCase())) return actual
+      return `${actual} · ${limpio}`
+    })
+  }
+
+  const guardarNotasCRM = async (
+    claveCliente: string,
+    notaFija: string,
+    etiquetas: string[],
+    referencia?: { nombre?: string; telefono?: string }
+  ): Promise<boolean> => {
+    if (!claveCliente) return false
+    setGuardandoNotaCRM(true)
+    try {
+      const res = await fetch('/api/admin/clientes-crm-notas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          claveCliente,
+          notaFija,
+          etiquetas,
+          nombreReferencia: referencia?.nombre,
+          telefonoReferencia: referencia?.telefono,
+        }),
+      })
+
+      if (!res.ok) return false
+      const data = await res.json()
+      const notaFinal = data?.registro?.notaFija ?? notaFija.trim()
+      const etiquetasFinales = Array.isArray(data?.registro?.etiquetas) ? data.registro.etiquetas : etiquetas
+
+      // Actualizar estado local del mini-perfil inmediatamente
+      setClienteSeleccionadoCRM((prev) => {
+        if (!prev) return prev
+        const clavePrev = prev.claveCliente || obtenerClaveCliente(prev)
+        if (clavePrev !== claveCliente) return prev
+        return { ...prev, notaFija: notaFinal, etiquetas: etiquetasFinales }
+      })
+
+      // Actualizar caché SWR para que toda la lista refleje las notas/etiquetas al instante
+      mutarSugerenciasDb(
+        (prev) => {
+          if (!Array.isArray(prev)) return prev
+          return prev.map((c) => {
+            const claveC = c.claveCliente || obtenerClaveCliente(c)
+            if (claveC !== claveCliente) return c
+            return { ...c, notaFija: notaFinal, etiquetas: etiquetasFinales }
+          })
+        },
+        { revalidate: false }
+      )
+
+      return true
+    } catch (err) {
+      console.error('[useFormularioPedido] Error guardando notas CRM:', err)
+      return false
+    } finally {
+      setGuardandoNotaCRM(false)
     }
   }
 
@@ -734,7 +828,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
 
   return {
     estado: {
-      clienteEncontrado, tipoEntrega, cliente, telefono, direccion, coordenadas,
+      clienteEncontrado, clienteSeleccionadoCRM, guardandoNotaCRM,
+      tipoEntrega, cliente, telefono, direccion, coordenadas,
       metodoPago, observaciones, filasProductos, error, costoEnvio, distanciaKm,
       cargandoEnvio, envioManual, costoEnvioManualInput,
       montoEfectivo, montoTransferencia, montoTarjeta,
@@ -753,7 +848,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     },
     acciones: {
       aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
-      guardarBorrador, restaurarBorrador, descartarBorrador
+      guardarBorrador, restaurarBorrador, descartarBorrador,
+      limpiarClienteSeleccionadoCRM, aplicarObservacionSugerida, guardarNotasCRM
     }
   }
 }
