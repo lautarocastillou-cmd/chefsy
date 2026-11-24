@@ -164,8 +164,130 @@ export function distanciaLevenshtein(a: string, b: string): number {
 }
 
 /**
+ * Calcula la distancia de Damerau-Levenshtein (Optimal String Alignment)
+ * para detectar transposiciones adyacentes (ej: "lautrao" <-> "lautaro") como 1 error.
+ */
+function distanciaDamerauLevenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+
+  const lenA = a.length
+  const lenB = b.length
+  const d: number[][] = Array.from({ length: lenA + 1 }, () => new Array(lenB + 1).fill(0))
+
+  for (let i = 0; i <= lenA; i++) d[i][0] = i
+  for (let j = 0; j <= lenB; j++) d[0][j] = j
+
+  for (let i = 1; i <= lenA; i++) {
+    for (let j = 1; j <= lenB; j++) {
+      const costo = a[i - 1] === b[j - 1] ? 0 : 1
+      d[i][j] = Math.min(
+        d[i - 1][j] + 1,         // eliminación
+        d[i][j - 1] + 1,         // inserción
+        d[i - 1][j - 1] + costo, // sustitución
+      )
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1) // transposición
+      }
+    }
+  }
+
+  return d[lenA][lenB]
+}
+
+/**
+ * Extrae dígitos utilizables para búsquedas por teléfono (incluye parciales de 4-5 dígitos).
+ * Si el número tiene >= 6 dígitos válidos, usa la normalización argentina canónica.
+ */
+function extraerDigitosTelefonoConsulta(tel: string | null | undefined): string {
+  if (!tel) return ''
+  const norm = normalizarTelefonoArgentino(tel)
+  if (norm) return norm
+
+  const textoLimpio = String(tel).toLowerCase().trim()
+  if (
+    textoLimpio === 'sesp' ||
+    textoLimpio === 'sinespecificar' ||
+    textoLimpio === 'sin especificar' ||
+    textoLimpio === 'undefined' ||
+    textoLimpio === 'null'
+  ) {
+    return ''
+  }
+
+  const digitos = String(tel).replace(/\D/g, '')
+  return digitos.length >= 4 ? digitos : ''
+}
+
+/**
+ * Evalúa si un token de consulta coincide con un token candidato por:
+ * - igualdad exacta
+ * - prefijo estricto (o prefijo inverso si el candidato tiene >= 4 caracteres)
+ * - typo genuino (Levenshtein <= 1 para largo >= 4, <= 2 para largo >= 7, o transposición adyacente),
+ *   rechazando palabras no relacionadas como "carlos" vs "marcos" donde cambia la letra inicial y largo <= 6.
+ */
+function evaluarCoincidenciaToken(
+  queryToken: string,
+  candidateToken: string,
+): { match: boolean; score: number; exacto: boolean } {
+  if (!queryToken || !candidateToken) {
+    return { match: false, score: 0, exacto: false }
+  }
+
+  if (queryToken === candidateToken) {
+    return { match: true, score: 1, exacto: true }
+  }
+
+  // Prefijo estricto (ej: "laut" -> "lautaro", "fe" -> "fernandez")
+  if (queryToken.length >= 2 && candidateToken.startsWith(queryToken)) {
+    const ratio = queryToken.length / candidateToken.length
+    const score = queryToken.length >= 3
+      ? Math.min(0.95, 0.80 + 0.15 * ratio)
+      : 0.78
+    return { match: true, score, exacto: false }
+  }
+
+  // Prefijo inverso (ej: "lautaro" -> "lauta")
+  if (candidateToken.length >= 4 && queryToken.startsWith(candidateToken)) {
+    const ratio = candidateToken.length / queryToken.length
+    const score = Math.min(0.92, 0.78 + 0.14 * ratio)
+    return { match: true, score, exacto: false }
+  }
+
+  // Typo genuino
+  const minLen = Math.min(queryToken.length, candidateToken.length)
+  const maxLen = Math.max(queryToken.length, candidateToken.length)
+  if (minLen < 4) {
+    return { match: false, score: 0, exacto: false }
+  }
+
+  const mismaInicial = queryToken[0] === candidateToken[0]
+  if (!mismaInicial && maxLen <= 6) {
+    return { match: false, score: 0, exacto: false }
+  }
+
+  const distLev = distanciaLevenshtein(queryToken, candidateToken)
+  const distDam = distanciaDamerauLevenshtein(queryToken, candidateToken)
+  const maxLev = minLen >= 7 ? 2 : 1
+
+  const esTypoValido =
+    (distLev <= maxLev || (distDam === 1 && minLen >= 4)) &&
+    distDam / maxLen <= 0.30 &&
+    (mismaInicial || distDam <= 1)
+
+  if (esTypoValido) {
+    const score = Math.max(0.70, 1 - (distDam / maxLen) * 1.15)
+    return { match: true, score, exacto: false }
+  }
+
+  return { match: false, score: 0, exacto: false }
+}
+
+/**
  * Calcula un puntaje de similitud entre 0 (totalmente distintos) y 1 (idénticos).
- * Combina similitud por distancia de edición y solapamiento de palabras (token match).
+ * Prioriza coincidencia estricta por tokens (exacto, prefijo, typo genuino) para
+ * evitar falsos positivos entre nombres no relacionados como "Carlos" vs "Marcos".
  */
 export function calcularSimilitudNombres(nombreA: string, nombreB: string): number {
   const normA = limpiarNombre(nombreA)
@@ -174,33 +296,54 @@ export function calcularSimilitudNombres(nombreA: string, nombreB: string): numb
   if (!normA || !normB) return 0
   if (normA === normB) return 1
 
-  // 1. Similitud por Levenshtein
-  const maxLen = Math.max(normA.length, normB.length)
-  const dist = distanciaLevenshtein(normA, normB)
-  const simLev = 1 - dist / maxLen
+  const tokensA = normA.split(' ').filter(w => w.length >= 2)
+  const tokensB = normB.split(' ').filter(w => w.length >= 2)
 
-  // 2. Similitud por tokens/palabras (ej: "Juan Perez" vs "Perez Juan")
-  const tokensA = new Set(normA.split(' ').filter(w => w.length > 1))
-  const tokensB = new Set(normB.split(' ').filter(w => w.length > 1))
-
-  let coincidencias = 0
-  tokensA.forEach(t => {
-    if (tokensB.has(t)) coincidencias++
-  })
-
-  const unionTokens = new Set([...tokensA, ...tokensB]).size
-  const simTokens = unionTokens > 0 ? coincidencias / unionTokens : 0
-
-  // 3. Caso de apodo / prefijo (ej: "Lauta" y "Lautaro")
-  const esPrefijo = (normA.length >= 4 && normB.startsWith(normA)) || 
-                    (normB.length >= 4 && normA.startsWith(normB))
-
-  let score = simLev * 0.7 + simTokens * 0.3
-  if (esPrefijo) {
-    score = Math.max(score, 0.85)
+  if (tokensA.length === 0 || tokensB.length === 0) {
+    const esPrefijo = normA.startsWith(normB) || normB.startsWith(normA)
+    return esPrefijo ? 0.75 : 0
   }
 
-  return Math.min(1, Math.max(0, score))
+  const [menores, mayores] = tokensA.length <= tokensB.length
+    ? [tokensA, tokensB]
+    : [tokensB, tokensA]
+
+  let sumaScores = 0
+  let coincidencias = 0
+
+  for (const tMenor of menores) {
+    let mejorScore = 0
+    for (const tMayor of mayores) {
+      const ab = evaluarCoincidenciaToken(tMenor, tMayor)
+      const ba = evaluarCoincidenciaToken(tMayor, tMenor)
+      const candidatoScore = Math.max(ab.match ? ab.score : 0, ba.match ? ba.score : 0)
+      if (candidatoScore > mejorScore) {
+        mejorScore = candidatoScore
+      }
+    }
+    if (mejorScore > 0) {
+      coincidencias++
+      sumaScores += mejorScore
+    }
+  }
+
+  if (coincidencias === menores.length) {
+    const promedio = sumaScores / menores.length
+    const factorCobertura = menores.length === mayores.length
+      ? 1
+      : 0.85 + 0.10 * (menores.length / mayores.length)
+    return Math.min(1, Math.max(0, promedio * factorCobertura))
+  }
+
+  // Ningún token o solo una fracción coincidió: penalizar fuertemente
+  if (coincidencias === 0) {
+    const maxLen = Math.max(normA.length, normB.length)
+    const simLev = 1 - distanciaLevenshtein(normA, normB) / maxLen
+    return Math.min(0.35, Math.max(0, simLev * 0.45))
+  }
+
+  const unionEstimada = mayores.length + (menores.length - coincidencias)
+  return Math.min(0.45, Math.max(0, (coincidencias / unionEstimada) * 0.45))
 }
 
 /**
@@ -537,22 +680,53 @@ export function datosCoincidenConConfirmacion(
 
 /**
  * Calcula un puntaje de calidad (0-100) para una sugerencia de cliente
- * dada la consulta del usuario. Solo se ponderan los campos que el
- * usuario efectivamente completó.
- * - Nombre: 50 puntos (similitud difusa)
+ * dada la consulta del usuario, aplicando señales negativas de descarte inteligente:
+ * - Conflicto de teléfono (>= 6 dígitos válidos que no coinciden) -> 0
+ * - Conflicto de apellido / multi-token (si hay 2+ tokens, todos deben coincidir) -> 0
+ * - Conflicto de dirección (>= 4 chars sin inclusión ni mismo barrio) -> -18 pts
+ *
+ * Solo se ponderan los campos que el usuario efectivamente completó:
+ * - Nombre: 50 puntos (similitud estricta por tokens)
  * - Teléfono: 30 puntos (exacto o incluido)
- * - Dirección: 20 puntos (exacta o incluida)
+ * - Dirección: 20 puntos (exacta, incluida o mismo barrio)
  */
 export function calcularScoreSugerencia(
   cliente: SugerenciaCliente,
   filtros: FiltrosBusquedaCliente,
 ): number {
   const nombreConsulta = limpiarNombre(filtros.nombre || '')
-  const telefonoConsulta = normalizarTelefonoArgentino(filtros.telefono || '')
+  const telConsultaNorm = normalizarTelefonoArgentino(filtros.telefono || '')
+  const telConsultaDigitos = extraerDigitosTelefonoConsulta(filtros.telefono)
   const direccionConsulta = limpiarNombre(filtros.direccion || '')
+
+  const telCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+  const dirCliente = limpiarNombre(cliente.direccion || '')
+
+  // Señal negativa 1: Conflicto de teléfono
+  if (telConsultaNorm.length >= 6 && telCliente.length >= 6) {
+    const coincideTel =
+      telCliente === telConsultaNorm ||
+      telCliente.includes(telConsultaNorm) ||
+      telConsultaNorm.includes(telCliente)
+    if (!coincideTel) return 0
+  }
+
+  // Señal negativa 2: Conflicto de apellido / multi-token
+  if (nombreConsulta) {
+    const queryTokens = nombreConsulta.split(' ').filter(t => t.length >= 2)
+    if (queryTokens.length >= 2) {
+      const candTokens = limpiarNombre(cliente.nombre).split(' ').filter(t => t.length >= 2)
+      if (candTokens.length === 0) return 0
+      const todosCoinciden = queryTokens.every(qt =>
+        candTokens.some(ct => evaluarCoincidenciaToken(qt, ct).match),
+      )
+      if (!todosCoinciden) return 0
+    }
+  }
 
   let puntos = 0
   let totalCampos = 0
+  let penalizacionDireccion = 0
 
   // Nombre (peso 50)
   if (nombreConsulta) {
@@ -562,23 +736,41 @@ export function calcularScoreSugerencia(
   }
 
   // Teléfono (peso 30)
-  if (telefonoConsulta) {
+  if (telConsultaDigitos) {
     totalCampos += 30
-    const telCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
-    if (telCliente === telefonoConsulta) puntos += 30
-    else if (telCliente.includes(telefonoConsulta) || telefonoConsulta.includes(telCliente)) puntos += 15
+    if (telCliente) {
+      if (telConsultaNorm && telCliente === telConsultaNorm) {
+        puntos += 30
+      } else if (telCliente.includes(telConsultaDigitos) || telConsultaDigitos.includes(telCliente)) {
+        puntos += telConsultaDigitos.length >= 6 ? 24 : 21
+      }
+    }
   }
 
   // Dirección (peso 20)
   if (direccionConsulta) {
     totalCampos += 20
-    const dirCliente = limpiarNombre(cliente.direccion || '')
-    if (dirCliente === direccionConsulta) puntos += 20
-    else if (dirCliente.includes(direccionConsulta) || direccionConsulta.includes(dirCliente)) puntos += 10
+    if (dirCliente) {
+      if (dirCliente === direccionConsulta) {
+        puntos += 20
+      } else if (dirCliente.includes(direccionConsulta) || direccionConsulta.includes(dirCliente)) {
+        puntos += 14
+      } else {
+        const barrioConsulta = extraerBarrio(filtros.direccion)
+        const barrioCliente = extraerBarrio(cliente.direccion)
+        if (barrioConsulta && barrioCliente && barrioConsulta === barrioCliente) {
+          puntos += 10
+        } else if (direccionConsulta.length >= 4 && dirCliente.length >= 4) {
+          // Señal negativa 3: Conflicto de dirección
+          penalizacionDireccion = 18
+        }
+      }
+    }
   }
 
   if (totalCampos === 0) return 0
-  return Math.round((puntos / totalCampos) * 100)
+  const scoreBase = Math.round((puntos / totalCampos) * 100)
+  return Math.max(0, Math.min(100, scoreBase - penalizacionDireccion))
 }
 
 /**
@@ -588,7 +780,7 @@ export function calcularScoreSugerencia(
 export function filtrarSugerenciasPorCalidad(
   clientes: SugerenciaCliente[],
   filtros: FiltrosBusquedaCliente,
-  umbralMinimo = 40,
+  umbralMinimo = 62,
 ): { cliente: SugerenciaCliente; score: number }[] {
   if (clientes.length === 0) return []
 
@@ -627,42 +819,133 @@ export function extraerBarrio(direccion: string | null | undefined): string {
   return limpiarNombre(barrio)
 }
 
+export interface ResultadoSugerenciaCRM {
+  cliente: SugerenciaCliente
+  score: number
+  confianza: 'alta' | 'media'
+  motivo: string
+}
+
 /**
- * Prepara la lista final de sugerencias para el CRM:
- * 1. Filtro por calidad mínima (no mostrar clientes al azar)
- * 2. Agrupamiento estable por barrio (si hay dirección cargada)
- * 3. Orden por frecuencia y recencia dentro de cada grupo
+ * Opciones para la preparación y ranking híbrido de sugerencias del CRM.
  */
 export interface OpcionesPrepararCRM {
   umbralCalidad?: number
   priorizarBarrio?: boolean
+  limite?: number
 }
 
+/**
+ * Prepara la lista detallada de sugerencias para el CRM con ranking híbrido:
+ * 1. Exige longitud mínima de entrada (>= 3 chars en nombre, >= 4 dígitos en teléfono o >= 4 chars en dirección)
+ * 2. Filtra por calidad mínima (default 62) con señales negativas de descarte inteligente
+ * 3. Rankea priorizando relevancia: `score + min(10, log2(totalPedidos + 1) * 2.5)` (+5 si mismo barrio)
+ * 4. Etiqueta confianza (`alta` / `media`) y motivo específico por candidato
+ * 5. Limita resultados (default 5)
+ */
+export function prepararSugerenciasCRMDetallado(
+  clientes: SugerenciaCliente[],
+  filtros: FiltrosBusquedaCliente,
+  opciones: OpcionesPrepararCRM = {},
+): ResultadoSugerenciaCRM[] {
+  if (clientes.length === 0) return []
+
+  const nombreConsulta = limpiarNombre(filtros.nombre || '')
+  const telConsultaNorm = normalizarTelefonoArgentino(filtros.telefono || '')
+  const telConsultaDigitos = extraerDigitosTelefonoConsulta(filtros.telefono)
+  const direccionConsulta = limpiarNombre(filtros.direccion || '')
+
+  // Longitud mínima de entrada
+  const tieneNombreValido = nombreConsulta.length >= 3
+  const tieneTelefonoValido = telConsultaDigitos.length >= 4
+  const tieneDireccionValida = direccionConsulta.length >= 4
+  if (!tieneNombreValido && !tieneTelefonoValido && !tieneDireccionValida) {
+    return []
+  }
+
+  const { umbralCalidad = 62, priorizarBarrio = true, limite = 5 } = opciones
+  if (limite <= 0) return []
+
+  const barrioConsulta = direccionConsulta ? extraerBarrio(filtros.direccion) : ''
+
+  const evaluados = clientes
+    .map((cliente) => {
+      const score = calcularScoreSugerencia(cliente, filtros)
+      if (score < umbralCalidad) return null
+
+      const telCliente = cliente.telefonoNormalizado || normalizarTelefonoArgentino(cliente.telefono)
+      const telExacto = Boolean(telConsultaNorm && telCliente && telCliente === telConsultaNorm)
+      const coincideTelefono = Boolean(
+        telConsultaDigitos &&
+        telCliente &&
+        (telExacto || telCliente.includes(telConsultaDigitos) || telConsultaDigitos.includes(telCliente)),
+      )
+
+      const nombreExacto = Boolean(nombreConsulta && limpiarNombre(cliente.nombre) === nombreConsulta)
+      const simNombre = nombreConsulta ? calcularSimilitudNombres(cliente.nombre, nombreConsulta) : 0
+      const coincideNombre = Boolean(nombreConsulta && simNombre >= 0.62)
+
+      const barrioCliente = cliente.direccion ? extraerBarrio(cliente.direccion) : ''
+      const mismoBarrio = Boolean(barrioConsulta && barrioCliente && barrioConsulta === barrioCliente)
+
+      const bonusFrecuencia = Math.min(10, Math.log2((cliente.totalPedidos || 0) + 1) * 2.5)
+      const bonusBarrio = priorizarBarrio && mismoBarrio ? 5 : 0
+      const rankingScore = score + bonusFrecuencia + bonusBarrio
+
+      const confianza: 'alta' | 'media' =
+        score >= 82 || telExacto || nombreExacto ? 'alta' : 'media'
+
+      let motivo = 'Coincidencia de nombre'
+      if (coincideNombre && coincideTelefono) {
+        motivo = 'Nombre y teléfono'
+      } else if (telExacto) {
+        motivo = 'Teléfono exacto'
+      } else if (nombreExacto) {
+        motivo = 'Nombre exacto'
+      } else if (coincideNombre && mismoBarrio) {
+        motivo = 'Nombre y mismo barrio'
+      } else if (mismoBarrio && !coincideNombre) {
+        motivo = 'Mismo barrio'
+      } else if (coincideTelefono) {
+        motivo = 'Teléfono exacto'
+      } else {
+        motivo = 'Coincidencia de nombre'
+      }
+
+      return {
+        cliente,
+        score,
+        confianza,
+        motivo,
+        rankingScore,
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => {
+      if (b.rankingScore !== a.rankingScore) return b.rankingScore - a.rankingScore
+      if (b.score !== a.score) return b.score - a.score
+      const pedidosDiff = (b.cliente.totalPedidos || 0) - (a.cliente.totalPedidos || 0)
+      if (pedidosDiff !== 0) return pedidosDiff
+      return (b.cliente.ultimaFecha || '').localeCompare(a.cliente.ultimaFecha || '')
+    })
+
+  return evaluados.slice(0, limite).map(({ cliente, score, confianza, motivo }) => ({
+    cliente,
+    score,
+    confianza,
+    motivo,
+  }))
+}
+
+/**
+ * Prepara la lista final de sugerencias para el CRM usando el motor de ranking híbrido.
+ */
 export function prepararSugerenciasCRM(
   clientes: SugerenciaCliente[],
   filtros: FiltrosBusquedaCliente,
   opciones: OpcionesPrepararCRM = {},
 ): SugerenciaCliente[] {
-  const { umbralCalidad = 40, priorizarBarrio = true } = opciones
-
-  // 1. Filtro por calidad (con scores)
-  const conScore = filtrarSugerenciasPorCalidad(clientes, filtros, umbralCalidad)
-
-  // 2. Orden estable por frecuencia antes de agrupar por barrio
-  const ordenadosPorFrecuencia = conScore.map((item) => item.cliente)
-  const porFrecuencia = ordenarClientesPorFrecuencia(ordenadosPorFrecuencia)
-
-  // 3. Si hay dirección, priorizar mismo barrio manteniendo orden relativo
-  if (priorizarBarrio && filtros.direccion?.trim()) {
-    const barrioConsulta = extraerBarrio(filtros.direccion)
-    if (barrioConsulta) {
-      const mismosBarrio = porFrecuencia.filter((c) => extraerBarrio(c.direccion) === barrioConsulta)
-      const otrosBarrio = porFrecuencia.filter((c) => extraerBarrio(c.direccion) !== barrioConsulta)
-      return [...mismosBarrio, ...otrosBarrio]
-    }
-  }
-
-  return porFrecuencia
+  return prepararSugerenciasCRMDetallado(clientes, filtros, opciones).map((r) => r.cliente)
 }
 
 export function obtenerMotivoCoincidencia(filtros: { nombre?: string; telefono?: string; direccion?: string }): string {

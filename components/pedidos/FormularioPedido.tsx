@@ -59,8 +59,8 @@ export default function FormularioPedido({
       envioManual, costoEnvioManualInput, distanciaKm,
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
-      sugerenciasActivas, mostrarDropdownSugerencias,
-      autocompletadoHabilitado, modoClienteNuevo
+      sugerenciasActivas, sugerenciasDetalladas, mostrarDropdownSugerencias,
+      autocompletadoHabilitado, modoClienteNuevo, pareceClienteNuevo
     },
     setters: { 
       setCliente, setTelefono, setDireccion, setCoordenadas, setMetodoPago, 
@@ -72,14 +72,14 @@ export default function FormularioPedido({
       subtotal, pideDireccion, costoEnvioFinal, total, indiceClientes
     },
     acciones: { 
-      aplicarDatosCRM, activarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
+      aplicarDatosCRM, activarModoClienteNuevo, desactivarModoClienteNuevo, seleccionarSugerenciaCliente, manejarTipoEntrega, cargarEjemplo, manejarEnvio, cancelar,
       guardarBorrador, restaurarBorrador, descartarBorrador,
       limpiarClienteSeleccionadoCRM, aplicarObservacionSugerida, guardarNotasCRM
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
 
   const motivoCoincidencia = obtenerMotivoCoincidencia({ nombre: cliente, telefono, direccion })
-  const puedeMostrarSinCoincidencias = autocompletadoHabilitado && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
+  const puedeMostrarSinCoincidencias = autocompletadoHabilitado && !modoClienteNuevo && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
   const mostrarPanelCrmSeparado = conHeaderModal && !pedidoInicial && autocompletadoHabilitado
 
   return (
@@ -98,6 +98,7 @@ export default function FormularioPedido({
         <PanelCRMCliente
           indiceClientes={indiceClientes}
           sugerenciasActivas={sugerenciasActivas}
+          sugerenciasDetalladas={sugerenciasDetalladas}
           clienteEncontrado={clienteEncontrado}
           clienteSeleccionadoCRM={clienteSeleccionadoCRM}
           guardandoNotaCRM={guardandoNotaCRM}
@@ -105,11 +106,13 @@ export default function FormularioPedido({
           telefonoInput={telefono}
           motivoCoincidencia={motivoCoincidencia}
           puedeMostrarSinCoincidencias={puedeMostrarSinCoincidencias}
+          pareceClienteNuevo={pareceClienteNuevo}
           modoClienteNuevo={modoClienteNuevo}
           indiceSugerenciaActiva={indiceSugerenciaActiva}
           onSeleccionarSugerencia={seleccionarSugerenciaCliente}
           onAplicarDatosCRM={aplicarDatosCRM}
           onActivarModoClienteNuevo={activarModoClienteNuevo}
+          onDesactivarModoClienteNuevo={desactivarModoClienteNuevo}
           onLimpiarSeleccion={limpiarClienteSeleccionadoCRM}
           onResetIndiceSugerencia={() => setIndiceSugerenciaActiva(-1)}
           onAplicarObservacion={aplicarObservacionSugerida}
@@ -283,11 +286,22 @@ export default function FormularioPedido({
             )}
 
           {/* CRM compacto solo para móvil / tablet (< lg) cuando hay coincidencias */}
-          {mostrarPanelCrmSeparado && (clienteEncontrado || sugerenciasActivas.length > 0 || puedeMostrarSinCoincidencias) && (
+          {mostrarPanelCrmSeparado && !modoClienteNuevo && (clienteEncontrado || sugerenciasDetalladas.length > 0 || pareceClienteNuevo) && (
             <div className="lg:hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-3 space-y-2">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                <Users size={12} className="text-chefsy" />
-                <span>Sugerencias CRM</span>
+              <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <Users size={12} className="text-chefsy" />
+                  <span>Sugerencias CRM</span>
+                </span>
+                {sugerenciasDetalladas.length > 0 && !clienteEncontrado && (
+                  <button
+                    type="button"
+                    onClick={activarModoClienteNuevo}
+                    className="text-[10px] font-semibold normal-case tracking-normal text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 cursor-pointer"
+                  >
+                    Es cliente nuevo
+                  </button>
+                )}
               </div>
               {clienteEncontrado && (
                 <button
@@ -308,26 +322,53 @@ export default function FormularioPedido({
                   </span>
                 </button>
               )}
-              {!clienteEncontrado && sugerenciasActivas.length > 0 && (
+              {!clienteEncontrado && sugerenciasDetalladas.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                  {sugerenciasActivas.slice(0, 5).map((sug, idx) => (
+                  {sugerenciasDetalladas.slice(0, 5).map((item, idx) => (
                     <button
-                      key={`mob-${sug.nombre}-${sug.telefono}-${idx}`}
+                      key={`mob-${item.cliente.nombre}-${item.cliente.telefono}-${idx}`}
                       type="button"
                       onClick={() => {
-                        seleccionarSugerenciaCliente(sug)
+                        seleccionarSugerenciaCliente(item.cliente)
                         setIndiceSugerenciaActiva(-1)
                       }}
-                      className="shrink-0 max-w-[200px] px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-left cursor-pointer"
+                      className={`shrink-0 max-w-[210px] px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border text-left cursor-pointer ${
+                        item.confianza === 'alta'
+                          ? 'border-emerald-300 dark:border-emerald-700'
+                          : 'border-slate-200 dark:border-slate-700'
+                      }`}
                     >
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
-                        {sug.nombre}
+                        {item.cliente.nombre}
                       </span>
                       <span className="text-[10px] text-slate-400 block truncate">
-                        {sug.direccion || 'Retiro en local'}
+                        {item.cliente.direccion || 'Retiro en local'}
+                      </span>
+                      <span
+                        className={`inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                          item.confianza === 'alta'
+                            ? 'bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        {item.motivo}
                       </span>
                     </button>
                   ))}
+                </div>
+              )}
+              {!clienteEncontrado && sugerenciasDetalladas.length === 0 && pareceClienteNuevo && (
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/70 dark:border-emerald-900/50 px-3 py-2">
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                    Parece un cliente nuevo. Podés seguir cargando.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={activarModoClienteNuevo}
+                    className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 shrink-0 cursor-pointer hover:underline"
+                  >
+                    Confirmar
+                  </button>
                 </div>
               )}
             </div>
