@@ -7,18 +7,18 @@ import { useState, useEffect, useRef, MutableRefObject } from 'react'
 import useSWR from 'swr'
 import { Pedido } from '@/tipos'
 import { obtenerPedidosActivos, suscribirAPedidos } from '@/servicios/supabase/pedidos'
+import {
+  leerColaOffline,
+  reconciliarPedidosConEstadoLocal,
+  type RegistroCambioLocal,
+} from '@/lib/pedidos-reconciliacion'
+
+export type { RegistroCambioLocal }
 
 export type AccionDespachar =
   | { tipo: 'CARGAR_PEDIDOS'; pedidos: Pedido[] }
   | { tipo: 'ELIMINAR_PEDIDO'; id: string }
   | { tipo: 'UPSERT_PEDIDO'; pedido: Pedido }
-
-export type RegistroCambioLocal =
-  | number
-  | {
-      timestamp: number
-      cambios: Partial<Pedido>
-    }
 
 interface UsePedidosRealtimeProps {
   despachar: (accion: AccionDespachar) => void
@@ -118,74 +118,17 @@ export function usePedidosRealtime({
 
     if (pedidosSWR) {
       const ahora = Date.now()
-      const eliminadosMap = eliminadosLocalesRef?.current || {}
-      const idsEliminados = new Set(
-        Object.entries(eliminadosMap)
-          .filter(([, ts]) => ahora - ts < 30000)
-          .map(([id]) => id)
-      )
+      const colaOffline =
+        typeof window !== 'undefined' ? leerColaOffline(window.localStorage, ahora).items : []
 
-      let pedidosSWRFiltrados = pedidosSWR.filter(p => !idsEliminados.has(p.id))
-
-      // ── Ventana de protección de mutaciones locales recientes (Optimistic Lock) ──
-      // Si el usuario modificó recientemente un pedido (hace menos de 6s) y el servidor
-      // responde antes de que la DB haya completado la réplica o sirvió caché HTTP,
-      // protegemos el cambio local del usuario para no parpadear ni revertir su acción.
-      const cambiosMap = cambiosLocalesRef?.current || {}
-
-      pedidosSWRFiltrados = pedidosSWRFiltrados.map((pServidor) => {
-        const reg = cambiosMap[pServidor.id]
-        if (!reg) return pServidor
-
-        const tsCambio = typeof reg === 'number' ? reg : reg.timestamp
-        if (!tsCambio || ahora - tsCambio >= 6000) {
-          delete cambiosMap[pServidor.id]
-          return pServidor
-        }
-
-        const cambios = typeof reg === 'object' && reg.cambios ? reg.cambios : null
-        if (!cambios) return pServidor
-
-        // Si el servidor ya contiene todos los valores modificados por el usuario,
-        // liberamos el lock local.
-        let servidorYaAlDia = true
-        for (const [clave, valor] of Object.entries(cambios)) {
-          if ((pServidor as any)[clave] !== valor) {
-            servidorYaAlDia = false
-            break
-          }
-        }
-
-        if (servidorYaAlDia) {
-          delete cambiosMap[pServidor.id]
-          return pServidor
-        }
-
-        // El servidor aún devolvió datos viejos antes de impactar el cambio:
-        // preservamos las propiedades modificadas optimistamente por el usuario
-        return {
-          ...pServidor,
-          ...cambios,
-        }
+      const pedidosSWRFiltrados = reconciliarPedidosConEstadoLocal({
+        pedidosServidor: pedidosSWR,
+        pedidosLocalesPrevios: prevPedidosRef?.current || swrPrevRef.current,
+        cambiosMap: cambiosLocalesRef?.current || {},
+        eliminadosMap: eliminadosLocalesRef?.current || {},
+        colaOffline,
+        ahora,
       })
-
-      // Un pedido recién creado o editado de forma optimista puede no aparecer aún
-      // en una respuesta del servidor que comenzó antes de terminar el POST. Conservarlo
-      // temporalmente evita que desaparezca de la pantalla durante ese intervalo.
-      const idsRecibidos = new Set(pedidosSWRFiltrados.map((p) => p.id))
-      const pedidosLocalesParaAgregar = prevPedidosRef?.current || swrPrevRef.current
-      for (const pedidoLocal of pedidosLocalesParaAgregar) {
-        const reg = cambiosMap[pedidoLocal.id]
-        const cambioLocalAt = typeof reg === 'number' ? reg : reg?.timestamp || 0
-        if (
-          !idsRecibidos.has(pedidoLocal.id) &&
-          !idsEliminados.has(pedidoLocal.id) &&
-          cambioLocalAt > 0 &&
-          ahora - cambioLocalAt < 6000
-        ) {
-          pedidosSWRFiltrados.push(pedidoLocal)
-        }
-      }
 
       // Evitar bucle infinito de re-render si los pedidos no cambiaron
       const prev = swrPrevRef.current

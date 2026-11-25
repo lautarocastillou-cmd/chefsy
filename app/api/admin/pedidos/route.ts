@@ -20,17 +20,17 @@ function validarPedidoParaCrear(pedido: any): string | null {
   if (!pedido.id || typeof pedido.id !== 'string' || !pedido.id.trim() || pedido.id.length > 64) {
     return 'ID de pedido inválido (máx 64 caracteres).'
   }
-  if (!pedido.cliente || typeof pedido.cliente !== 'string' || !pedido.cliente.trim() || pedido.cliente.length > 120) {
-    return 'Nombre del cliente requerido (máx 120 caracteres).'
+  if (!pedido.cliente || typeof pedido.cliente !== 'string' || !pedido.cliente.trim() || pedido.cliente.length > 200) {
+    return 'Nombre del cliente requerido (máx 200 caracteres).'
   }
   if (pedido.telefono !== undefined && pedido.telefono !== null) {
-    if (typeof pedido.telefono !== 'string' || pedido.telefono.length > 40) {
-      return 'Teléfono inválido (máx 40 caracteres).'
+    if (typeof pedido.telefono !== 'string' || pedido.telefono.length > 80) {
+      return 'Teléfono inválido (máx 80 caracteres).'
     }
   }
   if (pedido.direccion !== undefined && pedido.direccion !== null) {
-    if (typeof pedido.direccion !== 'string' || pedido.direccion.length > 300) {
-      return 'Dirección inválida (máx 300 caracteres).'
+    if (typeof pedido.direccion !== 'string' || pedido.direccion.length > 1000) {
+      return 'Dirección inválida (máx 1000 caracteres).'
     }
   }
   if (pedido.tipoEntrega && !TIPOS_ENTREGA_VALIDOS.includes(pedido.tipoEntrega)) {
@@ -68,6 +68,13 @@ function validarPedidoParaCrear(pedido: any): string | null {
     }
   }
   return null
+}
+
+function sanitizarBigIntOpcional(valor: unknown): number | undefined {
+  if (valor === undefined || valor === null || valor === '') return undefined
+  const num = Number(valor)
+  if (!Number.isFinite(num) || num < 0) return 0
+  return Math.round(num)
 }
 
 function validarCoordenadas(coords: any): boolean {
@@ -198,8 +205,8 @@ export async function GET(request: Request) {
     let query = supabase
       .from('pedidos')
       .select(COLUMNAS_LISTA)
-      .neq('es_prueba', true)
-      .neq('turno_tipo', 'prueba')
+      .not('es_prueba', 'is', true)
+      .or('turno_tipo.is.null,turno_tipo.neq.prueba')
 
     if (soloActivos) {
       query = query.eq('archivado', false)
@@ -305,6 +312,14 @@ async function procesarPOST(request: Request) {
         const { pedido } = body
         const errorVal = validarPedidoParaCrear(pedido)
         if (errorVal) {
+          console.warn('[API Pedidos] Validación rechazada al crear pedido:', {
+            error: errorVal,
+            id: pedido?.id,
+            clienteLen: typeof pedido?.cliente === 'string' ? pedido.cliente.length : null,
+            telefonoLen: typeof pedido?.telefono === 'string' ? pedido.telefono.length : null,
+            direccionLen: typeof pedido?.direccion === 'string' ? pedido.direccion.length : null,
+            productosCount: Array.isArray(pedido?.productos) ? pedido.productos.length : null,
+          })
           return NextResponse.json({ error: errorVal }, { status: 400 })
         }
 
@@ -312,6 +327,29 @@ async function procesarPOST(request: Request) {
         const payload: any = {
           ...filtrarCamposPermitidos(pedido),
           archivado: false,
+          es_prueba: Boolean(pedido.es_prueba),
+          turno_tipo: pedido.turno_tipo || 'noche',
+        }
+
+        // Columnas bigint en Postgres: asegurar enteros para evitar error 22P02
+        const ef = sanitizarBigIntOpcional(payload.montoEfectivo)
+        const tr = sanitizarBigIntOpcional(payload.montoTransferencia)
+        const tj = sanitizarBigIntOpcional(payload.montoTarjeta)
+        if (ef !== undefined) payload.montoEfectivo = ef
+        if (tr !== undefined) payload.montoTransferencia = tr
+        if (tj !== undefined) payload.montoTarjeta = tj
+
+        // Idempotencia previa: si el cliente reintentó tras un corte de red cuando el
+        // insert anterior ya había impactado, devolvemos ok sin duplicar puntos ni fallar.
+        const { data: pedidoExistente } = await supabaseAdmin
+          .from('pedidos')
+          .select('id')
+          .eq('id', payload.id)
+          .maybeSingle()
+
+        if (pedidoExistente) {
+          console.info(`[API Pedidos] Creación idempotente: el pedido ${payload.id} ya existía en BD.`)
+          return NextResponse.json({ ok: true, idempotente: true })
         }
 
         // Persistir las marcas de tiempo del ciclo de vida desde el momento
@@ -358,6 +396,11 @@ async function procesarPOST(request: Request) {
           .insert(payload)
 
         if (error) {
+          // Carrera de doble envío / reintento concurrente sobre la misma PK
+          if ((error as any)?.code === '23505') {
+            console.info(`[API Pedidos] Creación idempotente tras conflicto 23505 para pedido ${payload.id}.`)
+            return NextResponse.json({ ok: true, idempotente: true })
+          }
           console.error('[API Pedidos] Error al insertar pedido:', error)
           throw error
         }
@@ -397,6 +440,12 @@ async function procesarPOST(request: Request) {
         // Sanitización estricta por whitelist contra Mass Assignment
         const payload = filtrarCamposPermitidos(pedido)
         delete payload.id
+        const efEd = sanitizarBigIntOpcional(payload.montoEfectivo)
+        const trEd = sanitizarBigIntOpcional(payload.montoTransferencia)
+        const tjEd = sanitizarBigIntOpcional(payload.montoTarjeta)
+        if (efEd !== undefined) payload.montoEfectivo = efEd
+        if (trEd !== undefined) payload.montoTransferencia = trEd
+        if (tjEd !== undefined) payload.montoTarjeta = tjEd
 
         if (Object.keys(payload).length === 0) {
           return NextResponse.json({ error: 'No se enviaron campos válidos para actualizar.' }, { status: 400 })
@@ -566,6 +615,8 @@ async function procesarPOST(request: Request) {
           return NextResponse.json({ error: 'ID de pedido no provisto.' }, { status: 400 })
         }
 
+        console.warn(`[API Pedidos] Eliminación definitiva ejecutada por usuario=${sesion.usuario} (${rol}) sobre pedido=${id}`)
+
         // Obtener pedido antes de eliminar para restituir stock si aplica
         const { data: pedidoEliminar } = await supabaseAdmin
           .from('pedidos')
@@ -637,8 +688,8 @@ async function procesarPOST(request: Request) {
             .from('pedidos')
             .select('id, estado, total, costoEnvio, metodoPago, tipoEntrega, es_prueba, turno_tipo')
             .eq('fecha', fechaStr)
-            .neq('es_prueba', true)
-            .neq('turno_tipo', 'prueba')
+            .not('es_prueba', 'is', true)
+            .or('turno_tipo.is.null,turno_tipo.neq.prueba')
 
           if (pedidosDelDia && pedidosDelDia.length > 0) {
             // En servicio exclusivamente nocturno, todos los pedidos de la fecha corresponden a este turno
@@ -798,9 +849,9 @@ async function procesarPOST(request: Request) {
         }
 
         const updateData: Record<string, any> = { metodoPago }
-        if (montoEfectivo !== undefined) updateData.montoEfectivo = Math.max(0, Number(montoEfectivo) || 0)
-        if (montoTransferencia !== undefined) updateData.montoTransferencia = Math.max(0, Number(montoTransferencia) || 0)
-        if (montoTarjeta !== undefined) updateData.montoTarjeta = Math.max(0, Number(montoTarjeta) || 0)
+        if (montoEfectivo !== undefined) updateData.montoEfectivo = Math.round(Math.max(0, Number(montoEfectivo) || 0))
+        if (montoTransferencia !== undefined) updateData.montoTransferencia = Math.round(Math.max(0, Number(montoTransferencia) || 0))
+        if (montoTarjeta !== undefined) updateData.montoTarjeta = Math.round(Math.max(0, Number(montoTarjeta) || 0))
 
         const { error } = await supabaseAdmin
           .from('pedidos')

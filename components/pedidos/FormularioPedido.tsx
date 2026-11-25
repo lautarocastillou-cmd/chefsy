@@ -21,6 +21,7 @@ import {
   X,
   Users,
   StickyNote,
+  Loader2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
@@ -46,16 +47,11 @@ export default function FormularioPedido({
   const [indiceSugerenciaActiva, setIndiceSugerenciaActiva] = React.useState(-1)
   const [sugerenciasCerradasManualmente, setSugerenciasCerradasManualmente] = React.useState(false)
  
-  useEscapeKey(() => {
-    if (onClose) onClose()
-    else router.push('/pedidos')
-  })
-
   const {
     estado: { 
       clienteEncontrado, clienteSeleccionadoCRM, guardandoNotaCRM,
       tipoEntrega, cliente, telefono, direccion, coordenadas, 
-      metodoPago, observaciones, filasProductos, error, cargandoEnvio, 
+      metodoPago, observaciones, filasProductos, error, enviando, cargandoEnvio, 
       envioManual, costoEnvioManualInput, distanciaKm,
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,
@@ -77,6 +73,12 @@ export default function FormularioPedido({
       limpiarClienteSeleccionadoCRM, aplicarObservacionSugerida, guardarNotasCRM
     }
   } = useFormularioPedido({ pedidoInicial, onClose })
+
+  useEscapeKey(() => {
+    if (enviando) return
+    if (onClose) onClose()
+    else router.push('/pedidos')
+  })
 
   const motivoCoincidencia = obtenerMotivoCoincidencia({ nombre: cliente, telefono, direccion })
   const puedeMostrarSinCoincidencias = autocompletadoHabilitado && !modoClienteNuevo && cliente.trim().length >= 3 && sugerenciasActivas.length === 0
@@ -188,7 +190,8 @@ export default function FormularioPedido({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer active:scale-90 ml-1"
+                  disabled={enviando}
+                  className="text-slate-450 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl bg-slate-100 dark:bg-slate-800 disabled:opacity-40 transition-colors focus:outline-none cursor-pointer active:scale-90 ml-1"
                   title="Cerrar ventana"
                 >
                   <X size={20} />
@@ -644,16 +647,27 @@ export default function FormularioPedido({
                     <button
                       type="button"
                       onClick={manejarEnvio}
-                      className="flex-1 bg-chefsy hover:bg-chefsy-700 text-white p-4 rounded-xl font-bold text-base transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                      disabled={enviando}
+                      className="flex-1 bg-chefsy hover:bg-chefsy-700 disabled:opacity-70 disabled:cursor-wait text-white p-4 rounded-xl font-bold text-base transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Check className="w-5 h-5" />
-                      <span>{pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}</span>
+                      {enviando ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>{pedidoInicial ? 'Guardando...' : 'Guardando pedido...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5" />
+                          <span>{pedidoInicial ? 'Guardar Cambios' : 'Generar Pedido'}</span>
+                        </>
+                      )}
                     </button>
 
                     <button
                       type="button"
                       onClick={cancelar}
-                      className="px-6 py-4 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                      disabled={enviando}
+                      className="px-6 py-4 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-all cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -705,10 +719,20 @@ export default function FormularioPedido({
           <button
             type="button"
             onClick={manejarEnvio}
-            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white py-3 px-4 rounded-2xl font-black text-xs transition-all shadow-lg shadow-emerald-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+            disabled={enviando}
+            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-70 disabled:cursor-wait text-white py-3 px-4 rounded-2xl font-black text-xs transition-all shadow-lg shadow-emerald-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <span>{pedidoInicial ? 'Guardar Cambios' : 'Confirmar Pedido'}</span>
-            <ArrowRight className="w-4 h-4" />
+            {enviando ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              <>
+                <span>{pedidoInicial ? 'Guardar Cambios' : 'Confirmar Pedido'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       </div>

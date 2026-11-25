@@ -9,6 +9,7 @@ import { requiereDireccion } from '@/lib/entrega'
 import { UBICACION_LOCAL, obtenerDistanciaConduccion, calcularCostoEnvio } from '@/lib/ubicacion'
 import { generarId, generarIdProducto } from '@/lib/utils'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { limpiarBorradorTrasCrearPedido } from '@/lib/borrador-pedido'
 import useSWR from 'swr'
 import {
   SugerenciaCliente,
@@ -94,6 +95,8 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     crearFilaProductoVacia(),
   ])
   const [error, setRawError] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const enviandoRef = useRef(false)
   const errorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   // ── Gestión de borrador temporal (Lectura directa para 0 lag al abrir modal) ──
@@ -110,11 +113,11 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   })
   const [borradorActivoCargado, setBorradorActivoCargado] = useState(false)
 
-  const setError = (msg: string) => {
+  const setError = (msg: string, duracionMs: number = 3500) => {
     setRawError(msg)
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current)
     if (msg) {
-      errorTimeoutRef.current = setTimeout(() => setRawError(''), 3000)
+      errorTimeoutRef.current = setTimeout(() => setRawError(''), duracionMs)
     }
   }
 
@@ -651,6 +654,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
   }
 
   const manejarEnvio = async () => {
+    if (enviandoRef.current) return
     setError('')
 
     if (!cliente.trim()) return setError('El nombre del cliente es obligatorio.')
@@ -669,75 +673,97 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
       return setError('Agregá al menos un producto del catálogo.')
     }
 
-    // ── Respaldo Infalible de Costo de Envío en Guardado Rápido ──
-    let costoEnvioRespaldo = costoEnvioFinal
-    let distRespaldo = distanciaKm
+    enviandoRef.current = true
+    setEnviando(true)
 
-    if (pideDireccion && !envioManual) {
-      if (cargandoEnvio && coordenadas) {
-        try {
-          const dist = await obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas)
-          distRespaldo = dist
-          costoEnvioRespaldo = calcularCostoEnvio(dist)
-        } catch {
-          costoEnvioRespaldo = costoEnvio > 0 ? costoEnvio : 1500
+    try {
+      // ── Respaldo Infalible de Costo de Envío en Guardado Rápido ──
+      let costoEnvioRespaldo = costoEnvioFinal
+      let distRespaldo = distanciaKm
+
+      if (pideDireccion && !envioManual) {
+        if (cargandoEnvio && coordenadas) {
+          try {
+            const dist = await obtenerDistanciaConduccion(UBICACION_LOCAL, coordenadas)
+            distRespaldo = dist
+            costoEnvioRespaldo = calcularCostoEnvio(dist)
+          } catch {
+            costoEnvioRespaldo = costoEnvio > 0 ? costoEnvio : 1500
+          }
+        } else if (costoEnvioRespaldo === 0) {
+          // Si no hay coordenadas o la API no respondió aún, aplicar costo base de $1500
+          costoEnvioRespaldo = 1500
         }
-      } else if (costoEnvioRespaldo === 0) {
-        // Si no hay coordenadas o la API no respondió aún, aplicar costo base de $1500
-        costoEnvioRespaldo = 1500
       }
-    }
 
-    const totalCalculado = subtotal + (pideDireccion ? costoEnvioRespaldo : 0)
+      const totalCalculado = subtotal + (pideDireccion ? costoEnvioRespaldo : 0)
 
-    if (metodoPago === 'mixto') {
-      const sumaMixto = (Number(montoEfectivo) || 0) + (Number(montoTransferencia) || 0) + (Number(montoTarjeta) || 0)
-      if (sumaMixto !== totalCalculado) {
-        return setError(`El pago mixto ($${sumaMixto}) no coincide con el total ($${totalCalculado}).`)
+      if (metodoPago === 'mixto') {
+        const sumaMixto = (Number(montoEfectivo) || 0) + (Number(montoTransferencia) || 0) + (Number(montoTarjeta) || 0)
+        if (sumaMixto !== totalCalculado) {
+          setError(`El pago mixto ($${sumaMixto}) no coincide con el total ($${totalCalculado}).`)
+          return
+        }
       }
-    }
 
-    const ahora = new Date()
+      const ahora = new Date()
 
-    const nuevoPedido: Pedido = {
-      ...(pedidoInicial || {}),
-      id: pedidoInicial?.id || generarId(),
-      cliente: cliente.trim(),
-      telefono: telefono.trim() || 'Sin especificar',
-      tipoEntrega,
-      direccion: pideDireccion ? direccion.trim() : '',
-      coordenadas: pideDireccion ? coordenadas ?? undefined : undefined,
-      productos: productosParseados,
-      total: totalCalculado,
-      costoEnvio: pideDireccion ? (costoEnvioRespaldo > 0 ? costoEnvioRespaldo : undefined) : undefined,
-      distanciaKm: distRespaldo > 0 ? Number(distRespaldo.toFixed(2)) : undefined,
-      envioManual: envioManual,
-      estado: pedidoInicial ? pedidoInicial.estado : 'en_cocina',
-      metodoPago,
-      observaciones: observaciones.trim() || undefined,
-      hora: pedidoInicial?.hora || ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      fecha: pedidoInicial?.fecha || obtenerFechaNegocio(ahora),
-      created_at: pedidoInicial?.created_at || ahora.toISOString(),
-      cocina_at: pedidoInicial ? pedidoInicial.cocina_at : ahora.toISOString(),
-      pago_confirmado: pedidoInicial?.pago_confirmado,
-      montoEfectivo: metodoPago === 'mixto' && Number(montoEfectivo) > 0 ? Number(montoEfectivo) : undefined,
-      montoTransferencia: metodoPago === 'mixto' && Number(montoTransferencia) > 0 ? Number(montoTransferencia) : undefined,
-      montoTarjeta: metodoPago === 'mixto' && Number(montoTarjeta) > 0 ? Number(montoTarjeta) : undefined,
-    }
+      const nuevoPedido: Pedido = {
+        ...(pedidoInicial || {}),
+        id: pedidoInicial?.id || generarId(),
+        cliente: cliente.trim(),
+        telefono: telefono.trim() || 'Sin especificar',
+        tipoEntrega,
+        direccion: pideDireccion ? direccion.trim() : '',
+        coordenadas: pideDireccion ? coordenadas ?? undefined : undefined,
+        productos: productosParseados,
+        total: totalCalculado,
+        costoEnvio: pideDireccion ? (costoEnvioRespaldo > 0 ? costoEnvioRespaldo : undefined) : undefined,
+        distanciaKm: distRespaldo > 0 ? Number(distRespaldo.toFixed(2)) : undefined,
+        envioManual: envioManual,
+        estado: pedidoInicial ? pedidoInicial.estado : 'en_cocina',
+        metodoPago,
+        observaciones: observaciones.trim() || undefined,
+        hora: pedidoInicial?.hora || ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        fecha: pedidoInicial?.fecha || obtenerFechaNegocio(ahora),
+        created_at: pedidoInicial?.created_at || ahora.toISOString(),
+        cocina_at: pedidoInicial ? pedidoInicial.cocina_at : ahora.toISOString(),
+        pago_confirmado: pedidoInicial?.pago_confirmado,
+        montoEfectivo: metodoPago === 'mixto' && Number(montoEfectivo) > 0 ? Math.round(Number(montoEfectivo)) : undefined,
+        montoTransferencia: metodoPago === 'mixto' && Number(montoTransferencia) > 0 ? Math.round(Number(montoTransferencia)) : undefined,
+        montoTarjeta: metodoPago === 'mixto' && Number(montoTarjeta) > 0 ? Math.round(Number(montoTarjeta)) : undefined,
+      }
 
-    if (pedidoInicial) {
-      editarPedido(nuevoPedido)
-    } else {
-      agregarPedido(nuevoPedido)
-      // Si se crea el pedido con éxito, se elimina la data guardada temporalmente
-      try {
-        localStorage.removeItem(STORAGE_KEY_BORRADOR_PEDIDO)
-      } catch {}
-      setBorradorGuardado(null)
-      setBorradorActivoCargado(false)
+      if (pedidoInicial) {
+        const resultado = await editarPedido(nuevoPedido)
+        if (!resultado.ok) {
+          setError(
+            resultado.error || 'No se pudo actualizar el pedido en el servidor. Intentá nuevamente.',
+            8000
+          )
+          return
+        }
+      } else {
+        const resultado = await agregarPedido(nuevoPedido)
+        if (!resultado.ok) {
+          setError(
+            resultado.error || 'No se pudo guardar el pedido en el servidor. Revisá los datos e intentá nuevamente.',
+            8000
+          )
+          return
+        }
+        // Solo si se guardó con éxito y provenía del borrador restaurado, limpiamos el borrador
+        if (limpiarBorradorTrasCrearPedido(localStorage, STORAGE_KEY_BORRADOR_PEDIDO, borradorActivoCargado)) {
+          setBorradorGuardado(null)
+          setBorradorActivoCargado(false)
+        }
+      }
+
+      cancelar()
+    } finally {
+      enviandoRef.current = false
+      setEnviando(false)
     }
-    
-    cancelar()
   }
 
   // ── Acciones de Borrador Temporal ──────────────────────────────────────────
@@ -849,7 +875,7 @@ export function useFormularioPedido({ pedidoInicial, onClose }: PropsUseFormular
     estado: {
       clienteEncontrado, clienteSeleccionadoCRM, guardandoNotaCRM,
       tipoEntrega, cliente, telefono, direccion, coordenadas,
-      metodoPago, observaciones, filasProductos, error, costoEnvio, distanciaKm,
+      metodoPago, observaciones, filasProductos, error, enviando, costoEnvio, distanciaKm,
       cargandoEnvio, envioManual, costoEnvioManualInput,
       montoEfectivo, montoTransferencia, montoTarjeta,
       borradorGuardado, borradorActivoCargado,

@@ -284,7 +284,7 @@ function ToastItem({
 }) {
   const [saliendoLocal, setSaliendoLocal] = useState(false)
   const saliendo = Boolean(n.saliendo || saliendoLocal)
-  const duracionMs = n.accion ? 4200 : 2600
+  const duracionMs = n.accion ? 5500 : n.tipo === 'warning' ? 5500 : 2800
 
   const esEntrega = n.mensaje.toLowerCase().includes('entregado') || n.mensaje.toLowerCase().includes('entrega') || n.mensaje.toLowerCase().includes('llevar')
 

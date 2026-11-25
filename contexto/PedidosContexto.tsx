@@ -56,6 +56,11 @@ import { useSincronizacionOffline } from '@/hooks/useSincronizacionOffline'
 import { useAlertasInactividad } from '@/hooks/useAlertasInactividad'
 import { useTurno } from '@/hooks/useTurno'
 import { useCadetes } from '@/hooks/useCadetes'
+import {
+  encolarAccionOffline,
+  EVENTO_OFFLINE_QUEUE_ACTUALIZADA,
+  type ResultadoAccionPedido,
+} from '@/lib/pedidos-reconciliacion'
 
 // Re-exportar interfaz de Notificación para mantener compatibilidad
 export type { Notificacion } from './TemaNotificacionContexto'
@@ -154,8 +159,8 @@ interface ValorContextoPedidosInterno {
   pedidos: Pedido[]
   cadetes: Cadete[]
   estaListo: boolean
-  agregarPedido: (pedido: Pedido) => void
-  editarPedido: (pedido: Pedido) => void
+  agregarPedido: (pedido: Pedido) => Promise<ResultadoAccionPedido>
+  editarPedido: (pedido: Pedido) => Promise<ResultadoAccionPedido>
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
   revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
@@ -246,8 +251,10 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
 
   const { usuarioActivo } = usarAuth()
   const { agregarNotificacion } = usarTemaNotificacion()
-  const isAdmin = usuarioActivo?.rol === 'admin'
-  const esStaff = usuarioActivo?.rol === 'admin' || usuarioActivo?.rol === 'cadete'
+  const rolActual = usuarioActivo?.rol as string | undefined
+  const isAdmin = rolActual === 'admin'
+  const esOperador = isAdmin || rolActual === 'cajero'
+  const esStaff = esOperador || rolActual === 'cadete'
 
   // ── Hooks especializados ──────────────────────────────
 
@@ -259,11 +266,23 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     habilitado: esStaff,
   })
 
-  useSincronizacionOffline({ setDbEstado, agregarNotificacion, isAdmin })
+  const refrescarDesdeOffline = useCallback(() => {
+    void mutateSWR()
+  }, [mutateSWR])
 
-  const { cadetes, refrescarCadetes } = useCadetes({ isAdmin })
+  useSincronizacionOffline({
+    setDbEstado,
+    agregarNotificacion,
+    isAdmin: esOperador,
+    onSincronizado: refrescarDesdeOffline,
+  })
 
-  const { estadoTurno, setEstadoTurno, iniciarTurno } = useTurno({ agregarNotificacion, isAdmin })
+  const { cadetes, refrescarCadetes } = useCadetes({ isAdmin: esOperador })
+
+  const { estadoTurno, setEstadoTurno, iniciarTurno } = useTurno({
+    agregarNotificacion,
+    isAdmin: esOperador,
+  })
 
   useAlertasInactividad({
     pedidos: estado.pedidos,
@@ -460,36 +479,83 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     prevPedidosRef.current = estado.pedidos
   }, [estado.pedidos, estaListo, usuarioActivo])
 
-  // ── Función auxiliar: enviar acciones al servidor ─────
+  // ── Función auxiliar: enviar acciones al servidor (con reintento automático) ─────
 
-  const enviarAccionPedido = async (payload: any) => {
-    try {
-      const respuesta = await fetch('/api/admin/pedidos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!respuesta.ok) {
+  const enviarAccionPedido = async (payload: any): Promise<{ offline: boolean }> => {
+    const MAX_INTENTOS = 2
+    const TIMEOUT_MS = 12_000
+    let ultimoError: any = null
+
+    for (let intento = 0; intento < MAX_INTENTOS; intento++) {
+      const controller = new AbortController()
+      const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS)
+      try {
+        const respuesta = await fetch('/api/admin/pedidos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+        window.clearTimeout(timer)
+
+        if (respuesta.ok) {
+          return { offline: false }
+        }
+
         const errorData = await respuesta.json().catch(() => ({}))
-        throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`)
+        const mensaje = errorData.error || `Error del servidor: ${respuesta.status}`
+        const err: any = new Error(mensaje)
+        err.status = respuesta.status
+        ultimoError = err
+
+        // Reintentar solo fallos transitorios del servidor/edge (5xx, 408, 429)
+        const esTransitorio =
+          respuesta.status >= 500 || respuesta.status === 408 || respuesta.status === 429
+        if (esTransitorio && intento + 1 < MAX_INTENTOS) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * (intento + 1)))
+          continue
+        }
+
+        throw err
+      } catch (e: any) {
+        window.clearTimeout(timer)
+        ultimoError = e
+
+        const esErrorDeRed =
+          !navigator.onLine ||
+          e?.name === 'AbortError' ||
+          e?.name === 'TypeError' ||
+          (typeof e?.message === 'string' &&
+            (e.message.includes('Failed to fetch') ||
+              e.message.includes('NetworkError') ||
+              e.message.includes('Load failed')))
+
+        if (esErrorDeRed) {
+          if (intento + 1 < MAX_INTENTOS && navigator.onLine) {
+            await new Promise((resolve) => setTimeout(resolve, 500 * (intento + 1)))
+            continue
+          }
+
+          console.warn('[Offline] Petición encolada para sincronizar luego:', payload)
+          encolarAccionOffline(window.localStorage, payload)
+          window.dispatchEvent(new CustomEvent(EVENTO_OFFLINE_QUEUE_ACTUALIZADA))
+          agregarNotificacion(
+            'Sin conexión. El pedido quedó guardado localmente y se sincronizará automáticamente al recuperar señal.',
+            'warning'
+          )
+          return { offline: true }
+        }
+
+        throw e
       }
-    } catch (e: any) {
-      if (!navigator.onLine || (e.message && e.message.includes('Failed to fetch'))) {
-        console.warn('[Offline] Petición encolada para sincronizar luego:', payload)
-        const queueStr = localStorage.getItem('chefsy-offline-queue')
-        const queue = queueStr ? JSON.parse(queueStr) : []
-        queue.push({ payload, timestamp: Date.now() })
-        localStorage.setItem('chefsy-offline-queue', JSON.stringify(queue))
-        agregarNotificacion('Sin conexión. Los cambios se sincronizarán al recuperar la señal.', 'info')
-        return
-      }
-      throw e
     }
+
+    throw ultimoError || new Error('No se pudo completar la operación en el servidor.')
   }
 
   // ── Operaciones CRUD ──────────────────────────────────
 
-  const agregarPedido = async (pedido: Pedido) => {
+  const agregarPedido = async (pedido: Pedido): Promise<ResultadoAccionPedido> => {
     const esModoPrueba = estadoTurno?.tipoTurno === 'prueba'
     const pedidoConTurno: Pedido = {
       ...pedido,
@@ -500,26 +566,47 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
     cambiosLocalesRef.current[pedidoConTurno.id] = {
       timestamp: Date.now(),
       cambios: { ...pedidoConTurno },
+      pedidoCompleto: pedidoConTurno,
+      enVuelo: true,
     }
-    despachar({ tipo: 'AGREGAR_PEDIDO', pedido: pedidoConTurno })
-    mutateSWR((current) => {
-      const arr = current || []
-      const existe = arr.some((p) => p.id === pedidoConTurno.id)
-      return existe ? arr.map((p) => (p.id === pedidoConTurno.id ? pedidoConTurno : p)) : [pedidoConTurno, ...arr]
-    }, false)
-    reproducirSonidoCampanaCocina()
+
     try {
-      await enviarAccionPedido({ accion: 'crear', pedido: pedidoConTurno })
+      const resultadoEnvio = await enviarAccionPedido({ accion: 'crear', pedido: pedidoConTurno })
+
+      // Confirmado en servidor o resguardado en la cola offline: recién ahora
+      // lo publicamos en el estado local para no mostrar ni imprimir comandas fantasma.
+      cambiosLocalesRef.current[pedidoConTurno.id] = {
+        timestamp: Date.now(),
+        cambios: { ...pedidoConTurno },
+        pedidoCompleto: pedidoConTurno,
+        enVuelo: false,
+      }
+      despachar({ tipo: 'AGREGAR_PEDIDO', pedido: pedidoConTurno })
+      mutateSWR((current) => {
+        const arr = current || []
+        const existe = arr.some((p) => p.id === pedidoConTurno.id)
+        return existe
+          ? arr.map((p) => (p.id === pedidoConTurno.id ? pedidoConTurno : p))
+          : [pedidoConTurno, ...arr]
+      }, false)
+      reproducirSonidoCampanaCocina()
+
+      return { ok: true, offline: resultadoEnvio.offline }
     } catch (e: any) {
+      delete cambiosLocalesRef.current[pedidoConTurno.id]
+      const mensaje = e?.message || 'Error interno al guardar el pedido.'
       console.error('[Servidor/Supabase] Error al crear pedido:', e)
-      agregarNotificacion(`Error al guardar el pedido en la nube: ${e.message || 'Error interno'}`, 'warning')
+      agregarNotificacion(`No se pudo guardar el pedido: ${mensaje}`, 'warning')
+      return { ok: false, error: mensaje, status: e?.status }
     }
   }
 
-  const editarPedido = async (pedido: Pedido) => {
+  const editarPedido = async (pedido: Pedido): Promise<ResultadoAccionPedido> => {
+    const pedidoAnterior = estado.pedidos.find((p) => p.id === pedido.id)
     cambiosLocalesRef.current[pedido.id] = {
       timestamp: Date.now(),
       cambios: { ...pedido },
+      enVuelo: true,
     }
     despachar({ tipo: 'EDITAR_PEDIDO', pedido })
     mutateSWR((current) => {
@@ -527,10 +614,26 @@ function ProveedorPedidosInterno({ children }: { children: ReactNode }) {
       return current.map((p) => (p.id === pedido.id ? pedido : p))
     }, false)
     try {
-      await enviarAccionPedido({ accion: 'editar', id: pedido.id, pedido })
+      const resultadoEnvio = await enviarAccionPedido({ accion: 'editar', id: pedido.id, pedido })
+      cambiosLocalesRef.current[pedido.id] = {
+        timestamp: Date.now(),
+        cambios: { ...pedido },
+        enVuelo: false,
+      }
+      return { ok: true, offline: resultadoEnvio.offline }
     } catch (e: any) {
+      const mensaje = e?.message || 'Error al actualizar el pedido en el servidor.'
       console.error('[Servidor/Supabase] Error al actualizar pedido:', e)
-      agregarNotificacion('Error al actualizar el pedido en el servidor.', 'warning')
+      delete cambiosLocalesRef.current[pedido.id]
+      if (pedidoAnterior) {
+        despachar({ tipo: 'EDITAR_PEDIDO', pedido: pedidoAnterior })
+        mutateSWR((current) => {
+          if (!current) return [pedidoAnterior]
+          return current.map((p) => (p.id === pedido.id ? pedidoAnterior : p))
+        }, false)
+      }
+      agregarNotificacion(`No se pudo actualizar el pedido: ${mensaje}`, 'warning')
+      return { ok: false, error: mensaje, status: e?.status }
     }
   }
 
@@ -1004,8 +1107,8 @@ interface ValorContextoPedidos {
   productos: ProductoCatalogo[]
   modificadores: ModificadorCatalogo[]
   estaListo: boolean
-  agregarPedido: (pedido: Pedido) => void
-  editarPedido: (pedido: Pedido) => void
+  agregarPedido: (pedido: Pedido) => Promise<ResultadoAccionPedido>
+  editarPedido: (pedido: Pedido) => Promise<ResultadoAccionPedido>
   cambiarEstado: (id: string, estado: EstadoPedido, mostrarDeshacer?: boolean) => void
   revertirEstado: (id: string) => void
   marcarPagoConfirmado: (id: string, confirmado: boolean) => void
