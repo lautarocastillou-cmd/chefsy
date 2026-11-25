@@ -8,6 +8,7 @@ import {
   esItemPromoFlash,
   evaluarEstadoPromoFlash,
   normalizarConfiguracionPromoFlash,
+  PROMO_FLASH_IMAGEN_DEFAULT,
   PROMO_FLASH_PRODUCTO_ID,
 } from '../lib/promo-flash.ts'
 import { esProductoPromo } from '../tipos/promo.ts'
@@ -33,7 +34,7 @@ test('crea configuración default de Burger Cheese a $5.000 para hoy y normaliza
   assert.equal(norm.precioRegular, 8500)
   assert.equal(norm.limiteTotal, 20)
   assert.equal(norm.maxPorPedido, 3)
-  assert.equal(norm.imagenUrl, '/burger-loca.webp')
+  assert.equal(norm.imagenUrl, PROMO_FLASH_IMAGEN_DEFAULT)
 })
 
 test('cuenta unidades vendidas ignorando pedidos cancelados y pedidos de prueba', () => {

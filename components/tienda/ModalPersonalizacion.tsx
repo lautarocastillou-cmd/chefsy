@@ -55,6 +55,13 @@ export default function ModalPersonalizacion({
   const esPromo = promoHabilitada && esProductoPromo(producto.id, producto.nombre, promoHabilitada, producto.esCombo, producto.categoriaId)
   const modPromoSeleccionado = modsSeleccionados.find(m => m.id.startsWith('promo-regalo-'))?.id || MOD_PROMO_FANTA.id
 
+  // Identificar burgers elaboradas con el blend propio (excluye categoría Patys clásicos)
+  const esBurgerBlend =
+    producto.categoriaId !== 'cat-1781570568487' &&
+    (producto.categoriaId === 'patys' ||
+      producto.categoriaId === 'hamburguesas' ||
+      producto.nombre.toLowerCase().includes('burger'))
+
   useEffect(() => {
     if (esPromo) {
       const yaTiene = modsSeleccionados.some(m => m.id.startsWith('promo-regalo-'))
@@ -481,17 +488,24 @@ export default function ModalPersonalizacion({
                   </div>
 
                   {/* Ingredientes y Detalles */}
-                  {descripcion && descripcion.trim() && (
-                    <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
+                  {((descripcion && descripcion.trim()) || esBurgerBlend) && (
+                    <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-2 shadow-sm">
                       <div className="flex items-center gap-1.5">
                         <FileText size={12} className="text-amber-400 shrink-0" />
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                           Ingredientes & Detalles
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                        {descripcion.trim()}
-                      </p>
+                      {descripcion && descripcion.trim() && (
+                        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                          {descripcion.trim()}
+                        </p>
+                      )}
+                      {esBurgerBlend && (
+                        <p className="text-[11px] sm:text-xs text-stone-300 border-t border-white/10 pt-2 leading-snug">
+                          <span className="text-amber-400 font-bold">Blend propio:</span> medallón elaborado con tapa de asado + roast beef.
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -715,17 +729,24 @@ export default function ModalPersonalizacion({
                 </div>
 
                 {/* Ingredientes y Detalles */}
-                {descripcion && descripcion.trim() && (
-                  <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-1.5 shadow-sm">
+                {((descripcion && descripcion.trim()) || esBurgerBlend) && (
+                  <div className="bg-[#222] border border-[#383838] rounded-2xl p-3.5 sm:p-4 text-left space-y-2 shadow-sm">
                     <div className="flex items-center gap-1.5">
                       <FileText size={12} className="text-amber-400 shrink-0" />
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Ingredientes & Detalles
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                      {descripcion.trim()}
-                    </p>
+                    {descripcion && descripcion.trim() && (
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                        {descripcion.trim()}
+                      </p>
+                    )}
+                    {esBurgerBlend && (
+                      <p className="text-[11px] sm:text-xs text-stone-300 border-t border-white/10 pt-2 leading-snug">
+                        <span className="text-amber-400 font-bold">Blend propio:</span> medallón elaborado con tapa de asado + roast beef.
+                      </p>
+                    )}
                   </div>
                 )}
 

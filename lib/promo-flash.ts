@@ -66,6 +66,9 @@ export interface EstadoPromoFlash {
   config: ConfiguracionPromoFlash
 }
 
+export const PROMO_FLASH_IMAGEN_DEFAULT =
+  'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1795646193386_nhmed9q.webp'
+
 export function crearConfiguracionPromoFlashDefault(
   fechaHoy: string = obtenerFechaHoyArgentinaSimple()
 ): ConfiguracionPromoFlash {
@@ -74,11 +77,11 @@ export function crearConfiguracionPromoFlashDefault(
     activa: true,
     fechaVigencia: fechaHoy,
     titulo: 'BURGER CHEESE A $5.000',
-    subtitulo: '¡Locura cheddar solo por hoy! Pan de papa artesanal, medallón smash jugoso y doble cheddar fundido.',
+    subtitulo: '¡Solo por hoy! Blend propio de Roast Beef + Tapa de Asado smash, cheddar fundido y pan de papa.',
     badge: 'SOLO POR HOY',
     nombreProducto: 'Promo Burger Cheese ($5.000)',
-    descripcionProducto: 'Medallón smash jugoso + doble cheddar fundido en pan de papa. ¡Edición limitada solo por hoy!',
-    imagenUrl: '/burger-loca.webp',
+    descripcionProducto: 'Medallón smash de Roast Beef + Tapa de Asado y cheddar fundido en pan de papa. ¡Edición limitada solo por hoy!',
+    imagenUrl: PROMO_FLASH_IMAGEN_DEFAULT,
     precioPromo: PROMO_FLASH_PRECIO_DEFAULT,
     precioRegular: PROMO_FLASH_PRECIO_REGULAR_DEFAULT,
     limiteTotal: PROMO_FLASH_LIMITE_DEFAULT,

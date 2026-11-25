@@ -3,6 +3,7 @@
 import React from 'react'
 import { ScrollSpyNavBar } from '@/components/tienda/ScrollSpyNavBar'
 import ProductCard from '@/components/tienda/ProductCard'
+import CartelBlendBurgers from '@/components/tienda/CartelBlendBurgers'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { CategoriaCatalogo, ProductoCatalogo, MetaProducto } from '@/tipos/catalogo'
 import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA, resolverImagen } from '@/lib/tienda-helpers'
@@ -11,7 +12,6 @@ import { OBTENER_DETALLES_COMPLEMENTARIOS, OBTENER_DETALLES_CATEGORIA, resolverI
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Helper interno: construye los props de ProductCard para un producto dado
 function buildCardProps(
   prodOriginal: ProductoCatalogo,
   metadata:     Record<string, MetaProducto>,
@@ -105,6 +105,11 @@ function CatalogoProductosComponente({
                 const productosDeCat = productosFiltrados.filter(p => p.categoriaId === cat.id)
                 if (productosDeCat.length === 0) return null
 
+                const esSeccionBurgers =
+                  cat.id === 'patys' ||
+                  cat.id === 'hamburguesas' ||
+                  cat.nombre.toLowerCase().includes('burger')
+
                 return (
                   <div key={cat.id} id={cat.id} className={`categoria-seccion flex flex-col gap-4 scroll-mt-36 ${portadaAppActiva ? 'md:grid md:grid-cols-2 md:gap-x-5 md:gap-y-4' : ''}`}>
                     {/* Título de Categoría en la lista */}
@@ -112,6 +117,11 @@ function CatalogoProductosComponente({
                       <h3 className={`font-bebas text-4xl text-chefsy-300 tracking-wide border-b border-white/10 pb-2 mb-2 ${portadaAppActiva ? 'md:col-span-2' : ''}`}>
                         {cat.nombre}
                       </h3>
+                    )}
+
+                    {/* Cartel informativo del blend propio de carne (Roast Beef + Tapa de Asado) */}
+                    {esSeccionBurgers && !busqueda && (
+                      <CartelBlendBurgers className={portadaAppActiva ? 'md:col-span-2' : ''} />
                     )}
 
                     {/* Productos normales (excluye medias pizzas en la categoría pizzas) */}
