@@ -4,12 +4,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Store, FileText, ArrowUp, WifiOff } from 'lucide-react'
 import BannerTituloCarta from '@/components/carta/BannerTituloCarta'
+import ImagenHojaCarta from '@/components/carta/ImagenHojaCarta'
 import {
   construirEnlaceWhatsAppCarta,
+  detectarConexionLentaCarta,
   formatearFechaActualizacionCarta,
   obtenerSiguienteImagen,
   type ConfiguracionCarta,
   type HojaCarta,
+  type InfoConexionRedCarta,
 } from '@/lib/carta-digital'
 import type { EstadoHorarioCarta } from '@/lib/carta-digital-servidor'
 
@@ -27,6 +30,7 @@ export default function VisorCartaPublica({
   const [indiceActivo, setIndiceActivo] = useState(0)
   const [mostrarSubir, setMostrarSubir] = useState(false)
   const [sinConexion, setSinConexion] = useState(false)
+  const [ahorroDatos, setAhorroDatos] = useState(false)
   const hojasRefs = useRef<Array<HTMLElement | null>>([])
   const chipsContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -37,6 +41,16 @@ export default function VisorCartaPublica({
         .map((h) => h.imagenUrl),
     [hojas]
   )
+
+  const urlsImagenesRetener = useMemo(() => {
+    const lista: string[] = []
+    for (const h of hojas) {
+      if (h.tipo === 'titulo') continue
+      if (h.imagenUrl) lista.push(h.imagenUrl)
+      if (h.imagenFallbackUrl) lista.push(h.imagenFallbackUrl)
+    }
+    return lista
+  }, [hojas])
 
   const whatsappUrl = useMemo(() => construirEnlaceWhatsAppCarta(config), [config])
   const fechaActualizacion = useMemo(
@@ -95,24 +109,39 @@ export default function VisorCartaPublica({
     [hojas]
   )
 
-  // ── Modo offline exclusivo de /carta (Service Worker + estado de red) ─────
+  // ── Modo offline exclusivo de /carta (Service Worker + ahorro de datos 2G) ──
   useEffect(() => {
     if (typeof window === 'undefined') return
 
+    const nav = window.navigator as Navigator & {
+      connection?: InfoConexionRedCarta & {
+        addEventListener?: (type: string, cb: () => void) => void
+        removeEventListener?: (type: string, cb: () => void) => void
+      }
+    }
+
     const actualizarEstadoRed = () => {
       setSinConexion(!window.navigator.onLine)
+      const info = detectarConexionLentaCarta(nav.connection)
+      setAhorroDatos(info.ahorroDatos)
     }
     actualizarEstadoRed()
     window.addEventListener('online', actualizarEstadoRed)
     window.addEventListener('offline', actualizarEstadoRed)
+    nav.connection?.addEventListener?.('change', actualizarEstadoRed)
 
     let cancelado = false
     const enviarAssetsAlSw = (sw: ServiceWorker | null | undefined) => {
       if (!sw || urlsImagenesActivas.length === 0) return
+      const { ahorroDatos: esLenta } = detectarConexionLentaCarta(nav.connection)
       try {
         sw.postMessage({
           type: 'SYNC_CARTA_ASSETS',
           urls: urlsImagenesActivas,
+          urlsRetener: urlsImagenesRetener,
+          // En 2G o Ahorro de datos evitamos precargar todas las hojas de golpe
+          // para no saturar la descarga de la hoja que el cliente está viendo.
+          soloLimpiar: esLenta,
         })
       } catch {
         // Ignorar si el worker está cerrándose
@@ -152,8 +181,9 @@ export default function VisorCartaPublica({
       cancelado = true
       window.removeEventListener('online', actualizarEstadoRed)
       window.removeEventListener('offline', actualizarEstadoRed)
+      nav.connection?.removeEventListener?.('change', actualizarEstadoRed)
     }
-  }, [urlsImagenesActivas])
+  }, [urlsImagenesActivas, urlsImagenesRetener])
 
   // ── Bloqueo estricto de zoom (pinch iOS/Android, doble toque y Ctrl+rueda) ──
   // Evita que personas mayores queden "perdidas" con la pantalla ampliada.
@@ -323,6 +353,14 @@ export default function VisorCartaPublica({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {ahorroDatos && !sinConexion && (
+              <span
+                title="Conexión lenta o ahorro de datos: cargamos cada hoja a medida que bajás"
+                className="text-[10px] font-bold text-stone-600 bg-stone-100 border border-stone-200/80 px-2 py-1 rounded-full"
+              >
+                Ahorro
+              </span>
+            )}
             {infoPaginasImagen.total > 1 && (
               <span
                 aria-live="polite"
@@ -427,7 +465,8 @@ export default function VisorCartaPublica({
               }
 
               const esLcp = idx === indicePrimeraImagen
-              const tieneDimensiones = Boolean(hoja.ancho && hoja.alto)
+              const numeroHojaImagen =
+                hojas.slice(0, idx + 1).filter((h) => h.tipo !== 'titulo').length || idx + 1
               return (
                 <article
                   key={hoja.id}
@@ -437,25 +476,15 @@ export default function VisorCartaPublica({
                   }}
                   className="w-full bg-white sm:rounded-md sm:border sm:border-stone-300/70 sm:shadow-[0_2px_14px_rgba(24,24,20,0.08)] overflow-hidden"
                 >
-                  <img
-                    src={hoja.imagenUrl}
+                  <ImagenHojaCarta
+                    hoja={hoja}
+                    esLcp={esLcp}
+                    numeroHoja={numeroHojaImagen}
                     alt={
                       hoja.titulo.trim()
                         ? `${config.titulo} — ${hoja.titulo.trim()}`
-                        : `${config.titulo} — hoja ${idx + 1}`
+                        : `${config.titulo} — hoja ${numeroHojaImagen}`
                     }
-                    width={hoja.ancho}
-                    height={hoja.alto}
-                    fetchPriority={esLcp ? 'high' : undefined}
-                    loading={esLcp ? undefined : 'lazy'}
-                    decoding={esLcp ? 'sync' : 'async'}
-                    draggable={false}
-                    style={
-                      tieneDimensiones
-                        ? { aspectRatio: `${hoja.ancho} / ${hoja.alto}` }
-                        : undefined
-                    }
-                    className="block w-full h-auto bg-stone-200/60 select-none touch-pan-y pointer-events-none"
                   />
                 </article>
               )

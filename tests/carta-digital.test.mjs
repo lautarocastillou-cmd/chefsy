@@ -5,6 +5,7 @@ import {
   construirEnlaceWhatsAppCarta,
   crearConfiguracionCartaDefault,
   crearHojaTituloDefault,
+  detectarConexionLentaCarta,
   esUrlImagenCartaValida,
   normalizarConfiguracionCarta,
   obtenerHojasVisibles,
@@ -162,21 +163,59 @@ test('detecta únicamente URLs eliminadas pertenecientes al bucket images de Sup
   const anteriores = normalizarConfiguracionCarta({
     hojas: [
       crearHojaTituloDefault(0, 'Sección'),
-      { id: '1', imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.webp', orden: 1 },
-      { id: '2', imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_2.webp', orden: 2 },
+      {
+        id: '1',
+        imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.webp',
+        imagenFallbackUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.jpg',
+        orden: 1,
+      },
+      {
+        id: '2',
+        imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_2.webp',
+        imagenFallbackUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_2.jpg',
+        orden: 2,
+      },
       { id: '3', imagenUrl: 'https://externo.com/foto.webp', orden: 3 },
     ],
   }).hojas
 
   const nuevas = normalizarConfiguracionCarta({
     hojas: [
-      { id: '1', imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.webp' },
+      {
+        id: '1',
+        imagenUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.webp',
+        imagenFallbackUrl: 'https://proj.supabase.co/storage/v1/object/public/images/carta_1.jpg',
+      },
     ],
   }).hojas
 
   assert.deepEqual(obtenerUrlsEliminadasStorage(anteriores, nuevas), [
     'https://proj.supabase.co/storage/v1/object/public/images/carta_2.webp',
+    'https://proj.supabase.co/storage/v1/object/public/images/carta_2.jpg',
   ])
+})
+
+test('detecta conexión lenta o modo ahorro de datos (2g / slow-2g / saveData)', () => {
+  assert.deepEqual(detectarConexionLentaCarta({ saveData: true, effectiveType: '4g' }), {
+    ahorroDatos: true,
+    motivo: 'save-data',
+  })
+  assert.deepEqual(detectarConexionLentaCarta({ saveData: false, effectiveType: '2g' }), {
+    ahorroDatos: true,
+    motivo: '2g',
+  })
+  assert.deepEqual(detectarConexionLentaCarta({ saveData: false, effectiveType: 'slow-2g' }), {
+    ahorroDatos: true,
+    motivo: '2g',
+  })
+  assert.deepEqual(detectarConexionLentaCarta({ saveData: false, effectiveType: '4g' }), {
+    ahorroDatos: false,
+    motivo: null,
+  })
+  assert.deepEqual(detectarConexionLentaCarta(undefined), {
+    ahorroDatos: false,
+    motivo: null,
+  })
 })
 
 test('valida URLs permitidas, colores hex y rechaza esquemas peligrosos', () => {

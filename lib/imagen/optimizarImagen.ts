@@ -123,3 +123,38 @@ export async function optimizarImagenWebP(
     }
   }
 }
+
+/**
+ * Genera una copia JPEG progresiva liviana a partir de una imagen ya optimizada/redimensionada,
+ * pensada como fallback en `<picture>` para navegadores antiguos sin soporte WebP (iOS <= 13, WebViews viejos).
+ */
+export async function generarFallbackJpegCarta(
+  bufferFuente: Buffer,
+  calidad = 82
+): Promise<{
+  buffer: Buffer
+  contentType: string
+  ext: string
+  tamanoBytes: number
+} | null> {
+  try {
+    const bufferJpg = await sharp(bufferFuente, { failOn: 'none', animated: false })
+      .flatten({ background: '#ffffff' })
+      .jpeg({
+        quality: calidad,
+        progressive: true,
+        mozjpeg: true,
+      })
+      .toBuffer()
+
+    return {
+      buffer: bufferJpg,
+      contentType: 'image/jpeg',
+      ext: 'jpg',
+      tamanoBytes: bufferJpg.length,
+    }
+  } catch (err) {
+    console.warn('[Optimizador Carta] No se pudo generar fallback JPEG:', err)
+    return null
+  }
+}

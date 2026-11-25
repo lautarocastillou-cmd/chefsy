@@ -157,12 +157,14 @@ export default function GestorCartaDigital() {
 
   const subirArchivoCarta = async (
     archivo: File,
-    oldUrl?: string
-  ): Promise<{ url: string; ancho?: number; alto?: number }> => {
+    oldUrl?: string,
+    oldFallbackUrl?: string
+  ): Promise<{ url: string; urlFallback?: string; ancho?: number; alto?: number }> => {
     const formData = new FormData()
     formData.append('file', archivo)
     formData.append('modo', 'carta')
     if (oldUrl) formData.append('oldUrl', oldUrl)
+    if (oldFallbackUrl) formData.append('oldFallbackUrl', oldFallbackUrl)
 
     const res = await fetch('/api/admin/upload?modo=carta', {
       method: 'POST',
@@ -174,6 +176,7 @@ export default function GestorCartaDigital() {
     }
     return {
       url: data.url as string,
+      urlFallback: typeof data.urlFallback === 'string' ? data.urlFallback : undefined,
       ancho: typeof data.ancho === 'number' ? data.ancho : undefined,
       alto: typeof data.alto === 'number' ? data.alto : undefined,
     }
@@ -208,6 +211,7 @@ export default function GestorCartaDigital() {
           tipo: 'imagen',
           titulo: '',
           imagenUrl: subida.url,
+          imagenFallbackUrl: subida.urlFallback,
           ancho: subida.ancho,
           alto: subida.alto,
           activa: true,
@@ -262,12 +266,22 @@ export default function GestorCartaDigital() {
 
     setReemplazandoId(hojaId)
     try {
-      const subida = await subirArchivoCarta(archivo, hojaObjetivo.imagenUrl)
+      const subida = await subirArchivoCarta(
+        archivo,
+        hojaObjetivo.imagenUrl,
+        hojaObjetivo.imagenFallbackUrl
+      )
       const siguiente: ConfiguracionCarta = {
         ...config,
         hojas: config.hojas.map((h) =>
           h.id === hojaId
-            ? { ...h, imagenUrl: subida.url, ancho: subida.ancho, alto: subida.alto }
+            ? {
+                ...h,
+                imagenUrl: subida.url,
+                imagenFallbackUrl: subida.urlFallback,
+                ancho: subida.ancho,
+                alto: subida.alto,
+              }
             : h
         ),
       }

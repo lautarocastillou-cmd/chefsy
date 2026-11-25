@@ -39,6 +39,7 @@ export interface HojaCarta {
   titulo: string
   subtitulo?: string
   imagenUrl: string
+  imagenFallbackUrl?: string
   ancho?: number
   alto?: number
   estiloTitulo?: EstiloTituloCarta
@@ -256,6 +257,9 @@ export function normalizarHojaCarta(entrada: any, indice: number, ahoraIso: stri
     tipo: 'imagen',
     titulo: limpiarTextoPlano(entrada.titulo, 40, ''),
     imagenUrl: entrada.imagenUrl.trim(),
+    imagenFallbackUrl: esUrlImagenCartaValida(entrada.imagenFallbackUrl)
+      ? entrada.imagenFallbackUrl.trim()
+      : undefined,
     ancho: sanitizarDimensionPositiva(entrada.ancho),
     alto: sanitizarDimensionPositiva(entrada.alto),
     activa: entrada.activa !== false,
@@ -376,23 +380,55 @@ export function reordenarHojasCarta(hojas: HojaCarta[], desdeIndice: number, hac
   return copia.map((h, idx) => ({ ...h, orden: idx }))
 }
 
-/** Calcula qué URLs de Supabase Storage dejaron de referenciarse al guardar. */
+/** Calcula qué URLs de Supabase Storage dejaron de referenciarse al guardar (WebP + fallback JPG). */
 export function obtenerUrlsEliminadasStorage(
   hojasAnteriores: HojaCarta[],
   hojasNuevas: HojaCarta[]
 ): string[] {
-  const nuevasUrls = new Set(hojasNuevas.map((h) => h.imagenUrl).filter(Boolean))
+  const nuevasUrls = new Set<string>()
+  for (const h of hojasNuevas) {
+    if (h.imagenUrl) nuevasUrls.add(h.imagenUrl)
+    if (h.imagenFallbackUrl) nuevasUrls.add(h.imagenFallbackUrl)
+  }
+
   const eliminadas: string[] = []
   for (const h of hojasAnteriores) {
-    if (
-      h.imagenUrl &&
-      !nuevasUrls.has(h.imagenUrl) &&
-      h.imagenUrl.includes('supabase.co/storage/v1/object/public/images/')
-    ) {
-      eliminadas.push(h.imagenUrl)
+    for (const url of [h.imagenUrl, h.imagenFallbackUrl]) {
+      if (
+        url &&
+        !nuevasUrls.has(url) &&
+        url.includes('supabase.co/storage/v1/object/public/images/')
+      ) {
+        eliminadas.push(url)
+      }
     }
   }
   return eliminadas
+}
+
+export interface InfoConexionRedCarta {
+  saveData?: boolean
+  effectiveType?: string
+}
+
+/**
+ * Detecta si el dispositivo tiene ahorro de datos activado o una conexión 2G/slow-2g
+ * para evitar precargas masivas que saturen la descarga de la primera hoja.
+ */
+export function detectarConexionLentaCarta(
+  conexion?: InfoConexionRedCarta | null
+): { ahorroDatos: boolean; motivo: 'save-data' | '2g' | null } {
+  if (!conexion || typeof conexion !== 'object') {
+    return { ahorroDatos: false, motivo: null }
+  }
+  if (conexion.saveData === true) {
+    return { ahorroDatos: true, motivo: 'save-data' }
+  }
+  const tipo = typeof conexion.effectiveType === 'string' ? conexion.effectiveType.toLowerCase() : ''
+  if (tipo === 'slow-2g' || tipo === '2g') {
+    return { ahorroDatos: true, motivo: '2g' }
+  }
+  return { ahorroDatos: false, motivo: null }
 }
 
 /** Formatea una fecha ISO de última actualización en español argentino breve (ej. "24 nov"). */

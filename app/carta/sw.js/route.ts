@@ -58,28 +58,51 @@ self.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || data.type !== 'SYNC_CARTA_ASSETS' || !Array.isArray(data.urls)) return;
 
-  const urlsValidas = data.urls
-    .filter((u) => typeof u === 'string' && u.length > 0)
-    .map((u) => {
-      try {
-        return new URL(u, self.location.origin).href;
-      } catch {
-        return '';
-      }
-    })
-    .filter(Boolean);
-  const setUrls = new Set(urlsValidas);
+  const normalizarLista = (arr) =>
+    arr
+      .filter((u) => typeof u === 'string' && u.length > 0)
+      .map((u) => {
+        try {
+          return new URL(u, self.location.origin).href;
+        } catch {
+          return '';
+        }
+      })
+      .filter(Boolean);
+
+  const urlsPrecargar = normalizarLista(data.urls);
+  const urlsRetener = Array.isArray(data.urlsRetener)
+    ? normalizarLista(data.urlsRetener)
+    : urlsPrecargar;
+  const setRetener = new Set(urlsRetener);
+  const soloLimpiar = Boolean(data.soloLimpiar);
 
   event.waitUntil(
     (async () => {
       const cache = await caches.open(IMAGES_CACHE);
-      // Pre-descargar todas las hojas activas en segundo plano
-      await Promise.all(urlsValidas.map((url) => cachearImagen(cache, url)));
-      // Limpiar imágenes viejas que ya no están en la carta
+
+      // Si no está en 2G / Ahorro de datos, pre-descargamos en lotes chicos de a 2
+      // para no competir con la descarga de la hoja principal (LCP).
+      if (!soloLimpiar) {
+        for (let i = 0; i < urlsPrecargar.length; i += 2) {
+          const lote = urlsPrecargar.slice(i, i + 2);
+          await Promise.all(lote.map((url) => cachearImagen(cache, url)));
+        }
+      }
+
+      // Limpiar imágenes viejas (WebP o fallback JPG) que ya no están en la carta
       const existentes = await cache.keys();
       await Promise.all(
         existentes
-          .filter((req) => !setUrls.has(req.url))
+          .filter((req) => {
+            try {
+              const sinQuery = new URL(req.url);
+              sinQuery.search = '';
+              return !setRetener.has(req.url) && !setRetener.has(sinQuery.href);
+            } catch {
+              return !setRetener.has(req.url);
+            }
+          })
           .map((req) => cache.delete(req))
       );
     })()

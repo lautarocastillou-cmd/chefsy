@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { obtenerSesion } from '@/lib/auth-server'
 import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
-import { optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
+import { generarFallbackJpegCarta, optimizarImagenWebP } from '@/lib/imagen/optimizarImagen'
 import { responderError } from '@/lib/api-error'
 
 export async function POST(request: Request) {
@@ -18,11 +18,13 @@ export async function POST(request: Request) {
     let mimeType: string
     let ext: string
     let oldUrl: string | null = url.searchParams.get('oldUrl')
+    let oldFallbackUrl: string | null = url.searchParams.get('oldFallbackUrl')
     let modo: string | null = url.searchParams.get('modo')
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
       if (!oldUrl) oldUrl = formData.get('oldUrl') as string | null
+      if (!oldFallbackUrl) oldFallbackUrl = formData.get('oldFallbackUrl') as string | null
       if (!modo) modo = formData.get('modo') as string | null
       const file = formData.get('file') as File | null
       if (!file) {
@@ -92,18 +94,21 @@ export async function POST(request: Request) {
     }
 
     const prefijoArchivo = esModoCarta ? 'carta' : 'upload'
-    const fileName = `${prefijoArchivo}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
+    const baseIdArchivo = `${prefijoArchivo}_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const fileName = `${baseIdArchivo}.${ext}`
 
     const supabaseAdmin = obtenerSupabaseAdmin()
 
-    if (oldUrl) {
+    const archivosViejosABorrar = [oldUrl, oldFallbackUrl]
+      .filter((u): u is string => Boolean(u && u.includes('supabase.co')))
+      .map((u) => u.split('/').pop()?.split('?')[0] || '')
+      .filter(Boolean)
+
+    if (archivosViejosABorrar.length > 0) {
       try {
-        const oldFileName = oldUrl.split('/').pop()?.split('?')[0]
-        if (oldFileName && oldUrl.includes('supabase.co')) {
-          await supabaseAdmin.storage.from('images').remove([oldFileName])
-        }
+        await supabaseAdmin.storage.from('images').remove(archivosViejosABorrar)
       } catch (e) {
-        console.error('[Upload API] Error al borrar archivo antiguo:', e)
+        console.error('[Upload API] Error al borrar archivos antiguos:', e)
       }
     }
 
@@ -125,8 +130,31 @@ export async function POST(request: Request) {
       .from('images')
       .getPublicUrl(fileName)
 
+    // Para hojas de carta en WebP generamos además un fallback JPEG progresivo
+    // destinado a navegadores muy antiguos sin soporte WebP (iOS <= 13, WebViews viejos).
+    let urlFallback: string | undefined
+    if (esModoCarta && !esVideo && ext === 'webp') {
+      const fallbackJpg = await generarFallbackJpegCarta(buffer, 82)
+      if (fallbackJpg) {
+        const fileNameJpg = `${baseIdArchivo}.${fallbackJpg.ext}`
+        const { error: errJpg } = await supabaseAdmin.storage
+          .from('images')
+          .upload(fileNameJpg, fallbackJpg.buffer, {
+            contentType: fallbackJpg.contentType,
+            upsert: true,
+          })
+        if (!errJpg) {
+          const { data: pubJpg } = supabaseAdmin.storage
+            .from('images')
+            .getPublicUrl(fileNameJpg)
+          urlFallback = pubJpg.publicUrl
+        }
+      }
+    }
+
     return NextResponse.json({
       url: publicData.publicUrl,
+      urlFallback,
       urlOriginal: publicData.publicUrl,
       urlTransformada: publicData.publicUrl,
       ancho: anchoOptimizado,
