@@ -29,6 +29,8 @@ import SelectorCategorias from '@/components/tienda/SelectorCategorias'
 import HeroManager from '@/components/tienda/hero/HeroManager'
 import SidebarTienda, { BotonHamburguesa } from '@/components/tienda/SidebarTienda'
 import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
+import { usePromoFlash } from '@/hooks/usePromoFlash'
+import PromoFlashBurgerCheese from '@/components/tienda/PromoFlashBurgerCheese'
 import dynamic from 'next/dynamic'
 
 const ModalLoginCliente = dynamic(() => import('@/components/auth/ModalLoginCliente'), { ssr: false })
@@ -62,6 +64,8 @@ export default function TiendaMobile() {
   
   const { configuracion } = usarConfiguracionTienda()
   const promoActiva = (configuracion?.promo_popup || PROMO_POPUP_DEFAULT).activo !== false
+  const { estado: estadoPromoFlash } = usePromoFlash()
+  const promoCheeseActiva = Boolean(estadoPromoFlash?.disponible)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [buscadorIluminado, setBuscadorIluminado] = useState(false)
@@ -442,6 +446,13 @@ export default function TiendaMobile() {
             </div>
           )}
 
+          {/* Promo Principal de Hoy: Burger Cheese $5.000 (arriba de todo, desaparece sola al agotar cupo) */}
+          {!categoriaSeleccionada && !busqueda && (
+            <div className="px-3">
+              <PromoFlashBurgerCheese className="mt-3 mb-1" />
+            </div>
+          )}
+
           {/* Hero Section Dinámico (Parallax, Carrusel, Cinemático o Minimalista) */}
           {!categoriaSeleccionada && !busqueda && (
             <HeroManager
@@ -477,19 +488,32 @@ export default function TiendaMobile() {
       </div>
 
       {/* Pill flotante de Promo del Día (Mobile) */}
-      {promoActiva && (
+      {(promoActiva || promoCheeseActiva) && (
         <div 
           className="fixed bottom-[74px] left-1/2 -translate-x-1/2 z-30 max-w-[92vw] pointer-events-auto"
         >
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('chefsy:abrir-promo'))}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181818]/95 hover:bg-[#222222] text-white border border-emerald-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_12px_rgba(16,185,129,0.25)] backdrop-blur-md active:scale-95 transition-all text-xs font-semibold cursor-pointer group"
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181818]/95 hover:bg-[#222222] text-white backdrop-blur-md active:scale-95 transition-all text-xs font-semibold cursor-pointer group ${
+              promoCheeseActiva
+                ? 'border border-amber-400/55 shadow-[0_4px_20px_rgba(0,0,0,0.75),0_0_14px_rgba(245,158,11,0.3)]'
+                : 'border border-emerald-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_12px_rgba(16,185,129,0.25)]'
+            }`}
             aria-label="Ver promoción del día"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className={`w-2 h-2 rounded-full shrink-0 ${promoCheeseActiva ? 'bg-amber-400' : 'bg-emerald-400'}`} />
             <span className="text-white font-medium text-[11px]">
-              Promo del día: <strong className="text-emerald-400 font-bold">Bebida gratis</strong>
+              {promoCheeseActiva && estadoPromoFlash ? (
+                <>
+                  <strong className="text-amber-300 font-extrabold">Cheese $5.000</strong>
+                  <span className="text-stone-300"> · Quedan {estadoPromoFlash.restantes}</span>
+                </>
+              ) : (
+                <>
+                  Promo del día: <strong className="text-emerald-400 font-bold">Bebida gratis</strong>
+                </>
+              )}
             </span>
             <span className="text-[10px] text-slate-400 group-hover:text-white transition-colors flex items-center ml-0.5">
               Ver promo <ChevronRight size={12} className="ml-0.5 text-emerald-400/80" />

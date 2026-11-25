@@ -11,6 +11,8 @@ import { notificarCambioPedido, type TipoCambioPedido } from '@/lib/pedidos-broa
 import { enviarNotificacionCadete } from '@/lib/webpush'
 import { registrarVentaKardex, restituirVentaKardex } from '@/lib/stock-motor'
 import { obtenerFechaNegocio } from '@/lib/tiempo'
+import { contarUnidadesPromoFlashEnItems } from '@/lib/promo-flash'
+import { verificarYAutoDesactivarPromoFlashServidor } from '@/lib/promo-flash-servidor'
 
 const TIPOS_ENTREGA_VALIDOS = ['delivery', 'retiro', 'mostrador', 'consumo_local']
 const METODOS_PAGO_VALIDOS = ['efectivo', 'tarjeta', 'transferencia', 'mixto', 'sin_especificar', 'puntos']
@@ -403,6 +405,14 @@ async function procesarPOST(request: Request) {
           }
           console.error('[API Pedidos] Error al insertar pedido:', error)
           throw error
+        }
+
+        // Si el pedido POS incluyó unidades de la Promo Flash y no es de prueba,
+        // verificamos si alcanzó el límite para auto-desactivarla en la tienda.
+        if (!esPedidoPrueba && contarUnidadesPromoFlashEnItems(payload.productos || []) > 0) {
+          verificarYAutoDesactivarPromoFlashServidor().catch((e) =>
+            console.warn('[API Pedidos] Error verificando auto-límite de Promo Flash:', e)
+          )
         }
 
         return NextResponse.json({ ok: true })

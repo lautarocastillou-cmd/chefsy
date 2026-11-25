@@ -9,6 +9,14 @@ import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
 import { obtenerEstadoHorarioLocal } from '@/lib/tiempo'
 import { calcularCostoEnvio, resolverDireccionHumana, esEnlaceOCoordenadas, calcularDistanciaKm, UBICACION_LOCAL } from '@/lib/ubicacion'
 import { obtenerIpCliente, verificarRateLimit } from '@/lib/rate-limit'
+import {
+  contarUnidadesPromoFlashEnItems,
+  esItemPromoFlash,
+} from '@/lib/promo-flash'
+import {
+  obtenerEstadoPromoFlashServidor,
+  verificarYAutoDesactivarPromoFlashServidor,
+} from '@/lib/promo-flash-servidor'
 
 const MAX_PEDIDOS_POR_SESION = 3 // máximo 3 pedidos activos por teléfono
 const RATE_LIMIT_CHECKOUT_MAX = 15 // máximo 15 intentos por cada 10 minutos
@@ -158,6 +166,42 @@ export async function POST(request: Request) {
 
     const mapProductosDb = new Map((productosDb || []).map((p) => [p.id, p]))
 
+    // ── 6B. BLINDAJE PROMO FLASH (Burger Cheese $5.000 — límite y vigencia) ──
+    const cantidadPromoFlashPedido = contarUnidadesPromoFlashEnItems(body.productos)
+    let estadoPromoFlashActual: Awaited<ReturnType<typeof obtenerEstadoPromoFlashServidor>> | null = null
+
+    if (cantidadPromoFlashPedido > 0) {
+      estadoPromoFlashActual = await obtenerEstadoPromoFlashServidor()
+      if (!estadoPromoFlashActual.disponible) {
+        const msg = estadoPromoFlashActual.agotada
+          ? '¡Se agotaron todas las Burger Cheese de la promo de hoy! La promoción finalizó automáticamente.'
+          : 'La Promo Burger Cheese ya no está disponible en este momento.'
+        return NextResponse.json({ error: msg, promoAgotada: true }, { status: 409 })
+      }
+
+      if (cantidadPromoFlashPedido > estadoPromoFlashActual.config.maxPorPedido) {
+        return NextResponse.json(
+          {
+            error: `Podés pedir hasta ${estadoPromoFlashActual.config.maxPorPedido} Burger Cheese de la promo por pedido.`,
+          },
+          { status: 400 }
+        )
+      }
+
+      if (cantidadPromoFlashPedido > estadoPromoFlashActual.restantes) {
+        return NextResponse.json(
+          {
+            error:
+              estadoPromoFlashActual.restantes === 1
+                ? '¡Uy! Solo queda 1 Burger Cheese de la promo de hoy. Ajustá la cantidad en tu carrito.'
+                : `¡Uy! Solo quedan ${estadoPromoFlashActual.restantes} Burger Cheese de la promo de hoy. Ajustá la cantidad en tu carrito.`,
+            restantesPromo: estadoPromoFlashActual.restantes,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     let subtotalCalculado = 0
     let puntosRequeridos = 0
 
@@ -167,6 +211,28 @@ export async function POST(request: Request) {
 
       if (!Number.isInteger(cantidad) || cantidad <= 0 || cantidad > 50) {
         return NextResponse.json({ error: `Cantidad inválida para el producto "${item.nombre || 'desconocido'}"` }, { status: 400 })
+      }
+
+      // Ítem de Promo Flash: validar precio exacto en servidor (nunca $0 ni canje por puntos)
+      if (esItemPromoFlash(item) && estadoPromoFlashActual) {
+        const precioItemCliente = Number(item.precio) || 0
+        if (Boolean(item.pago_con_puntos || item.nombre?.includes('[PAGADO CON PUNTOS]'))) {
+          return NextResponse.json(
+            { error: 'La Promo Burger Cheese $5.000 no se puede canjear con puntos.' },
+            { status: 400 }
+          )
+        }
+        if (precioItemCliente < estadoPromoFlashActual.config.precioPromo) {
+          console.warn(
+            `[API Pedido Security] Precio adulterado en Promo Flash: Cliente envió $${precioItemCliente}, Promo es $${estadoPromoFlashActual.config.precioPromo}`
+          )
+          return NextResponse.json(
+            { error: 'El precio de la Promo Burger Cheese cambió. Por favor recargá la tienda.' },
+            { status: 400 }
+          )
+        }
+        subtotalCalculado += precioItemCliente * cantidad
+        continue
       }
 
       const prodDb = mapProductosDb.get(idProducto)
@@ -324,6 +390,16 @@ export async function POST(request: Request) {
     if (insertError) {
       console.error('[API Pedido] Error al insertar:', insertError.message)
       return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    // Si este pedido incluyó Burger Cheese de la Promo Flash, verificamos si se alcanzó
+    // el tope configurado para desactivarla automáticamente en la base de datos.
+    if (cantidadPromoFlashPedido > 0) {
+      try {
+        await verificarYAutoDesactivarPromoFlashServidor()
+      } catch (promoErr) {
+        console.warn('[API Pedido] Error actualizando estado auto-límite de Promo Flash:', promoErr)
+      }
     }
 
     return NextResponse.json({

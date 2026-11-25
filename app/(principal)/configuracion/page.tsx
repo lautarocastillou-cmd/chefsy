@@ -2,7 +2,7 @@
 
 import { usarPedidos } from '@/contexto/PedidosContexto'
 import { useCallback, useState, useEffect } from 'react'
-import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2, Wrench, ShieldAlert, ShieldCheck, FileText } from 'lucide-react'
+import { Save, RefreshCw, Clock, ChefHat, Bike, AlertTriangle, Users, UserPlus, Trash2, Palette, Bell, Volume2, BellOff, Settings, Sliders, Printer, CheckCircle2, Zap, Play, Loader2, Wrench, ShieldAlert, ShieldCheck, FileText, Flame } from 'lucide-react'
 import Link from 'next/link'
 import { notificarError, notificarAviso } from '@/lib/notificaciones'
 import { obtenerConfiguracionTienda, actualizarConfiguracionTienda } from '@/servicios/supabase/configuracion'
@@ -11,6 +11,7 @@ import ConfiguracionTipografia from '@/components/impresion/ConfiguracionTipogra
 import SolucionadorImpresion from '@/components/impresion/SolucionadorImpresion'
 import ActualizadorAgente from '@/components/impresion/ActualizadorAgente'
 import GestorCartaDigital from '@/components/carta/GestorCartaDigital'
+import GestorPromoFlash from '@/components/configuracion/GestorPromoFlash'
 import {
   gestorImpresora,
   ConfiguracionImpresora,
@@ -1582,12 +1583,12 @@ function PestanaParametros() {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function PaginaConfiguracion() {
-  const [pestanaActiva, setPestanaActiva] = useState<'parametros' | 'carta' | 'impresion' | 'usuarios'>('parametros')
+  const [pestanaActiva, setPestanaActiva] = useState<'parametros' | 'promos' | 'carta' | 'impresion' | 'usuarios'>('parametros')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab === 'carta' || tab === 'impresion' || tab === 'usuarios' || tab === 'parametros') {
+    if (tab === 'promos' || tab === 'carta' || tab === 'impresion' || tab === 'usuarios' || tab === 'parametros') {
       setPestanaActiva(tab)
     }
   }, [])
@@ -1627,6 +1628,17 @@ export default function PaginaConfiguracion() {
           Parámetros de Operación
         </button>
         <button
+          onClick={() => setPestanaActiva('promos')}
+          className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+            pestanaActiva === 'promos'
+              ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <Flame size={15} />
+          Promo Flash
+        </button>
+        <button
           onClick={() => setPestanaActiva('carta')}
           className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
             pestanaActiva === 'carta'
@@ -1663,6 +1675,7 @@ export default function PaginaConfiguracion() {
       {/* Contenido de la Pestaña Activa */}
       <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
         {pestanaActiva === 'parametros' && <PestanaParametros />}
+        {pestanaActiva === 'promos' && <GestorPromoFlash />}
         {pestanaActiva === 'carta' && <GestorCartaDigital />}
         {pestanaActiva === 'impresion' && <PestanaImpresion />}
         {pestanaActiva === 'usuarios' && <PestanaUsuarios />}

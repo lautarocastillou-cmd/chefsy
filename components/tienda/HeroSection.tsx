@@ -20,6 +20,7 @@ const ModalHistorialPedidos = dynamic(() => import('@/components/tienda/ModalHis
 const ModalPerfilCliente = dynamic(() => import('@/components/tienda/ModalPerfilCliente'), { ssr: false })
 
 import HeroManager from '@/components/tienda/hero/HeroManager'
+import PromoFlashBurgerCheese from '@/components/tienda/PromoFlashBurgerCheese'
 
 interface HeroSectionProps {
   categoriasActivas: CategoriaCatalogo[]
@@ -103,6 +104,13 @@ export default function HeroSection(props: HeroSectionProps) {
           </div>
         </div>
       </header>
+
+      {/* --- PROMO PRINCIPAL DE HOY: BURGER CHEESE $5.000 (desaparece sola al agotar cupo) --- */}
+      {!props.busqueda && (
+        <div className="max-w-6xl mx-auto px-4 relative z-20">
+          <PromoFlashBurgerCheese className="mt-4 mb-1" />
+        </div>
+      )}
 
       {/* --- RENDERIZADO DINÁMICO DEL HERO SEGÚN EL LAYOUT SELECCIONADO --- */}
       <HeroManager {...props} />

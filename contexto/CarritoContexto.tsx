@@ -39,6 +39,7 @@ interface ValorContextoCarrito {
   alternarModificador: (mod: ModificadorCatalogo) => void
   calcularPrecioUnitarioModal: () => number
   agregarAlCarritoDesdeModal: () => void
+  agregarProductoDirecto: (prod: ProductoCatalogo, cantidad?: number, maxCantidadTotal?: number) => boolean
 
   actualizarCantidadCarrito: (idCart: string, delta: number) => void
   eliminarDelCarrito: (idCart: string) => void
@@ -289,6 +290,60 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     setProductoAPersonalizar(null)
   }, [productoAPersonalizar, cantidadModal, modsSeleccionados, notaPersonalizacion, calcularPrecioUnitarioModal, promoActiva])
 
+  const agregarProductoDirecto = useCallback((
+    prod: ProductoCatalogo,
+    cantidad: number = 1,
+    maxCantidadTotal?: number
+  ): boolean => {
+    if (turnoActivo === false || esDomingoCerrado) {
+      mostrarCartel({
+        tipo: 'cerrado',
+        titulo: esDomingoCerrado ? 'Domingos Cerrado' : 'Local Cerrado',
+        mensaje: mensajeCierre || 'El local se encuentra cerrado en este momento. Horarios: Lunes a Sábados de 20:30 a 01:00 hs. Domingos cerrado.',
+        botonTexto: 'Entendido',
+      })
+      return false
+    }
+
+    const cantSegura = Math.max(1, Math.floor(cantidad))
+    const existente = carrito.find((item) => item.idCart === prod.id && !item.pago_con_puntos)
+    const cantidadActual = existente?.cantidad || 0
+
+    if (typeof maxCantidadTotal === 'number' && cantidadActual + cantSegura > maxCantidadTotal) {
+      notificarAviso(
+        cantidadActual >= maxCantidadTotal
+          ? `Ya tenés el máximo permitido (${maxCantidadTotal}) de esta promo en tu carrito.`
+          : `Solo podés sumar ${maxCantidadTotal - cantidadActual} más de esta promo en este pedido.`
+      )
+      return false
+    }
+
+    setCarrito((prev) => {
+      const idx = prev.findIndex((item) => item.idCart === prod.id && !item.pago_con_puntos)
+      if (idx > -1) {
+        const copia = [...prev]
+        copia[idx] = { ...copia[idx], cantidad: copia[idx].cantidad + cantSegura }
+        return copia
+      }
+      return [
+        ...prev,
+        {
+          idCart: prod.id,
+          producto: prod,
+          cantidad: cantSegura,
+          modificadoresSeleccionados: [],
+          precioUnitario: prod.precio,
+          pago_con_puntos: false,
+        },
+      ]
+    })
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('chefsy:cart-pop'))
+    }
+    return true
+  }, [carrito, turnoActivo, esDomingoCerrado, mensajeCierre])
+
   const actualizarCantidadCarrito = useCallback((idCart: string, delta: number) => {
     setCarrito(prev => 
       prev.map(item => {
@@ -492,6 +547,9 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Error enviando pedido', err)
       const mensajeError = err?.message || 'Hubo un error al procesar tu pedido. Por favor intentá de nuevo o contactanos por WhatsApp.'
+      if (typeof window !== 'undefined' && mensajeError.toLowerCase().includes('burger cheese')) {
+        window.dispatchEvent(new CustomEvent('chefsy:promo-flash-actualizada'))
+      }
       const esCerrado = mensajeError.toLowerCase().includes('cerrado') || mensajeError.toLowerCase().includes('domingo')
       mostrarCartel({
         tipo: esCerrado ? 'cerrado' : 'error',
@@ -518,6 +576,9 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
     })
 
     setPedidoCompletado(nuevoPedido)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('chefsy:promo-flash-actualizada'))
+    }
     setCarrito([])
     setMostrarCheckout(false)
     setCartAbierto(false)
@@ -538,6 +599,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       productoAPersonalizar, modsSeleccionados, cantidadModal, notaPersonalizacion,
       setProductoAPersonalizar, setModsSeleccionados, setCantidadModal, setNotaPersonalizacion,
       abrirModalPersonalizacion, alternarModificador, calcularPrecioUnitarioModal, agregarAlCarritoDesdeModal,
+      agregarProductoDirecto,
       actualizarCantidadCarrito, eliminarDelCarrito,
       mostrarCheckout, setMostrarCheckout,
       tipoEntrega, setTipoEntrega,
@@ -556,6 +618,7 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       carrito, cartAbierto,
       productoAPersonalizar, modsSeleccionados, cantidadModal, notaPersonalizacion,
       abrirModalPersonalizacion, alternarModificador, calcularPrecioUnitarioModal, agregarAlCarritoDesdeModal,
+      agregarProductoDirecto,
       actualizarCantidadCarrito, eliminarDelCarrito,
       mostrarCheckout,
       tipoEntrega,

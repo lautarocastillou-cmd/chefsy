@@ -1,4 +1,4 @@
-import { ModificadorCatalogo, ProductoCatalogo } from '@/tipos/catalogo'
+import type { ModificadorCatalogo, ProductoCatalogo } from '@/tipos/catalogo'
 
 export interface PromoPopupConfig {
   activo: boolean
@@ -74,8 +74,8 @@ export function esProductoPromo(
   if (!activo) return false
   if (!id && !nom) return false
 
-  // 1. Si está marcado como combo, NO califica (solo individuales)
-  if (combo) return false
+  // 1. Si está marcado como combo o es la promo flash, NO califica (solo individuales)
+  if (combo || id.startsWith('promo-flash-')) return false
 
   // 2. Exclusiones explícitas de combos / promociones por patrón de texto en el nombre
   if (

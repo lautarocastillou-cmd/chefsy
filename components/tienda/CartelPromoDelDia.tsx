@@ -1,23 +1,32 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { X, ArrowRight } from 'lucide-react'
+import { X, ArrowRight, Flame, ShoppingBag, Sparkles } from 'lucide-react'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
+import { usarCarrito } from '@/contexto/CarritoContexto'
+import { usePromoFlash } from '@/hooks/usePromoFlash'
+import { construirProductoPromoFlash } from '@/lib/promo-flash'
 import { scrollHaciaCategoria } from '@/lib/tienda-helpers'
+import { formatearPrecio } from '@/lib/utils'
+import { notificarExito } from '@/lib/notificaciones'
 import { PROMO_POPUP_DEFAULT } from '@/tipos/promo'
 
 export default function CartelPromoDelDia() {
   const [abierto, setAbierto] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
   const { configuracion } = usarConfiguracionTienda()
+  const { agregarProductoDirecto } = usarCarrito()
+  const { estado: estadoPromoFlash } = usePromoFlash()
 
   const configPromo = configuracion?.promo_popup || PROMO_POPUP_DEFAULT
-  const promoActiva = configPromo.activo !== false
+  const promoBebidaActiva = configPromo.activo !== false
+  const promoCheeseActiva = Boolean(estadoPromoFlash?.disponible)
+  const hayAlgunaPromo = promoBebidaActiva || promoCheeseActiva
 
-  // Sanitización de textos para evitar mayúsculas agresivas o textos desactualizados de caché
   const rawTitulo = configPromo.titulo?.trim() || ''
   const tituloLimpio = (!rawTitulo || rawTitulo.toUpperCase() === 'PROMO DE HOY')
-    ? 'Promo del día'
+    ? 'Promos del día'
     : rawTitulo
 
   const rawDesc = configPromo.descripcion?.trim() || ''
@@ -29,22 +38,20 @@ export default function CartelPromoDelDia() {
     ? 'Elegí cualquier burger, lomo o milanesa individual de la carta y sumás una Fanta o Sprite de 375cc de regalo.'
     : rawDesc
 
-  // Abrir cartel al ingresar
+  // Abrir cartel al ingresar si hay alguna promo activa
   useEffect(() => {
-    if (typeof window === 'undefined' || !promoActiva) return
+    if (typeof window === 'undefined' || !hayAlgunaPromo) return
 
     const params = new URLSearchParams(window.location.search)
     const tieneParamPromo = params.has('promo') || params.get('p') === 'promo'
 
-    // Si viene con link de promo explícito (?promo), abrir siempre
     if (tieneParamPromo) {
       const timer = setTimeout(() => setAbierto(true), 300)
       return () => clearTimeout(timer)
     }
 
-    // Si ya vio el popup en esta versión de la promo, no volver a interrumpir
     try {
-      const yaVisto = sessionStorage.getItem('chefsy_promo_popup_vista_v2')
+      const yaVisto = sessionStorage.getItem('chefsy_promo_popup_vista_v3')
       if (!yaVisto) {
         const timer = setTimeout(() => setAbierto(true), 450)
         return () => clearTimeout(timer)
@@ -53,7 +60,7 @@ export default function CartelPromoDelDia() {
       const timer = setTimeout(() => setAbierto(true), 450)
       return () => clearTimeout(timer)
     }
-  }, [promoActiva])
+  }, [hayAlgunaPromo])
 
   // Escuchar evento global por si tocan un banner o botón "Ver Promo"
   useEffect(() => {
@@ -69,9 +76,67 @@ export default function CartelPromoDelDia() {
   const cerrarModal = useCallback(() => {
     setAbierto(false)
     try {
-      sessionStorage.setItem('chefsy_promo_popup_vista_v2', '1')
+      sessionStorage.setItem('chefsy_promo_popup_vista_v3', '1')
     } catch (_) {}
   }, [])
+
+  // Sincronizar visibilidad con el elemento nativo <dialog> (top-layer, Esc y gestión de foco nativos)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    if (abierto && hayAlgunaPromo) {
+      if (!dialog.open) {
+        try {
+          dialog.showModal()
+        } catch {
+          // Si ya estaba abierto en otro estado
+        }
+      }
+    } else if (dialog.open) {
+      dialog.close()
+    }
+  }, [abierto, hayAlgunaPromo])
+
+  // Sincronizar cierre nativo (Esc, gesto atrás o closedby="any") + fallback light-dismiss para Safari
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    const onClose = () => {
+      dialog.returnValue = ''
+      cerrarModal()
+    }
+    dialog.addEventListener('close', onClose)
+
+    if (typeof HTMLDialogElement === 'undefined' || 'closedBy' in HTMLDialogElement.prototype) {
+      return () => dialog.removeEventListener('close', onClose)
+    }
+
+    const estaAfuera = (e: PointerEvent) => {
+      const r = dialog.getBoundingClientRect()
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom
+    }
+
+    let presionoAfuera = false
+    const onPointerDown = (e: PointerEvent) => {
+      presionoAfuera = estaAfuera(e)
+    }
+    const onPointerUp = (e: PointerEvent) => {
+      if (presionoAfuera && estaAfuera(e)) {
+        dialog.close()
+      }
+      presionoAfuera = false
+    }
+
+    dialog.addEventListener('pointerdown', onPointerDown)
+    dialog.addEventListener('pointerup', onPointerUp)
+    return () => {
+      dialog.removeEventListener('close', onClose)
+      dialog.removeEventListener('pointerdown', onPointerDown)
+      dialog.removeEventListener('pointerup', onPointerUp)
+    }
+  }, [cerrarModal])
 
   const handleElegirCategoria = (categoriaId: string) => {
     cerrarModal()
@@ -81,197 +146,272 @@ export default function CartelPromoDelDia() {
     }, 120)
   }
 
-  if (!abierto || !promoActiva) return null
+  const handleSumarCheesePromo = () => {
+    if (!estadoPromoFlash?.disponible) return
+    const { config, restantes } = estadoPromoFlash
+    const maxPermitido = Math.min(config.maxPorPedido, restantes)
+    const ok = agregarProductoDirecto(construirProductoPromoFlash(config), 1, maxPermitido)
+    if (ok) {
+      notificarExito(`¡Adentro! Sumaste 1 ${config.nombreProducto} a tu pedido 🍔🧀`)
+      cerrarModal()
+    }
+  }
 
-  // Fotos oficiales de referencia de las categorías
+  if (!hayAlgunaPromo) return null
+
   const fotoBurger = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009810/btwjx7btqxu4i28p0rzc.jpg'
   const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1783992908572_cd157k.jpeg'
   const fotoMila = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346979850_ojawu.jpeg'
 
   return (
-    <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 animate-in fade-in duration-200 select-none overflow-y-auto"
-      onClick={cerrarModal}
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby="promo-dia-titulo"
       aria-describedby="promo-dia-descripcion"
+      {...({ closedby: 'any' } as any)}
       data-lenis-prevent="true"
+      className="chefsy-modal-dialog m-auto p-0 bg-transparent w-[calc(100%-1.5rem)] max-w-xl sm:max-w-2xl md:max-w-3xl max-h-[92dvh] overflow-y-auto rounded-2xl sm:rounded-3xl select-none"
     >
-      <div 
-        className="relative w-full max-w-xl sm:max-w-2xl md:max-w-3xl bg-[#161616] border border-[#2a2a2a] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] overflow-hidden my-auto text-center animate-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] overflow-hidden text-center">
         {/* Botón cerrar X */}
         <button
           type="button"
           onClick={cerrarModal}
-          className="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-[#222222] hover:bg-[#2e2e2e] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer z-20 border border-[#333333] active:scale-95"
+          className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-[#222222] hover:bg-[#2e2e2e] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer z-20 border border-[#333333] active:scale-95"
           aria-label="Cerrar cartel de promo"
         >
           <X size={16} />
         </button>
 
-        {/* Encabezado del Cartel */}
-        <div className="flex flex-col items-center space-y-2 max-w-lg mx-auto">
-          {/* Título Principal */}
-          <h2 id="promo-dia-titulo" className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight">
-            {tituloLimpio}
-          </h2>
-
-          {/* Subtítulo / Descripción */}
-          <p id="promo-dia-descripcion" className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5">
-            {descripcionLimpia}
-          </p>
-        </div>
-
-        {/* CONTENEDOR DE CATEGORÍAS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 text-left">
-          
-          {/* CATEGORÍA 1: BURGERS */}
-          <div 
-            onClick={() => handleElegirCategoria('patys')}
-            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
-          >
-            <div className="flex sm:flex-col items-start gap-3">
-              {/* Imagen de la categoría */}
-              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
-                <Image
-                  src={fotoBurger}
-                  alt="Burgers individuales"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="(max-width: 640px) 64px, 240px"
-                  loading="lazy"
+        {/* ── BLOQUE ESTRELLA: BURGER CHEESE $5.000 (SOLO POR HOY) ── */}
+        {promoCheeseActiva && estadoPromoFlash && (
+          <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-gradient-to-br from-[#241809] via-[#17130d] to-[#231407] p-4 sm:p-5 text-left shadow-[0_10px_30px_rgba(245,158,11,0.2)]">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-2 rounded-full bg-amber-400/25 blur-lg"
+                />
+                <img
+                  src={estadoPromoFlash.config.imagenUrl || '/burger-loca.webp'}
+                  alt={estadoPromoFlash.config.nombreProducto}
+                  width={120}
+                  height={120}
+                  className="promo-cheese-float relative z-10 w-full h-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.75)]"
                 />
               </div>
 
-              {/* Textos */}
-              <div className="flex-1 min-w-0 sm:pt-1">
-                <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                    Burgers
-                  </h3>
-                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
-                    Bebida gratis
+              <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-950 text-[10px] font-black uppercase tracking-wider">
+                    <Flame size={11} className="fill-orange-600 text-orange-700" />
+                    {estadoPromoFlash.config.badge}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-amber-400/35 text-amber-200 text-[10px] font-bold">
+                    <Sparkles size={10} />
+                    Quedan {estadoPromoFlash.restantes} de {estadoPromoFlash.config.limiteTotal}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Común, Especial, Chefsy, American y 4 Quesos.
-                </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
-                  Con Fanta o Sprite gratis
-                </p>
-              </div>
-            </div>
 
-            {/* Botón Acción */}
-            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
-              <span className="text-[11px] font-medium">Ver opciones</span>
-              <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
-                <ArrowRight size={13} />
+                <div className="flex flex-wrap items-baseline justify-center sm:justify-start gap-2.5">
+                  <h1
+                    id="promo-dia-titulo"
+                    className="font-bebas text-3xl sm:text-4xl text-white tracking-wide leading-none"
+                  >
+                    BURGER <span className="text-amber-400">CHEESE</span>{' '}
+                    <span className="text-amber-300">
+                      {formatearPrecio(estadoPromoFlash.config.precioPromo)}
+                    </span>
+                  </h1>
+                  {estadoPromoFlash.config.precioRegular > estadoPromoFlash.config.precioPromo && (
+                    <span className="text-xs font-semibold text-stone-400 line-through">
+                      {formatearPrecio(estadoPromoFlash.config.precioRegular)}
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  id="promo-dia-descripcion"
+                  className="text-xs text-stone-200/90 leading-snug"
+                >
+                  {estadoPromoFlash.config.subtitulo}
+                </p>
+
+                <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={handleSumarCheesePromo}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-stone-950 text-xs font-black tracking-wide shadow-md transition-all cursor-pointer active:scale-95"
+                  >
+                    <ShoppingBag size={14} strokeWidth={2.5} />
+                    <span>¡Agregar por {formatearPrecio(estadoPromoFlash.config.precioPromo)}!</span>
+                  </button>
+                  <span className="text-[10px] text-amber-200/70 font-medium">
+                    Máx. {estadoPromoFlash.config.maxPorPedido} por pedido · Hasta agotar cupo
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* CATEGORÍA 2: LOMOS */}
-          <div 
-            onClick={() => handleElegirCategoria('lomos')}
-            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
-          >
-            <div className="flex sm:flex-col items-start gap-3">
-              {/* Imagen de la categoría */}
-              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
-                <Image
-                  src={fotoLomo}
-                  alt="Lomos individuales"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="(max-width: 640px) 64px, 240px"
-                  loading="lazy"
-                />
-              </div>
+        {/* ── BLOQUE PROMO BEBIDA GRATIS ── */}
+        {promoBebidaActiva && (
+          <>
+            <div className="flex flex-col items-center space-y-1.5 max-w-lg mx-auto">
+              {promoCheeseActiva ? (
+                <h2 className="font-bebas text-2xl sm:text-3xl text-emerald-300 tracking-wide leading-tight">
+                  Y además: {tituloLimpio} (Fanta o Sprite gratis)
+                </h2>
+              ) : (
+                <h1
+                  id="promo-dia-titulo"
+                  className="font-bebas text-3xl sm:text-4xl md:text-5xl text-white tracking-wide leading-tight"
+                >
+                  {tituloLimpio}
+                </h1>
+              )}
 
-              {/* Textos */}
-              <div className="flex-1 min-w-0 sm:pt-1">
-                <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                    Lomos
-                  </h3>
-                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
-                    Bebida gratis
-                  </span>
+              <p
+                id={promoCheeseActiva ? undefined : 'promo-dia-descripcion'}
+                className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-md pt-0.5"
+              >
+                {descripcionLimpia}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-5 text-left">
+              {/* CATEGORÍA 1: BURGERS */}
+              <div
+                onClick={() => handleElegirCategoria('patys')}
+                className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+              >
+                <div className="flex sm:flex-col items-start gap-3">
+                  <div className="relative w-16 h-16 sm:w-full sm:h-24 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
+                    <Image
+                      src={fotoBurger}
+                      alt="Burgers individuales"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      sizes="(max-width: 640px) 64px, 240px"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 sm:pt-1">
+                    <div className="flex items-baseline justify-between gap-1.5">
+                      <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                        Burgers
+                      </h3>
+                      <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                        Bebida gratis
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                      Común, Especial, Chefsy, American y 4 Quesos.
+                    </p>
+                    <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                      Con Fanta o Sprite gratis
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  Lomito de pollo, Especial, Chefsy, American y más.
-                </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
-                  Con Fanta o Sprite gratis
-                </p>
-              </div>
-            </div>
-
-            {/* Botón Acción */}
-            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
-              <span className="text-[11px] font-medium">Ver opciones</span>
-              <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
-                <ArrowRight size={13} />
-              </div>
-            </div>
-          </div>
-
-          {/* CATEGORÍA 3: MILAS */}
-          <div 
-            onClick={() => handleElegirCategoria('lomos-y-milas')}
-            className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
-          >
-            <div className="flex sm:flex-col items-start gap-3">
-              {/* Imagen de la categoría */}
-              <div className="relative w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
-                <Image
-                  src={fotoMila}
-                  alt="Milas en sándwich"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  sizes="(max-width: 640px) 64px, 240px"
-                  loading="lazy"
-                />
-              </div>
-
-              {/* Textos */}
-              <div className="flex-1 min-w-0 sm:pt-1">
-                <div className="flex items-baseline justify-between gap-1.5">
-                  <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
-                    Milas
-                  </h3>
-                  <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
-                    Bebida gratis
-                  </span>
+                <div className="mt-3 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+                  <span className="text-[11px] font-medium">Ver opciones</span>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
+                    <ArrowRight size={13} />
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
-                  En sándwich: Común, Especial, Chefsy y 4 Quesos.
-                </p>
-                <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
-                  Con Fanta o Sprite gratis
-                </p>
+              </div>
+
+              {/* CATEGORÍA 2: LOMOS */}
+              <div
+                onClick={() => handleElegirCategoria('lomos')}
+                className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+              >
+                <div className="flex sm:flex-col items-start gap-3">
+                  <div className="relative w-16 h-16 sm:w-full sm:h-24 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
+                    <Image
+                      src={fotoLomo}
+                      alt="Lomos individuales"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      sizes="(max-width: 640px) 64px, 240px"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 sm:pt-1">
+                    <div className="flex items-baseline justify-between gap-1.5">
+                      <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                        Lomos
+                      </h3>
+                      <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                        Bebida gratis
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                      Lomito de pollo, Especial, Chefsy, American y más.
+                    </p>
+                    <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                      Con Fanta o Sprite gratis
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+                  <span className="text-[11px] font-medium">Ver opciones</span>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
+                    <ArrowRight size={13} />
+                  </div>
+                </div>
+              </div>
+
+              {/* CATEGORÍA 3: MILAS */}
+              <div
+                onClick={() => handleElegirCategoria('lomos-y-milas')}
+                className="group relative bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer shadow-md active:scale-[0.99]"
+              >
+                <div className="flex sm:flex-col items-start gap-3">
+                  <div className="relative w-16 h-16 sm:w-full sm:h-24 rounded-xl overflow-hidden bg-black/60 border border-[#262626] shrink-0">
+                    <Image
+                      src={fotoMila}
+                      alt="Milas en sándwich"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      sizes="(max-width: 640px) 64px, 240px"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 sm:pt-1">
+                    <div className="flex items-baseline justify-between gap-1.5">
+                      <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide leading-none group-hover:text-emerald-300 transition-colors">
+                        Milas
+                      </h3>
+                      <span className="text-[11px] text-emerald-400/90 font-medium sm:hidden">
+                        Bebida gratis
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">
+                      En sándwich: Común, Especial, Chefsy y 4 Quesos.
+                    </p>
+                    <p className="text-[11px] text-emerald-400/90 font-medium mt-1 leading-tight hidden sm:block">
+                      Con Fanta o Sprite gratis
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
+                  <span className="text-[11px] font-medium">Ver opciones</span>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
+                    <ArrowRight size={13} />
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Botón Acción */}
-            <div className="mt-3.5 pt-2.5 border-t border-[#222222] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-emerald-400 transition-colors">
-              <span className="text-[11px] font-medium">Ver opciones</span>
-              <div className="w-6 h-6 rounded-full bg-emerald-500/15 group-hover:bg-emerald-500 group-hover:text-black text-emerald-400 flex items-center justify-center transition-colors">
-                <ArrowRight size={13} />
-              </div>
-            </div>
-          </div>
-
-        </div>
+          </>
+        )}
 
         {/* Footer del Popup */}
-        <div className="mt-6 pt-4 border-t border-[#242424] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="mt-5 pt-4 border-t border-[#242424] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p className="text-[11px] text-slate-400">
-            * Aplica a variedades individuales en sándwich. No incluye combos ni milanesas al plato.
+            * Promos no acumulables entre sí. La bebida gratis aplica a variedades individuales en sándwich.
           </p>
           <button
             type="button"
@@ -281,8 +421,7 @@ export default function CartelPromoDelDia() {
             Explorar toda la carta
           </button>
         </div>
-
       </div>
-    </div>
+    </dialog>
   )
 }
