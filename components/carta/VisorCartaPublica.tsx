@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Store, FileText, ArrowUp } from 'lucide-react'
+import { MessageCircle, Store, FileText, ArrowUp, WifiOff } from 'lucide-react'
 import BannerTituloCarta from '@/components/carta/BannerTituloCarta'
 import {
   construirEnlaceWhatsAppCarta,
@@ -26,8 +26,17 @@ export default function VisorCartaPublica({
 }: PropsVisorCartaPublica) {
   const [indiceActivo, setIndiceActivo] = useState(0)
   const [mostrarSubir, setMostrarSubir] = useState(false)
+  const [sinConexion, setSinConexion] = useState(false)
   const hojasRefs = useRef<Array<HTMLElement | null>>([])
   const chipsContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const urlsImagenesActivas = useMemo(
+    () =>
+      hojas
+        .filter((h) => h.tipo !== 'titulo' && Boolean(h.imagenUrl))
+        .map((h) => h.imagenUrl),
+    [hojas]
+  )
 
   const whatsappUrl = useMemo(() => construirEnlaceWhatsAppCarta(config), [config])
   const fechaActualizacion = useMemo(
@@ -85,6 +94,66 @@ export default function VisorCartaPublica({
     () => hojas.findIndex((h) => h.tipo !== 'titulo'),
     [hojas]
   )
+
+  // ── Modo offline exclusivo de /carta (Service Worker + estado de red) ─────
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const actualizarEstadoRed = () => {
+      setSinConexion(!window.navigator.onLine)
+    }
+    actualizarEstadoRed()
+    window.addEventListener('online', actualizarEstadoRed)
+    window.addEventListener('offline', actualizarEstadoRed)
+
+    let cancelado = false
+    const enviarAssetsAlSw = (sw: ServiceWorker | null | undefined) => {
+      if (!sw || urlsImagenesActivas.length === 0) return
+      try {
+        sw.postMessage({
+          type: 'SYNC_CARTA_ASSETS',
+          urls: urlsImagenesActivas,
+        })
+      } catch {
+        // Ignorar si el worker está cerrándose
+      }
+    }
+
+    if ('serviceWorker' in window.navigator) {
+      window.navigator.serviceWorker
+        .register('/carta/sw.js', { scope: '/carta' })
+        .then((registro) => {
+          if (cancelado) return
+          const activo = registro.active || registro.waiting || registro.installing
+          if (activo) {
+            if (activo.state === 'activated') {
+              enviarAssetsAlSw(activo)
+            } else {
+              activo.addEventListener('statechange', () => {
+                if (activo.state === 'activated') {
+                  enviarAssetsAlSw(activo)
+                }
+              })
+            }
+          }
+          return window.navigator.serviceWorker.ready
+        })
+        .then((registroListo) => {
+          if (!cancelado && registroListo?.active) {
+            enviarAssetsAlSw(registroListo.active)
+          }
+        })
+        .catch(() => {
+          // En entornos sin HTTPS o con SW deshabilitado, /carta sigue funcionando online normal
+        })
+    }
+
+    return () => {
+      cancelado = true
+      window.removeEventListener('online', actualizarEstadoRed)
+      window.removeEventListener('offline', actualizarEstadoRed)
+    }
+  }, [urlsImagenesActivas])
 
   // ── Bloqueo estricto de zoom (pinch iOS/Android, doble toque y Ctrl+rueda) ──
   // Evita que personas mayores queden "perdidas" con la pantalla ampliada.
@@ -231,17 +300,24 @@ export default function VisorCartaPublica({
               <h1 className="text-sm sm:text-[15px] font-bold tracking-tight text-stone-900 truncate">
                 {config.titulo}
               </h1>
-              {config.mostrarEstadoHorario && (
-                <p className="text-[11px] font-medium text-stone-500 flex items-center gap-1.5 truncate mt-0.5">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      estadoHorario.abierto ? 'bg-[#2A6348]' : 'bg-stone-400'
-                    }`}
-                  />
-                  <span className={estadoHorario.abierto ? 'text-[#2A6348] font-semibold' : ''}>
-                    {estadoHorario.etiquetaCorta}
-                  </span>
+              {sinConexion ? (
+                <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1.5 truncate mt-0.5">
+                  <WifiOff size={11} className="shrink-0" />
+                  <span>Sin conexión · Carta guardada</span>
                 </p>
+              ) : (
+                config.mostrarEstadoHorario && (
+                  <p className="text-[11px] font-medium text-stone-500 flex items-center gap-1.5 truncate mt-0.5">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        estadoHorario.abierto ? 'bg-[#2A6348]' : 'bg-stone-400'
+                      }`}
+                    />
+                    <span className={estadoHorario.abierto ? 'text-[#2A6348] font-semibold' : ''}>
+                      {estadoHorario.etiquetaCorta}
+                    </span>
+                  </p>
+                )
               )}
             </div>
           </div>
