@@ -1,18 +1,68 @@
-import { NextResponse } from 'next/server'
-import { obtenerSesion } from '@/lib/auth-server'
-import { obtenerSupabaseAdmin } from '@/lib/supabase-admin'
-import { notificarCambioPedido } from '@/lib/pedidos-broadcast'
+// ─────────────────────────────────────────────────────
+// app/api/notificaciones-pagos/route.ts
+// API para recibir notificaciones de transferencias (desde
+// el listener Android del local o el admin) y consultarlas
+// desde la app de cadetes (Shorebird OTA) y el panel web.
+// ─────────────────────────────────────────────────────
 
-// Notificaciones de pago para verificación interna (solo admin/local).
-// Se almacenan en la tabla existente `cadetes_pagos_extras` con motivo
-// 'verificar_pago' para no crear tablas nuevas. No usa Supabase Realtime
-// directamente desde el cliente (evita saturar la cuota free); el Flutter
-// consulta por polling HTTP ligero cada 30s cuando el modo está activo.
+import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
+import { obtenerSesion } from '@/lib/auth-server'
+import {
+  marcarNotificacionPagoLeidaServidor,
+  obtenerNotificacionesPagosServidor,
+  registrarNotificacionPagoServidor,
+} from '@/lib/notificaciones-pagos-servidor'
+
+export const dynamic = 'force-dynamic'
+
+const TOKEN_DEFAULT_APPS = 'chefsy_expo_secure_track_99XQ'
+
+function tokenBearerValido(request: Request): boolean {
+  const auth = request.headers.get('authorization') || ''
+  if (!auth.toLowerCase().startsWith('bearer ')) return false
+  const recibido = auth.slice(7).trim()
+  if (!recibido) return false
+
+  const permitidos = [
+    process.env.CHEFSY_PAGOS_TOKEN,
+    process.env.CADETE_TRACK_TOKEN,
+    TOKEN_DEFAULT_APPS,
+  ].filter((t): t is string => Boolean(t && t.trim()))
+
+  const bufRecibido = Buffer.from(recibido, 'utf8')
+  for (const esperado of permitidos) {
+    const bufEsperado = Buffer.from(esperado.trim(), 'utf8')
+    if (
+      bufRecibido.length === bufEsperado.length &&
+      timingSafeEqual(bufRecibido, bufEsperado)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+async function autorizarSolicitud(
+  request: Request,
+  rolesPermitidos: Array<'admin' | 'cajero' | 'cadete'> = ['admin', 'cajero']
+): Promise<boolean> {
+  if (tokenBearerValido(request)) return true
+  try {
+    const sesion = await obtenerSesion()
+    if (sesion && rolesPermitidos.includes(sesion.rol as any)) {
+      return true
+    }
+  } catch {
+    // Sin cookie de sesión válida
+  }
+  return false
+}
 
 export async function GET(request: Request) {
   try {
-    const sesion = await obtenerSesion()
-    if (!sesion || (sesion.rol !== 'admin' && sesion.rol !== 'cajero')) {
+    const autorizado = await autorizarSolicitud(request, ['admin', 'cajero', 'cadete'])
+    if (!autorizado) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
@@ -20,88 +70,68 @@ export async function GET(request: Request) {
     const cadeteId = searchParams.get('cadeteId')
     const pedidoId = searchParams.get('pedidoId')
     const soloNoLeidas = searchParams.get('noLeidas') === '1'
+    const limite = Number(searchParams.get('limit') || '50')
 
-    const supabaseAdmin = obtenerSupabaseAdmin()
+    const notificaciones = await obtenerNotificacionesPagosServidor({
+      cadeteId,
+      pedidoId,
+      soloNoLeidas,
+      limite: Number.isFinite(limite) ? limite : 50,
+    })
 
-    let query = supabaseAdmin
-      .from('cadetes_pagos_extras')
-      .select('*')
-      .eq('motivo', 'verificar_pago')
-      .order('created_at', { ascending: false })
-
-    if (cadeteId) query = query.eq('cadete_id', cadeteId)
-    if (pedidoId) query = query.eq('pedido_id', pedidoId)
-    if (soloNoLeidas) query = query.eq('leida', false)
-
-    const { data, error } = await query.limit(50)
-
-    if (error) {
-      return NextResponse.json({ ok: true, notificaciones: [] })
-    }
-
-    return NextResponse.json({ ok: true, notificaciones: data || [] })
+    return NextResponse.json(
+      { ok: true, notificaciones },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
   } catch (error: any) {
-    return NextResponse.json({ ok: true, notificaciones: [], error: error.message })
+    console.error('[API Notificaciones Pagos GET]:', error)
+    return NextResponse.json(
+      { ok: false, notificaciones: [], error: 'Error al consultar notificaciones.' },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const sesion = await obtenerSesion()
-    if (!sesion || sesion.rol !== 'admin') {
+    const autorizado = await autorizarSolicitud(request, ['admin', 'cajero'])
+    if (!autorizado) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { cadeteId, cadeteNombre, monto, pedidoId, metodo, comprobanteUrl, mensaje } = body
-
-    if (!monto) {
-      return NextResponse.json({ error: 'Falta el monto' }, { status: 400 })
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Cuerpo JSON inválido.' }, { status: 400 })
     }
 
-    const supabaseAdmin = obtenerSupabaseAdmin()
-    const ahora = new Date().toISOString()
-    const fechaHoy = ahora.slice(0, 10)
-    const cadeteLocal = cadeteId || 'local'
-    const nombreLocal = cadeteNombre || 'Local / Mostrador'
-
-    const { error } = await supabaseAdmin.from('cadetes_pagos_extras').insert({
-      cadete_id: cadeteLocal,
-      cadete_nombre: nombreLocal,
-      monto: Number(monto),
-      motivo: 'verificar_pago',
-      creado_en: ahora,
-      fecha: fechaHoy,
-      notas: mensaje || (pedidoId ? `Pedido ${pedidoId}` : null),
-      comprobante_url: comprobanteUrl || null,
-      metodo_pago: metodo || 'efectivo',
-      leida: false,
+    const resultado = await registrarNotificacionPagoServidor({
+      titulo: typeof body.titulo === 'string' ? body.titulo : undefined,
+      texto: typeof body.texto === 'string' ? body.texto : undefined,
+      paquete: typeof body.paquete === 'string' ? body.paquete : undefined,
+      monto: body.monto,
+      metodo: typeof body.metodo === 'string' ? body.metodo : undefined,
+      billetera: typeof body.billetera === 'string' ? body.billetera : undefined,
+      remitente: typeof body.remitente === 'string' ? body.remitente : undefined,
+      cadeteId: typeof body.cadeteId === 'string' ? body.cadeteId : undefined,
+      cadeteNombre: typeof body.cadeteNombre === 'string' ? body.cadeteNombre : undefined,
+      pedidoId: typeof body.pedidoId === 'string' ? body.pedidoId : undefined,
+      mensaje: typeof body.mensaje === 'string' ? body.mensaje : undefined,
     })
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Error al registrar notificación de pago: ' + error.message },
-        { status: 500 }
-      )
-    }
-
-    // Señal ligera por broadcast (no satura cuota Realtime: es solo aviso, sin datos de tabla)
-    try {
-      await notificarCambioPedido(cadeteLocal, 'update')
-    } catch {
-      // Ignorar fallo de broadcast
-    }
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(resultado)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
+    console.error('[API Notificaciones Pagos POST]:', error)
+    return NextResponse.json(
+      { error: 'Error al registrar notificación de pago.' },
+      { status: 500 }
+    )
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    const sesion = await obtenerSesion()
-    if (!sesion || (sesion.rol !== 'admin' && sesion.rol !== 'cajero')) {
+    const autorizado = await autorizarSolicitud(request, ['admin', 'cajero', 'cadete'])
+    if (!autorizado) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
@@ -111,16 +141,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     }
 
-    const supabaseAdmin = obtenerSupabaseAdmin()
-    const { error } = await supabaseAdmin
-      .from('cadetes_pagos_extras')
-      .update({ leida: true })
-      .eq('id', id)
-      .eq('motivo', 'verificar_pago')
-
-    if (error) throw error
+    await marcarNotificacionPagoLeidaServidor(id)
     return NextResponse.json({ ok: true })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
+    console.error('[API Notificaciones Pagos PATCH]:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar notificación.' },
+      { status: 500 }
+    )
   }
 }

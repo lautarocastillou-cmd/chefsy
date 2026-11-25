@@ -1,0 +1,23 @@
+name: chefsy_pagos_listener
+description: "Agente Android para escuchar notificaciones de transferencias y enviarlas a Chefsy."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shorebird_code_push: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - shorebird.yaml

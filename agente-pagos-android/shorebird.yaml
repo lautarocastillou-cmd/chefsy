@@ -1,0 +1,7 @@
+# Configuración de Shorebird Code Push para Chefsy Pagos.
+# Ejecutá `shorebird init` dentro de `agente-pagos-android` para vincular tu app_id real
+# y luego `shorebird release android --artifact apk` para el primer APK con OTA.
+app_id: PENDING_SHOREBIRD_INIT
+
+# auto_update: false permite que UpdaterService controle la descarga y muestre el aviso en pantalla.
+auto_update: false
