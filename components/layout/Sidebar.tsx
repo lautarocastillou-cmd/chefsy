@@ -17,7 +17,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   LogOut, Settings,
   LayoutDashboard, ClipboardList, Wallet, UtensilsCrossed, Users, Store, Paintbrush,
-  ChevronLeft, Radar
+  ChevronLeft, Radar, FileText
 } from 'lucide-react'
 
 // TTL de preferencias de UI del admin: 90 días
@@ -294,6 +294,43 @@ export default function Sidebar({ className, onCloseMobile }: PropsSidebar) {
         {esDock && (
           <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
             Tienda
+          </span>
+        )}
+      </a>
+
+      {/* Atajo a la carta PDF pública — abre en pestaña nueva */}
+      <a
+        href="/carta"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Ver la carta digital estilo PDF (/carta)"
+        onClick={() => onCloseMobile?.()}
+        className={cn(
+          "flex items-center rounded-xl font-medium transition-[width,height,padding,gap,background-color] duration-700 group relative cursor-pointer text-xs shrink-0",
+          "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-100",
+          esDock
+            ? "w-11 h-11 items-center self-center px-[13px] delay-[1000ms]"
+            : "w-full items-center h-11 px-3 gap-3",
+          "justify-start"
+        )}
+      >
+        <FileText
+          size={18}
+          className="shrink-0 transition-transform duration-200 group-hover:scale-105"
+        />
+        <span
+          className={cn(
+            "tracking-tight whitespace-nowrap transition-all duration-200 overflow-hidden",
+            esDock
+              ? "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+              : "max-w-[140px] opacity-100 translate-x-0"
+          )}
+        >
+          Carta PDF
+        </span>
+        {esDock && (
+          <span className="absolute left-full ml-3 px-2.5 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 z-50 translate-x-1 group-hover:translate-x-0">
+            Carta PDF
           </span>
         )}
       </a>

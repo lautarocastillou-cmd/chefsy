@@ -1,0 +1,366 @@
+'use client'
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { MessageCircle, Store, FileText, ArrowUp } from 'lucide-react'
+import {
+  construirEnlaceWhatsAppCarta,
+  formatearFechaActualizacionCarta,
+  type ConfiguracionCarta,
+  type HojaCarta,
+} from '@/lib/carta-digital'
+import type { EstadoHorarioCarta } from '@/lib/carta-digital-servidor'
+
+interface PropsVisorCartaPublica {
+  config: ConfiguracionCarta
+  hojas: HojaCarta[]
+  estadoHorario: EstadoHorarioCarta
+}
+
+export default function VisorCartaPublica({
+  config,
+  hojas,
+  estadoHorario,
+}: PropsVisorCartaPublica) {
+  const [paginaActual, setPaginaActual] = useState(1)
+  const [mostrarSubir, setMostrarSubir] = useState(false)
+  const hojasRefs = useRef<Array<HTMLElement | null>>([])
+  const chipsContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const whatsappUrl = useMemo(() => construirEnlaceWhatsAppCarta(config), [config])
+  const fechaActualizacion = useMemo(
+    () => formatearFechaActualizacionCarta(config.updatedAt),
+    [config.updatedAt]
+  )
+
+  const tieneIndiceTitulos = useMemo(
+    () => hojas.length > 1 && hojas.some((h) => Boolean(h.titulo.trim())),
+    [hojas]
+  )
+
+  // ── Bloqueo estricto de zoom (pinch iOS/Android, doble toque y Ctrl+rueda) ──
+  // Evita que personas mayores queden "perdidas" con la pantalla ampliada.
+  useEffect(() => {
+    let ultimoTouchEnd = 0
+
+    const bloquearGestoSafari = (e: Event) => {
+      e.preventDefault()
+    }
+
+    const bloquearMultiTouch = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault()
+      }
+    }
+
+    const bloquearDobleTapZoom = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target?.closest('a, button, input, textarea, select')) {
+        ultimoTouchEnd = 0
+        return
+      }
+      const ahora = Date.now()
+      if (ahora - ultimoTouchEnd <= 320) {
+        e.preventDefault()
+      }
+      ultimoTouchEnd = ahora
+    }
+
+    const bloquearRuedaZoom = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+      }
+    }
+
+    const bloquearTecladoZoom = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '_', '0'].includes(e.key)) {
+        e.preventDefault()
+      }
+    }
+
+    document.addEventListener('gesturestart', bloquearGestoSafari, { passive: false })
+    document.addEventListener('gesturechange', bloquearGestoSafari, { passive: false })
+    document.addEventListener('gestureend', bloquearGestoSafari, { passive: false })
+    document.addEventListener('touchstart', bloquearMultiTouch, { passive: false })
+    document.addEventListener('touchmove', bloquearMultiTouch, { passive: false })
+    document.addEventListener('touchend', bloquearDobleTapZoom, { passive: false })
+    window.addEventListener('wheel', bloquearRuedaZoom, { passive: false })
+    window.addEventListener('keydown', bloquearTecladoZoom)
+
+    return () => {
+      document.removeEventListener('gesturestart', bloquearGestoSafari)
+      document.removeEventListener('gesturechange', bloquearGestoSafari)
+      document.removeEventListener('gestureend', bloquearGestoSafari)
+      document.removeEventListener('touchstart', bloquearMultiTouch)
+      document.removeEventListener('touchmove', bloquearMultiTouch)
+      document.removeEventListener('touchend', bloquearDobleTapZoom)
+      window.removeEventListener('wheel', bloquearRuedaZoom)
+      window.removeEventListener('keydown', bloquearTecladoZoom)
+    }
+  }, [])
+
+  // ── Seguimiento de página actual al hacer scroll ───────────────────────────
+  useEffect(() => {
+    if (hojas.length <= 1) return
+
+    const ratios = new Map<number, number>()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const idx = Number((entry.target as HTMLElement).dataset.hojaIndex)
+          if (!Number.isNaN(idx)) {
+            ratios.set(idx, entry.intersectionRatio)
+          }
+        }
+        let mejorIndice = -1
+        let mejorRatio = 0
+        ratios.forEach((ratio, idx) => {
+          if (ratio > mejorRatio) {
+            mejorRatio = ratio
+            mejorIndice = idx
+          }
+        })
+        if (mejorIndice >= 0) {
+          setPaginaActual(mejorIndice + 1)
+        }
+      },
+      {
+        rootMargin: '-15% 0px -35% 0px',
+        threshold: [0, 0.15, 0.35, 0.6, 0.85, 1],
+      }
+    )
+
+    hojasRefs.current.forEach((el) => {
+      if (el) observer.observe(el)
+    })
+
+    const onScroll = () => {
+      setMostrarSubir(window.scrollY > 480)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [hojas.length])
+
+  // Mantener visible el chip activo dentro de la barra horizontal
+  useEffect(() => {
+    if (!tieneIndiceTitulos || !chipsContainerRef.current) return
+    const chipActivo = chipsContainerRef.current.querySelector(
+      `[data-chip-index="${paginaActual - 1}"]`
+    ) as HTMLElement | null
+    if (chipActivo) {
+      chipActivo.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }
+  }, [paginaActual, tieneIndiceTitulos])
+
+  const irAHoja = (indice: number) => {
+    const el = hojasRefs.current[indice]
+    if (!el) return
+    const offset = tieneIndiceTitulos ? 104 : 62
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    setPaginaActual(indice + 1)
+  }
+
+  return (
+    <div
+      className="min-h-dvh bg-[#efede8] text-stone-900 select-none touch-pan-y [-webkit-touch-callout:none] flex flex-col"
+    >
+      {/* ── Cabecera sticky sobria estilo visor de documento ── */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-stone-200/90">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/logo.jpg"
+              alt="Chefsy"
+              width={34}
+              height={34}
+              draggable={false}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-contain bg-white border border-stone-200 shrink-0"
+            />
+            <div className="min-w-0 leading-tight">
+              <h1 className="text-sm sm:text-[15px] font-bold tracking-tight text-stone-900 truncate">
+                {config.titulo}
+              </h1>
+              {config.mostrarEstadoHorario && (
+                <p className="text-[11px] font-medium text-stone-500 flex items-center gap-1.5 truncate mt-0.5">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      estadoHorario.abierto ? 'bg-[#2A6348]' : 'bg-stone-400'
+                    }`}
+                  />
+                  <span className={estadoHorario.abierto ? 'text-[#2A6348] font-semibold' : ''}>
+                    {estadoHorario.etiquetaCorta}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {hojas.length > 1 && (
+              <span
+                aria-live="polite"
+                className="text-[11px] font-semibold tabular-nums text-stone-600 bg-stone-100 border border-stone-200/80 px-2.5 py-1 rounded-full"
+              >
+                {paginaActual} / {hojas.length}
+              </span>
+            )}
+
+            {config.mostrarLinkTienda && (
+              <Link
+                href="/tienda"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 hover:text-stone-950 bg-stone-100 hover:bg-stone-200/80 border border-stone-200/90 px-2.5 sm:px-3 py-1.5 rounded-full transition-colors"
+              >
+                <Store size={13} className="text-[#2A6348]" />
+                <span>Tienda</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* ── Índice rápido por hoja (solo si cargaron títulos en las láminas) ── */}
+        {tieneIndiceTitulos && (
+          <nav
+            aria-label="Secciones de la carta"
+            ref={chipsContainerRef}
+            className="max-w-3xl mx-auto px-3 sm:px-4 pb-2.5 pt-0.5 flex items-center gap-1.5 overflow-x-auto scrollbar-hide touch-pan-x"
+          >
+            {hojas.map((hoja, idx) => {
+              const etiqueta = hoja.titulo.trim() || `Hoja ${idx + 1}`
+              const activa = paginaActual === idx + 1
+              return (
+                <button
+                  key={hoja.id}
+                  type="button"
+                  data-chip-index={idx}
+                  onClick={() => irAHoja(idx)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                    activa
+                      ? 'bg-[#2A6348] text-white'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200/80'
+                  }`}
+                >
+                  {etiqueta}
+                </button>
+              )
+            })}
+          </nav>
+        )}
+      </header>
+
+      {/* ── Cuerpo del visor estilo PDF ── */}
+      <main className="flex-1 w-full max-w-[780px] mx-auto px-0 sm:px-4 py-2 sm:py-6 pb-28 sm:pb-24">
+        {hojas.length === 0 ? (
+          <div className="mx-4 my-12 bg-white border border-stone-200 rounded-2xl p-8 text-center max-w-md sm:mx-auto space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-stone-100 text-stone-500 flex items-center justify-center mx-auto">
+              <FileText size={22} />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-base font-bold text-stone-900">Carta en actualización</h2>
+              <p className="text-sm text-stone-500 leading-relaxed">
+                Estamos cargando las hojas nuevas de nuestra carta. Mientras tanto podés pedir por WhatsApp o ver la tienda online.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2 justify-center">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#2A6348] hover:bg-[#22503a] text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors"
+              >
+                <MessageCircle size={16} />
+                <span>Escribir por WhatsApp</span>
+              </a>
+              {config.mostrarLinkTienda && (
+                <Link
+                  href="/tienda"
+                  className="inline-flex items-center justify-center gap-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors"
+                >
+                  <Store size={16} />
+                  <span>Ver tienda online</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2.5 sm:gap-5">
+            {hojas.map((hoja, idx) => {
+              const esLcp = idx === 0
+              const tieneDimensiones = Boolean(hoja.ancho && hoja.alto)
+              return (
+                <article
+                  key={hoja.id}
+                  data-hoja-index={idx}
+                  ref={(el) => {
+                    hojasRefs.current[idx] = el
+                  }}
+                  className="w-full bg-white sm:rounded-md sm:border sm:border-stone-300/70 sm:shadow-[0_2px_14px_rgba(24,24,20,0.08)] overflow-hidden"
+                >
+                  <img
+                    src={hoja.imagenUrl}
+                    alt={
+                      hoja.titulo.trim()
+                        ? `${config.titulo} — ${hoja.titulo.trim()} (página ${idx + 1})`
+                        : `${config.titulo} — página ${idx + 1} de ${hojas.length}`
+                    }
+                    width={hoja.ancho}
+                    height={hoja.alto}
+                    fetchPriority={esLcp ? 'high' : undefined}
+                    loading={esLcp ? undefined : 'lazy'}
+                    decoding={esLcp ? 'sync' : 'async'}
+                    draggable={false}
+                    style={
+                      tieneDimensiones
+                        ? { aspectRatio: `${hoja.ancho} / ${hoja.alto}` }
+                        : undefined
+                    }
+                    className="block w-full h-auto bg-stone-200/60 select-none touch-pan-y pointer-events-none"
+                  />
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Pie editorial discreto ── */}
+        {hojas.length > 0 && (
+          <footer className="mt-8 px-4 text-center space-y-2 text-xs text-stone-500">
+            {fechaActualizacion && (
+              <p>Carta actualizada el {fechaActualizacion}</p>
+            )}
+            <p className="text-[11px] text-stone-400">
+              {estadoHorario.detalle}
+            </p>
+          </footer>
+        )}
+      </main>
+
+      {/* ── Botón discreto volver arriba (solo tras scrollear) ── */}
+      {mostrarSubir && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Volver arriba"
+          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 sm:bottom-6 sm:left-6 z-30 w-10 h-10 rounded-full bg-white/95 border border-stone-300/90 text-stone-700 hover:text-stone-950 shadow-sm flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <ArrowUp size={17} />
+        </button>
+      )}
+
+      {/* ── Botón flotante para pedir por WhatsApp ── */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 sm:bottom-6 sm:right-6 z-30 inline-flex items-center gap-2 h-12 px-5 rounded-full bg-[#2A6348] hover:bg-[#22503a] active:bg-[#1b402e] text-white text-sm font-semibold shadow-[0_6px_20px_rgba(20,52,37,0.3)] transition-colors"
+      >
+        <MessageCircle size={18} strokeWidth={2.2} />
+        <span>Pedir por WhatsApp</span>
+      </a>
+    </div>
+  )
+}

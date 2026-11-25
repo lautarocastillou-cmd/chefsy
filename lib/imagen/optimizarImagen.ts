@@ -31,7 +31,14 @@ function esBufferHeic(buffer: Buffer): boolean {
 export async function optimizarImagenWebP(
   bufferOriginal: Buffer,
   opciones: OpcionesOptimizacion = {}
-): Promise<{ buffer: Buffer; contentType: string; ext: string; tamanoBytes: number }> {
+): Promise<{
+  buffer: Buffer
+  contentType: string
+  ext: string
+  tamanoBytes: number
+  ancho?: number
+  alto?: number
+}> {
   const maxAncho = opciones.maxAncho || 900
   const maxAlto = opciones.maxAlto || 900
   const calidad = opciones.calidad || 75
@@ -54,7 +61,7 @@ export async function optimizarImagenWebP(
 
   // 2. Procesar con Sharp hacia WebP
   try {
-    const bufferOptimizado = await sharp(bufferAProcesar, {
+    const { data: bufferOptimizado, info } = await sharp(bufferAProcesar, {
       failOn: 'none',
       animated: false,
     })
@@ -70,13 +77,15 @@ export async function optimizarImagenWebP(
         effort: 5,
         smartSubsample: true,
       })
-      .toBuffer()
+      .toBuffer({ resolveWithObject: true })
 
     return {
       buffer: bufferOptimizado,
       contentType: 'image/webp',
       ext: 'webp',
       tamanoBytes: bufferOptimizado.length,
+      ancho: info.width,
+      alto: info.height,
     }
   } catch (sharpErr) {
     console.warn('[Optimizador Sharp] Primer intento con Sharp falló, probando fallback heic-convert:', sharpErr)
@@ -89,17 +98,19 @@ export async function optimizarImagenWebP(
         quality: 0.90,
       })
       const bufferJpg = Buffer.from(jpegConvertido)
-      const bufferFinal = await sharp(bufferJpg)
+      const { data: bufferFinal, info } = await sharp(bufferJpg)
         .rotate()
         .resize({ width: maxAncho, height: maxAlto, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: calidad })
-        .toBuffer()
+        .toBuffer({ resolveWithObject: true })
 
       return {
         buffer: bufferFinal,
         contentType: 'image/webp',
         ext: 'webp',
         tamanoBytes: bufferFinal.length,
+        ancho: info.width,
+        alto: info.height,
       }
     } catch (errFallback) {
       console.error('[Optimizador Sharp] Fallback falló completamente:', errFallback)

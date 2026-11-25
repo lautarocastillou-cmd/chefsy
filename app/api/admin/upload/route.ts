@@ -18,10 +18,12 @@ export async function POST(request: Request) {
     let mimeType: string
     let ext: string
     let oldUrl: string | null = url.searchParams.get('oldUrl')
+    let modo: string | null = url.searchParams.get('modo')
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
       if (!oldUrl) oldUrl = formData.get('oldUrl') as string | null
+      if (!modo) modo = formData.get('modo') as string | null
       const file = formData.get('file') as File | null
       if (!file) {
         return NextResponse.json({ error: 'Archivo requerido.' }, { status: 400 })
@@ -68,16 +70,29 @@ export async function POST(request: Request) {
 
     const esVideo = mimeType.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext)
     const esHeic = ['heic', 'heif', 'hevc', 'h265'].includes(ext) || mimeType.includes('heic') || mimeType.includes('heif') || mimeType.includes('hevc')
+    const esModoCarta = modo === 'carta'
+
+    let anchoOptimizado: number | undefined
+    let altoOptimizado: number | undefined
 
     if (!esVideo) {
-      // Optimizar cualquier imagen (JPEG, PNG, HEIC, HEIF, HEVC, WebP, AVIF) a WebP ultraliviano
-      const optimizada = await optimizarImagenWebP(buffer, { maxAncho: 1200, maxAlto: 1200, calidad: 78, esHeic })
+      // Para hojas de carta preservamos mayor resolución vertical y calidad WebP
+      // para que precios y tipografía se lean nítidos en celular sin hacer zoom.
+      const optimizada = await optimizarImagenWebP(
+        buffer,
+        esModoCarta
+          ? { maxAncho: 1600, maxAlto: 2800, calidad: 86, esHeic }
+          : { maxAncho: 1200, maxAlto: 1200, calidad: 78, esHeic }
+      )
       buffer = optimizada.buffer
       mimeType = optimizada.contentType
       ext = optimizada.ext
+      anchoOptimizado = optimizada.ancho
+      altoOptimizado = optimizada.alto
     }
 
-    const fileName = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
+    const prefijoArchivo = esModoCarta ? 'carta' : 'upload'
+    const fileName = `${prefijoArchivo}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
 
     const supabaseAdmin = obtenerSupabaseAdmin()
 
@@ -113,7 +128,10 @@ export async function POST(request: Request) {
     return NextResponse.json({
       url: publicData.publicUrl,
       urlOriginal: publicData.publicUrl,
-      urlTransformada: publicData.publicUrl
+      urlTransformada: publicData.publicUrl,
+      ancho: anchoOptimizado,
+      alto: altoOptimizado,
+      tamanoBytes: buffer.length,
     })
   } catch (err: any) {
     return responderError(err, {

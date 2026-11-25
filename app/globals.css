@@ -422,3 +422,15 @@ html.lenis, html.lenis body {
   transition: none !important;
 }
 
+/* ─── Diálogos modales nativos (<dialog>): contener scroll sin mutar body ─── */
+dialog.chefsy-modal-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.chefsy-modal-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+
