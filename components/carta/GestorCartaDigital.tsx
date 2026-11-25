@@ -18,18 +18,27 @@ import {
   QrCode,
   RefreshCw,
   Save,
+  SlidersHorizontal,
   Trash2,
+  Type,
   Upload,
   X,
 } from 'lucide-react'
 import { notificarError, notificarExito } from '@/lib/notificaciones'
+import BannerTituloCarta from '@/components/carta/BannerTituloCarta'
+import EditorTituloCarta from '@/components/carta/EditorTituloCarta'
 import {
   crearConfiguracionCartaDefault,
+  crearEstiloTituloDefault,
+  crearHojaTituloDefault,
   formatearFechaActualizacionCarta,
   MAX_HOJAS_CARTA,
   obtenerHojasVisibles,
+  obtenerPrimeraImagenVisible,
+  obtenerSiguienteImagen,
   reordenarHojasCarta,
   type ConfiguracionCarta,
+  type EstiloTituloCarta,
   type HojaCarta,
 } from '@/lib/carta-digital'
 
@@ -47,6 +56,7 @@ export default function GestorCartaDigital() {
   const [indiceDrag, setIndiceDrag] = useState<number | null>(null)
   const [indiceSobre, setIndiceSobre] = useState<number | null>(null)
   const [urlPublica, setUrlPublica] = useState(URL_PUBLICA_DISPLAY)
+  const [tituloEditandoId, setTituloEditandoId] = useState<string | null>(null)
 
   const inputMultipleRef = useRef<HTMLInputElement | null>(null)
   const inputReemplazoRef = useRef<HTMLInputElement | null>(null)
@@ -195,6 +205,7 @@ export default function GestorCartaDigital() {
         const subida = await subirArchivoCarta(aSubir[i])
         nuevasHojas.push({
           id: `hoja-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+          tipo: 'imagen',
           titulo: '',
           imagenUrl: subida.url,
           ancho: subida.ancho,
@@ -308,6 +319,41 @@ export default function GestorCartaDigital() {
     setConfig((prev) => ({
       ...prev,
       hojas: prev.hojas.map((h) => (h.id === hojaId ? { ...h, titulo } : h)),
+    }))
+    setHayCambiosPendientes(true)
+  }
+
+  const agregarSeparadorTitulo = async () => {
+    if (config.hojas.length >= MAX_HOJAS_CARTA) {
+      notificarError(`Alcanzaste el límite de ${MAX_HOJAS_CARTA} elementos en la carta.`)
+      return
+    }
+    const nuevoTitulo = crearHojaTituloDefault(config.hojas.length, 'Nueva sección')
+    const siguiente: ConfiguracionCarta = {
+      ...config,
+      hojas: [...config.hojas, nuevoTitulo].map((h, idx) => ({ ...h, orden: idx })),
+    }
+    setConfig(siguiente)
+    setTituloEditandoId(nuevoTitulo.id)
+    await persistirCarta(siguiente, 'Título separador agregado. Podés editarlo y moverlo donde quieras.')
+  }
+
+  const actualizarTextoSeparador = (hojaId: string, campo: 'titulo' | 'subtitulo', valor: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      hojas: prev.hojas.map((h) => (h.id === hojaId ? { ...h, [campo]: valor } : h)),
+    }))
+    setHayCambiosPendientes(true)
+  }
+
+  const actualizarEstiloSeparador = (hojaId: string, parcial: Partial<EstiloTituloCarta>) => {
+    setConfig((prev) => ({
+      ...prev,
+      hojas: prev.hojas.map((h) =>
+        h.id === hojaId
+          ? { ...h, estiloTitulo: { ...(h.estiloTitulo || crearEstiloTituloDefault()), ...parcial } }
+          : h
+      ),
     }))
     setHayCambiosPendientes(true)
   }
@@ -442,7 +488,8 @@ export default function GestorCartaDigital() {
   }
 
   const hojasVisibles = useMemo(() => obtenerHojasVisibles(config), [config])
-  const portadaPreview = hojasVisibles[0]?.imagenUrl || '/logo.jpg'
+  const primeraImagenVisible = useMemo(() => obtenerPrimeraImagenVisible(hojasVisibles), [hojasVisibles])
+  const portadaPreview = primeraImagenVisible?.imagenUrl || '/logo.jpg'
   const fechaActualizacion = formatearFechaActualizacionCarta(config.updatedAt)
 
   if (cargando) {
@@ -573,15 +620,26 @@ export default function GestorCartaDigital() {
                     Podés arrastrar varias juntas (JPG, PNG, WebP o HEIC). Se comprimen livianas manteniendo los precios nítidos.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => inputMultipleRef.current?.click()}
-                  disabled={guardando}
-                  className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Upload size={14} />
-                  <span>Seleccionar imágenes</span>
-                </button>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => inputMultipleRef.current?.click()}
+                    disabled={guardando}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Upload size={14} />
+                    <span>Seleccionar imágenes</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void agregarSeparadorTitulo()}
+                    disabled={guardando}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-chefsy dark:text-emerald-300 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Type size={14} />
+                    <span>Agregar título separador</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -610,12 +668,17 @@ export default function GestorCartaDigital() {
                 const esPrimero = idx === 0
                 const esUltimo = idx === config.hojas.length - 1
                 const estaReemplazando = reemplazandoId === hoja.id
+                const esTitulo = hoja.tipo === 'titulo'
+                const editandoEsteTitulo = esTitulo && tituloEditandoId === hoja.id
+                const siguienteImagen = esTitulo ? obtenerSiguienteImagen(config.hojas, idx) : undefined
 
                 return (
                   <div
                     key={hoja.id}
-                    draggable
-                    onDragStart={() => setIndiceDrag(idx)}
+                    draggable={!editandoEsteTitulo}
+                    onDragStart={() => {
+                      if (!editandoEsteTitulo) setIndiceDrag(idx)
+                    }}
                     onDragOver={(e) => {
                       e.preventDefault()
                       if (indiceDrag !== null && indiceDrag !== idx) {
@@ -637,148 +700,234 @@ export default function GestorCartaDigital() {
                       setIndiceDrag(null)
                       setIndiceSobre(null)
                     }}
-                    className={`bg-white dark:bg-slate-900 border rounded-2xl p-3 flex items-center gap-3 transition-colors ${
+                    className={`bg-white dark:bg-slate-900 border rounded-2xl p-3 transition-colors ${
                       indiceSobre === idx
                         ? 'border-chefsy ring-2 ring-chefsy/20'
                         : hoja.activa
-                          ? 'border-slate-200/90 dark:border-slate-800'
+                          ? esTitulo
+                            ? 'border-emerald-200/90 dark:border-emerald-900/70'
+                            : 'border-slate-200/90 dark:border-slate-800'
                           : 'border-slate-200/60 dark:border-slate-800/60 opacity-65'
                     }`}
                   >
-                    {/* Handle arrastre + número */}
-                    <div className="flex flex-col items-center gap-1 shrink-0 text-slate-400">
-                      <GripVertical size={16} className="cursor-grab active:cursor-grabbing hidden sm:block" />
-                      <span className="text-[10px] font-extrabold tabular-nums px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        #{idx + 1}
-                      </span>
-                    </div>
-
-                    {/* Miniatura de la lámina */}
-                    <div className="relative w-14 h-20 sm:w-16 sm:h-22 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0">
-                      <img
-                        src={hoja.imagenUrl}
-                        alt={hoja.titulo || `Hoja ${idx + 1}`}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                      {estaReemplazando && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <Loader2 size={16} className="animate-spin text-white" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Título opcional + metadata */}
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="text"
-                          value={hoja.titulo}
-                          onChange={(e) => actualizarTituloHoja(hoja.id, e.target.value)}
-                          placeholder="Sección opcional (ej: Promos, Lomos, Bebidas)"
-                          maxLength={40}
-                          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-chefsy/40"
+                    <div className="flex items-center gap-3">
+                      {/* Handle arrastre + número */}
+                      <div className="flex flex-col items-center gap-1 shrink-0 text-slate-400">
+                        <GripVertical
+                          size={16}
+                          className={`${
+                            editandoEsteTitulo ? 'opacity-30' : 'cursor-grab active:cursor-grabbing'
+                          } hidden sm:block`}
                         />
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-400">
-                        <span
-                          className={`font-bold ${
-                            hoja.activa
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-amber-600 dark:text-amber-400'
-                          }`}
-                        >
-                          {hoja.activa ? 'Visible' : 'Oculta'}
+                        <span className="text-[10px] font-extrabold tabular-nums px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          #{idx + 1}
                         </span>
-                        {hoja.ancho && hoja.alto && (
-                          <>
-                            <span>·</span>
-                            <span className="tabular-nums">
-                              {hoja.ancho} × {hoja.alto} px
+                      </div>
+
+                      {esTitulo ? (
+                        /* Cuerpo compacto de separador de título */
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-chefsy dark:text-emerald-300">
+                              <Type size={10} />
+                              Título separador
                             </span>
-                          </>
-                        )}
-                        {idx === 0 && hoja.activa && (
-                          <>
-                            <span>·</span>
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">
-                              Portada en WhatsApp
+                            <span
+                              className={`text-[11px] font-bold ${
+                                hoja.activa
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {hoja.activa ? 'Visible' : 'Oculto'}
                             </span>
-                          </>
-                        )}
+                          </div>
+
+                          {!editandoEsteTitulo && (
+                            <div
+                              onClick={() => setTituloEditandoId(hoja.id)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setTituloEditandoId(hoja.id)
+                                }
+                              }}
+                              className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer hover:ring-2 hover:ring-chefsy/30 transition-all"
+                            >
+                              <BannerTituloCarta
+                                hoja={hoja}
+                                siguienteImagen={siguienteImagen}
+                                modoPreview
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          {/* Miniatura de la lámina */}
+                          <div className="relative w-14 h-20 sm:w-16 sm:h-22 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0">
+                            <img
+                              src={hoja.imagenUrl}
+                              alt={hoja.titulo || `Hoja ${idx + 1}`}
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                            {estaReemplazando && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <Loader2 size={16} className="animate-spin text-white" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Título opcional + metadata */}
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <input
+                                type="text"
+                                value={hoja.titulo}
+                                onChange={(e) => actualizarTituloHoja(hoja.id, e.target.value)}
+                                placeholder="Sección opcional (ej: Promos, Lomos, Bebidas)"
+                                maxLength={40}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-chefsy/40"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-400">
+                              <span
+                                className={`font-bold ${
+                                  hoja.activa
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-amber-600 dark:text-amber-400'
+                                }`}
+                              >
+                                {hoja.activa ? 'Visible' : 'Oculta'}
+                              </span>
+                              {hoja.ancho && hoja.alto && (
+                                <>
+                                  <span>·</span>
+                                  <span className="tabular-nums">
+                                    {hoja.ancho} × {hoja.alto} px
+                                  </span>
+                                </>
+                              )}
+                              {primeraImagenVisible?.id === hoja.id && (
+                                <>
+                                  <span>·</span>
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">
+                                    Portada en WhatsApp
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Controles de orden, visibilidad, estilo/reemplazo y borrado */}
+                      <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => void moverHoja(idx, idx - 1)}
+                            disabled={esPrimero || guardando}
+                            title="Subir elemento"
+                            aria-label={`Subir elemento ${idx + 1}`}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 cursor-pointer"
+                          >
+                            <ArrowUp size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void moverHoja(idx, idx + 1)}
+                            disabled={esUltimo || guardando}
+                            title="Bajar elemento"
+                            aria-label={`Bajar elemento ${idx + 1}`}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 cursor-pointer"
+                          >
+                            <ArrowDown size={15} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => void alternarVisibilidadHoja(hoja.id)}
+                            disabled={guardando}
+                            title={hoja.activa ? 'Ocultar temporalmente sin borrar' : 'Mostrar nuevamente'}
+                            aria-label={hoja.activa ? 'Ocultar elemento' : 'Mostrar elemento'}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              hoja.activa
+                                ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                                : 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                            }`}
+                          >
+                            {hoja.activa ? <Eye size={15} /> : <EyeOff size={15} />}
+                          </button>
+
+                          {esTitulo ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTituloEditandoId((prev) => (prev === hoja.id ? null : hoja.id))
+                              }
+                              title={editandoEsteTitulo ? 'Cerrar editor de estilo' : 'Personalizar fuente y estilo'}
+                              aria-label={`Personalizar título ${idx + 1}`}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                editandoEsteTitulo
+                                  ? 'bg-chefsy text-white'
+                                  : 'text-slate-500 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800'
+                              }`}
+                            >
+                              <SlidersHorizontal size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => iniciarReemplazoImagen(hoja.id)}
+                              disabled={guardando || estaReemplazando}
+                              title="Reemplazar imagen (conserva orden y título)"
+                              aria-label={`Reemplazar imagen de hoja ${idx + 1}`}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40"
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => void eliminarHoja(hoja.id, idx + 1)}
+                            disabled={guardando}
+                            title={esTitulo ? 'Eliminar título separador' : 'Eliminar hoja'}
+                            aria-label={`Eliminar elemento ${idx + 1}`}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Controles de orden, visibilidad, reemplazo y borrado */}
-                    <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => void moverHoja(idx, idx - 1)}
-                          disabled={esPrimero || guardando}
-                          title="Subir página"
-                          aria-label={`Subir hoja ${idx + 1}`}
-                          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 cursor-pointer"
-                        >
-                          <ArrowUp size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void moverHoja(idx, idx + 1)}
-                          disabled={esUltimo || guardando}
-                          title="Bajar página"
-                          aria-label={`Bajar hoja ${idx + 1}`}
-                          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 cursor-pointer"
-                        >
-                          <ArrowDown size={15} />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => void alternarVisibilidadHoja(hoja.id)}
-                          disabled={guardando}
-                          title={hoja.activa ? 'Ocultar temporalmente sin borrar' : 'Mostrar nuevamente'}
-                          aria-label={hoja.activa ? 'Ocultar hoja' : 'Mostrar hoja'}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            hoja.activa
-                              ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
-                              : 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30'
-                          }`}
-                        >
-                          {hoja.activa ? <Eye size={15} /> : <EyeOff size={15} />}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => iniciarReemplazoImagen(hoja.id)}
-                          disabled={guardando || estaReemplazando}
-                          title="Reemplazar imagen (conserva orden y título)"
-                          aria-label={`Reemplazar imagen de hoja ${idx + 1}`}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-chefsy hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40"
-                        >
-                          <RefreshCw size={14} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => void eliminarHoja(hoja.id, idx + 1)}
-                          disabled={guardando}
-                          title="Eliminar hoja"
-                          aria-label={`Eliminar hoja ${idx + 1}`}
-                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-40"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
+                    {/* Panel expandible para personalizar el título separador */}
+                    {editandoEsteTitulo && (
+                      <EditorTituloCarta
+                        hoja={hoja}
+                        siguienteImagen={siguienteImagen}
+                        hayCambiosPendientes={hayCambiosPendientes}
+                        guardando={guardando}
+                        onCambiarTexto={(campo, valor) =>
+                          actualizarTextoSeparador(hoja.id, campo, valor)
+                        }
+                        onCambiarEstilo={(parcial) => actualizarEstiloSeparador(hoja.id, parcial)}
+                        onGuardar={() => void persistirCarta(config, 'Título separador guardado.')}
+                      />
+                    )}
                   </div>
                 )
               })}
 
               <p className="text-[11px] text-slate-400 px-1">
-                Tip: si completás el título de las secciones (ej. <em>Promos</em>, <em>Lomos</em>, <em>Bebidas</em>), aparece una barrita arriba en la carta para saltar directo a esa hoja.
+                Tip: podés intercalar <strong>títulos separadores</strong> entre las imágenes y moverlos con las flechas o arrastrándolos. Cada título genera automáticamente un acceso rápido en la barra superior de la carta.
               </p>
             </div>
           )}

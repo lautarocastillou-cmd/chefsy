@@ -3,9 +3,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Store, FileText, ArrowUp } from 'lucide-react'
+import BannerTituloCarta from '@/components/carta/BannerTituloCarta'
 import {
   construirEnlaceWhatsAppCarta,
   formatearFechaActualizacionCarta,
+  obtenerSiguienteImagen,
   type ConfiguracionCarta,
   type HojaCarta,
 } from '@/lib/carta-digital'
@@ -22,7 +24,7 @@ export default function VisorCartaPublica({
   hojas,
   estadoHorario,
 }: PropsVisorCartaPublica) {
-  const [paginaActual, setPaginaActual] = useState(1)
+  const [indiceActivo, setIndiceActivo] = useState(0)
   const [mostrarSubir, setMostrarSubir] = useState(false)
   const hojasRefs = useRef<Array<HTMLElement | null>>([])
   const chipsContainerRef = useRef<HTMLDivElement | null>(null)
@@ -33,8 +35,54 @@ export default function VisorCartaPublica({
     [config.updatedAt]
   )
 
-  const tieneIndiceTitulos = useMemo(
-    () => hojas.length > 1 && hojas.some((h) => Boolean(h.titulo.trim())),
+  // Índice de chips: si hay títulos separadores o láminas con título, mostramos solo esos saltos limpios
+  const chipsSecciones = useMemo(() => {
+    const conTitulo = hojas
+      .map((hoja, idx) => ({ hoja, idx, etiqueta: hoja.titulo.trim() }))
+      .filter((item) => Boolean(item.etiqueta))
+    if (conTitulo.length < 2 && !(conTitulo.length === 1 && hojas.length > 1)) {
+      return []
+    }
+    return conTitulo
+  }, [hojas])
+
+  const tieneIndiceTitulos = chipsSecciones.length > 0
+
+  // Contador de hojas de imagen (excluyendo separadores de título para que "2 / 6" cuente páginas reales)
+  const infoPaginasImagen = useMemo(() => {
+    const indicesImagen: number[] = []
+    hojas.forEach((h, idx) => {
+      if (h.tipo !== 'titulo') indicesImagen.push(idx)
+    })
+    const total = indicesImagen.length
+    if (total === 0) return { actual: 0, total: 0 }
+    // Encontrar la página de imagen actual o más cercana hacia atrás/adelante
+    let actualPos = indicesImagen.findIndex((idx) => idx === indiceActivo)
+    if (actualPos === -1) {
+      // Si el elemento activo es un título, apuntamos a la primera imagen que viene después (o la última anterior)
+      const siguienteIdx = indicesImagen.findIndex((idx) => idx > indiceActivo)
+      actualPos = siguienteIdx !== -1 ? siguienteIdx : total - 1
+    }
+    return { actual: actualPos + 1, total }
+  }, [hojas, indiceActivo])
+
+  // Chip activo: el último chip cuyo índice sea <= indiceActivo
+  const chipActivoIdx = useMemo(() => {
+    if (!tieneIndiceTitulos) return -1
+    let elegido = chipsSecciones[0].idx
+    for (const chip of chipsSecciones) {
+      if (chip.idx <= indiceActivo) {
+        elegido = chip.idx
+      } else {
+        break
+      }
+    }
+    return elegido
+  }, [chipsSecciones, indiceActivo, tieneIndiceTitulos])
+
+  // Índice de la primera imagen real para priorizar LCP
+  const indicePrimeraImagen = useMemo(
+    () => hojas.findIndex((h) => h.tipo !== 'titulo'),
     [hojas]
   )
 
@@ -99,7 +147,7 @@ export default function VisorCartaPublica({
     }
   }, [])
 
-  // ── Seguimiento de página actual al hacer scroll ───────────────────────────
+  // ── Seguimiento de sección/página actual al hacer scroll ───────────────────
   useEffect(() => {
     if (hojas.length <= 1) return
 
@@ -121,7 +169,7 @@ export default function VisorCartaPublica({
           }
         })
         if (mejorIndice >= 0) {
-          setPaginaActual(mejorIndice + 1)
+          setIndiceActivo(mejorIndice)
         }
       },
       {
@@ -147,14 +195,14 @@ export default function VisorCartaPublica({
 
   // Mantener visible el chip activo dentro de la barra horizontal
   useEffect(() => {
-    if (!tieneIndiceTitulos || !chipsContainerRef.current) return
+    if (!tieneIndiceTitulos || !chipsContainerRef.current || chipActivoIdx < 0) return
     const chipActivo = chipsContainerRef.current.querySelector(
-      `[data-chip-index="${paginaActual - 1}"]`
+      `[data-chip-index="${chipActivoIdx}"]`
     ) as HTMLElement | null
     if (chipActivo) {
       chipActivo.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
     }
-  }, [paginaActual, tieneIndiceTitulos])
+  }, [chipActivoIdx, tieneIndiceTitulos])
 
   const irAHoja = (indice: number) => {
     const el = hojasRefs.current[indice]
@@ -162,13 +210,11 @@ export default function VisorCartaPublica({
     const offset = tieneIndiceTitulos ? 104 : 62
     const top = el.getBoundingClientRect().top + window.scrollY - offset
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-    setPaginaActual(indice + 1)
+    setIndiceActivo(indice)
   }
 
   return (
-    <div
-      className="min-h-dvh bg-[#efede8] text-stone-900 select-none touch-pan-y [-webkit-touch-callout:none] flex flex-col"
-    >
+    <div className="min-h-dvh bg-[#efede8] text-stone-900 select-none touch-pan-y [-webkit-touch-callout:none] flex flex-col">
       {/* ── Cabecera sticky sobria estilo visor de documento ── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-stone-200/90">
         <div className="max-w-3xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
@@ -201,12 +247,12 @@ export default function VisorCartaPublica({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {hojas.length > 1 && (
+            {infoPaginasImagen.total > 1 && (
               <span
                 aria-live="polite"
                 className="text-[11px] font-semibold tabular-nums text-stone-600 bg-stone-100 border border-stone-200/80 px-2.5 py-1 rounded-full"
               >
-                {paginaActual} / {hojas.length}
+                {infoPaginasImagen.actual} / {infoPaginasImagen.total}
               </span>
             )}
 
@@ -222,16 +268,15 @@ export default function VisorCartaPublica({
           </div>
         </div>
 
-        {/* ── Índice rápido por hoja (solo si cargaron títulos en las láminas) ── */}
+        {/* ── Índice rápido por secciones (títulos separadores o hojas nombradas) ── */}
         {tieneIndiceTitulos && (
           <nav
             aria-label="Secciones de la carta"
             ref={chipsContainerRef}
             className="max-w-3xl mx-auto px-3 sm:px-4 pb-2.5 pt-0.5 flex items-center gap-1.5 overflow-x-auto scrollbar-hide touch-pan-x"
           >
-            {hojas.map((hoja, idx) => {
-              const etiqueta = hoja.titulo.trim() || `Hoja ${idx + 1}`
-              const activa = paginaActual === idx + 1
+            {chipsSecciones.map(({ hoja, idx, etiqueta }) => {
+              const activa = chipActivoIdx === idx
               return (
                 <button
                   key={hoja.id}
@@ -289,7 +334,23 @@ export default function VisorCartaPublica({
         ) : (
           <div className="flex flex-col gap-2.5 sm:gap-5">
             {hojas.map((hoja, idx) => {
-              const esLcp = idx === 0
+              if (hoja.tipo === 'titulo') {
+                const siguienteImagen = obtenerSiguienteImagen(hojas, idx)
+                return (
+                  <section
+                    key={hoja.id}
+                    data-hoja-index={idx}
+                    ref={(el) => {
+                      hojasRefs.current[idx] = el
+                    }}
+                    className="w-full sm:rounded-md sm:border sm:border-stone-300/60 sm:shadow-[0_2px_12px_rgba(24,24,20,0.06)] overflow-hidden"
+                  >
+                    <BannerTituloCarta hoja={hoja} siguienteImagen={siguienteImagen} />
+                  </section>
+                )
+              }
+
+              const esLcp = idx === indicePrimeraImagen
               const tieneDimensiones = Boolean(hoja.ancho && hoja.alto)
               return (
                 <article
@@ -304,8 +365,8 @@ export default function VisorCartaPublica({
                     src={hoja.imagenUrl}
                     alt={
                       hoja.titulo.trim()
-                        ? `${config.titulo} — ${hoja.titulo.trim()} (página ${idx + 1})`
-                        : `${config.titulo} — página ${idx + 1} de ${hojas.length}`
+                        ? `${config.titulo} — ${hoja.titulo.trim()}`
+                        : `${config.titulo} — hoja ${idx + 1}`
                     }
                     width={hoja.ancho}
                     height={hoja.alto}

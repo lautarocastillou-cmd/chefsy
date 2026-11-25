@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import VisorCartaPublica from '@/components/carta/VisorCartaPublica'
-import { obtenerHojasVisibles } from '@/lib/carta-digital'
+import { obtenerHojasVisibles, obtenerPrimeraImagenVisible } from '@/lib/carta-digital'
 import {
   obtenerConfiguracionCartaServidor,
   obtenerEstadoHorarioCartaServidor,
@@ -21,7 +21,8 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const config = await obtenerConfiguracionCartaServidor()
   const hojasVisibles = obtenerHojasVisibles(config)
-  const portada = hojasVisibles[0]?.imagenUrl || '/logo.jpg'
+  const primeraImagen = obtenerPrimeraImagenVisible(hojasVisibles)
+  const portada = primeraImagen?.imagenUrl || '/logo.jpg'
 
   return {
     title: {
@@ -41,8 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: portada,
-          width: hojasVisibles[0]?.ancho || 800,
-          height: hojasVisibles[0]?.alto || 800,
+          width: primeraImagen?.ancho || 800,
+          height: primeraImagen?.alto || 800,
           alt: config.titulo,
         },
       ],
