@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { X, ArrowRight, Flame, ShoppingBag, Sparkles } from 'lucide-react'
+import { X, ArrowRight, ShoppingBag } from 'lucide-react'
 import { usarConfiguracionTienda } from '@/contexto/ConfiguracionTiendaContexto'
 import { usarCarrito } from '@/contexto/CarritoContexto'
 import { usePromoFlash } from '@/hooks/usePromoFlash'
@@ -159,7 +159,8 @@ export default function CartelPromoDelDia() {
 
   if (!hayAlgunaPromo) return null
 
-  const fotoBurger = 'https://res.cloudinary.com/dmncddle8/image/upload/f_auto,q_auto,w_800/v1782009810/btwjx7btqxu4i28p0rzc.jpg'
+  const fotoBurger = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1795646129425_09humj.webp'
+  const fotoBurgerTabla = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1795646193386_nhmed9q.webp'
   const fotoLomo = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1783992908572_cd157k.jpeg'
   const fotoMila = 'https://bdwgglizirgyuxfwssvc.supabase.co/storage/v1/object/public/images/upload_1782346979850_ojawu.jpeg'
 
@@ -187,28 +188,26 @@ export default function CartelPromoDelDia() {
         {promoCheeseActiva && estadoPromoFlash && (
           <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-400/60 bg-gradient-to-br from-[#241809] via-[#17130d] to-[#231407] p-4 sm:p-5 text-left shadow-[0_10px_30px_rgba(245,158,11,0.2)]">
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-2 rounded-full bg-amber-400/25 blur-lg"
-                />
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 rounded-2xl overflow-hidden border-2 border-amber-400/55 shadow-[0_10px_24px_rgba(0,0,0,0.75)] bg-stone-900">
                 <img
-                  src={estadoPromoFlash.config.imagenUrl || '/burger-loca.webp'}
+                  src={
+                    estadoPromoFlash.config.imagenUrl &&
+                    estadoPromoFlash.config.imagenUrl !== '/burger-loca.webp'
+                      ? estadoPromoFlash.config.imagenUrl
+                      : fotoBurgerTabla
+                  }
                   alt={estadoPromoFlash.config.nombreProducto}
-                  width={120}
-                  height={120}
-                  className="promo-cheese-float relative z-10 w-full h-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.75)]"
+                  width={140}
+                  height={140}
+                  className="w-full h-full object-cover"
                 />
               </div>
 
               <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-950 text-[10px] font-black uppercase tracking-wider">
-                    <Flame size={11} className="fill-orange-600 text-orange-700" />
-                    {estadoPromoFlash.config.badge}
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-amber-400/35 text-amber-200 text-[10px] font-bold">
-                    <Sparkles size={10} />
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-0.5 text-[10px] font-black uppercase tracking-[0.14em]">
+                  <span className="text-amber-400">{estadoPromoFlash.config.badge}</span>
+                  <span aria-hidden="true" className="text-stone-600">·</span>
+                  <span className="text-stone-300">
                     Quedan {estadoPromoFlash.restantes} de {estadoPromoFlash.config.limiteTotal}
                   </span>
                 </div>
@@ -219,12 +218,12 @@ export default function CartelPromoDelDia() {
                     className="font-bebas text-3xl sm:text-4xl text-white tracking-wide leading-none"
                   >
                     BURGER <span className="text-amber-400">CHEESE</span>{' '}
-                    <span className="text-amber-300">
+                    <span className="text-amber-400">
                       {formatearPrecio(estadoPromoFlash.config.precioPromo)}
                     </span>
                   </h1>
                   {estadoPromoFlash.config.precioRegular > estadoPromoFlash.config.precioPromo && (
-                    <span className="text-xs font-semibold text-stone-400 line-through">
+                    <span className="text-xs font-semibold text-stone-500 line-through">
                       {formatearPrecio(estadoPromoFlash.config.precioRegular)}
                     </span>
                   )}
@@ -232,23 +231,23 @@ export default function CartelPromoDelDia() {
 
                 <p
                   id="promo-dia-descripcion"
-                  className="text-xs text-stone-200/90 leading-snug"
+                  className="text-xs text-stone-300 leading-snug"
                 >
                   {estadoPromoFlash.config.subtitulo}
                 </p>
 
-                <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                   <button
                     type="button"
                     autoFocus
                     onClick={handleSumarCheesePromo}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-stone-950 text-xs font-black tracking-wide shadow-md transition-all cursor-pointer active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 text-xs font-black tracking-wide transition-colors cursor-pointer active:scale-95"
                   >
                     <ShoppingBag size={14} strokeWidth={2.5} />
-                    <span>¡Agregar por {formatearPrecio(estadoPromoFlash.config.precioPromo)}!</span>
+                    <span>Agregar por {formatearPrecio(estadoPromoFlash.config.precioPromo)}</span>
                   </button>
-                  <span className="text-[10px] text-amber-200/70 font-medium">
-                    Máx. {estadoPromoFlash.config.maxPorPedido} por pedido · Hasta agotar cupo
+                  <span className="text-[10px] text-stone-400 font-medium">
+                    Máx. {estadoPromoFlash.config.maxPorPedido} por pedido
                   </span>
                 </div>
               </div>
