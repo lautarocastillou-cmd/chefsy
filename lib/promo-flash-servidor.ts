@@ -50,7 +50,10 @@ export async function obtenerConfiguracionPromoFlashServidor(): Promise<Configur
   }
 }
 
-export async function contarVendidasPromoFlashFechaServidor(fechaVigencia: string): Promise<number> {
+export async function contarVendidasPromoFlashFechaServidor(
+  fechaVigencia: string,
+  precioPromoMax?: number
+): Promise<number> {
   try {
     const supabase = obtenerSupabaseAdmin()
     const { data, error } = await supabase
@@ -63,7 +66,7 @@ export async function contarVendidasPromoFlashFechaServidor(fechaVigencia: strin
       return 0
     }
 
-    return contarUnidadesPromoFlashEnPedidos(data)
+    return contarUnidadesPromoFlashEnPedidos(data, precioPromoMax)
   } catch (err) {
     console.error('[Promo Flash] Error contando ventas de promo:', err)
     return 0
@@ -110,7 +113,10 @@ export async function guardarConfiguracionPromoFlashServidor(
 export async function obtenerEstadoPromoFlashServidor(): Promise<EstadoPromoFlash> {
   const fechaHoy = obtenerFechaNegocio()
   const config = await obtenerConfiguracionPromoFlashServidor()
-  const vendidas = await contarVendidasPromoFlashFechaServidor(config.fechaVigencia)
+  const vendidas = await contarVendidasPromoFlashFechaServidor(
+    config.fechaVigencia,
+    config.precioPromo
+  )
 
   let configVigente = config
 

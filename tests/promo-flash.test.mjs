@@ -71,6 +71,41 @@ test('cuenta unidades vendidas ignorando pedidos cancelados y pedidos de prueba'
   ]
 
   assert.equal(contarUnidadesPromoFlashEnPedidos(pedidos), 5)
+  // También cuenta ventas reales desde POS o catálogo oficial ("Burgers - Burger Cheese" a $5.000)
+  assert.equal(
+    contarUnidadesPromoFlashEnPedidos(
+      [
+        {
+          estado: 'en_cocina',
+          es_prueba: false,
+          productos: [
+            {
+              id: 'prod-1795655606592-441',
+              idCatalogo: 'prod-1788571526634-75',
+              nombre: 'Burgers - Burger Cheese',
+              precio: 5000,
+              cantidad: 2,
+            },
+          ],
+        },
+        {
+          estado: 'entregado',
+          es_prueba: false,
+          productos: [
+            {
+              id: 'prod-regular',
+              idCatalogo: 'prod-1788571526634-75',
+              nombre: 'Burgers - Burger Cheese',
+              precio: 8500,
+              cantidad: 1,
+            },
+          ],
+        },
+      ],
+      5000
+    ),
+    2
+  )
   assert.equal(
     contarUnidadesPromoFlashEnItems([
       { idCatalogo: PROMO_FLASH_PRODUCTO_ID, cantidad: 2 },

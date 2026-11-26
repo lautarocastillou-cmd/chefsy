@@ -8,6 +8,8 @@
 import type { ProductoCatalogo } from '@/tipos/catalogo'
 
 export const PROMO_FLASH_PRODUCTO_ID = 'promo-flash-burger-cheese-5000'
+/** ID oficial de "Burger Cheese" en el catálogo (POS y tienda) para sincronizar ventas reales. */
+export const BURGER_CHEESE_CATALOGO_ID = 'prod-1788571526634-75'
 export const PROMO_FLASH_PRECIO_DEFAULT = 5000
 export const PROMO_FLASH_PRECIO_REGULAR_DEFAULT = 8500
 export const PROMO_FLASH_LIMITE_DEFAULT = 30
@@ -152,21 +154,49 @@ export function normalizarConfiguracionPromoFlash(
   }
 }
 
-/** Determina si un ítem de pedido corresponde a la Promo Flash Burger Cheese. */
-export function esItemPromoFlash(item: any): boolean {
+/**
+ * Determina si un ítem de pedido corresponde a la Promo Flash Burger Cheese.
+ * Contempla tanto el ítem dedicado (`promo-flash-burger-cheese-5000`) como la
+ * Burger Cheese oficial del catálogo/POS (`prod-1788571526634-75` o nombre "Burger Cheese")
+ * cuando sale al precio promocional (<= precioPromo + margen).
+ */
+export function esItemPromoFlash(item: any, precioPromoMax?: number): boolean {
   if (!item || typeof item !== 'object') return false
   const idCat = typeof item.idCatalogo === 'string' ? item.idCatalogo.trim().toLowerCase() : ''
   const id = typeof item.id === 'string' ? item.id.trim().toLowerCase() : ''
   const nombre = typeof item.nombre === 'string' ? item.nombre.trim().toLowerCase() : ''
 
+  // 1. Coincidencia directa con el ítem virtual de la Promo Flash
   if (idCat === PROMO_FLASH_PRODUCTO_ID || id === PROMO_FLASH_PRODUCTO_ID) return true
   if (id.startsWith(`${PROMO_FLASH_PRODUCTO_ID}-`)) return true
   if (nombre.includes('promo burger cheese')) return true
-  return false
+
+  // 2. Coincidencia con la Burger Cheese del catálogo / POS ("Burgers - Burger Cheese")
+  const esBurgerCheeseCatalogo =
+    idCat === BURGER_CHEESE_CATALOGO_ID ||
+    id === BURGER_CHEESE_CATALOGO_ID ||
+    id.startsWith(`${BURGER_CHEESE_CATALOGO_ID}-`) ||
+    /\bburger\s+cheese\b|\bcheese\s+burger\b|\bcheeseburger\b/i.test(nombre)
+
+  if (!esBurgerCheeseCatalogo) return false
+
+  // Si se pasó precioPromoMax, verificamos que el ítem se haya vendido al precio promo
+  // (así si mañana vuelve a precio regular ej. $8.500 no queda bloqueada por la promo de $5.000).
+  if (typeof precioPromoMax === 'number' && Number.isFinite(precioPromoMax) && precioPromoMax > 0) {
+    const precioRaw = Number(item.precio ?? item.precioUnitario)
+    if (Number.isFinite(precioRaw) && precioRaw > 0) {
+      return precioRaw <= precioPromoMax + 500
+    }
+  }
+
+  return true
 }
 
 /** Suma cuántas unidades de la Promo Flash se vendieron en una lista de pedidos (ignorando cancelados y de prueba). */
-export function contarUnidadesPromoFlashEnPedidos(pedidos: Array<any>): number {
+export function contarUnidadesPromoFlashEnPedidos(
+  pedidos: Array<any>,
+  precioPromoMax?: number
+): number {
   let total = 0
   for (const pedido of pedidos) {
     if (!pedido || typeof pedido !== 'object') continue
@@ -176,7 +206,7 @@ export function contarUnidadesPromoFlashEnPedidos(pedidos: Array<any>): number {
 
     const items = Array.isArray(pedido.productos) ? pedido.productos : []
     for (const item of items) {
-      if (!esItemPromoFlash(item)) continue
+      if (!esItemPromoFlash(item, precioPromoMax)) continue
       const cant = Math.max(0, Math.floor(Number(item.cantidad) || 0))
       total += cant
     }
@@ -185,10 +215,13 @@ export function contarUnidadesPromoFlashEnPedidos(pedidos: Array<any>): number {
 }
 
 /** Suma cuántas unidades de la Promo Flash hay dentro de un único pedido o carrito. */
-export function contarUnidadesPromoFlashEnItems(items: Array<any>): number {
+export function contarUnidadesPromoFlashEnItems(
+  items: Array<any>,
+  precioPromoMax?: number
+): number {
   let total = 0
   for (const item of items) {
-    if (!esItemPromoFlash(item)) continue
+    if (!esItemPromoFlash(item, precioPromoMax)) continue
     total += Math.max(0, Math.floor(Number(item.cantidad) || 0))
   }
   return total

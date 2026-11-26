@@ -167,11 +167,19 @@ export async function POST(request: Request) {
     const mapProductosDb = new Map((productosDb || []).map((p) => [p.id, p]))
 
     // ── 6B. BLINDAJE PROMO FLASH (Burger Cheese $5.000 — límite y vigencia) ──
-    const cantidadPromoFlashPedido = contarUnidadesPromoFlashEnItems(body.productos)
+    const tienePosibleItemPromo = contarUnidadesPromoFlashEnItems(body.productos) > 0
     let estadoPromoFlashActual: Awaited<ReturnType<typeof obtenerEstadoPromoFlashServidor>> | null = null
+    let cantidadPromoFlashPedido = 0
 
-    if (cantidadPromoFlashPedido > 0) {
+    if (tienePosibleItemPromo) {
       estadoPromoFlashActual = await obtenerEstadoPromoFlashServidor()
+      cantidadPromoFlashPedido = contarUnidadesPromoFlashEnItems(
+        body.productos,
+        estadoPromoFlashActual.config.precioPromo
+      )
+    }
+
+    if (cantidadPromoFlashPedido > 0 && estadoPromoFlashActual) {
       if (!estadoPromoFlashActual.disponible) {
         const msg = estadoPromoFlashActual.agotada
           ? '¡Se agotaron todas las Burger Cheese de la promo de hoy! La promoción finalizó automáticamente.'
@@ -214,7 +222,7 @@ export async function POST(request: Request) {
       }
 
       // Ítem de Promo Flash: validar precio exacto en servidor (nunca $0 ni canje por puntos)
-      if (esItemPromoFlash(item) && estadoPromoFlashActual) {
+      if (estadoPromoFlashActual && esItemPromoFlash(item, estadoPromoFlashActual.config.precioPromo)) {
         const precioItemCliente = Number(item.precio) || 0
         if (Boolean(item.pago_con_puntos || item.nombre?.includes('[PAGADO CON PUNTOS]'))) {
           return NextResponse.json(

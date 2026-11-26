@@ -65,7 +65,8 @@ export async function PUT(request: Request) {
     // Si el admin reactiva manualmente la promo o sube el límite por encima de las vendidas,
     // limpiamos la bandera de auto-desactivación previa.
     const vendidasEnFecha = await contarVendidasPromoFlashFechaServidor(
-      typeof fusionada.fechaVigencia === 'string' ? fusionada.fechaVigencia : actual.fechaVigencia
+      typeof fusionada.fechaVigencia === 'string' ? fusionada.fechaVigencia : actual.fechaVigencia,
+      Number(fusionada.precioPromo) || actual.precioPromo
     )
 
     if (fusionada.activa === true) {
