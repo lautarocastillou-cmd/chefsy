@@ -14,6 +14,8 @@ import {
   Gift,
   Ticket,
   Instagram,
+  Phone,
+  MapPin,
   Star,
   MessageSquare,
   Zap
@@ -45,6 +47,12 @@ interface ConfigTicketPromo {
   validezTipo: 'sin_vencimiento' | 'hoy' | 'dias'
   validezDias: number
   letraChica: string
+  mostrarInstagram?: boolean
+  instagram?: string
+  mostrarTelefono?: boolean
+  telefono?: string
+  mostrarDireccion?: boolean
+  direccion?: string
   anchoPapel: '80mm' | '58mm'
   copias: number
   tamanoFuente?: 'normal' | 'grande' | 'extra_grande'
@@ -59,10 +67,28 @@ const CONFIG_POR_DEFECTO: ConfigTicketPromo = {
   validezTipo: 'dias',
   validezDias: 7,
   letraChica: 'Válido para consumo en el local o delivery.',
+  mostrarInstagram: false,
+  instagram: '@chefsy_fastfood_',
+  mostrarTelefono: false,
+  telefono: '3834 22-5445',
+  mostrarDireccion: false,
+  direccion: '',
   anchoPapel: '80mm',
   copias: 1,
   tamanoFuente: 'normal'
 }
+
+function escaparHtmlTicket(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+const SVG_ICONO_INSTAGRAM = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="contacto-icono"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>`
+const SVG_ICONO_TELEFONO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="contacto-icono"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
+const SVG_ICONO_DIRECCION = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="contacto-icono"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`
 
 const PLANTILLAS: PlantillaPromo[] = [
   {
@@ -242,6 +268,12 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
   const [validezTipo, setValidezTipo] = useState<'sin_vencimiento' | 'hoy' | 'dias'>(configInicial.validezTipo || 'dias')
   const [validezDias, setValidezDias] = useState<number>(configInicial.validezDias || 7)
   const [letraChica, setLetraChica] = useState(configInicial.letraChica)
+  const [mostrarInstagram, setMostrarInstagram] = useState(Boolean(configInicial.mostrarInstagram))
+  const [instagram, setInstagram] = useState(configInicial.instagram ?? '@chefsy_fastfood_')
+  const [mostrarTelefono, setMostrarTelefono] = useState(Boolean(configInicial.mostrarTelefono))
+  const [telefono, setTelefono] = useState(configInicial.telefono ?? '3834 22-5445')
+  const [mostrarDireccion, setMostrarDireccion] = useState(Boolean(configInicial.mostrarDireccion))
+  const [direccion, setDireccion] = useState(configInicial.direccion ?? '')
   const [anchoPapel, setAnchoPapel] = useState<'80mm' | '58mm'>(configInicial.anchoPapel)
   const [copias, setCopias] = useState<number>(configInicial.copias)
   const [tamanoFuente, setTamanoFuente] = useState<'normal' | 'grande' | 'extra_grande'>(configInicial.tamanoFuente || 'normal')
@@ -259,6 +291,12 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
         validezTipo,
         validezDias,
         letraChica,
+        mostrarInstagram,
+        instagram,
+        mostrarTelefono,
+        telefono,
+        mostrarDireccion,
+        direccion,
         anchoPapel,
         copias,
         tamanoFuente
@@ -267,7 +305,25 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
     } catch {
       // silencioso
     }
-  }, [titulo, mensaje, incluirQr, qrUrl, qrTexto, validezTipo, validezDias, letraChica, anchoPapel, copias, tamanoFuente])
+  }, [
+    titulo,
+    mensaje,
+    incluirQr,
+    qrUrl,
+    qrTexto,
+    validezTipo,
+    validezDias,
+    letraChica,
+    mostrarInstagram,
+    instagram,
+    mostrarTelefono,
+    telefono,
+    mostrarDireccion,
+    direccion,
+    anchoPapel,
+    copias,
+    tamanoFuente,
+  ])
 
   // Debounce simple para el QR URL
   const [qrUrlDebounced, setQrUrlDebounced] = useState(qrUrl)
@@ -291,6 +347,10 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
   }, [])
 
   const textoValidez = calcularTextoValidez(validezTipo, validezDias)
+  const igActivo = mostrarInstagram && instagram.trim().length > 0
+  const telActivo = mostrarTelefono && telefono.trim().length > 0
+  const dirActivo = mostrarDireccion && direccion.trim().length > 0
+  const hayDatosContacto = igActivo || telActivo || dirActivo
 
   const imprimirTicket = () => {
     setImprimiendo(true)
@@ -319,8 +379,19 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
     const fValidez = anchoPapel === '58mm' ? Math.round(10 * factorEscala) : Math.round(11.5 * factorEscala)
     const fQrCaption = anchoPapel === '58mm' ? Math.round(9.5 * factorEscala) : Math.round(10.5 * factorEscala)
     const fLetraChica = anchoPapel === '58mm' ? Math.round(9 * factorEscala) : Math.round(9.5 * factorEscala)
+    const fContacto = anchoPapel === '58mm' ? Math.round(9.5 * factorEscala) : Math.round(10.5 * factorEscala)
+    const tamIconoContacto = Math.round(fContacto * 1.15)
     const fFooter = anchoPapel === '58mm' ? Math.round(9.5 * factorEscala) : Math.round(10.5 * factorEscala)
     const fFecha = anchoPapel === '58mm' ? Math.round(9 * factorEscala) : Math.round(9.5 * factorEscala)
+
+    const bloqueContactoHtml = hayDatosContacto ? `
+      <div class="sep"></div>
+      <div class="contacto-section">
+        ${igActivo ? `<div class="contacto-row">${SVG_ICONO_INSTAGRAM}<span>${escaparHtmlTicket(instagram.trim())}</span></div>` : ''}
+        ${telActivo ? `<div class="contacto-row">${SVG_ICONO_TELEFONO}<span>${escaparHtmlTicket(telefono.trim())}</span></div>` : ''}
+        ${dirActivo ? `<div class="contacto-row">${SVG_ICONO_DIRECCION}<span>${escaparHtmlTicket(direccion.trim())}</span></div>` : ''}
+      </div>
+    ` : ''
 
     const ticketSingleHtml = `
       <div class="ticket-wrapper">
@@ -331,24 +402,26 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
 
         <div class="sep"></div>
 
-        <div class="titulo-promo">${titulo.toUpperCase()}</div>
+        <div class="titulo-promo">${escaparHtmlTicket(titulo.toUpperCase())}</div>
 
-        <div class="mensaje">${mensaje.replace(/\n/g, '<br/>')}</div>
+        <div class="mensaje">${escaparHtmlTicket(mensaje).replace(/\n/g, '<br/>')}</div>
 
         ${textoValidez ? `
-          <div class="validez-box">${textoValidez.toUpperCase()}</div>
+          <div class="validez-box">${escaparHtmlTicket(textoValidez.toUpperCase())}</div>
         ` : ''}
 
         ${incluirQr && qrDataUrl ? `
           <div class="qr-section">
             <img src="${qrDataUrl}" class="qr-img" alt="QR" />
-            ${qrTexto ? `<div class="qr-caption">${qrTexto}</div>` : ''}
+            ${qrTexto ? `<div class="qr-caption">${escaparHtmlTicket(qrTexto)}</div>` : ''}
           </div>
         ` : ''}
 
+        ${bloqueContactoHtml}
+
         ${letraChica.trim() ? `
           <div class="sep"></div>
-          <div class="letra-chica">${letraChica}</div>
+          <div class="letra-chica">${escaparHtmlTicket(letraChica)}</div>
         ` : ''}
 
         <div class="sep"></div>
@@ -434,6 +507,23 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
           display: block;
         }
         .qr-caption { font-size: ${fQrCaption}px; font-weight: bold; margin-top: 3px; text-align: center; }
+        .contacto-section { margin: 4px 0; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+        .contacto-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          font-size: ${fContacto}px;
+          font-weight: 700;
+          line-height: 1.25;
+          text-align: center;
+        }
+        .contacto-icono {
+          width: ${tamIconoContacto}px;
+          height: ${tamIconoContacto}px;
+          flex-shrink: 0;
+          display: inline-block;
+        }
         .letra-chica { font-size: ${fLetraChica}px; text-align: center; color: #333; line-height: 1.25; margin-top: 3px; }
         .footer { font-size: ${fFooter}px; font-weight: bold; text-align: center; margin-top: 3px; }
         .cut-space { height: 8px; }
@@ -713,6 +803,93 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
               )}
             </div>
 
+            {/* Datos del Local en el Ticket (Instagram, Teléfono y Dirección independientes) */}
+            <div className="border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Datos del Local (con íconos)
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  Activá los que quieras imprimir
+                </span>
+              </div>
+
+              {/* 1. Instagram */}
+              <div className="space-y-1.5">
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <Instagram size={14} className="text-pink-500 shrink-0" />
+                    Instagram
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={mostrarInstagram}
+                    onChange={(e) => setMostrarInstagram(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </label>
+                {mostrarInstagram && (
+                  <input
+                    type="text"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value)}
+                    placeholder="@chefsy_fastfood_"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-medium"
+                  />
+                )}
+              </div>
+
+              {/* 2. Teléfono */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <Phone size={14} className="text-emerald-500 shrink-0" />
+                    Teléfono / WhatsApp
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={mostrarTelefono}
+                    onChange={(e) => setMostrarTelefono(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </label>
+                {mostrarTelefono && (
+                  <input
+                    type="text"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="3834 22-5445"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-medium"
+                  />
+                )}
+              </div>
+
+              {/* 3. Dirección */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <MapPin size={14} className="text-amber-500 shrink-0" />
+                    Dirección
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={mostrarDireccion}
+                    onChange={(e) => setMostrarDireccion(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </label>
+                {mostrarDireccion && (
+                  <input
+                    type="text"
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
+                    placeholder="Ej: Av. Güemes 123, Catamarca"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-medium"
+                  />
+                )}
+              </div>
+            </div>
+
             {/* Opciones Impresión (Tamaño Fuente, Ancho Papel, Copias) */}
             <div className="space-y-3 pt-1">
               <div>
@@ -870,6 +1047,37 @@ function ModalPromociones({ onClose }: { onClose: () => void }) {
 
                 {incluirQr && (
                   <QrPreview url={qrUrlDebounced} texto={qrTexto} />
+                )}
+
+                {hayDatosContacto && (
+                  <>
+                    <div className="border-t border-dashed border-black my-2"></div>
+                    <div
+                      className="space-y-1 font-bold text-black"
+                      style={{
+                        fontSize: tamanoFuente === 'extra_grande' ? '10.5px' : tamanoFuente === 'grande' ? '9.5px' : '8.5px'
+                      }}
+                    >
+                      {igActivo && (
+                        <div className="flex items-center justify-center gap-1 leading-tight">
+                          <Instagram size={tamanoFuente === 'extra_grande' ? 12 : 10} strokeWidth={2.3} className="shrink-0" />
+                          <span className="break-all">{instagram.trim()}</span>
+                        </div>
+                      )}
+                      {telActivo && (
+                        <div className="flex items-center justify-center gap-1 leading-tight">
+                          <Phone size={tamanoFuente === 'extra_grande' ? 12 : 10} strokeWidth={2.3} className="shrink-0" />
+                          <span>{telefono.trim()}</span>
+                        </div>
+                      )}
+                      {dirActivo && (
+                        <div className="flex items-center justify-center gap-1 leading-tight">
+                          <MapPin size={tamanoFuente === 'extra_grande' ? 12 : 10} strokeWidth={2.3} className="shrink-0" />
+                          <span>{direccion.trim()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 {letraChica && (
